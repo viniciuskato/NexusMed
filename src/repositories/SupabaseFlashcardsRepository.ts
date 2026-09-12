@@ -289,7 +289,8 @@ export class SupabaseFlashcardsRepository implements FlashcardsRepository {
   // atômica e idempotente. Este método continua aqui só para satisfazer a
   // interface `FlashcardsRepository`; chamá-lo direto faz duas escritas
   // separadas sem lock nem client_op_id — não usar para revisão real.
-  async reviewFlashcard(cardId: string, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null> {
+  async reviewFlashcard(card: Flashcard, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null> {
+    const cardId = card.id;
     const { data: cardRow, error: cErr } = await supabase.from('flashcards').select('*').eq('id', cardId).maybeSingle();
     if (cErr) throw cErr;
     if (!cardRow) return null;

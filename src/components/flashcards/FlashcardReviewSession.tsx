@@ -64,7 +64,7 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
       // nunca para o palpite local, evitando a perda de atualização que
       // existia quando duas abas revisavam o mesmo card quase ao mesmo tempo
       // (achado do Prompt 13-B — ver docs/diretoria/registro.md).
-      const reviewedCard = await flashcardsRepository.reviewFlashcard(currentCard.id, rating);
+      const reviewedCard = await flashcardsRepository.reviewFlashcard(currentCard, rating);
       const updatedCard: Flashcard = reviewedCard ?? currentCard;
 
       setReviewedCount((prev) => prev + 1);
