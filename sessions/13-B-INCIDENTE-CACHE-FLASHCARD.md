@@ -1,7 +1,7 @@
 # Incidente: revisão de flashcard não gravada quando o card não está no cache local
 
-- Estado: CONFIRMADO (verificação independente por leitura de código, não por execução em runtime)
-- Severidade: CRÍTICA — perda silenciosa de dado do usuário, já em produção (13-B publicado e deployado)
+- Estado: RESOLVIDO E PUBLICADO (2026-09-12)
+- Severidade: CRÍTICA — perda silenciosa de dado do usuário, esteve em produção desde a publicação do 13-B até o hotfix
 - Origem da investigação: sessão de diretoria no Codex, interrompida por limite de uso ao investigar se os testes de concorrência do 13-B validam o fluxo real ou preenchem um cache que o app não preenche sozinho.
 
 ## Cadeia confirmada
@@ -26,6 +26,24 @@ Afeta qualquer flashcard cujo id não esteja no cache local do navegador/disposi
 
 ## Decisão
 
-Não subir nada novo para o servidor até corrigir. Prioridade máxima, acima de 22-A/18-A/19-A/etc. na fila. Correção precisa de autorização explícita por tocar o mesmo caminho sensível (`reviewFlashcard`/RPC) que o 13-B já mexeu — mesma exigência de autorização especial de antes.
+RESOLVIDO. Correção implementada e verificada com ferramentas próprias, autorizada pelo usuário diretamente nesta sessão (não foi preciso prompt formal separado — a mesma sessão de diretoria implementou, testou e publicou).
 
-Direção de correção candidata (não implementada ainda): não condicionar a chamada de `enqueueAndTry('flashcard_review', ...)` à existência do card no cache local; o servidor já recalcula o SRS a partir do estado autoritativo (comentário em `FlashcardReviewSession.tsx`), então `localRes` não deveria ser pré-requisito para contatar o servidor — só para a otimização de UX local. Precisa de teste novo que reproduza o cenário sem `seedLocalFlashcardCache` (card só existe no servidor) para provar a correção.
+## Correção aplicada
+
+`ResilientFlashcardsRepository.reviewFlashcard` (`src/repositories/FlashcardsRepository.ts`) deixou de condicionar a chamada de `enqueueAndTry('flashcard_review', ...)` à existência do card no cache local. Assinatura mudou de `reviewFlashcard(cardId, rating)` para `reviewFlashcard(card: Flashcard, rating)` — o chamador (`FlashcardReviewSession.tsx`) já tinha o card completo em mãos, então quando o cache local não tem o card (`localRes === null`), o card passado pelo chamador vira a base para o resultado convergido, e a RPC é chamada de qualquer forma. O resultado do servidor grava no cache local depois (self-healing). `SupabaseFlashcardsRepository.reviewFlashcard` (código morto, mantido só pela interface) e `scripts/validate-personal-repos.ts` atualizados para a nova assinatura.
+
+Teste novo em `concurrencia-13b.spec.ts` ("flashcard que NUNCA passou por saveFlashcard local...") reproduz o cenário real (card só inserido no servidor via SQL, sem `seedLocalFlashcardCache`) e prova que a revisão é gravada.
+
+## Achado lateral: gate `verify:full` local incompleto
+
+Ao rodar a suíte completa localmente pela primeira vez, apareceram 2 falhas em testes não relacionados (reação a questão, finalização de simulado). Investigação por eliminação (rodar os 2 testes isolados após `supabase db reset`: passam; rodar a suíte inteira: falham de novo) apontou a causa real: `rls_policies.test.sql` (pgTAP) insere fixtures de `public.questions`, algumas com `status='published'`, e roda em autocommit (sem `BEGIN`/`ROLLBACK` — comentário no próprio arquivo já documentava isso), então essas questões de teste ficam poluindo a tabela depois do `npm run test:db`. O `ci.yml` já sabia disso e faz um segundo `supabase db reset` entre o passo de pgTAP e o de Playwright (comentário: "pg_prove grava permanentemente, sem rollback (achado do Prompt 13-B)") — mas o script `verify:full` do `package.json`, usado localmente, não tinha esse segundo reset. Corrigido: `"verify:full": "npm run verify:fast && npm run test:db && supabase db reset && npm run test:e2e"`. Isso não bate em nada a aceitação do 13-B (o CI real dele sempre teve o reset duplo) — era só uma divergência entre o script de conveniência local e o pipeline real.
+
+## Verificação e publicação
+
+- CI real (GitHub Actions) verde na branch `hotfix/flashcard-review-sem-cache-local` (commit `6c2d682`, run `34724084979`, conclusion=success).
+- Merge `--no-ff` em `main`: commit `b8795ab` sobre base `42252b9`.
+- CI real verde em `main` pós-merge (run `34724624300`, conclusion=success).
+- `npm run verify:full` local rodado 2x (pré e pós-merge) com o script corrigido: 18/18 Playwright, 183/183 pgTAP, 15/15 unit, typecheck e lint (90 warnings, dentro do limite de 93) limpos em ambas as vezes.
+- `git push origin main`: `42252b9..b8795ab`.
+- Deploy Vercel confirmado: hash do bundle em produção (`https://synapse-med-firebase-auth.vercel.app/assets/index-DdHpjmJ2.js`) idêntico byte a byte (`sha256:66b437d231361dd519db54872b1244c1f2b32e756f34a7be11b96d8e57cf97a5`) ao build local do commit publicado. Confirmado por comparação com o hash do build da versão anterior (`index-Bfi7dsF5.js`, hash diferente), descartando coincidência.
+- Não foi rodado `scripts/smoke-test-remote.ts` (cria usuário real em produção, exige passo manual no dashboard, e testa só Materials/Questions — não flashcard); a verificação de bundle + CI real foi considerada suficiente e mais segura dado o alerta existente sobre `.env.local` deste projeto apontar pro remoto por padrão.
