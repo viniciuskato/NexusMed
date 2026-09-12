@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Flashcard, Discipline, Theme, Compendium } from '../../types';
+import { calculateNextSRS } from '../../services/srsAlgorithm';
 import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { formatToAbntCitation } from '../../utils/bibliographicSources';
 
@@ -53,20 +54,13 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
     async (rating: 1 | 2 | 3 | 4) => {
       if (!currentCard) return;
 
-      // Caminho atômico/idempotente (RPC submit_flashcard_review, ver
-      // FlashcardsRepository.reviewFlashcard): calcula e grava localmente de
-      // imediato (mesma UX de sempre, sem esperar a rede) e, em paralelo,
-      // envia a revisão para o servidor com um client_op_id próprio desta
-      // ação (estável só para o retry DESTA revisão — a próxima chamada de
-      // handleRate gera outro). O servidor recalcula o SM-2 a partir do
-      // estado autoritativo (com lock de linha) e grava em
-      // flashcard_reviews; a UI atualiza para o resultado que voltar de lá,
-      // nunca para o palpite local, evitando a perda de atualização que
-      // existia quando duas abas revisavam o mesmo card quase ao mesmo tempo
-      // (achado do Prompt 13-B — ver docs/diretoria/registro.md).
-      const reviewedCard = await flashcardsRepository.reviewFlashcard(currentCard, rating);
-      const updatedCard: Flashcard = reviewedCard ?? currentCard;
+      const updatedSrs = calculateNextSRS(currentCard.srs, rating);
+      const updatedCard: Flashcard = {
+        ...currentCard,
+        srs: updatedSrs,
+      };
 
+      await flashcardsRepository.updateFlashcardSRS(currentCard.id, updatedSrs);
       setReviewedCount((prev) => prev + 1);
 
       // If rating is 1 (Errei), add back to the end of the current session queue for immediate reinforcement

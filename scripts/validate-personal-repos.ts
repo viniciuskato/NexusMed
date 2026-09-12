@@ -389,7 +389,7 @@ async function main() {
   });
 
   await step('14. FlashcardsRepository.reviewFlashcard (rating=3, SM-2 real)', async () => {
-    const reviewed = await flashcardsRepo.reviewFlashcard(flashcard, 3);
+    const reviewed = await flashcardsRepo.reviewFlashcard(flashcard.id, 3);
     if (!reviewed) throw new Error('reviewFlashcard retornou null');
     if (reviewed.srs.state === 'new') throw new Error('estado não avançou após revisão');
     if (reviewed.srs.reviewHistory.length !== 1) {

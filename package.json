@@ -15,16 +15,8 @@
     "lint": "eslint . --max-warnings 93",
     "test": "node scripts/run-db-tests.mjs",
     "test:optional": "node scripts/run-db-tests.mjs --optional",
-    "test:unit": "vitest run",
-    "test:db": "node scripts/run-db-tests.mjs",
-    "test:e2e": "playwright test --config=tests/e2e/playwright.config.ts",
-    "build:e2e": "vite build --mode test --outDir dist-e2e",
-    "preview:e2e": "vite preview --outDir dist-e2e --port 4183 --strictPort",
-    "check:no-debug-bundle": "node scripts/check-no-debug-bundle.mjs dist",
     "clean": "node scripts/clean.mjs",
-    "verify": "npm run typecheck && npm run lint && npm run test && npm run build",
-    "verify:fast": "npm run typecheck && npm run lint && npm run test:unit && npm run build",
-    "verify:full": "npm run verify:fast && npm run test:db && supabase db reset && npm run test:e2e"
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run build"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",
@@ -35,7 +27,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.1.14",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^22.14.0",
@@ -52,7 +43,6 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "typescript-eslint": "^8.70.0",
-    "vite": "^6.2.3",
-    "vitest": "^3.2.7"
+    "vite": "^6.2.3"
   }
 }

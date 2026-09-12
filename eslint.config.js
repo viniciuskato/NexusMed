@@ -11,16 +11,7 @@ import globals from 'globals';
 
 export default tseslint.config(
   {
-    ignores: [
-      'dist/**',
-      'dist-e2e/**',
-      'node_modules/**',
-      'coverage/**',
-      'supabase/.branches/**',
-      'supabase/.temp/**',
-      'playwright-report/**',
-      'test-results/**',
-    ],
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'supabase/.branches/**', 'supabase/.temp/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

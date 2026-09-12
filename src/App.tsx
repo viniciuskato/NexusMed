@@ -95,12 +95,46 @@ import { FlashcardReviewSession } from './components/flashcards/FlashcardReviewS
 import { CreateFlashcardModal } from './components/flashcards/CreateFlashcardModal';
 import { SimuladosView } from './components/simulados/SimuladosView';
 import { AdminCMSView } from './components/admin/AdminCMSView';
+import { ThematicStudyView } from './components/thematic/ThematicStudyView';
 
 function AuthenticatedApp() {
   const { user, profile, loading, isEmailVerified } = useAuth();
 
   // Navigation State
-  const [activeView, setActiveView] = useState<string>('dashboard');
+  const [activeView, setActiveView] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('nexusmed_active_view');
+      const validViews = [
+        'dashboard',
+        'thematic-study',
+        'compendiums',
+        'compendium-reader',
+        'questions',
+        'flashcards',
+        'flashcard-session',
+        'simulados',
+        'simulado-session',
+        'errors',
+        'admin',
+      ];
+      if (saved && validViews.includes(saved)) {
+        return saved;
+      }
+    } catch {
+      // Ignora erro de storage
+    }
+    return 'dashboard';
+  });
+
+  const [flashcardOriginView, setFlashcardOriginView] = useState<string>('flashcards');
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('nexusmed_active_view', activeView);
+    } catch {
+      // Ignora erro de storage
+    }
+  }, [activeView]);
 
   // Deep-link / Context State
   const [selectedCompendiumId, setSelectedCompendiumId] = useState<string | null>(null);
@@ -324,12 +358,14 @@ function AuthenticatedApp() {
 
   // Navigators
   const handleOpenCompendium = (compendiumId?: string, sectionId?: string, originQuestionId?: string) => {
-    if (activeView === 'questions' || activeView === 'errors' || activeView === 'simulado-session') {
+    if (activeView === 'questions' || activeView === 'errors' || activeView === 'simulado-session' || activeView === 'thematic-study') {
       setLibraryOrigin({
         view: activeView,
         questionId: originQuestionId,
         label:
-          activeView === 'errors'
+          activeView === 'thematic-study'
+            ? 'Retornar ao Estudo Temático'
+            : activeView === 'errors'
             ? 'Retornar ao Caderno de Erros'
             : activeView === 'simulado-session'
             ? 'Retornar ao Simulado'
@@ -394,9 +430,10 @@ function AuthenticatedApp() {
     setActiveView('questions');
   };
 
-  const handleStartSRS = (cards?: Flashcard[]) => {
+  const handleStartSRS = (cards?: Flashcard[], originView?: string) => {
     const queue = cards && cards.length > 0 ? cards : flashcards.filter((fc) => isCardDueToday(fc));
     setReviewCardsQueue(queue.length > 0 ? queue : flashcards);
+    setFlashcardOriginView(originView || (activeView === 'thematic-study' ? 'thematic-study' : 'flashcards'));
     setActiveView('flashcard-session');
   };
 
@@ -461,6 +498,24 @@ function AuthenticatedApp() {
               initialTab={dashboardTab}
               onTabChange={setDashboardTab}
               onStartErrorSimulado={handleTrainMistakesUntimed}
+              onUpdate={refreshData}
+            />
+          )}
+
+          {activeView === 'thematic-study' && (
+            <ThematicStudyView
+              disciplines={disciplines}
+              themes={themes}
+              compendiums={compendiums}
+              questions={questions}
+              flashcards={flashcards}
+              answers={answers}
+              loading={dataLoading}
+              onOpenCompendium={handleOpenCompendium}
+              onOpenQuestionsForTheme={handleOpenQuestionsForTheme}
+              onOpenFlashcardsForTheme={handleOpenFlashcardsForTheme}
+              onStartSRS={(cards) => handleStartSRS(cards, 'thematic-study')}
+              onAnswerRecorded={() => refreshData()}
               onUpdate={refreshData}
             />
           )}
@@ -542,7 +597,7 @@ function AuthenticatedApp() {
               compendiums={compendiums}
               onFinishSession={() => {
                 refreshData();
-                setActiveView('flashcards');
+                setActiveView(flashcardOriginView);
               }}
               onOpenCompendium={handleOpenCompendium}
             />
