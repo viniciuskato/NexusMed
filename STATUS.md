@@ -10,7 +10,7 @@ Atualizado em: 2026-09-12
 
 ## Aguardando diretoria
 
-- Reorganização “Estudo Temático / packs”: retorno funcional recebido; causa declarada como rota não mapeada e correção integrada. Aguarda evidências Git, testes e verificação independente.
+- Reorganização “Estudo Temático / packs”: retorno funcional recebido; causa declarada (rota não mapeada) e desenho de packs por material CONFIRMADOS por inspeção direta do snapshot exportado do Google AI Studio (`synapsemed-firebase-auth.zip`, sem segredos, sem lockfile). Ainda faltam: diff contra a base pós-13-B, typecheck/lint/test/build executados, evidência de navegador e checagem do gate de admin. Ver `sessions/ESTUDO-TEMATICO-PACKS.md`. Publicação/merge seguem bloqueados; sem concorrência com o 13-B.
 
 ## Próximos candidatos
 

@@ -44,3 +44,26 @@ Fonte: anexo `286f5b80-93b5-451f-a7b7-cf24563b6e83/pasted-text.txt`. Esta revis�
 - Textos “em produção/em elaboração pela equipe” não devem ser deduzidos de conteúdo ausente sem status editorial que os sustente.
 
 Decisão: retorno documental aceito como parcial; publicação e integração continuam não aprovadas. Próximo passo: obter exportação do applet sem segredos/dados pessoais, preservar snapshot separado e comparar com a base vigente após o 13-B. Não solicitar mais narrativa como substituto dos arquivos.
+
+## Verificação independente do snapshot exportado (2026-09-12)
+
+Fonte: `synapsemed-firebase-auth.zip` (export do Google AI Studio via botão Code, baixado em Downloads pelo usuário). Snapshot preservado fora do repositório de código, sem `.git`, sem histórico/diff contra a base. Inspeção direta dos arquivos, não mais só do relato.
+
+- Segredos: nenhum arquivo sensível no ZIP (sem `.env`, `.env.local`, chaves, `serviceAccount*.json`). Só `.env.example` vazio (`VITE_SUPABASE_URL=`, `VITE_SUPABASE_ANON_KEY=`). `.gitignore` interno já exclui `.env*`, `*.pem`, `*.key`, `*serviceAccount*.json`, `credentials.json`.
+- Lockfile: nem `bun.lock` nem `package-lock.json` no export (export do AI Studio não inclui lockfile nenhum). `package.json` interno (`"name": "nexusmed"`) usa só scripts npm (`npm run typecheck && npm run lint && npm run test && npm run build`), engines `"npm": ">=10"` — sem qualquer referência a bun. Ao integrar, gerar lockfile novo com `npm install` local; nunca importar lockfile do export.
+- Causa raiz declarada (rota não mapeada): CONFIRMADA no código. `src/App.tsx:505-506` renderiza `<ThematicStudyView>` quando `activeView === 'thematic-study'`; import na linha 98. Antes da correção essa branch não existia.
+- Desvio "pack por tema" apontado na revisão documental anterior: RESOLVIDO no código atual. `ThematicStudyView.tsx:156` constrói `compendiumPacks` com `compendiums.map((c) => ...)` — um pack por material (compêndio), não `compendiums.find` por tema. Vínculo de questões/flashcards usa `compendiumRefId` explícito, com fallback por `themeId` só quando `compendiumRefId` está ausente (linhas 161-167).
+- Temas sem compêndio: cobertos por `orphanThemes` (linha 218-220), gerando um pack por tema órfão.
+- Conteúdo avulso: preservado em dois packs dedicados — `pack-unlinked-questions` ("Sem Material Associado — Questões") e `pack-unlinked-cards` ("Meus Cards — Sem Material Associado"), linhas 278-322. Confirma o relato do retorno.
+- Contradição de escopo (Header/MobileBottomNav ausentes da lista final de conflitos): RESOLVIDA — ambos os arquivos referenciam `'thematic-study'` de fato (`Header.tsx:148-150`, `MobileBottomNav.tsx:237-247`), então a alteração nesses dois arquivos é real, não inventada.
+- Dados reais vs. mock: `ThematicStudyView.tsx` não importa `mockData`; recebe `disciplines/themes/compendiums/questions/flashcards/answers` via props. `App.tsx:505-519` passa as variáveis de estado da própria aplicação (mesmas usadas nas outras views), não mocks — mas o ZIP não prova qual fonte de dados alimenta esses states (Supabase real vs. fixture local não foi confirmado nesta passada).
+
+### Ainda não verificado (não subir de estado sem isto)
+
+- Diff estrutural completo contra a base pós-13-B (só foi comparado o que já existe em `dev/NexusMed/firebase-auth`: `ThematicStudyView` e a rota não existem lá — é feature nova, não uma correção de regressão).
+- typecheck/lint/test/build executados de fato (só existem como afirmação no retorno anterior).
+- Evidência de navegador (desktop/mobile, reload/deep link, console/rede).
+- Gate de admin por role + status ativo (não conferido nesta passada).
+- Compatibilidade com 13-B (SRS/simulado/progresso) — sem migrations no export, mas isso não prova compatibilidade funcional.
+
+Decisão: mantém-se RETORNO_RECEBIDO. Publicação/merge continuam bloqueados e concorrência com 13-B continua proibida. Não pedir mais narrativa — os itens acima exigem rodar as ferramentas (typecheck/lint/test/build) e navegador de fato, ou aceitar reimplementar a mudança já verificada (rota + packs por material) diretamente na base canônica após o 13-B fechar, descartando o snapshot do AI Studio como fonte de merge direto (ambiente sem `.git`, sem diff confiável).
