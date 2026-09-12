@@ -55,16 +55,19 @@ async function goToQuestionsBank(page: Page) {
 }
 
 /**
- * `flashcardsRepository.reviewFlashcard` (o caminho real, ver
- * FlashcardsRepository.ts) primeiro procura o card no cache LOCAL
- * (`localStorage`, isolado por UID) antes de decidir se envia a RPC — um
- * flashcard que existe só no servidor (ex.: inserido direto via SQL para o
- * teste) nunca é encontrado ali, e a revisão é silenciosamente descartada
- * sem chamar a RPC nenhuma vez (achado real ao rodar esta suíte). Em uso
- * normal do produto isso nunca acontece porque todo flashcard passa por
- * `saveFlashcard` (grava local ANTES de enfileirar no servidor) — replicamos
- * esse mesmo passo aqui em cada `BrowserContext`/dispositivo, com a MESMA
- * linha já criada no servidor por `insertFlashcardForUser`.
+ * CORREÇÃO PÓS-13-B: esta função existia porque `reviewFlashcard` antes
+ * dependia de encontrar o card no cache LOCAL (`localStorage`) para decidir
+ * se chamava a RPC — e um flashcard inserido direto no servidor (como aqui,
+ * via `insertFlashcardForUser`) nunca caía nesse cache, então a revisão era
+ * descartada em silêncio SEMPRE, não só no teste. A suposição de que "todo
+ * flashcard passa por `saveFlashcard` antes" estava errada para conteúdo
+ * real (carregado direto no Supabase, nunca via `saveFlashcard` local) — é
+ * o caso comum em produção, não uma exceção. `reviewFlashcard` foi corrigido
+ * para não depender mais disso (ver `FlashcardsRepository.ts`); o teste
+ * `flashcard que NUNCA passou por saveFlashcard local...` abaixo prova o
+ * caminho real sem esta função. Mantida aqui só para os testes de
+ * concorrência entre dois dispositivos, onde pré-popular o cache elimina uma
+ * variável irrelevante ao que eles medem (o lock de linha da RPC).
  */
 async function seedLocalFlashcardCache(
   page: Page,
@@ -277,6 +280,27 @@ test.describe('Revisão de flashcard (SRS) — concorrência real e idempotênci
     await expect
       .poll(() => countFlashcardReviews(flashcardId), { timeout: 20_000, message: 'aguardando retry convergir' })
       .toBe(1); // exatamente 1, nunca 2 — mesmo client_op_id reenviado pela fila até o servidor confirmar
+  });
+
+  test('flashcard que NUNCA passou por saveFlashcard local (só existe no servidor) tem a revisão gravada mesmo assim', async ({ page }) => {
+    // Regressão do achado pós-13-B: `flashcardsRepository.reviewFlashcard`
+    // dependia de encontrar o card no cache local antes de decidir chamar a
+    // RPC; um flashcard de conteúdo real (nunca criado via `saveFlashcard`
+    // no dispositivo) nunca cai nesse cache, e a revisão era descartada em
+    // silêncio. Este teste reproduz o cenário real (SEM
+    // `seedLocalFlashcardCache`) para provar que a correção não depende
+    // mais do cache estar pré-populado.
+    await login(page, user);
+    await openReviewSession(page);
+    await expect(page.getByRole('button', { name: 'Revelar Resposta' })).toBeVisible({ timeout: 15_000 });
+
+    await flipAndRate(page, /3\. Bom/);
+
+    await expect
+      .poll(() => countFlashcardReviews(flashcardId), { timeout: 20_000, message: 'revisão não foi gravada no servidor' })
+      .toBe(1);
+    const srs = getFlashcardSrsState(flashcardId);
+    expect(srs.repetitionCount).toBe(1);
   });
 });
 

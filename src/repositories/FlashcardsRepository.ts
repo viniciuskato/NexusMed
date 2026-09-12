@@ -37,7 +37,7 @@ export interface FlashcardsRepository {
   getDueFlashcards(): Promise<Flashcard[]>;
   updateFlashcardSRS(cardId: string, srs: any): Promise<void>;
   createFlashcardFromQuestion(question: Question): Promise<Flashcard>;
-  reviewFlashcard(cardId: string, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null>;
+  reviewFlashcard(card: Flashcard, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null>;
 }
 
 class LocalStorageFlashcardsRepository implements FlashcardsRepository {
@@ -62,8 +62,8 @@ class LocalStorageFlashcardsRepository implements FlashcardsRepository {
   async createFlashcardFromQuestion(question: Question): Promise<Flashcard> {
     return StorageService.createFlashcardFromQuestion(question);
   }
-  async reviewFlashcard(cardId: string, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null> {
-    return StorageService.reviewFlashcard(cardId, rating);
+  async reviewFlashcard(card: Flashcard, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null> {
+    return StorageService.reviewFlashcard(card.id, rating);
   }
 }
 
@@ -145,19 +145,27 @@ class ResilientFlashcardsRepository implements FlashcardsRepository {
     return localRes;
   }
 
-  async reviewFlashcard(cardId: string, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null> {
-    const localRes = await this.local.reviewFlashcard(cardId, rating);
+  async reviewFlashcard(card: Flashcard, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null> {
+    // O card pode não estar no cache local (ex.: veio só da leitura do
+    // Supabase, que nunca hidrata esse cache) — `localRes` é só uma
+    // otimização de eco local, nunca um pré-requisito para contatar o
+    // servidor. A RPC é a fonte de verdade e recalcula o SRS a partir do
+    // estado autoritativo; gatear a chamada em `localRes` fazia a revisão
+    // ser descartada em silêncio sempre que o card não estivesse cacheado
+    // (achado do Prompt 13-B, revisão pós-publicação).
+    const localRes = await this.local.reviewFlashcard(card, rating);
     const userId = getStorageUser();
-    if (isSupabaseConfigured && userId && localRes) {
-      const payload: FlashcardReviewOpPayload = { flashcardId: cardId, rating };
+    if (isSupabaseConfigured && userId) {
+      const payload: FlashcardReviewOpPayload = { flashcardId: card.id, rating };
       const serverResult = await enqueueAndTry(userId, 'flashcard_review', payload);
       if (serverResult) {
-        const converged: Flashcard = { ...localRes, srs: rpcResultToSRS(localRes.srs, serverResult as FlashcardReviewRpcResult) };
-        this.local.saveFlashcard(converged);
+        const baseCard = localRes ?? card;
+        const converged: Flashcard = { ...baseCard, srs: rpcResultToSRS(baseCard.srs, serverResult as FlashcardReviewRpcResult) };
+        this.local.saveFlashcard(converged); // popula o cache local para a próxima revisão
         return converged;
       }
     }
-    return localRes;
+    return localRes ?? card;
   }
 }
 
