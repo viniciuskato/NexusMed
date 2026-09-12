@@ -43,7 +43,17 @@ Fonte: anexo `286f5b80-93b5-451f-a7b7-cf24563b6e83/pasted-text.txt`. Esta revis�
 - Descrição de admin apenas por role é incompleta frente ao gate que também exige status ativo; conferir implementação antes de apontar regressão.
 - Textos “em produção/em elaboração pela equipe” não devem ser deduzidos de conteúdo ausente sem status editorial que os sustente.
 
-Decisão: retorno documental aceito como parcial; publicação e integração continuam não aprovadas. Próximo passo: obter exportação do applet sem segredos/dados pessoais, preservar snapshot separado e comparar com a base vigente após o 13-B. Não solicitar mais narrativa como substituto dos arquivos.
+Decisão anterior: retorno documental aceito como parcial; publicação e integração não aprovadas.
+
+## Snapshot recebido e auditado
+
+- ZIP: `C:\Users\vinic\Downloads\synapsemed-firebase-auth.zip`.
+- SHA-256: `6E3AE971C5BA68EEBCD72509F20C91F17358FCBDEA7E9EDACA32F0DF019EE2F2`.
+- Sem `.env` ou credencial remota nova; sem lockfile.
+- Base canônica da comparação: `main = origin/main = 42252b9`.
+- O snapshot apaga testes/CI do 13-B e restaura o caminho SRS não atômico se copiado integralmente.
+- A nova view cria packs por compêndio, mas repete questões/cards sem referência em todos os compêndios do mesmo tema.
+- Decisão: aproveitar somente a interface relevante por meio do 22-A, a partir do `main` atual.
 
 ## Verificação independente do snapshot exportado (2026-09-12)
 

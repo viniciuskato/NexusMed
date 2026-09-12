@@ -4,11 +4,11 @@ Atualizado em: 2026-09-12
 
 ## Sessão ativa
 
-Nenhuma. 13-B publicada e verificada (ver Marcos aceitos); nenhum prompt novo foi despachado ainda.
+Nenhuma em execução. O 22-A está pronto para despacho executivo.
 
 ## Aguardando diretoria
 
-- Reorganização “Estudo Temático / packs”: retorno funcional recebido; causa declarada (rota não mapeada) e desenho de packs por material CONFIRMADOS por inspeção direta do snapshot exportado do Google AI Studio (`synapsemed-firebase-auth.zip`, sem segredos, sem lockfile). Ainda faltam: diff contra a base pós-13-B, typecheck/lint/test/build executados, evidência de navegador e checagem do gate de admin. Ver `sessions/ESTUDO-TEMATICO-PACKS.md`. A restrição de não concorrer com o 13-B caiu (13-B encerrada); publicação/merge continuam bloqueados pelas lacunas de evidência, agora só disputando prioridade com a fila abaixo.
+- Reorganização “Estudo Temático / packs”: ZIP auditado contra `main` pós-13-B. O protótipo é aproveitável seletivamente, mas a cópia integral apagaria a suíte/CI e restauraria o SRS inseguro. Prompt 22-A preparado para transposição controlada.
 
 ## Próximos candidatos
 
@@ -16,14 +16,15 @@ Gate "retorno e decisão do 13-B" / "fundação de testes publicada" / "testes p
 
 | Ordem | ID | Estado | Gate |
 |---:|---|---|---|
-| 1 | 18-A | ELEGÍVEL | gate satisfeito (13-B publicada) |
-| 2 | 19-A | ELEGÍVEL | gate satisfeito (suíte publicada) |
-| 3 | 14-A | ELEGÍVEL | gate satisfeito; ainda exige reconciliar conflitos antes do despacho |
-| 4 | 15-A | ELEGÍVEL | gate satisfeito |
-| 5 | 16-A | ELEGÍVEL | gate satisfeito |
-| 6 | 21-A2 | ELEGÍVEL | auditoria somente leitura; substitui 21-A; pode rodar em paralelo a qualquer uma acima |
-| 7 | 20-A | CONDICIONAL | valor atual da carga YAML ainda não reavaliado |
-| 8 | 17-A | ADIADA | decisão estratégica de offline |
+| 1 | 22-A | PRONTA | transposição seletiva sobre `42252b9` |
+| 2 | 18-A | ELEGÍVEL | gate satisfeito (13-B publicada) |
+| 3 | 19-A | ELEGÍVEL | gate satisfeito (suíte publicada) |
+| 4 | 14-A | ELEGÍVEL | gate satisfeito; ainda exige reconciliar conflitos antes do despacho |
+| 5 | 15-A | ELEGÍVEL | gate satisfeito |
+| 6 | 16-A | ELEGÍVEL | gate satisfeito |
+| 7 | 21-A2 | ELEGÍVEL | auditoria somente leitura; substitui 21-A |
+| 8 | 20-A | CONDICIONAL | valor atual da carga YAML ainda não reavaliado |
+| 9 | 17-A | ADIADA | decisão estratégica de offline |
 
 ## Marcos aceitos
 
@@ -34,4 +35,4 @@ Gate "retorno e decisão do 13-B" / "fundação de testes publicada" / "testes p
 
 ## Próxima ação da diretoria
 
-Escolher, entre os candidatos elegíveis (18-A, 19-A, 14-A, 15-A, 16-A, 21-A2), qual despachar em seguida — ou fechar antes as lacunas de evidência do "Estudo Temático / packs". Nenhum despacho foi feito automaticamente por esta atualização.
+Despachar 22-A em sessão executiva separada; verificar o retorno antes de qualquer publicação.
