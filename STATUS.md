@@ -21,7 +21,7 @@ Atualizado em: 2026-09-12
 | 3 | 14-A | PLANEJADA | testes publicados e conflitos reconciliados |
 | 4 | 15-A | PLANEJADA | testes publicados |
 | 5 | 16-A | PLANEJADA | testes publicados |
-| 6 | 21-A | PLANEJADA | pode ser documental/independente |
+| 6 | 21-A2 | PLANEJADA | auditoria somente leitura; substitui 21-A |
 | 7 | 20-A | CONDICIONAL | valor atual da carga YAML |
 | 8 | 17-A | ADIADA | decisão estratégica de offline |
 
@@ -35,3 +35,4 @@ Atualizado em: 2026-09-12
 
 Receber `RETORNO: 13-B`, verificar com ferramentas próprias e só então decidir a próxima sessão.
 
+Auditoria nova preparada: 21-A2, para inventariar Biblioteca/Questões/Flashcards, medir conformidade e prontidão para packs. Pode rodar separadamente em modo somente leitura, desde que não concorra na documentação/arquivos do 13-B.
