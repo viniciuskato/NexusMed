@@ -10,7 +10,7 @@ Atualizado em: 2026-09-12
 
 ## Aguardando diretoria
 
-- Reorganização “Estudo Temático / packs”: executada no Google AI Studio, com tela vazia relatada; correção orientada, ainda sem retorno Git verificável.
+- Reorganização “Estudo Temático / packs”: retorno funcional recebido; causa declarada como rota não mapeada e correção integrada. Aguarda evidências Git, testes e verificação independente.
 
 ## Próximos candidatos
 
