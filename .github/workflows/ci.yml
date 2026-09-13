@@ -1,0 +1,158 @@
+name: CI
+
+# Gate rápido (fast): roda em todo push e todo PR — typecheck, lint, unit,
+# build. Gate completo (full): também roda em todo push/PR (não só antes de
+# merge, já que hoje não há PR obrigatório — ver AGENTS.md "Convenções de
+# trabalho": commits vão direto pra `main`) — sobe Supabase local de verdade
+# (Docker, serviço já presente nos runners `ubuntu-latest`) e roda pgTAP +
+# Playwright contra ele. Nenhum dos dois jobs toca Supabase remoto ou
+# produção — não há segredos de produção neste workflow.
+#
+# Segurança: `pull_request` (nunca `pull_request_target`) — roda com o código
+# do PR, mas SEM acesso a segredos de repositório (não há nenhum `secrets.*`
+# usado aqui; tudo local/efêmero: Supabase local, chaves demo do próprio CLI).
+# `permissions` no nível do workflow é o mínimo (`contents: read`) — nenhum
+# job escreve no repositório, comenta em PR ou publica nada.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # package.json#engines aceita >=20.19 <25, mas o cliente Supabase
+  # (@supabase/supabase-js/realtime-js) exige `WebSocket` nativo do runtime
+  # — indisponível antes do Node 22 — e falha já na criação do client
+  # (import de src/lib/supabaseClient.ts), não só ao conectar de verdade.
+  # Achado real do Prompt 13-B: nunca tinha sido testado no Node fixado
+  # aqui (20.19) até esta validação em runner real; todas as sessões
+  # anteriores rodaram localmente em Node mais novo. Fixado em 22 (LTS
+  # dentro da faixa permitida) em vez de adicionar polyfill de WebSocket.
+  NODE_VERSION: '22'
+
+jobs:
+  fast:
+    name: fast (typecheck + lint + unit + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Instalar dependências (lockfile)
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Testes unitários (vitest)
+        run: npm run test:unit
+
+      - name: Build de produção
+        run: npm run build
+
+      - name: Gate — sem instrumentação de debug no bundle de produção
+        run: npm run check:no-debug-bundle
+
+      - name: Publicar build de produção (para inspeção manual se necessário)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-production
+          path: dist/
+          retention-days: 5
+
+  full:
+    name: full (pgTAP + Playwright contra Supabase local)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: fast
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Instalar dependências (lockfile)
+        run: npm ci
+
+      - name: Instalar Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Instalar navegadores do Playwright (Chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Subir Supabase local (supabase start)
+        run: supabase start
+
+      - name: Resetar banco local (migrations + seed determinístico)
+        run: supabase db reset
+
+      - name: Aguardar Supabase local pronto (achado real do Prompt 13-B — `supabase db reset` retorna antes dos containers reiniciados responderem em runner real, e `npm run test:db` pula tudo silenciosamente sem isso)
+        run: |
+          for i in $(seq 1 30); do
+            if supabase status -o json 2>/dev/null | grep -q '"DB_URL"'; then
+              echo "Supabase local pronto (tentativa $i)."
+              exit 0
+            fi
+            echo "Aguardando Supabase local responder (tentativa $i/30)..."
+            sleep 2
+          done
+          echo "::error::Supabase local não respondeu DB_URL após 60s de espera."
+          exit 1
+
+      - name: pgTAP (contratos de servidor)
+        run: npm run test:db
+
+      - name: Resetar banco local de novo — pgTAP (pg_prove) grava permanentemente, sem rollback (achado do Prompt 13-B)
+        run: supabase db reset
+
+      - name: Criar .env.test.local para o build do Playwright (Supabase LOCAL, nunca remoto)
+        run: |
+          API_URL=$(supabase status -o json | node -e "process.stdin.once('data', d => console.log(JSON.parse(d).API_URL))")
+          ANON_KEY=$(supabase status -o json | node -e "process.stdin.once('data', d => console.log(JSON.parse(d).ANON_KEY))")
+          echo "VITE_SUPABASE_URL=$API_URL" > .env.test.local
+          echo "VITE_SUPABASE_ANON_KEY=$ANON_KEY" >> .env.test.local
+
+      - name: Testes de navegador (Playwright/Chromium, cenários críticos)
+        run: npm run test:e2e
+
+      - name: Verificação de limpeza — zero fixtures e2e-13a- remanescentes
+        if: always()
+        run: |
+          docker exec supabase_db_synapsemed psql -U postgres -t -A -c \
+            "select count(*) from auth.users where email like 'e2e-13a-%';" | tee /tmp/e2e-leftover-count.txt
+          COUNT=$(cat /tmp/e2e-leftover-count.txt | tr -d '[:space:]')
+          if [ "$COUNT" != "0" ]; then
+            echo "::error::Sobraram $COUNT usuário(s) e2e-13a- após a suíte — limpeza incompleta."
+            exit 1
+          fi
+
+      - name: Publicar relatório/artefatos de falha do Playwright (sanitizados)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore

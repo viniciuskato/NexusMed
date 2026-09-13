@@ -32,7 +32,13 @@ function skip(message) {
   process.exit(1);
 }
 
-const status = run('supabase', ['status']);
+// `-o json` explícito: achado real do Prompt 13-B — em runner de CI real,
+// `supabase/setup-cli@v1` instala a versão mais recente da CLI (`version:
+// latest`), e o formato de saída HUMANO padrão de `supabase status` (sem
+// `-o json`) mudou entre versões — deixou de conter o literal "DB_URL" que
+// esta checagem depende. `-o json` é estável entre versões e é o mesmo
+// formato já usado com sucesso no passo de espera do workflow (ci.yml).
+const status = run('supabase', ['status', '-o', 'json']);
 
 const supabaseCliMissing = status.error != null;
 const localStackDown =

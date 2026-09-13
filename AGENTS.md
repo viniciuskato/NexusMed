@@ -1310,6 +1310,80 @@ protótipo).
   (Área Editorial) ainda sem prova de navegador — recomenda-se cobri-la
   numa sessão futura com conta de teste `role=admin`.
 
+- **Prompt 13-B (2026-09-12), sessão executiva — PUBLICADO**: fecha as
+  lacunas do 13-A e valida a suíte crítica em runner GitHub Actions real
+  pela primeira vez. Cobertura complementar (todos os cenários usam dois
+  `BrowserContext` reais, nunca duas abas do mesmo contexto — ver achado
+  abaixo): reação/nota/progresso de leitura concorrentes (mesma conta,
+  dois dispositivos), revisão de flashcard (SRS) concorrente e idempotente
+  sob retry de rede, e simulado (rascunho local + finalização idempotente
+  sob retry). 7 specs novos em `tests/e2e/specs/concurrencia-13b.spec.ts`,
+  suíte completa (17 testes: 10 do 13-A + 7 novos) reproduzida 2x local
+  sem resíduo antes do push.
+
+  **Achado corrigido (autorizado pela diretoria)**: a tela real de
+  revisão de flashcard (`FlashcardReviewSession.tsx`) nunca usava a RPC
+  atômica/idempotente já existente (`submit_flashcard_review`) — calculava
+  o SRS no cliente e fazia upsert cego (`flashcard_srs_upsert`) sem lock
+  de linha nem auditoria em `flashcard_reviews`; duas abas revisando o
+  mesmo card perdiam atualização silenciosamente. Religada para
+  `reviewFlashcard()`/`submit_flashcard_review`. `FlashcardReviewer.tsx`
+  (único outro consumidor da RPC, nunca importado no app real) removido
+  como código morto confirmado (zero referências).
+
+  **Achados de infra de CI corrigidos** (nenhum tocou RPC/RLS/migration):
+  (1) `pg_prove` (pgTAP) grava permanentemente no banco local sem
+  rollback — o job `full` rodava Playwright em seguida sem resetar,
+  poluindo os testes de navegador com dado residual (ex.: contagem exata
+  de questões do seed quebrava); adicionado `supabase db reset` entre
+  pgTAP e a suíte de navegador. (2) `supabase db reset` retorna sucesso
+  antes dos containers reiniciados responderem de verdade em runner real
+  — adicionado passo de espera (`supabase status -o json`, até 60s) antes
+  do pgTAP. (3) `scripts/run-db-tests.mjs` checava `supabase status` SEM
+  `-o json`; o formato humano padrão mudou entre versões da CLI
+  (`supabase/setup-cli@v1` instala `version: latest`) e deixou de conter
+  o literal "DB_URL" — alinhado ao mesmo `-o json` estável já usado no
+  passo de espera. (4) `NODE_VERSION` do workflow fixado em `20.19` —
+  `@supabase/supabase-js`/`realtime-js` exige `WebSocket` nativo (só a
+  partir do Node 22) já na importação do client, derrubando os testes
+  unitários; fixado em `22` (dentro de `package.json#engines`, sem mudar
+  esse arquivo). Todos os 4 achados só apareceram ao validar em runner
+  real pela primeira vez — nunca reproduzidos localmente antes (Node mais
+  novo, Supabase local sem a mesma corrida de containers).
+
+  **Achado registrado, não corrigido (fora de escopo)**: duas ABAS do
+  MESMO `BrowserContext` competem sem trava na mesma fila local
+  (`syncQueue`, `localStorage`) — cada aba lê/escreve o array da fila sem
+  nenhuma coordenação entre si, podendo uma sobrescrever silenciosamente
+  a operação que a outra acabou de enfileirar. Contornado nos testes
+  usando dois `BrowserContext` (dois dispositivos reais, sessões
+  independentes) em vez de duas abas — prova a garantia que as RPCs
+  (lock de linha, upsert idempotente, merge de conflito) foram desenhadas
+  para dar, sem depender de uma trava entre abas que a fila hoje não tem.
+  Corrigir isso é uma frente própria (ex.: `BroadcastChannel`/Web Locks
+  API para serializar `enqueue`/`flush` entre abas do mesmo contexto).
+
+  **Achados de comportamento documentados** (comportamento intencional,
+  não corrigidos por decisão da diretoria): status de perfil desconhecido
+  cai em "Aguardando Aprovação" por normalização do cliente (nunca libera
+  o app — fail-closed correto, só o comentário do código estava
+  impreciso, já corrigido no 13-A); resposta offline pode levar até ~20s
+  sem feedback imediato (converge sozinha, registrado como dívida de UX
+  mensurável, não corrigido nesta entrega).
+
+  CI real validado do zero: push da branch candidata, 3 iterações de
+  correção guiadas pelo log real do runner (colado manualmente pelo
+  usuário — sem `gh` CLI/token disponível no ambiente local), até `fast`
+  e `full` passarem 100% verdes (typecheck, lint 0 erros/90 avisos,
+  vitest 15/15, build, gate sem debug no bundle, pgTAP 183/183, Playwright
+  17/17, zero fixtures residuais). `main` sem proteção de branch
+  (`protected: false`, convencional deste repositório — sem PR
+  obrigatório, mesma situação já documentada no 12-B) — o gate `full` é
+  informativo/procedimental, não um bloqueio técnico do GitHub. Merge
+  feito com commit explícito (`--no-ff`). Ver `docs/diretoria/
+  registro.md`, entrada "13-B", para o detalhamento completo (runs de CI,
+  hashes, deploy, smoke).
+
 ## Manter este arquivo atualizado
 
 Isto não é um documento estático. **Toda sessão de trabalho neste

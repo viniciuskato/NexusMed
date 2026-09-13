@@ -131,6 +131,82 @@ npm run preview
 
 ---
 
+## 🧪 Suíte de testes críticos (Prompt 13-A)
+
+Três camadas, cada uma provando uma coisa diferente — não são substitutas
+umas das outras:
+
+| Camada | Onde | O que prova | O que NÃO prova |
+|---|---|---|---|
+| **Unitário** (Vitest) | `tests/unit/**` | Lógica pura/estado isolado (classificação de erro de sincronização, seleção/sorteio de simulado) | Nada sobre navegador, rede ou banco real |
+| **pgTAP** | `supabase/tests/database/**` | Contratos de servidor (RPCs, RLS, triggers) direto no Postgres | Comportamento do código do CLIENTE (dedupe de promises, checagem de sessão ativa, React) — ver AGENTS.md, lição do Prompt 07-B |
+| **Playwright** (browser real) | `tests/e2e/specs/**` | Fluxos reais de navegador contra Supabase LOCAL: gates de acesso, isolamento entre contas, resposta+reidratação de questão, fila offline/reconexão/idempotência | Produção/remoto — a suíte se recusa a rodar se a URL resolvida não for localhost (ver `tests/e2e/fixtures/localSupabase.ts`) |
+
+### Rodando localmente (Windows)
+
+Pré-requisitos: Docker Desktop rodando, Supabase CLI instalada, navegadores do
+Playwright instalados uma vez (`npx playwright install chromium`).
+
+```bash
+npm ci
+supabase start          # sobe o Supabase local (Postgres, Auth, Storage)
+supabase db reset       # aplica migrations + seed determinístico do zero
+
+npm run test:unit       # Vitest — rápido, sem Docker
+npm run test:db         # pgTAP — requer Supabase local rodando
+npm run test:e2e        # Playwright — builda em modo `test` (.env.test.local,
+                         # nunca .env.local) e sobe um preview isolado na
+                         # porta 4183 antes de rodar os specs
+```
+
+`npm run verify:fast` roda typecheck+lint+unit+build (sem Docker — rápido,
+todo push). `npm run verify:full` roda isso e mais pgTAP+Playwright (requer
+Supabase local — gate completo antes de qualquer merge).
+
+**Por que build de produção (`--mode test`), não `npm run dev`, para o
+Playwright**: `AuthContext.tsx` tem um atalho de preview do AI Studio que
+auto-loga um usuário de demonstração sempre que `import.meta.env.DEV===true`
+e não há sessão ativa — isso torna `npm run dev` incompatível com testar
+login/gates (a tela de login nunca apareceria numa `BrowserContext` nova).
+`npm run test:e2e` builda com `vite build --mode test` (mesmo código de
+produção, `DEV=false`) lendo `.env.test.local` (git-ignorado, mesmo conteúdo
+de `.env.development.local` — nunca `.env.local`, que aponta para o Supabase
+remoto) e serve com `vite preview` numa porta dedicada (4183, para não
+colidir com um `npm run dev` pessoal que porventura já esteja rodando na
+3000).
+
+Fixtures de teste usam e-mails com prefixo `e2e-13a-` (`@e2e.local`) e são
+sempre removidas em `finally`/`afterEach` — nunca dependem de conta pessoal
+nem de dado remoto. Para conferir manualmente que nada ficou para trás:
+
+```bash
+docker exec supabase_db_synapsemed psql -U postgres -t -A -c \
+  "select count(*) from auth.users where email like 'e2e-13a-%';"
+# esperado: 0
+```
+
+### Gate "sem instrumentação de debug em produção"
+
+```bash
+npm run build                     # build de produção REAL (sem --mode test)
+npm run check:no-debug-bundle     # falha se __syncDebug/__setTestBackoffOverride aparecerem em dist/assets/*.js
+```
+
+### CI (GitHub Actions)
+
+`.github/workflows/ci.yml` — dois jobs, ambos em todo push/PR (`pull_request`,
+nunca `pull_request_target`; sem segredos de repositório usados no workflow):
+
+- **fast**: `npm ci` → typecheck → lint → unit → build → gate de bundle limpo.
+- **full** (depende do fast): sobe Supabase local no runner (`supabase start`
+  + `supabase db reset`), roda pgTAP, builda/serve o app em modo `test` contra
+  esse Supabase local e roda a suíte Playwright completa; falha o job se
+  sobrar qualquer fixture `e2e-13a-`. Artefatos de falha do Playwright (trace,
+  screenshot, vídeo — nunca segredos/e-mails reais, já que as fixtures são
+  sempre `@e2e.local`) publicados via `actions/upload-artifact`.
+
+---
+
 ## 📂 Estrutura Principal do Projeto
 
 - `src/components/auth/`: Telas e modais de login, cadastro, verificação de e-mail e redefinição de senha.

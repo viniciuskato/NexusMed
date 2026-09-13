@@ -4,8 +4,14 @@ node_modules/
 # Production & Build outputs
 build/
 dist/
+dist-e2e/
 coverage/
 .firebase/
+
+# Playwright
+/playwright-report/
+/test-results/
+/tests/e2e/.auth/
 
 # OS and system files
 .DS_Store

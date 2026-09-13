@@ -1098,3 +1098,181 @@ sessão diretoria futura a avaliar a liberação do 13-A (suíte de
 navegador/acessibilidade de teclado), condicionada a cobrir a pendência
 de Área Editorial acima. Esta sessão executiva não libera nem declara
 início do 13-A.
+
+## Retorno recebido — 13-B, 2026-09-12 (sessão executiva)
+
+**Estado inicial**: `C:\Users\vinic\dev\NexusMed\firebase-auth`, `main`
+em `0c7834a` = `origin/main` (parado durante toda a janela — confirmado
+por `git fetch` antes de cada push), branch candidata
+`work/13a-suite-critica` em `4bf8dce` (commit único do 13-A), 1 commit à
+frente de `origin/main`, sem reconciliação necessária.
+
+**Revisão do 13-A**: diff completo (16 arquivos, 1625 inserções) revisado
+antes de qualquer edição — workflow de CI em duas camadas (`fast`/`full`,
+`permissions: contents: read`, `pull_request` nunca `pull_request_target`,
+zero `secrets.*`), fixtures `e2e-13a-*` com trava "só local"
+(`assertLocal`, recusa qualquer URL não-localhost mesmo em leitura),
+sanitização de artefatos do Playwright (`if-no-files-found: ignore`,
+`retention-days`). Nenhum problema encontrado na revisão.
+
+**Achado que mudou o escopo antes de eu escrever qualquer teste**: ao
+investigar como cobrir "revisão SRS concorrente/idempotente" (lacuna 1),
+encontrei que a RPC atômica/idempotente já existente
+(`submit_flashcard_review`, lock de linha + `client_op_id`, já provada
+por pgTAP) é código morto no fluxo real — a tela realmente usada
+(`FlashcardReviewSession.tsx`) chama `updateFlashcardSRS`, que calcula o
+SRS no cliente e faz upsert cego sem lock nem auditoria. Reportado à
+diretoria antes de prosseguir; autorizada a correção mínima (religar
+`FlashcardReviewSession` na RPC existente, sem criar schema/RPC novo) e
+um teste que reproduzisse a perda antes da correção.
+
+**Cobertura complementar** — `tests/e2e/specs/concurrencia-13b.spec.ts`
+(7 specs novos), todos com **dois `BrowserContext` reais** (nunca duas
+abas do mesmo contexto — ver achado de infra abaixo):
+- reação de questão concorrente (2 dispositivos, reações opostas quase
+  simultâneas) → exatamente 1 linha em `question_reactions`;
+- nota de compêndio concorrente (2 dispositivos, textos diferentes) →
+  exatamente 1 linha em `notes`, nenhuma das duas edições perdida
+  silenciosamente (aceita uma por completo ou funde via
+  `upsert_note`/`mergeConflictingNoteText`);
+- progresso de leitura concorrente (2 dispositivos marcam a mesma seção
+  lida) → converge para 100%, sem duplicar a seção no array;
+- revisão de flashcard concorrente (2 dispositivos revisam o mesmo card
+  quase ao mesmo tempo) → exatamente 2 linhas em `flashcard_reviews`,
+  `repetition_count` reflete as duas aplicadas em série pelo lock;
+- retry de rede da mesma revisão de flashcard → exatamente 1 linha
+  (nunca duplica sob reenvio automático da fila);
+- rascunho de simulado → resposta gravada localmente antes de finalizar
+  (sobrevive a queda antes do envio);
+- finalização de simulado com falha de rede → retry automático converge
+  para exatamente 1 sessão/pergunta/resposta gravada, idempotente também
+  sob reload.
+
+**Achado de infra dos próprios testes**: duas abas do MESMO
+`BrowserContext` competem sem nenhuma trava na fila local
+(`syncQueue`/`localStorage`) — reproduzido ao tentar a primeira versão
+dos testes com duas abas (progresso e SRS convergiam para 0 em ~50% das
+tentativas). Contornado usando dois `BrowserContext` (dois dispositivos
+reais), que é exatamente o cenário que as RPCs foram desenhadas para
+proteger — registrado como achado, não corrigido (mudar a arquitetura da
+fila para ser segura entre abas do mesmo contexto é uma frente própria).
+
+**Execuções locais**: suíte completa (17 testes = 10 do 13-A + 7 novos)
+reproduzida 2x a partir de `supabase db reset`, ambas 17/17 em ~2min cada,
+zero fixtures residuais confirmadas por query direta após cada execução
+(`auth.users` com prefixos de teste = 0). pgTAP 183/183 antes de cada
+rodada. `npm run verify`/typecheck/lint (0 erros, 90/93 avisos — mesmo
+teto do 13-A, nenhuma regra desativada) e `build` + gate
+`check:no-debug-bundle` limpos. `git diff --check` limpo.
+
+**CI real — 5 pushes, 4 achados reais corrigidos, só na branch
+candidata**: sem `gh` CLI nem token disponíveis no ambiente local (só
+Docker/Supabase CLI/Node no PATH); logs de job só acessíveis via API com
+permissão de admin (`403 Must have admin rights`) — diagnóstico feito com
+o usuário colando manualmente a saída de cada passo que falhou.
+1. Push 1 (`89caa8c`) — `fast` falhou no Lint: import não usado
+   (`psqlLocal`) presente no commit mas já removido no working tree local
+   (índice do git desatualizado no momento do commit). Corrigido com novo
+   commit.
+2. Push 2 (`77b444e`) — `fast` avançou (lint OK) e falhou nos testes
+   unitários (vitest): `@supabase/supabase-js`/`realtime-js` exige
+   `WebSocket` nativo do runtime só a partir do Node 22, e o workflow
+   fixava `NODE_VERSION: '20.19'` — falhava já na importação do client,
+   sem precisar conectar. Corrigido fixando Node em `22` (dentro de
+   `package.json#engines`, sem alterar esse arquivo).
+3. Push 3 (`50d6ed1`) — `fast` 100% verde pela primeira vez; `full`
+   avançou até pgTAP e falhou ali: `supabase db reset` retorna sucesso
+   antes dos containers reiniciados responderem de verdade em runner
+   real, e `scripts/run-db-tests.mjs` checava a stack imediatamente.
+   Corrigido com um passo de espera (`supabase status -o json`, até 60s)
+   entre o reset e o pgTAP.
+4. Push 4 (`815e1b9`) — o passo de espera confirmou Supabase pronto, mas
+   pgTAP continuou pulando com o mesmo erro: a checagem em
+   `run-db-tests.mjs` chamava `supabase status` SEM `-o json`, e o
+   formato de saída humano padrão mudou entre versões da CLI
+   (`supabase/setup-cli@v1` usa `version: latest`) — deixou de conter o
+   literal `DB_URL`. Corrigido alinhando ao mesmo `-o json` já usado com
+   sucesso no passo de espera.
+5. Push 5 (`0ae5e5a`) — **`fast` e `full` 100% verdes**: typecheck, lint
+   (0 erros/90 avisos), vitest 15/15, build, gate sem debug no bundle,
+   pgTAP 183/183, Playwright 17/17 (real, Chromium, runner Ubuntu),
+   verificação de limpeza (zero fixtures `e2e-13a-*`) — tudo em
+   `https://github.com/viniciuskato/SynapseMed-firebase-auth/actions/runs/34703405681`.
+
+Nenhum dos 4 achados de CI tocou RPC, RLS ou migration — todos em
+`.github/workflows/ci.yml` ou `scripts/run-db-tests.mjs`. Nenhum
+enfraqueceu um gate (nenhum teste removido, nenhum teto de aviso
+alterado, nenhuma regra de lint desativada) — todos tornaram a checagem
+mais correta/estável entre versões, não mais permissiva.
+
+**Achados de comportamento documentados** (decisão já tomada pela
+diretoria antes desta entrega, aplicada aqui): status de perfil
+desconhecido é normalizado para "pending" pelo cliente antes de chegar
+em `App.tsx` — cai em "Aguardando Aprovação", nunca libera o app
+(fail-closed correto; só o comentário do código estava impreciso,
+corrigido no 13-A). Resposta offline pode levar até ~20s sem feedback
+imediato até convergir sozinha — registrado como dívida de UX
+mensurável, não corrigido (fora do escopo autorizado).
+
+**Verificação de `main` sem proteção**: `GET
+/repos/.../branches/main` → `"protected": false` (API pública, sem
+autenticação). Confirma o que já estava documentado no `ci.yml`/12-B:
+este repositório não usa PR obrigatório nem branch protection — commits
+vão direto para `main` por convenção. O gate `full` é, portanto,
+procedimental (a diretoria/sessão executiva respeita CI vermelho como
+bloqueio), não um bloqueio técnico imposto pelo GitHub. Registrado, não
+tratado como impeditivo — mesma situação já aceita no 12-B.
+
+**Integração/publicação**: com CI real 100% verde no commit final da
+candidata (`5cef8a4`, confirmado de novo após aguardar o rate limit da
+API pública do GitHub resetar — 0 requisições restantes por polling
+excessivo, achado da própria sessão sobre o próprio processo, sem
+impacto no código), `origin/main` reconfirmado parado em `0c7834a`
+antes de cada push (5 vezes ao longo da janela de correção de CI + 1
+vez antes do merge). Merge com commit explícito (`--no-ff`,
+convenção do repositório) — `af1dbd4`. `npm run verify` repetido em
+`main` pós-merge: typecheck limpo, lint 0 erros/90 avisos, pgTAP
+183/183, build limpo — exit 0. Push de `main`: `0c7834a..af1dbd4`.
+
+**Deploy**: automático (Vercel, push-to-deploy). Confirmado por
+comparação de hashes de asset — bundle local pós-merge
+(`assets/index-Bhkq9Os8.js`, `assets/index-Ci4HehPr.css`) idêntico ao
+servido em produção (`curl` direto no HTML de
+`https://synapse-med-firebase-auth.vercel.app/`) — sem precisar
+aguardar propagação, já estava no ar no momento da checagem.
+
+**Smoke de produção** (não destrutivo, navegador real via Playwright/
+Chromium contra a URL de produção, nenhuma credencial usada): título
+"NexusMed" correto, tela de login real renderiza
+(`#auth-email-input` visível — não é o atalho de demo do dev mode),
+9 ids na página, todos únicos, 0 erros de console. Nenhum dado criado,
+alterado ou submetido; script temporário de smoke removido do
+repositório após a checagem (nunca commitado).
+
+**Dados de teste e limpeza**: nenhuma conta ou dado real de produção
+tocado. Todas as fixtures E2E (`e2e-13a-*`, `two-tabs-*`, `srs-*`,
+`simulado-*`) criadas e removidas exclusivamente contra o Supabase
+LOCAL (trava `assertLocal`) — confirmado 0 residual por query direta
+após as duas execuções completas locais e após cada run de CI real
+(passo "Verificação de limpeza" do workflow, sempre verde). `git
+status` confirmado limpo em `main` antes e depois de cada operação
+relevante.
+
+**Pendências e riscos**: (1) duas abas do MESMO `BrowserContext`
+competem sem trava na fila local (`syncQueue`) — achado registrado
+acima, correção é uma frente própria (Web Locks API/`BroadcastChannel`
+entre abas). (2) pendência já conhecida do 12-B continua sem mudança:
+acessibilidade de teclado do `AdminCMSView` (Área Editorial) ainda sem
+prova de navegador ao vivo. (3) chunk único de produção >500kB
+(pré-existente, sem regressão). (4) API pública do GitHub usada para
+diagnosticar CI tem limite de 60 req/hora sem autenticação — qualquer
+sessão futura que precise investigar CI de novo deve espaçar as
+chamadas ou obter autenticação (`gh auth login`/token), não instalado
+nesta máquina.
+
+**Liberação das próximas frentes**: sim. A suíte crítica está publicada,
+validada em CI real e em produção. Duas frentes ficam abertas para uma
+sessão futura decidir prioridade: (a) corrigir a corrida entre abas do
+mesmo `BrowserContext` na fila de sincronização (achado desta sessão);
+(b) cobertura de acessibilidade de teclado do `AdminCMSView` (pendência
+já herdada do 12-B/13-A).

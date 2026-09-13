@@ -9,11 +9,6 @@ import {
   ChevronDown,
   MessageSquarePlus,
   Settings,
-  Compass,
-  FolderArchive,
-  BookOpen,
-  HelpCircle,
-  Layers,
 } from 'lucide-react';
 import { UserPlan, UserStats, ThemeMode } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -47,8 +42,6 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenFeedback,
 }) => {
   const { user, profile, logout } = useAuth();
-  const [isResourcesDropdownOpen, setIsResourcesDropdownOpen] = useState(false);
-  const resourcesDropdownRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   useEffect(() => {
     const header = headerRef.current;
@@ -63,33 +56,15 @@ export const Header: React.FC<HeaderProps> = ({
 
   // Fechar o menu de usuário com a tecla Escape
   useEffect(() => {
+    if (!userDropdownOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setUserDropdownOpen(false);
-        setIsResourcesDropdownOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  // Fechar dropdown de recursos ao clicar fora
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        resourcesDropdownRef.current &&
-        !resourcesDropdownRef.current.contains(e.target as Node)
-      ) {
-        setIsResourcesDropdownOpen(false);
-      }
-    };
-    if (isResourcesDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isResourcesDropdownOpen]);
+  }, [userDropdownOpen]);
 
   const displayName = profile?.displayName || user?.user_metadata?.display_name || 'Estudante';
   const photoURL = profile?.photoURL || user?.user_metadata?.avatar_url || null;
@@ -103,20 +78,11 @@ export const Header: React.FC<HeaderProps> = ({
     .join('')
     .toUpperCase();
 
-  const isResourceActive =
-    activeView === 'compendiums' ||
-    activeView === 'compendium-reader' ||
-    activeView === 'questions' ||
-    activeView === 'simulados' ||
-    activeView === 'simulado-session' ||
-    activeView === 'flashcards' ||
-    activeView === 'flashcard-session';
-
   return (
     <header ref={headerRef} className="sticky top-0 z-30 bg-white/80 dark:bg-[#0B1220]/80 backdrop-blur-xl border-b border-slate-200/70 dark:border-white/10 px-3 sm:px-6 lg:px-8 py-2.5 transition-colors max-w-full">
       <div className="max-w-[1720px] mx-auto flex items-center justify-between gap-1.5 sm:gap-3">
-        {/* Left: Brand Identity + Desktop Navigation */}
-        <div className="flex items-center gap-2 sm:gap-4 shrink-0 min-w-0">
+        {/* Left: Brand Identity */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
           <button
             onClick={() => onSelectView('dashboard')}
             className="min-h-11 flex items-center gap-1.5 sm:gap-2.5 text-left group focus:outline-hidden cursor-pointer min-w-0"
@@ -128,126 +94,6 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </div>
           </button>
-
-          {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1 pl-2 border-l border-slate-200/80 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={() => onSelectView('dashboard')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeView === 'dashboard'
-                  ? 'bg-teal-50 dark:bg-teal-950/70 text-teal-800 dark:text-teal-300 font-bold'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#142038]'
-              }`}
-            >
-              Início
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onSelectView('thematic-study')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeView === 'thematic-study'
-                  ? 'bg-teal-50 dark:bg-teal-950/70 text-teal-800 dark:text-teal-300 font-bold'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#142038]'
-              }`}
-            >
-              <Compass className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-              <span>Estudo Temático</span>
-            </button>
-
-            {/* Dropdown Recursos */}
-            <div className="relative" ref={resourcesDropdownRef}>
-              <button
-                type="button"
-                onClick={() => setIsResourcesDropdownOpen((prev) => !prev)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  isResourceActive || isResourcesDropdownOpen
-                    ? 'bg-teal-50 dark:bg-teal-950/70 text-teal-800 dark:text-teal-300 font-bold'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#142038]'
-                }`}
-              >
-                <FolderArchive className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                <span>Recursos</span>
-                <ChevronDown
-                  className={`w-3 h-3 transition-transform ${
-                    isResourcesDropdownOpen ? 'rotate-180 text-teal-600 dark:text-teal-400' : 'text-slate-400'
-                  }`}
-                />
-              </button>
-
-              {isResourcesDropdownOpen && (
-                <div className="absolute left-0 mt-2 w-64 p-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800 mb-1">
-                    Acesso Específico
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsResourcesDropdownOpen(false);
-                      onSelectView('compendiums');
-                    }}
-                    className={`w-full p-2 rounded-xl text-left flex items-center gap-2.5 transition-colors cursor-pointer text-xs ${
-                      activeView === 'compendiums' || activeView === 'compendium-reader'
-                        ? 'bg-teal-50 dark:bg-teal-950 text-teal-900 dark:text-teal-200 font-bold'
-                        : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium'
-                    }`}
-                  >
-                    <BookOpen className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
-                    <div>
-                      <div className="font-bold">Biblioteca</div>
-                      <div className="text-[10px] text-slate-400 font-normal">Compêndios e leitura</div>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsResourcesDropdownOpen(false);
-                      onSelectView('questions');
-                    }}
-                    className={`w-full p-2 rounded-xl text-left flex items-center gap-2.5 transition-colors cursor-pointer text-xs ${
-                      activeView === 'questions' || activeView === 'simulados' || activeView === 'simulado-session'
-                        ? 'bg-teal-50 dark:bg-teal-950 text-teal-900 dark:text-teal-200 font-bold'
-                        : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium'
-                    }`}
-                  >
-                    <HelpCircle className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
-                    <div>
-                      <div className="font-bold">Questões</div>
-                      <div className="text-[10px] text-slate-400 font-normal">Packs por material</div>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsResourcesDropdownOpen(false);
-                      onSelectView('flashcards');
-                    }}
-                    className={`w-full p-2 rounded-xl text-left flex items-center justify-between gap-2.5 transition-colors cursor-pointer text-xs ${
-                      activeView === 'flashcards' || activeView === 'flashcard-session'
-                        ? 'bg-teal-50 dark:bg-teal-950 text-teal-900 dark:text-teal-200 font-bold'
-                        : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Layers className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
-                      <div>
-                        <div className="font-bold">Cards</div>
-                        <div className="text-[10px] text-slate-400 font-normal">Packs e revisão SRS</div>
-                      </div>
-                    </div>
-                    {dueCardsCount > 0 && (
-                      <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-amber-500 text-slate-950">
-                        {dueCardsCount}
-                      </span>
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
-          </nav>
         </div>
 
 
