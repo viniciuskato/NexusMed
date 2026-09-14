@@ -579,6 +579,20 @@ protótipo).
   postgres" quebra `ON DELETE CASCADE` legítimo quando o material/questão
   pai é apagado. Pendente: mesclar em `main`, aplicar a migration no
   Supabase remoto, e então liberar 21-A2/20-A conforme a fila da diretoria.
+  **Pontos mínimos de extensão futura (não implementados agora, só
+  preservados):** taxonomia de conceitos (`concepts`/`question_concepts`) e
+  pauta editorial ficam fora de escopo do 23-B, mas nada aqui os bloqueia —
+  `content_revisions.id` é uuid estável e `content_revisions.material_id`/
+  `question_id` já apontam para o alvo publicável certo (material inteiro ou
+  questão, nunca `material_section` isolada, decisão de 23-A/23-B), então uma
+  futura `question_concepts` pode FK direto em `questions.id` (já existe) e
+  um futuro item de pauta pode referenciar `content_revisions.id` para
+  "qual revisão aprovada cobre este item da pauta" sem migração destrutiva.
+  `claims.content_locator` é texto livre estável (não FK, não enum fechado)
+  de propósito — uma futura ligação claim↔conceito também não exige mudar
+  esse campo, só adicionar uma tabela nova. Nenhum nome de coluna/tabela
+  deste prompt usa "concept"/"pauta"/"tema editorial" com outro sentido (o
+  que colidiria depois).
 - Migração Firebase → Supabase: **concluída**, Firebase removido do
   código.
 - Conteúdo: 33 compêndios + 393 questões carregados e publicados no
