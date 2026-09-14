@@ -120,15 +120,24 @@ returning id as v_theme_id \gset
 insert into public.materials (discipline_id, theme_id, title) values (:'v_discipline_id', :'v_theme_id', 'Material Draft')
 returning id as v_material_draft_id \gset
 
-insert into public.materials (discipline_id, theme_id, title, status) values (:'v_discipline_id', :'v_theme_id', 'Material Published', 'published')
+-- Desde 23-B (content_provenance_attestation), materials.status não aceita
+-- mais INSERT direto com 'published' (guard_material_publish, trigger da
+-- migration 20260914120000) — insere em draft e usa o helper de fixture
+-- tests.force_publish_material (definido em
+-- content_provenance_attestation.test.sql, que roda antes deste arquivo em
+-- ordem alfabética), que aprova uma revisão e publica sem exercitar o fluxo
+-- de proveniência em si.
+insert into public.materials (discipline_id, theme_id, title) values (:'v_discipline_id', :'v_theme_id', 'Material Published')
 returning id as v_material_pub_id \gset
+select tests.force_publish_material(:'v_material_pub_id');
 
 -- Segundo material published, usado só para ter um par (material_id,
 -- depends_on_material_id) ainda não inserido em material_dependencies —
 -- necessário para testar a negação de RLS na escrita sem esbarrar na
 -- constraint unique dos pares já usados nas fixtures abaixo.
-insert into public.materials (discipline_id, theme_id, title, status) values (:'v_discipline_id', :'v_theme_id', 'Material Published 2', 'published')
+insert into public.materials (discipline_id, theme_id, title) values (:'v_discipline_id', :'v_theme_id', 'Material Published 2')
 returning id as v_material_pub2_id \gset
+select tests.force_publish_material(:'v_material_pub2_id');
 
 -- material_dependencies segue o mesmo padrão de RLS de material_references:
 -- leitura liberada quando o material "de origem" (material_id) está
@@ -155,6 +164,7 @@ update public.question_option_keys set explanation = 'Explicação incorreta A' 
 -- preparação da fixture precisa autenticar como v_admin de fato (mesma RPC
 -- real usada em produção), não pode chamar a função sem sessão autenticada.
 select tests.authenticate_as(:'v_admin');
+select tests.approve_question_revision(:'v_question_a_id');
 select public.publish_question(:'v_question_a_id');
 select tests.clear_auth();
 
@@ -175,6 +185,7 @@ update public.question_option_keys set is_correct = true, explanation = 'Explica
 update public.question_option_keys set explanation = 'Explicação C incorreta' where option_id = :'v_qc_opt_b';
 
 select tests.authenticate_as(:'v_admin');
+select tests.approve_question_revision(:'v_question_c_id');
 select public.publish_question(:'v_question_c_id');
 update public.questions set status = 'archived' where id = :'v_question_c_id';
 select tests.clear_auth();
@@ -470,6 +481,7 @@ select throws_ok(
 insert into public.question_answer_keys (question_id, general_commentary, high_yield_summary)
 values (:'v_question_d_id', 'Comentário D', 'Resumo D');
 
+select tests.approve_question_revision(:'v_question_d_id');
 select lives_ok(
   format($$ select public.publish_question(%L) $$, :'v_question_d_id'),
   'publish_question aceita questão válida (2 opções, 1 correta, answer_key, explicações)'
@@ -636,6 +648,10 @@ select lives_ok(
   'edição de alternativa é permitida depois que a questão volta a draft'
 );
 
+-- Conteúdo mudou desde a aprovação usada na primeira publicação (fixture
+-- inicial) — precisa de uma revisão/aprovação nova batendo com o hash atual,
+-- mesma regra que qualquer edição pós-aprovação (23-B).
+select tests.approve_question_revision(:'v_question_a_id');
 select lives_ok(
   format($$ select public.publish_question(%L) $$, :'v_question_a_id'),
   'republicação válida via publish_question após nova validação'

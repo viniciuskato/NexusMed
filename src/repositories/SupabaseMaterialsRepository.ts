@@ -360,11 +360,21 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
     }
 
     if (compendium.references.length > 0) {
-      const refRows = compendium.references.map((text, i) => ({
-        material_id: compendium.id,
-        citation_text: text,
-        sort_order: i,
-      }));
+      // Preserva o vínculo estruturado (source_id/url) quando o item de
+      // referência já tinha um — antes, saveCompendium sempre reinseria só
+      // citation_text (fallback genérico), apagando source_id/url mesmo
+      // quando o admin nunca tocou naquela referência (23-B, achado do
+      // 23-A: "perda de material_references.source_id no salvamento").
+      const refRows = compendium.references.map((text, i) => {
+        const linked = compendium.referenceSources?.[i];
+        return {
+          material_id: compendium.id,
+          citation_text: text,
+          sort_order: i,
+          source_id: linked?.linked ? linked.sourceId ?? null : null,
+          url: linked?.linked ? linked.url ?? null : null,
+        };
+      });
       const { error } = await supabase.from('material_references').insert(refRows);
       if (error) throw error;
     }
@@ -377,10 +387,11 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
   }
 
   async publishCompendium(id: string): Promise<void> {
-    // Não há RPC dedicada nem trigger de validação para materials (diferente
-    // de questions/publish_question) — a política materials_admin_write
-    // ("for all") permite este UPDATE direto para admin autenticado.
-    const { error } = await supabase.from('materials').update({ status: 'published' }).eq('id', id);
+    // Desde 23-B: publish_material() é a única via de transição para
+    // 'published' (UPDATE direto agora é bloqueado por trigger). Exige uma
+    // revisão aprovada (content_revisions/content_reviews) cujo hash bata
+    // com o conteúdo atual — lança erro descritivo quando não há.
+    const { error } = await supabase.rpc('publish_material', { p_material_id: id });
     if (error) throw error;
   }
 

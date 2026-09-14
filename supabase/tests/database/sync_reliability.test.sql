@@ -43,6 +43,7 @@ update public.question_option_keys set is_correct = true, explanation = 'Explica
 update public.question_option_keys set explanation = 'Explicação errada' where option_id = :'v_opt_wrong';
 
 select tests.authenticate_as(:'v_admin');
+select tests.approve_question_revision(:'v_question_id');
 select public.publish_question(:'v_question_id');
 select tests.clear_auth();
 

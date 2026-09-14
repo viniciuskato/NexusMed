@@ -1370,3 +1370,65 @@ trabalho concorrente.
 13-A (não bloqueiam esta publicação): corrida entre abas do mesmo
 `BrowserContext` na fila de sincronização; cobertura de acessibilidade
 de teclado do `AdminCMSView`.
+
+## 23-C — Revisão, integração e publicação da proveniência/atestação editorial (2026-09-14, sessão executiva)
+
+**Base**: `main = origin/main = c942139` do início ao fim (reconferido por
+fetch antes do merge — sem drift). Candidata `work/23b-proveniencia-atestacao`
+em `c8dd48d` (`724fb5d` fundação, `cd87336` pgTAP re-executável, `c8dd48d`
+documentação de extensão futura), árvore limpa, única worktree, sem
+publicação prévia.
+
+**Auditoria (sem reimplementar o 23-B)**: leitura integral do diff
+`origin/main...HEAD` (14 arquivos, +2452/-15) e da migration
+`20260914120000_content_provenance_attestation.sql` linha a linha.
+Confirmado: toda função `SECURITY DEFINER` roda com `set search_path = ''`
+(sem sequestro de schema); identidade sempre `auth.uid()` computado dentro
+da função, nunca aceito como parâmetro; `create_content_revision`/
+`attest_content_revision` são a única via de escrita em
+`content_revisions`/`content_reviews` (sem GRANT de INSERT/UPDATE/DELETE
+para `anon`/`authenticated`); hash sha256 sempre recomputado server-side
+(`app.build_material_snapshot`/`app.build_question_snapshot`); publicação
+direta bloqueada por trigger (`guard_material_publish`, mesmo padrão do
+`guard_question_publish` preexistente) — única exceção é `current_user =
+'postgres'`, que PostgREST/supabase-js nunca assume; legado sem revisão
+fica `legacy_unmapped` (sem aprovação retroativa fabricada); validações
+antigas de `publish_question` (contagem de alternativas, exatamente 1
+correta, explicações preenchidas, `question_answer_keys` completo)
+preservadas, com o gate de revisão aprovada adicionado por último, não no
+lugar delas. `guard_claim_writes`/`guard_claim_sources_immutable_after_review`
+bloqueiam INSERT/UPDATE depois de atestado, mas liberam DELETE (cascade
+legítimo de exclusão de material/questão) — decisão documentada na própria
+migration após o achado de 23-B (trigger incondicional quebrava `ON DELETE
+CASCADE`). `SupabaseMaterialsRepository.saveCompendium` (correção de
+passagem, fora do escopo de proveniência) preserva `source_id`/`url` de
+referência já vinculada em vez de sempre reinserir só `citation_text`.
+
+**Compatibilidade remota**: `supabase migration list` mostrou as 18
+migrations locais anteriores já aplicadas no remoto (`local == remote`) e
+`20260914120000` como a única pendente — sem drift, sem migration
+desconhecida. Pré-requisitos (`app.is_admin_active`, extensão `pgcrypto`/
+`extensions.digest`) já existentes desde migrations anteriores.
+
+**Reuso de provas**: HEAD/base inalterados durante esta auditoria —
+reutilizadas as duas execuções completas de `verify:full` já reportadas
+pelo 23-B (pgTAP 228/228, Playwright 24/24, typecheck/lint/build sem
+erros), sem rerodar a suíte inteira. Executado nesta sessão, uma vez cada:
+`git diff --check` (limpo), `npm run build` (sem erros, sem artefato
+novo), `npm run check:no-debug-bundle` (0 ocorrências).
+
+**Integração/publicação**: atualizado `AGENTS.md` (status de "implementado
+localmente, não publicado" para publicado) e este registro; commit único;
+`git merge --no-ff` de `work/23b-proveniencia-atestacao` em `main` (sem
+force); `git push origin main`; migration aplicada no Supabase remoto via
+`supabase db push` (fluxo versionado do projeto); deploy automático
+acompanhado.
+
+**Restrições respeitadas**: sem force push, reset destrutivo, aprovação em
+massa, fonte/localizador inventado ou alteração de conteúdo clínico
+existente; nenhuma aprovação retroativa fabricada para o legado; revisor
+distinto do autor não exigido (decisão já tomada em 23-A/23-B); conceitos/
+aprendizagem longitudinal/pauta editorial não implementados.
+
+**Smoke de produção e limpeza**: ver seção seguinte com o resultado
+detalhado (conta administrativa descartável, criada e removida ao final).
