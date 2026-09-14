@@ -8,9 +8,11 @@ import {
   BookOpen,
   Brain,
   Trash2,
+  ArrowLeft,
 } from 'lucide-react';
 import { Flashcard, Discipline, Theme, Compendium } from '../../types';
 import { isCardDueToday } from '../../services/srsAlgorithm';
+import { SCOPE_CUSTOM, SCOPE_UNLINKED } from '../../services/thematicPacks';
 import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
@@ -25,6 +27,15 @@ interface FlashcardsViewProps {
   onOpenCompendium: (compendiumId: string) => void;
   onFlashcardUpdated: () => void;
   filterThemeId?: string;
+  /**
+   * Escopo de material (Prompt 22-A): id de compêndio (cards editoriais que o
+   * referenciam explicitamente), `SCOPE_UNLINKED` (cards editoriais sem material
+   * declarado) ou `SCOPE_CUSTOM` (os cards criados pelo próprio usuário). Vem da
+   * navegação do Estudo Temático e não é persistido.
+   */
+  filterCompendiumId?: string;
+  /** Presente quando se chegou aqui pelo Estudo Temático. */
+  onReturnToThematicStudy?: () => void;
 }
 
 export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
@@ -37,6 +48,8 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
   onOpenCompendium,
   onFlashcardUpdated,
   filterThemeId,
+  filterCompendiumId,
+  onReturnToThematicStudy,
 }) => {
   // Persistido para sobreviver à troca de seção do app (App.tsx desmonta
   // FlashcardsView ao navegar pra outra view). filterThemeId é contexto
@@ -56,12 +69,26 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterThemeId]);
 
+  // Recorte de navegação (pack do Estudo Temático). É a base de TUDO nesta
+  // visita — contagens, botão de revisão e listagem — para que o que a tela
+  // afirma ("X cards pendentes") seja verdade dentro do escopo mostrado.
+  const scopedCards = useMemo(() => {
+    if (!filterCompendiumId) return flashcards;
+    return flashcards.filter((fc) => {
+      if (filterCompendiumId === SCOPE_CUSTOM) return Boolean(fc.isCustom);
+      if (fc.isCustom) return false;
+      const ref = (fc.compendiumRefId ?? '').trim();
+      if (filterCompendiumId === SCOPE_UNLINKED) return ref === '';
+      return ref === filterCompendiumId;
+    });
+  }, [flashcards, filterCompendiumId]);
+
   const dueCards = useMemo(() => {
-    return flashcards.filter((fc) => isCardDueToday(fc));
-  }, [flashcards]);
+    return scopedCards.filter((fc) => isCardDueToday(fc));
+  }, [scopedCards]);
 
   const filteredCards = useMemo(() => {
-    return flashcards.filter((fc) => {
+    return scopedCards.filter((fc) => {
       if (selectedDiscipline !== 'all' && fc.disciplineId !== selectedDiscipline) {
         return false;
       }
@@ -86,7 +113,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
       }
       return true;
     });
-  }, [flashcards, selectedDiscipline, selectedTheme, selectedStatus, searchQuery]);
+  }, [scopedCards, selectedDiscipline, selectedTheme, selectedStatus, searchQuery]);
 
   const toggleFlip = (id: string) => {
     if (flippedCardIds.includes(id)) {
@@ -104,7 +131,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
   // Group stats by discipline
   const disciplineStats = useMemo(() => {
     return disciplines.map((disc) => {
-      const discCards = flashcards.filter((c) => c.disciplineId === disc.id);
+      const discCards = scopedCards.filter((c) => c.disciplineId === disc.id);
       const discDue = discCards.filter((c) => isCardDueToday(c));
       return {
         discipline: disc,
@@ -112,10 +139,34 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
         due: discDue.length,
       };
     });
-  }, [disciplines, flashcards]);
+  }, [disciplines, scopedCards]);
 
   return (
     <div className="space-y-6">
+      {onReturnToThematicStudy && (
+        <div
+          id="flashcards-return-to-pack"
+          className="p-3 sm:px-4 sm:py-2.5 rounded-2xl bg-slate-900/5 dark:bg-teal-950/40 border border-slate-300 dark:border-teal-800/50 elev-xs flex items-center justify-between gap-3"
+        >
+          <p className="text-xs text-slate-700 dark:text-slate-200 min-w-0">
+            <span className="font-bold">Escopo do Estudo Temático:</span>{' '}
+            {filterCompendiumId === SCOPE_CUSTOM
+              ? 'seus cards personalizados'
+              : filterCompendiumId === SCOPE_UNLINKED
+              ? 'cards do tema sem material associado'
+              : 'cards que referenciam o material do pack'}
+            .
+          </p>
+          <button
+            type="button"
+            onClick={onReturnToThematicStudy}
+            className="px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-teal-600 hover:bg-slate-800 dark:hover:bg-teal-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Voltar ao Estudo Temático</span>
+          </button>
+        </div>
+      )}
       {/* View Header */}
       <div className="bg-gradient-to-r from-teal-900 via-slate-900 to-emerald-950 rounded-3xl p-6 sm:p-8 text-white elev-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="max-w-2xl space-y-2">

@@ -11,6 +11,7 @@ import { bookmarksRepository } from '../../repositories/BookmarksRepository';
 import { answersRepository } from '../../repositories/AnswersRepository';
 import { questionReactionsRepository } from '../../repositories/QuestionReactionsRepository';
 import { QuestionCard } from './QuestionCard';
+import { SCOPE_UNLINKED } from '../../services/thematicPacks';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
 
@@ -22,6 +23,16 @@ interface QuestionsViewProps {
   onOpenCompendium: (compendiumId?: string, sectionId?: string, originQuestionId?: string) => void;
   onOpenCreateSimulado: () => void;
   filterThemeId?: string;
+  /**
+   * Escopo de material (Prompt 22-A): id de um compêndio — mostra só as questões
+   * que o referenciam explicitamente (`compendiumRefId`) — ou `SCOPE_UNLINKED`,
+   * que mostra só as questões SEM material declarado. Diferente dos filtros da
+   * barra, este recorte vem da navegação (pack do Estudo Temático) e não é
+   * persistido: sair pelo menu principal o descarta.
+   */
+  filterCompendiumId?: string;
+  /** Presente quando se chegou aqui por um pack — mostra o retorno explícito. */
+  onReturnToThematicStudy?: () => void;
   focusQuestionId?: string;
   /**
    * Status inicial dos pills de filtro (ex.: 'incorrect' ao chegar vindo de
@@ -42,6 +53,8 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
   onOpenCompendium,
   onOpenCreateSimulado,
   filterThemeId,
+  filterCompendiumId,
+  onReturnToThematicStudy,
   focusQuestionId,
   initialStatusFilter,
   returnToCompendiumContext,
@@ -105,6 +118,18 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
   // If focusQuestionId exists, locate it
   const filteredQuestions = useMemo(() => {
     return questions.filter((q) => {
+      // O escopo de material é o recorte mais forte: ele define QUAIS questões
+      // existem nesta visita, antes de qualquer filtro escolhido pelo usuário
+      // (e antes até do foco em questão única, que não pode furar o escopo).
+      if (filterCompendiumId) {
+        const ref = (q.compendiumRefId ?? '').trim();
+        if (filterCompendiumId === SCOPE_UNLINKED) {
+          if (ref !== '') return false;
+        } else if (ref !== filterCompendiumId) {
+          return false;
+        }
+      }
+
       if (focusQuestionId && q.id === focusQuestionId) return true;
 
       if (selectedDiscipline !== 'all' && q.disciplineId !== selectedDiscipline) {
@@ -146,12 +171,37 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
     answers,
     bookmarks,
     focusQuestionId,
+    filterCompendiumId,
   ]);
 
   const mistakesCount = (Object.values(answers) as QuestionAnswerRecord[]).filter((a) => !a.isCorrect).length;
 
   return (
     <div className="w-full max-w-[1600px] mx-auto space-y-6">
+      {/* ── Retorno ao pack do Estudo Temático ─────────────────────── */}
+      {onReturnToThematicStudy && (
+        <div
+          id="questions-return-to-pack"
+          className="p-3 sm:px-4 sm:py-2.5 rounded-2xl bg-slate-900/5 dark:bg-teal-950/40 border border-slate-300 dark:border-teal-800/50 elev-xs flex items-center justify-between gap-3"
+        >
+          <p className="text-xs text-slate-700 dark:text-slate-200 min-w-0">
+            <span className="font-bold">Escopo do Estudo Temático:</span>{' '}
+            {filterCompendiumId === SCOPE_UNLINKED
+              ? 'questões do tema sem material associado'
+              : 'questões que referenciam o material do pack'}
+            .
+          </p>
+          <button
+            type="button"
+            onClick={onReturnToThematicStudy}
+            className="px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-teal-600 hover:bg-slate-800 dark:hover:bg-teal-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Voltar ao Estudo Temático</span>
+          </button>
+        </div>
+      )}
+
       {/* ── Retorno ao Compêndio em Leitura ────────────────────────── */}
       {returnToCompendiumContext && onReturnToCompendium && (
         <div className="p-3 sm:px-4 sm:py-2.5 rounded-2xl bg-teal-500/10 dark:bg-teal-950/40 border border-teal-500/30 dark:border-teal-700/40 elev-xs flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">

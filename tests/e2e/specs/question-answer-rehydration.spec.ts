@@ -22,9 +22,10 @@ async function login(page: Page, user: CreatedTestUser) {
 
 async function goToQuestionsBank(page: Page) {
   // Dock flutuante `#mobile-floating-dock` (sempre visível, ver
-  // src/components/navigation/MobileBottomNav.tsx e AGENTS.md armadilha #12)
-  // — botão "Questões".
-  await page.locator('#mobile-floating-dock').getByText('Questões', { exact: true }).click();
+  // src/components/navigation/MobileBottomNav.tsx e AGENTS.md armadilha #12).
+  // Prompt 22-A: os acervos ficam dentro do agrupador "Recursos".
+  await page.locator('#dock-nav-resources').click();
+  await page.locator('#dock-resources-questions').click();
 }
 
 test.describe('Resposta de questão + reidratação', () => {

@@ -33,6 +33,7 @@ import { simuladosRepository } from './repositories/SimuladosRepository';
 import { feedbackRepository } from './repositories/FeedbackRepository';
 import { questionReactionsRepository } from './repositories/QuestionReactionsRepository';
 import { buildSimuladoSelection, SimuladoSelectionResult } from './services/simuladoSelection';
+import { packIdForCompendium, SCOPE_CUSTOM, SCOPE_UNLINKED } from './services/thematicPacks';
 
 registerSyncHandlers();
 
@@ -95,12 +96,43 @@ import { FlashcardReviewSession } from './components/flashcards/FlashcardReviewS
 import { CreateFlashcardModal } from './components/flashcards/CreateFlashcardModal';
 import { SimuladosView } from './components/simulados/SimuladosView';
 import { AdminCMSView } from './components/admin/AdminCMSView';
+import { ThematicStudyView } from './components/thematic/ThematicStudyView';
+
+// Views que podem ser restauradas depois de um reload (Prompt 22-A). É uma
+// lista de PERMISSÃO: qualquer outro valor salvo (inclusive um valor futuro
+// ainda não conhecido, ou lixo gravado por outra versão) cai em 'dashboard'.
+// Sessões efêmeras ficam deliberadamente de fora — 'simulado-session',
+// 'flashcard-session' e 'compendium-reader' dependem de estado em memória
+// (fila de cards, seleção sorteada, compêndio ativo) que não sobrevive ao
+// reload; restaurá-las abriria uma tela sem o conteúdo correspondente.
+const PERSISTED_VIEWS = [
+  'dashboard',
+  'thematic-study',
+  'compendiums',
+  'questions',
+  'flashcards',
+  'simulados',
+  'errors',
+  'admin',
+] as const;
 
 function AuthenticatedApp() {
   const { user, profile, loading, isEmailVerified } = useAuth();
 
   // Navigation State
   const [activeView, setActiveView] = useState<string>('dashboard');
+  // Estudo Temático: pack aberto (id derivado do compêndio). Fica aqui, e não
+  // dentro da view, porque o retorno ao pack depois de ler/responder/revisar
+  // depende dele, e porque a validação do id salvo precisa dos dados já
+  // carregados.
+  const [selectedPackId, setSelectedPackId] = useState<string | null>(null);
+  const [invalidSavedPackId, setInvalidSavedPackId] = useState<string | null>(null);
+  const [navStateRestored, setNavStateRestored] = useState(false);
+  // Escopo de material aplicado a Questões/Cards quando se chega pelo pack.
+  const [scopeCompendiumForQuestions, setScopeCompendiumForQuestions] = useState<string | undefined>(undefined);
+  const [scopeCompendiumForFlashcards, setScopeCompendiumForFlashcards] = useState<string | undefined>(undefined);
+  const [packReturnContext, setPackReturnContext] = useState<string | null>(null);
+  const [flashcardOriginView, setFlashcardOriginView] = useState<string>('flashcards');
 
   // Deep-link / Context State
   const [selectedCompendiumId, setSelectedCompendiumId] = useState<string | null>(null);
@@ -140,6 +172,19 @@ function AuthenticatedApp() {
   const [dashboardTab, setDashboardTab] = useState<'overview' | 'errors'>('overview');
 
   const handleSelectView = (view: string) => {
+    // Navegar pelo menu principal é sempre uma saída explícita do escopo de um
+    // pack — sem isso, "Questões" no menu continuaria mostrando só as questões
+    // do último material aberto, sem o usuário ter pedido esse recorte.
+    if (view === 'questions') {
+      setScopeCompendiumForQuestions(undefined);
+      setFilterThemeForQuestions(undefined);
+      setPackReturnContext(null);
+    }
+    if (view === 'flashcards') {
+      setScopeCompendiumForFlashcards(undefined);
+      setFilterThemeForFlashcards(undefined);
+      setPackReturnContext(null);
+    }
     if (view === 'errors') {
       setDashboardTab('errors');
       setActiveView('dashboard');
@@ -213,6 +258,7 @@ function AuthenticatedApp() {
   // Quando o usuário autenticado muda, recarrega os dados do namespace dele
   useEffect(() => {
     if (user?.id) {
+      setNavStateRestored(false);
       setDataLoading(true);
       refreshData().finally(() => setDataLoading(false));
       const legacySummary = StorageService.checkLegacyDataSummary(user.id);
@@ -221,6 +267,51 @@ function AuthenticatedApp() {
       }
     }
   }, [user?.id, refreshData]);
+
+  // ── Restauração de navegação depois de um reload (Prompt 22-A) ─────────────
+  // Só roda depois que os dados do usuário terminaram de carregar: a view é
+  // validada contra a lista de permissão (e contra o papel real, no caso de
+  // 'admin'), e o pack salvo é validado contra os compêndios efetivamente
+  // disponíveis para ESTA conta agora — um material despublicado ou removido
+  // entre sessões não pode ser reaberto, e o usuário é avisado em vez de cair
+  // numa tela vazia. O estado é lido do StorageService, que já isola por UID.
+  useEffect(() => {
+    if (!user?.id || dataLoading || navStateRestored) return;
+
+    const savedView = StorageService.getUIState<string>('nav_active_view', 'dashboard');
+    const isAllowedView = (PERSISTED_VIEWS as readonly string[]).includes(savedView);
+    const canUseAdmin = profile?.role === 'admin' && profile?.status === 'active';
+    const restoredView = isAllowedView && (savedView !== 'admin' || canUseAdmin) ? savedView : 'dashboard';
+
+    const savedPackId = StorageService.getUIState<string | null>('nav_thematic_pack', null);
+    const isValidPack =
+      typeof savedPackId === 'string' &&
+      compendiums.some((c) => packIdForCompendium(c.id) === savedPackId);
+
+    setActiveView(restoredView);
+    if (isValidPack) {
+      setSelectedPackId(savedPackId);
+    } else if (typeof savedPackId === 'string' && savedPackId !== '') {
+      setSelectedPackId(null);
+      setInvalidSavedPackId(savedPackId);
+    }
+    setNavStateRestored(true);
+  }, [user?.id, dataLoading, navStateRestored, compendiums, profile?.role, profile?.status]);
+
+  // Persistência só começa depois da restauração — gravar antes sobrescreveria
+  // o valor salvo com o 'dashboard' do estado inicial.
+  useEffect(() => {
+    if (!navStateRestored) return;
+    StorageService.setUIState(
+      'nav_active_view',
+      (PERSISTED_VIEWS as readonly string[]).includes(activeView) ? activeView : 'dashboard'
+    );
+  }, [activeView, navStateRestored]);
+
+  useEffect(() => {
+    if (!navStateRestored) return;
+    StorageService.setUIState('nav_thematic_pack', selectedPackId);
+  }, [selectedPackId, navStateRestored]);
 
   // Dark Mode synchronization
   useEffect(() => {
@@ -324,12 +415,19 @@ function AuthenticatedApp() {
 
   // Navigators
   const handleOpenCompendium = (compendiumId?: string, sectionId?: string, originQuestionId?: string) => {
-    if (activeView === 'questions' || activeView === 'errors' || activeView === 'simulado-session') {
+    if (
+      activeView === 'questions' ||
+      activeView === 'errors' ||
+      activeView === 'simulado-session' ||
+      activeView === 'thematic-study'
+    ) {
       setLibraryOrigin({
         view: activeView,
         questionId: originQuestionId,
         label:
-          activeView === 'errors'
+          activeView === 'thematic-study'
+            ? 'Retornar ao Estudo Temático'
+            : activeView === 'errors'
             ? 'Retornar ao Caderno de Erros'
             : activeView === 'simulado-session'
             ? 'Retornar ao Simulado'
@@ -394,10 +492,62 @@ function AuthenticatedApp() {
     setActiveView('questions');
   };
 
-  const handleStartSRS = (cards?: Flashcard[]) => {
+  const handleStartSRS = (cards?: Flashcard[], originView?: string) => {
     const queue = cards && cards.length > 0 ? cards : flashcards.filter((fc) => isCardDueToday(fc));
     setReviewCardsQueue(queue.length > 0 ? queue : flashcards);
+    setFlashcardOriginView(originView ?? 'flashcards');
     setActiveView('flashcard-session');
+  };
+
+  // ── Navegação a partir de um pack do Estudo Temático ───────────────────────
+  // Abre as telas canônicas (mesmos componentes, repositórios e gravações de
+  // sempre) recortadas pelo material do pack, com retorno explícito para cá.
+  const handleOpenPackQuestions = (packId: string, compendiumId: string) => {
+    setFilterThemeForQuestions(undefined);
+    setFocusQuestionId(undefined);
+    setScopeCompendiumForQuestions(compendiumId);
+    setPackReturnContext(packId);
+    setActiveView('questions');
+  };
+
+  const handleOpenPackFlashcards = (packId: string, compendiumId: string) => {
+    setFilterThemeForFlashcards(undefined);
+    setScopeCompendiumForFlashcards(compendiumId);
+    setPackReturnContext(packId);
+    setActiveView('flashcards');
+  };
+
+  // Conteúdo do tema sem material associado: mesmo tema, escopo "sem material"
+  // — nunca a lista inteira do tema, que reincluiria o conteúdo dos packs.
+  const handleOpenLooseThemeQuestions = (themeId: string) => {
+    setFilterThemeForQuestions(themeId);
+    setFocusQuestionId(undefined);
+    setScopeCompendiumForQuestions(SCOPE_UNLINKED);
+    setPackReturnContext(selectedPackId ?? 'lista');
+    setActiveView('questions');
+  };
+
+  const handleOpenLooseThemeFlashcards = (themeId: string) => {
+    setFilterThemeForFlashcards(themeId);
+    setScopeCompendiumForFlashcards(SCOPE_UNLINKED);
+    setPackReturnContext(selectedPackId ?? 'lista');
+    setActiveView('flashcards');
+  };
+
+  const handleOpenCustomFlashcards = () => {
+    setFilterThemeForFlashcards(undefined);
+    setScopeCompendiumForFlashcards(SCOPE_CUSTOM);
+    setPackReturnContext(selectedPackId ?? 'lista');
+    setActiveView('flashcards');
+  };
+
+  const handleReturnToThematicStudy = () => {
+    setScopeCompendiumForQuestions(undefined);
+    setScopeCompendiumForFlashcards(undefined);
+    setFilterThemeForQuestions(undefined);
+    setFilterThemeForFlashcards(undefined);
+    setPackReturnContext(null);
+    setActiveView('thematic-study');
   };
 
   const handleStartCustomSimulado = (config: SimuladoConfig) => {
@@ -465,6 +615,29 @@ function AuthenticatedApp() {
             />
           )}
 
+          {activeView === 'thematic-study' && (
+            <ThematicStudyView
+              disciplines={disciplines}
+              themes={themes}
+              compendiums={compendiums}
+              questions={questions}
+              flashcards={flashcards}
+              answers={answers}
+              loading={dataLoading}
+              selectedPackId={selectedPackId}
+              onSelectPack={setSelectedPackId}
+              invalidSavedPackId={invalidSavedPackId}
+              onDismissInvalidPack={() => setInvalidSavedPackId(null)}
+              onOpenCompendium={(compendiumId, sectionId) => handleOpenCompendium(compendiumId, sectionId)}
+              onOpenPackQuestions={handleOpenPackQuestions}
+              onOpenPackFlashcards={handleOpenPackFlashcards}
+              onOpenThemeQuestions={handleOpenLooseThemeQuestions}
+              onOpenThemeFlashcards={handleOpenLooseThemeFlashcards}
+              onOpenCustomFlashcards={handleOpenCustomFlashcards}
+              onStartSRS={(cards) => handleStartSRS(cards, 'thematic-study')}
+            />
+          )}
+
           {activeView === 'compendiums' && (
             <CompendiumView
               compendiums={compendiums}
@@ -509,8 +682,10 @@ function AuthenticatedApp() {
               onOpenCompendium={handleOpenCompendium}
               onOpenCreateSimulado={() => setIsCreateSimuladoOpen(true)}
               filterThemeId={filterThemeForQuestions}
+              filterCompendiumId={scopeCompendiumForQuestions}
               focusQuestionId={focusQuestionId}
               initialStatusFilter={filterStatusForQuestions}
+              onReturnToThematicStudy={packReturnContext ? handleReturnToThematicStudy : undefined}
               returnToCompendiumContext={lastReadingSession}
               onReturnToCompendium={() => {
                 if (lastReadingSession) {
@@ -531,6 +706,8 @@ function AuthenticatedApp() {
               onOpenCompendium={handleOpenCompendium}
               onFlashcardUpdated={refreshData}
               filterThemeId={filterThemeForFlashcards}
+              filterCompendiumId={scopeCompendiumForFlashcards}
+              onReturnToThematicStudy={packReturnContext ? handleReturnToThematicStudy : undefined}
             />
           )}
 
@@ -542,7 +719,9 @@ function AuthenticatedApp() {
               compendiums={compendiums}
               onFinishSession={() => {
                 refreshData();
-                setActiveView('flashcards');
+                // Volta para onde a sessão começou: o pack continua selecionado,
+                // então "Estudo Temático" reabre exatamente o mesmo pack.
+                setActiveView(flashcardOriginView === 'thematic-study' ? 'thematic-study' : 'flashcards');
               }}
               onOpenCompendium={handleOpenCompendium}
             />

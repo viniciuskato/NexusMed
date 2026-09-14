@@ -50,8 +50,15 @@ async function secondDeviceLoggedIn(browser: Browser, user: CreatedTestUser): Pr
   return page;
 }
 
+// Prompt 22-A: o dock passou a ter Início / Estudo Temático / Recursos, e os
+// três acervos (Biblioteca, Questões, Cards) ficam dentro de "Recursos".
+async function goToResource(page: Page, id: 'compendiums' | 'questions' | 'flashcards') {
+  await page.locator('#dock-nav-resources').click();
+  await page.locator(`#dock-resources-${id}`).click();
+}
+
 async function goToQuestionsBank(page: Page) {
-  await page.locator('#mobile-floating-dock').getByText('Questões', { exact: true }).click();
+  await goToResource(page, 'questions');
 }
 
 /**
@@ -145,7 +152,7 @@ test.describe('Reação/nota/progresso de leitura — duas abas da mesma conta',
 
   test('duas abas editam a mesma anotação de compêndio quase ao mesmo tempo: funde, nunca duplica nem perde as duas edições', async ({ page, browser }) => {
     await login(page, user);
-    await page.locator('#mobile-floating-dock').getByText('Biblioteca', { exact: true }).click();
+    await goToResource(page, 'compendiums');
     await page.getByText('Insuficiência Cardíaca — Visão Geral (Seed)', { exact: true }).first().click();
     await page.getByRole('button', { name: 'Anotações pessoais' }).click();
     const textarea = page.locator('textarea');
@@ -153,7 +160,7 @@ test.describe('Reação/nota/progresso de leitura — duas abas da mesma conta',
     await textarea.fill('Anotação da aba 1 — hipertrofia excêntrica.');
 
     const page2 = await secondDeviceLoggedIn(browser, user);
-    await page2.locator('#mobile-floating-dock').getByText('Biblioteca', { exact: true }).click();
+    await goToResource(page2, 'compendiums');
     await page2.getByText('Insuficiência Cardíaca — Visão Geral (Seed)', { exact: true }).first().click();
     await page2.getByRole('button', { name: 'Anotações pessoais' }).click();
     const textarea2 = page2.locator('textarea');
@@ -186,13 +193,13 @@ test.describe('Reação/nota/progresso de leitura — duas abas da mesma conta',
 
   test('duas abas marcam a mesma seção como lida quase ao mesmo tempo: idempotente, sem corromper o percentual', async ({ page, browser }) => {
     await login(page, user);
-    await page.locator('#mobile-floating-dock').getByText('Biblioteca', { exact: true }).click();
+    await goToResource(page, 'compendiums');
     await page.getByText('Insuficiência Cardíaca — Visão Geral (Seed)', { exact: true }).first().click();
     const markReadBtn = page.getByRole('button', { name: /Marcar lida|Lida/ }).first();
     await expect(markReadBtn).toBeVisible({ timeout: 10_000 });
 
     const page2 = await secondDeviceLoggedIn(browser, user);
-    await page2.locator('#mobile-floating-dock').getByText('Biblioteca', { exact: true }).click();
+    await goToResource(page2, 'compendiums');
     await page2.getByText('Insuficiência Cardíaca — Visão Geral (Seed)', { exact: true }).first().click();
     const markReadBtn2 = page2.getByRole('button', { name: /Marcar lida|Lida/ }).first();
     await expect(markReadBtn2).toBeVisible({ timeout: 10_000 });
@@ -224,7 +231,7 @@ test.describe('Revisão de flashcard (SRS) — concorrência real e idempotênci
   });
 
   async function openReviewSession(page: Page) {
-    await page.locator('#mobile-floating-dock').getByText('Cards', { exact: true }).click();
+    await goToResource(page, 'flashcards');
     await page.getByRole('button', { name: /Revisar .*Cards? Pendentes|Revisar Todos os Cards/ }).click();
   }
 
@@ -316,7 +323,7 @@ test.describe('Simulado — rascunho local e finalização idempotente', () => {
   });
 
   async function startExpressSimulado(page: Page) {
-    await page.locator('#mobile-floating-dock').getByText('Início', { exact: true }).click();
+    await page.locator('#dock-nav-dashboard').click();
     await page.getByRole('button', { name: 'Simulados & Provas' }).click();
     await page.getByText('Simulado Express Misto', { exact: true }).click();
     await expect(page.getByRole('button', { name: 'Finalizar Prova' })).toBeVisible({ timeout: 15_000 });
