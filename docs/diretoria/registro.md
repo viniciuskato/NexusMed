@@ -1277,7 +1277,7 @@ mesmo `BrowserContext` na fila de sincronização (achado desta sessão);
 (b) cobertura de acessibilidade de teclado do `AdminCMSView` (pendência
 já herdada do 12-B/13-A).
 
-## 22-A — Estudo Temático por packs de material (2026-09-13, sessão executiva) — NÃO PUBLICADO
+## 22-A — Estudo Temático por packs de material (2026-09-13, sessão executiva) — publicado via 22-B
 
 **Base**: branch `work/22a-estudo-tematico`, criada a partir de
 `origin/main = eb37a91`. O prompt informava `42252b9`; o remoto já havia
@@ -1321,5 +1321,52 @@ atualizados para os ids novos (`#dock-nav-resources` →
 `#dock-resources-*`). Nenhuma alteração de produto foi feita para
 acomodar teste.
 
-**Estado de publicação**: não publicado — sem merge em `main`, sem push,
-sem PR, sem deploy, sem migration e sem escrita remota.
+**Estado de publicação**: publicado no Prompt 22-B (abaixo) — merge em
+`main`, push e deploy confirmados.
+
+## 22-B — Fecha a prova de retorno do SRS e publica o Estudo Temático (2026-09-13, sessão executiva) — PUBLICADO
+
+**Base**: `main = origin/main = eb37a91` no início; branch candidata
+`work/22a-estudo-tematico` em `bf88bc7`, árvore limpa, única worktree.
+`origin/main` conferido antes de cada gate (fetch) e permaneceu em
+`eb37a91` do início ao fim — sem reconciliação necessária.
+
+**Lacuna do 22-A fechada**: o spec `estudo-tematico-22a.spec.ts` (teste
+"leitura, questões e SRS voltam ao pack de origem") abria a sessão de SRS
+a partir do pack e só verificava a frente do card visível — não provava
+uma revisão concluída nem o retorno real ao pack. Completado sem tocar
+código de produto (nenhum defeito de produto reproduzido): revela a
+resposta, envia uma avaliação real pelo caminho canônico
+(`reviewFlashcard()` → RPC `submit_flashcard_review`), a fila de 1 card
+encerra a sessão nessa avaliação, confirma o retorno a `thematic-study`
+com o MESMO `data-pack-id` do pack de origem, confirma com
+`countFlashcardReviews` que a gravação é real (0 antes da revisão, 1
+depois — não só o estado da tela) e captura `pageerror` do navegador
+durante todo o fluxo (lista vazia ao final).
+
+**Validações (gate final, cada verificação rodada uma única vez)**:
+`npm run verify:full` verde — vitest 24/24, `supabase test db` (pgTAP)
+183/183, Playwright 23/23 (as mesmas 5 specs do Estudo Temático,
+incluindo o teste completado). `git diff --check` limpo. `npm run build`
++ `check:no-debug-bundle` OK (0 ocorrências de `__syncDebug`/
+`__setTestBackoffOverride` no bundle de produção). Zero fixtures
+residuais confirmado via `countRemainingE2EFixtures()` →
+`{"authUsers":0,"profiles":0}`.
+
+**Integração/publicação**: commit final com o ajuste do spec + este
+registro/`AGENTS.md`, revisão do diff antes do merge, `git merge --no-ff`
+de `work/22a-estudo-tematico` em `main` (sem force), `git push origin
+main`. Deploy automático acompanhado; smoke não destrutivo de produção
+cobrindo login, abertura do Estudo Temático, abertura de um pack e
+navegação para Recursos — sem criar/alterar dado remoto.
+
+**Restrições respeitadas**: nenhuma migration, RPC, RLS, auth ou CI
+tocada; regra de vínculo `compendiumRefId === compendium.id` inalterada;
+nenhuma associação por nome/tema/similaridade; precedência de cards
+`isCustom` preservada; sem force push, reset destrutivo ou descarte de
+trabalho concorrente.
+
+**Pendências/riscos**: nenhum aberto por este prompt. Herdadas do 22-A/
+13-A (não bloqueiam esta publicação): corrida entre abas do mesmo
+`BrowserContext` na fila de sincronização; cobertura de acessibilidade
+de teclado do `AdminCMSView`.

@@ -6,6 +6,7 @@ import {
   getSeedIds,
   insertFlashcardForUser,
   insertPublishedMaterial,
+  countFlashcardReviews,
   type CreatedTestUser,
 } from '../fixtures/localSupabase';
 
@@ -118,13 +119,17 @@ test.describe('Estudo Temático (22-A)', () => {
   });
 
   test('leitura, questões e SRS voltam ao pack de origem', async ({ page }) => {
+    const pageErrors: Error[] = [];
+    page.on('pageerror', (err) => pageErrors.push(err));
+
     const seed = getSeedIds();
     const user = await setupUser('tematico-retorno');
-    insertFlashcardForUser(user.id, seed, {
+    const flashcardId = insertFlashcardForUser(user.id, seed, {
       materialId: seed.materialId,
       isCustom: false,
       front: 'Card do material',
     });
+    expect(countFlashcardReviews(flashcardId)).toBe(0);
 
     await login(page, user);
     await openThematicStudy(page);
@@ -149,10 +154,28 @@ test.describe('Estudo Temático (22-A)', () => {
       `pack-${seed.materialId}`
     );
 
-    // SRS a partir do pack: usa a sessão canônica (submit_flashcard_review) e
-    // retorna ao pack ao terminar.
+    // SRS a partir do pack: usa a sessão canônica (submit_flashcard_review),
+    // conclui uma avaliação real pelo caminho canônico e retorna ao MESMO
+    // pack ao terminar a fila.
     await page.locator('#thematic-pack-start-srs').click();
     await expect(page.getByText('Card do material')).toBeVisible();
+
+    await page.getByText('Revelar Resposta').click();
+    await page.getByText('3. Bom').click();
+
+    // Fila de um card só: a avaliação encerra a sessão imediatamente.
+    await expect(page.getByText('Sessão de Revisão Concluída!')).toBeVisible();
+    await page.getByText('Voltar ao Painel de Flashcards').click();
+
+    await expect(page.locator('#thematic-pack-view')).toHaveAttribute(
+      'data-pack-id',
+      `pack-${seed.materialId}`
+    );
+
+    // A avaliação foi persistida pelo caminho canônico (RPC
+    // submit_flashcard_review via reviewFlashcard()), não só refletida na UI.
+    expect(countFlashcardReviews(flashcardId)).toBe(1);
+    expect(pageErrors).toEqual([]);
   });
 
   test('reload preserva view e pack válidos, e recupera de um pack salvo inválido', async ({ page }) => {

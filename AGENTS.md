@@ -1394,7 +1394,7 @@ protótipo).
   registro.md`, entrada "13-B", para o detalhamento completo (runs de CI,
   hashes, deploy, smoke).
 
-- **Prompt 22-A (2026-09-13), sessão executiva — NÃO PUBLICADO**: branch
+- **Prompt 22-A (2026-09-13), sessão executiva — publicado via 22-B**: branch
   `work/22a-estudo-tematico` (a partir de `origin/main = eb37a91`).
   Estudo Temático transposto seletivamente do snapshot do AI Studio (ver
   armadilha #6 — código de fora sempre revisado linha a linha): nova view
@@ -1422,6 +1422,25 @@ protótipo).
   restauradas de propósito (dependem de estado em memória). Ver também a
   atualização da armadilha #12 (navegação). `verify:full` verde
   (vitest 24/24, pgTAP 183/183, Playwright 23/23).
+
+- **Prompt 22-B (2026-09-13), sessão executiva — publicado**: fechou a
+  única lacuna de prova do 22-A e integrou `work/22a-estudo-tematico` em
+  `main`. `estudo-tematico-22a.spec.ts` ("leitura, questões e SRS voltam
+  ao pack de origem") não concluía uma revisão real — abria a sessão de
+  SRS e só verificava a frente do card visível. Completado para: revelar
+  resposta, enviar avaliação pelo caminho canônico (`reviewFlashcard()` →
+  RPC `submit_flashcard_review`), concluir a fila (1 card → sessão
+  encerra na primeira avaliação), confirmar retorno a `thematic-study`
+  com o MESMO `data-pack-id`, e confirmar a gravação real com
+  `countFlashcardReviews` (0 antes, 1 depois) — não só o estado de tela.
+  Nenhum defeito de produto encontrado; a lacuna era só de cobertura de
+  teste. `verify:full` verde (vitest 24/24, pgTAP 183/183, Playwright
+  23/23), `git diff --check` limpo, bundle de produção sem
+  `__syncDebug`/`__setTestBackoffOverride`, zero fixtures residuais
+  (`countRemainingE2EFixtures` → `authUsers: 0, profiles: 0`). Merge
+  `--no-ff` em `main` sem force; deploy automático e smoke de produção
+  (login, Estudo Temático, abertura de pack, navegação para Recursos)
+  confirmados não destrutivos.
 
 ## Manter este arquivo atualizado
 
