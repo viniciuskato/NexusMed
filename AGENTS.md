@@ -544,8 +544,8 @@ protótipo).
 
 ## Estado atual (mantenha esta seção precisa — é a mais importante)
 
-- **Implementado LOCALMENTE em 2026-09-14 (Prompt 23-B), branch
-  `work/23b-proveniencia-atestacao`, NÃO mesclado/publicado.** Fundação de
+- **Publicado em `main` e no Supabase remoto em 2026-09-14 (Prompt 23-B/
+  23-C).** Fundação de
   proveniência editorial e atestação humana: `content_revisions` (snapshot
   canônico imutável de material OU questão, hash sha256 server-side,
   `created_by := auth.uid()`), `claims` (`claim_kind`, `content_locator`
@@ -577,8 +577,7 @@ protótipo).
   este prompt, ver seção de armadilhas: `select (func()).* \gset` chama a
   função uma vez por coluna; um trigger "imutável para sempre, mesmo
   postgres" quebra `ON DELETE CASCADE` legítimo quando o material/questão
-  pai é apagado. Pendente: mesclar em `main`, aplicar a migration no
-  Supabase remoto, e então liberar 21-A2/20-A conforme a fila da diretoria.
+  pai é apagado.
   **Pontos mínimos de extensão futura (não implementados agora, só
   preservados):** taxonomia de conceitos (`concepts`/`question_concepts`) e
   pauta editorial ficam fora de escopo do 23-B, mas nada aqui os bloqueia —
