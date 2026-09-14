@@ -18,6 +18,7 @@ export interface MaterialsRepository {
   updateSectionContent(sectionId: string, patch: Partial<CompendiumSectionSnapshot>, reason?: string): Promise<void>;
   getSectionVersions(sectionId: string): Promise<MaterialSectionVersion[]>;
   revertSectionToVersion(sectionId: string, versionId: string): Promise<void>;
+  updateMaterialReferenceSource(referenceId: string, sourceId: string | null, url: string | null): Promise<void>;
 }
 
 class LocalStorageMaterialsRepository implements MaterialsRepository {
@@ -54,6 +55,9 @@ class LocalStorageMaterialsRepository implements MaterialsRepository {
     return [];
   }
   async revertSectionToVersion(_sectionId: string, _versionId: string): Promise<void> {}
+  // Catálogo de sources/associação de referência exige Supabase (mesmo
+  // motivo do histórico de seção acima) — sem-op em localStorage puro.
+  async updateMaterialReferenceSource(_referenceId: string, _sourceId: string | null, _url: string | null): Promise<void> {}
 }
 
 class ResilientMaterialsRepository implements MaterialsRepository {
@@ -155,6 +159,11 @@ class ResilientMaterialsRepository implements MaterialsRepository {
   async revertSectionToVersion(sectionId: string, versionId: string): Promise<void> {
     if (!isSupabaseConfigured) return this.local.revertSectionToVersion(sectionId, versionId);
     try { await this.supa.revertSectionToVersion(sectionId, versionId); } catch (err) { console.error(`[MaterialsRepository] falha ao sincronizar revertSectionToVersion com Supabase:`, err); throw err; }
+  }
+
+  async updateMaterialReferenceSource(referenceId: string, sourceId: string | null, url: string | null): Promise<void> {
+    if (!isSupabaseConfigured) return this.local.updateMaterialReferenceSource(referenceId, sourceId, url);
+    try { await this.supa.updateMaterialReferenceSource(referenceId, sourceId, url); } catch (err) { console.error(`[MaterialsRepository] falha ao sincronizar updateMaterialReferenceSource com Supabase:`, err); throw err; }
   }
 }
 

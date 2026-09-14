@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Database,
   Plus,
@@ -25,6 +25,7 @@ import {
   ArrowRight,
   ThumbsUp,
   ThumbsDown,
+  Link,
 } from 'lucide-react';
 import { Discipline, Theme, Question, Compendium, Flashcard, CompendiumSection, UserFeedback } from '../../types';
 import { StorageService } from '../../services/storage';
@@ -35,6 +36,7 @@ import { feedbackRepository } from '../../repositories/FeedbackRepository';
 import { supabase } from '../../lib/supabaseClient';
 import SectionEditor from './SectionEditor';
 import ProvenanceReviewPanel from './ProvenanceReviewPanel';
+import MaterialReferencesPanel from './MaterialReferencesPanel';
 import { getErrorMessage } from '../../utils/errorMessage';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
@@ -216,10 +218,36 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   const [openEditMenuCompId, setOpenEditMenuCompId] = useState<string | null>(null);
 
   // Revisão/atestação editorial (23-B) — painel único, reusado para
-  // compêndio OU questão (nunca os dois ao mesmo tempo).
+  // compêndio OU questão (nunca os dois ao mesmo tempo). Renderizado em
+  // posição comum às abas (21-D) — antes ficava só dentro do bloco da aba
+  // de compêndios, invisível ao abrir pela aba de questões.
   const [provenanceTarget, setProvenanceTarget] = useState<
     { kind: 'material'; id: string; title: string } | { kind: 'question'; id: string; title: string } | null
   >(null);
+  // Guarda o botão "Revisão" que abriu o painel, para devolver o foco a ele
+  // quando o painel fecha (21-D).
+  const provenanceTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const openProvenance = (
+    e: React.MouseEvent<HTMLButtonElement>,
+    target: { kind: 'material'; id: string; title: string } | { kind: 'question'; id: string; title: string }
+  ) => {
+    provenanceTriggerRef.current = e.currentTarget;
+    setProvenanceTarget(target);
+  };
+  const closeProvenance = () => {
+    setProvenanceTarget(null);
+    provenanceTriggerRef.current?.focus();
+  };
+
+  // Associação de referências de material -> fonte curada (21-D).
+  const [editingReferencesCompId, setEditingReferencesCompId] = useState<string | null>(null);
+
+  // Vínculo material_id/material_section_id de uma questão já existente
+  // (21-D) — controle explícito, separado do form grande de criação.
+  const [editingLinkQuestionId, setEditingLinkQuestionId] = useState<string | null>(null);
+  const [linkMaterialId, setLinkMaterialId] = useState<string>('');
+  const [linkSectionId, setLinkSectionId] = useState<string>('');
+  const [linkBusy, setLinkBusy] = useState(false);
 
   // Compendium Form Fields
   const [compTitle, setCompTitle] = useState('');
@@ -542,6 +570,36 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     }
   };
 
+  const handleOpenQuestionLink = (q: Question) => {
+    setEditingLinkQuestionId(q.id);
+    setLinkMaterialId(q.compendiumRefId || '');
+    setLinkSectionId(q.compendiumSectionId || '');
+  };
+
+  const handleCancelQuestionLink = () => {
+    setEditingLinkQuestionId(null);
+    setLinkMaterialId('');
+    setLinkSectionId('');
+  };
+
+  const handleSaveQuestionLink = async (questionId: string) => {
+    setLinkBusy(true);
+    try {
+      await questionsRepository.updateQuestionMaterialLink(
+        questionId,
+        linkMaterialId || null,
+        linkMaterialId ? linkSectionId || null : null
+      );
+      showToast('Vínculo com material atualizado.');
+      onRefreshData();
+      handleCancelQuestionLink();
+    } catch (err) {
+      showToast(`Vínculo não alterado: ${getErrorMessage(err)}`);
+    } finally {
+      setLinkBusy(false);
+    }
+  };
+
   const handleResetData = () => {
     if (window.confirm('Tem certeza de que deseja restaurar a base de dados original? Suas respostas e compêndios customizados serão reiniciados.')) {
       StorageService.resetToDefaults();
@@ -658,6 +716,32 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
         </button>
       </div>
 
+      {/* ── Revisão/atestação editorial (23-B) ───────────────────────── */}
+      {/* Posição comum a todas as abas (21-D): antes só existia dentro do */}
+      {/* bloco da aba de compêndios, então abrir pela aba de questões não */}
+      {/* mostrava nada. */}
+      {provenanceTarget && (
+        <ProvenanceReviewPanel
+          target={provenanceTarget.kind === 'material' ? { materialId: provenanceTarget.id } : { questionId: provenanceTarget.id }}
+          title={provenanceTarget.title}
+          onClose={closeProvenance}
+          onChanged={onRefreshData}
+        />
+      )}
+
+      {/* ── Associação de referências de material -> fonte (21-D) ─────── */}
+      {editingReferencesCompId && (() => {
+        const target = compendiums.find((c) => c.id === editingReferencesCompId);
+        if (!target) return null;
+        return (
+          <MaterialReferencesPanel
+            compendium={target}
+            onClose={() => setEditingReferencesCompId(null)}
+            onSaved={onRefreshData}
+          />
+        );
+      })()}
+
       {/* ══════════════════════════════════════════════════════════════ */}
       {/* ── TAB: COMPENDIUMS & MECANISMOS ─────────────────────────── */}
       {/* ══════════════════════════════════════════════════════════════ */}
@@ -707,16 +791,6 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               />
             );
           })()}
-
-          {/* ── Revisão/atestação editorial (23-B) ───────────────────── */}
-          {provenanceTarget && (
-            <ProvenanceReviewPanel
-              target={provenanceTarget.kind === 'material' ? { materialId: provenanceTarget.id } : { questionId: provenanceTarget.id }}
-              title={provenanceTarget.title}
-              onClose={() => setProvenanceTarget(null)}
-              onChanged={onRefreshData}
-            />
-          )}
 
           {/* ── Compendium Creation/Edit Modal/Drawer Form ─────────── */}
           {isCompendiumFormOpen && (
@@ -1173,7 +1247,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
 
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => setProvenanceTarget({ kind: 'material', id: c.id, title: c.title })}
+                        onClick={(e) => openProvenance(e, { kind: 'material', id: c.id, title: c.title })}
                         className="px-3 py-1.5 rounded-lg border border-stone-200 dark:border-[#243452] hover:bg-stone-100 dark:hover:bg-[#1A2845] text-stone-700 dark:text-slate-300 font-semibold text-xs flex items-center gap-1 transition-colors"
                         title="Revisão/atestação editorial — obrigatória para publicar (23-B)"
                       >
@@ -1242,6 +1316,19 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                                 <span>
                                   <span className="block font-semibold">Metadados</span>
                                   <span className="block text-[10px] text-stone-400">Título, disciplina, tags, autor...</span>
+                                </span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingReferencesCompId(c.id);
+                                  setOpenEditMenuCompId(null);
+                                }}
+                                className="w-full text-left px-3 py-2.5 hover:bg-stone-100 dark:hover:bg-[#1A2845] text-stone-700 dark:text-slate-300 text-xs flex items-center gap-2 transition-colors border-t border-stone-100 dark:border-[#243452]"
+                              >
+                                <BookOpen className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+                                <span>
+                                  <span className="block font-semibold">Referências</span>
+                                  <span className="block text-[10px] text-stone-400">Associar bibliografia a fontes cadastradas</span>
                                 </span>
                               </button>
                             </div>
@@ -1470,10 +1557,11 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               <div
                 key={q.id}
                 id={`admin-question-${q.id}`}
-                className={`p-4 flex items-center justify-between gap-4 text-xs transition-colors ${
+                className={`p-4 space-y-3 text-xs transition-colors ${
                   highlightedQuestionId === q.id ? 'bg-teal-50 dark:bg-teal-950/30' : ''
                 }`}
               >
+              <div className="flex items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-stone-900 dark:text-slate-100">
@@ -1504,12 +1592,22 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-stone-400 text-[11px]">{q.options.length} alternativas</span>
                   <button
-                    onClick={() => setProvenanceTarget({ kind: 'question', id: q.id, title: q.questionStem.slice(0, 60) })}
+                    onClick={(e) => openProvenance(e, { kind: 'question', id: q.id, title: q.questionStem.slice(0, 60) })}
                     className="px-2.5 py-1 rounded-lg border border-stone-200 dark:border-[#243452] hover:bg-stone-100 dark:hover:bg-[#1A2845] text-stone-600 dark:text-stone-300 font-semibold flex items-center gap-1 transition-colors"
                     title="Revisão/atestação editorial — obrigatória para publicar (23-B)"
                   >
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>Revisão</span>
+                  </button>
+                  <button
+                    onClick={() =>
+                      editingLinkQuestionId === q.id ? handleCancelQuestionLink() : handleOpenQuestionLink(q)
+                    }
+                    className="px-2.5 py-1 rounded-lg border border-stone-200 dark:border-[#243452] hover:bg-stone-100 dark:hover:bg-[#1A2845] text-stone-600 dark:text-stone-300 font-semibold flex items-center gap-1 transition-colors"
+                    title="Vincular esta questão a um material/seção (não altera enunciado, alternativas, gabarito ou status)"
+                  >
+                    <Link className="w-3.5 h-3.5" />
+                    <span>Vínculo</span>
                   </button>
                   <button
                     onClick={() => handleTogglePublishQuestion(q.id, q.publicationStatus)}
@@ -1536,6 +1634,72 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                   </button>
                 </div>
               </div>
+
+              {editingLinkQuestionId === q.id && (
+                <div className="flex flex-wrap items-end gap-2 p-3 rounded-lg bg-stone-50 dark:bg-[#0B1424] border border-stone-200 dark:border-[#243452]">
+                  <div className="min-w-[220px] flex-1">
+                    <label className="font-bold text-stone-700 dark:text-slate-300 block mb-1" htmlFor={`link-material-${q.id}`}>
+                      Material
+                    </label>
+                    <select
+                      id={`link-material-${q.id}`}
+                      value={linkMaterialId}
+                      onChange={(e) => {
+                        setLinkMaterialId(e.target.value);
+                        setLinkSectionId('');
+                      }}
+                      className="w-full p-2 rounded-lg border border-stone-200 dark:border-[#243452] bg-white dark:bg-[#0F172A] text-stone-900 dark:text-slate-100"
+                    >
+                      <option value="">Sem material</option>
+                      {compendiums.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {linkMaterialId && (
+                    <div className="min-w-[220px] flex-1">
+                      <label className="font-bold text-stone-700 dark:text-slate-300 block mb-1" htmlFor={`link-section-${q.id}`}>
+                        Seção (opcional)
+                      </label>
+                      <select
+                        id={`link-section-${q.id}`}
+                        value={linkSectionId}
+                        onChange={(e) => setLinkSectionId(e.target.value)}
+                        className="w-full p-2 rounded-lg border border-stone-200 dark:border-[#243452] bg-white dark:bg-[#0F172A] text-stone-900 dark:text-slate-100"
+                      >
+                        <option value="">Nenhuma seção específica</option>
+                        {(compendiums.find((c) => c.id === linkMaterialId)?.sections ?? []).map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCancelQuestionLink}
+                      disabled={linkBusy}
+                      className="px-3 py-2 rounded-lg text-stone-600 dark:text-slate-400 hover:bg-stone-100 dark:hover:bg-[#1A2845] font-semibold disabled:opacity-50"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSaveQuestionLink(q.id)}
+                      disabled={linkBusy}
+                      className="px-3.5 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-bold disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      <Link className="w-3.5 h-3.5" />
+                      <span>Salvar vínculo</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             ))}
           </div>
         </div>

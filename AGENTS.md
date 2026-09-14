@@ -544,6 +544,43 @@ protótipo).
 
 ## Estado atual (mantenha esta seção precisa — é a mais importante)
 
+- **Implementado em `work/21d-revisao-humana-cms` em 2026-09-14 (Prompt
+  21-D), NÃO mesclado em `main` ainda.** Corrige três barreiras que
+  impediam a preparação humana de um lote de questões (PCSK9) usando o
+  painel de proveniência do 23-B: (1) `ProvenanceReviewPanel` renderizava
+  só dentro do bloco da aba de Compêndios — o botão "Revisão" na aba de
+  Questões chamava `setProvenanceTarget` mas o painel ficava invisível;
+  movido pra posição comum a todas as abas em `AdminCMSView.tsx`, com foco
+  programático ao abrir (`panelRef.focus()` + `scrollIntoView`) e retorno
+  do foco ao botão que abriu quando fecha (`provenanceTriggerRef`). (2) CMS
+  não tinha edição do vínculo questão -> material/seção de uma questão já
+  existente — novo controle "Vínculo" por questão (`AdminCMSView.tsx`) +
+  `questionsRepository.updateQuestionMaterialLink()`, UPDATE direcionado só
+  em `material_id`/`material_section_id` (nunca chama `saveQuestion`
+  inteiro, que apaga+reinsere opções). `guard_question_content_immutable`
+  (23-A) já bloqueia esse UPDATE quando a questão está
+  published/archived — o erro do Postgres é propagado como toast visível,
+  sem tentar contornar. (3) `ProvenanceReviewPanel` exigia digitar
+  `sources.id` cru e só gravava `evidence_relation`/`consultation_basis`
+  padrão fixo — novo `SourceSelector.tsx` (busca por título/autoria/ano ou
+  DOI/URL via `contentProvenanceRepository.searchSources()`, sem CRUD de
+  fontes) + formulário completo por claim (`evidence_relation`,
+  `consultation_basis`, `source_locator`) + lista de vínculos já
+  adicionados. Referências de material (`material_references`) sem
+  `source_id` ganharam associação explícita (nunca matching automático) em
+  `MaterialReferencesPanel.tsx`, via
+  `materialsRepository.updateMaterialReferenceSource()` (UPDATE por id da
+  referência, preserva `citation_text`/`sort_order`, nunca reusa
+  `saveCompendium`, que reinsere seções inteiras). Testado: `tsc --noEmit`,
+  lint (0 erros, só warnings pré-existentes), `npm run build`,
+  `check:no-debug-bundle`, 228/228 pgTAP sem regressão (nenhuma migration
+  nova — só frontend/repositórios) e 29/29 Playwright (5 novos em
+  `cms-human-review-21d.spec.ts`: painel visível+foco na aba de Questões,
+  vínculo troca/remove/cancela sem escrever, vínculo bloqueado com erro
+  visível em questão publicada, seletor de fonte por DOI com todos os
+  campos de `claim_sources`, associação de referência de material sem
+  perda de texto/ordem/URL — mais o spec pré-existente do 23-B, sem
+  regressão). Supabase só local, nenhum dado remoto tocado, sem merge/push.
 - **Publicado em `main` e no Supabase remoto em 2026-09-14 (Prompt 23-B/
   23-C).** Fundação de
   proveniência editorial e atestação humana: `content_revisions` (snapshot
