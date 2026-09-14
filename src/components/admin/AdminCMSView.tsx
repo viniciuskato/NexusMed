@@ -34,6 +34,8 @@ import { questionsRepository } from '../../repositories/QuestionsRepository';
 import { feedbackRepository } from '../../repositories/FeedbackRepository';
 import { supabase } from '../../lib/supabaseClient';
 import SectionEditor from './SectionEditor';
+import ProvenanceReviewPanel from './ProvenanceReviewPanel';
+import { getErrorMessage } from '../../utils/errorMessage';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
 
@@ -212,6 +214,12 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   // onRefreshData (ver AGENTS.md / plano da feature).
   const [editingSectionsCompId, setEditingSectionsCompId] = useState<string | null>(null);
   const [openEditMenuCompId, setOpenEditMenuCompId] = useState<string | null>(null);
+
+  // Revisão/atestação editorial (23-B) — painel único, reusado para
+  // compêndio OU questão (nunca os dois ao mesmo tempo).
+  const [provenanceTarget, setProvenanceTarget] = useState<
+    { kind: 'material'; id: string; title: string } | { kind: 'question'; id: string; title: string } | null
+  >(null);
 
   // Compendium Form Fields
   const [compTitle, setCompTitle] = useState('');
@@ -452,7 +460,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
         await questionsRepository.publishQuestion(q.id);
         ok++;
       } catch (err) {
-        failures.push(`${q.questionStem.slice(0, 40)}...: ${err instanceof Error ? err.message : String(err)}`);
+        failures.push(`${q.questionStem.slice(0, 40)}...: ${getErrorMessage(err)}`);
       }
     }
     setBulkPublishing(false);
@@ -472,7 +480,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       }
       onRefreshData();
     } catch (err) {
-      showToast(`Erro ao alterar publicação: ${err instanceof Error ? err.message : String(err)}`);
+      showToast(`Erro ao alterar publicação: ${getErrorMessage(err)}`);
     }
   };
 
@@ -530,7 +538,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       }
       onRefreshData();
     } catch (err) {
-      showToast(`Não publicada: ${err instanceof Error ? err.message : String(err)}`);
+      showToast(`Não publicada: ${getErrorMessage(err)}`);
     }
   };
 
@@ -699,6 +707,16 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               />
             );
           })()}
+
+          {/* ── Revisão/atestação editorial (23-B) ───────────────────── */}
+          {provenanceTarget && (
+            <ProvenanceReviewPanel
+              target={provenanceTarget.kind === 'material' ? { materialId: provenanceTarget.id } : { questionId: provenanceTarget.id }}
+              title={provenanceTarget.title}
+              onClose={() => setProvenanceTarget(null)}
+              onChanged={onRefreshData}
+            />
+          )}
 
           {/* ── Compendium Creation/Edit Modal/Drawer Form ─────────── */}
           {isCompendiumFormOpen && (
@@ -1088,6 +1106,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               return (
                 <div
                   key={c.id}
+                  data-compendium-row-id={c.id}
                   className={`bg-white dark:bg-[#0F172A] rounded-xl border border-stone-200 dark:border-[#243452] p-5 elev-xs flex flex-col justify-between space-y-4 hover:border-amber-400 dark:hover:border-teal-500 transition-all ${
                     isAtlas ? 'border-l-4 border-l-[#5b8dd9]' : 'border-l-4 border-l-[#c0604a]'
                   }`}
@@ -1153,6 +1172,14 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                     <span className="text-[10px] text-stone-400 font-mono-code">ID: {c.id}</span>
 
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setProvenanceTarget({ kind: 'material', id: c.id, title: c.title })}
+                        className="px-3 py-1.5 rounded-lg border border-stone-200 dark:border-[#243452] hover:bg-stone-100 dark:hover:bg-[#1A2845] text-stone-700 dark:text-slate-300 font-semibold text-xs flex items-center gap-1 transition-colors"
+                        title="Revisão/atestação editorial — obrigatória para publicar (23-B)"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <span>Revisão</span>
+                      </button>
                       <button
                         onClick={() => handleTogglePublishCompendium(c.id, c.title, c.publicationStatus)}
                         className={`px-3 py-1.5 rounded-lg border font-semibold text-xs flex items-center gap-1 transition-colors ${
@@ -1476,6 +1503,14 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
 
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-stone-400 text-[11px]">{q.options.length} alternativas</span>
+                  <button
+                    onClick={() => setProvenanceTarget({ kind: 'question', id: q.id, title: q.questionStem.slice(0, 60) })}
+                    className="px-2.5 py-1 rounded-lg border border-stone-200 dark:border-[#243452] hover:bg-stone-100 dark:hover:bg-[#1A2845] text-stone-600 dark:text-stone-300 font-semibold flex items-center gap-1 transition-colors"
+                    title="Revisão/atestação editorial — obrigatória para publicar (23-B)"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Revisão</span>
+                  </button>
                   <button
                     onClick={() => handleTogglePublishQuestion(q.id, q.publicationStatus)}
                     className={`px-2.5 py-1 rounded-lg border font-semibold flex items-center gap-1 transition-colors ${

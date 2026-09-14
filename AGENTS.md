@@ -478,6 +478,50 @@ protótipo).
     confirmado nesta versão do SDK; se o padrão de chamadas mudar (ex.:
     deixar de depender só de `signInWithPassword`/`signOut`, ou trocar de
     SDK), reavaliar.
+22. **`select (minha_funcao()).* \gset` chama uma função VOLÁTIL UMA VEZ POR
+    COLUNA do tipo composto retornado** (Prompt 23-B, 2026-09-14) — armadilha
+    clássica do Postgres, não específica deste projeto, mas encontrada aqui
+    pela primeira vez ao escrever um teste pgTAP para `create_content_revision()`
+    (retorna `content_revisions`, 9 colunas): a expansão `.* ` é feita ANTES
+    de materializar a chamada, então o planner trata cada coluna como uma
+    referência separada à função — 9 chamadas, 9 linhas inseridas, com
+    `revision_number` 1..9 em vez de só 1. Sintoma: uma contagem/sequência
+    numérica "a mais" sem erro nenhum. Correção: usar a função como fonte de
+    linhas — `select * from minha_funcao(...) \gset prefix_` (ou uma CTE) —
+    nunca `select (minha_funcao()).* `, quando a função tem qualquer efeito
+    colateral (INSERT/UPDATE) e retorna mais de uma coluna.
+23. **Um trigger "imutável para sempre, incondicional, mesmo para
+    `postgres`" quebra `ON DELETE CASCADE` legítimo** (Prompt 23-B,
+    2026-09-14) — `content_revisions`/`content_reviews` tiveram, numa
+    primeira versão, um `BEFORE UPDATE OR DELETE ... RAISE EXCEPTION`
+    incondicional (sem checar `current_user`), pensado para reforçar
+    imutabilidade além de RLS/GRANT. Isso quebrou o cascade real de
+    `DELETE FROM materials` (que já tinha `ON DELETE CASCADE` para
+    `content_revisions`) — mesmo `deleteCompendium()`/scripts de limpeza de
+    teste rodando como `postgres` não conseguiam mais apagar um material que
+    já tivesse alguma revisão. Detectado só ao rodar a suíte Playwright real
+    (a limpeza de fixture do teste falhou), não pela leitura do código nem
+    pelo pgTAP (que não testa `DELETE FROM materials` com revisão associada).
+    **Corrigido removendo os dois triggers incondicionais** — a imutabilidade
+    contra qualquer CLIENTE real (PostgREST sempre conecta como
+    `anon`/`authenticated`/`service_role`, nunca `postgres`) já estava
+    garantida só por RLS (nenhuma policy de UPDATE/DELETE) + ausência de
+    GRANT dessas operações para `authenticated`; um trigger extra tentando
+    bloquear até `postgres`/cascade era uma garantia redundante e mais forte
+    do que o necessário, com um efeito colateral real. Mesmo padrão se
+    aplicou a `claims`/`claim_sources` (guardas de "revisão já atestada, não
+    mexe mais"): a checagem de "já atestada" agora só roda em INSERT/UPDATE,
+    nunca em DELETE — um `DELETE FROM materials`/`questions` que casque até
+    `claims`/`claim_sources` de uma revisão já aprovada é o material/questão
+    inteiro deixando de existir, não alguém alterando uma decisão registrada.
+    Lição geral: um trigger de "imutabilidade absoluta" (sem exceção nem
+    para o role que executa cascades/scripts administrativos) é mais forte
+    do que "imutável para clientes reais" e pode quebrar `ON DELETE CASCADE`
+    de qualquer FK apontando para a tabela — preferir RLS+GRANT ausente
+    (que já é a defesa real contra PostgREST, ver "Arquitetura em uma tela"
+    no topo deste arquivo) e reservar um trigger extra só para a checagem que
+    RLS/GRANT não conseguem expressar (ex.: "bloqueado depois de X evento",
+    não "bloqueado para sempre").
 
 ## Convenções de trabalho
 
@@ -500,6 +544,41 @@ protótipo).
 
 ## Estado atual (mantenha esta seção precisa — é a mais importante)
 
+- **Implementado LOCALMENTE em 2026-09-14 (Prompt 23-B), branch
+  `work/23b-proveniencia-atestacao`, NÃO mesclado/publicado.** Fundação de
+  proveniência editorial e atestação humana: `content_revisions` (snapshot
+  canônico imutável de material OU questão, hash sha256 server-side,
+  `created_by := auth.uid()`), `claims` (`claim_kind`, `content_locator`
+  estável, `requires_source`, `decision`), `claim_sources` (N:N claim↔fonte
+  com `evidence_relation`/`consultation_basis`/`source_locator`),
+  `content_reviews` (atestação append-only, `reviewer_user_id :=
+  auth.uid()`). RPCs novas: `create_content_revision`,
+  `attest_content_revision`, `get_provenance_status`, `publish_material`.
+  `publish_question` ganhou o mesmo gate: só publica com a última revisão
+  aprovada cujo hash recomputado do conteúdo ATUAL bata. Migration
+  `20260914120000_content_provenance_attestation.sql`. Cliente nunca insere
+  em `content_revisions`/`content_reviews` diretamente (sem GRANT
+  INSERT/UPDATE/DELETE para authenticated/anon — só as RPCs SECURITY
+  DEFINER escrevem). UI mínima: botão "Revisão" em cada compêndio/questão da
+  Área Editorial abre `ProvenanceReviewPanel` (criar revisão, decidir
+  claims, vincular fontes, atestar aprovar/rejeitar). Corrigido de
+  passagem: `saveCompendium` perdia `material_references.source_id/url` a
+  cada save (sempre reinseria só `citation_text`); e ~12 lugares do código
+  mostravam `"[object Object]"` em vez da mensagem real de erro de RPC
+  (`PostgrestError` não é `instanceof Error`) — corrigido só nos 3 pontos de
+  publicar/despublicar que este prompt tornou acionáveis
+  (`src/utils/errorMessage.ts`), os demais ficam fora de escopo. Testado:
+  228/228 pgTAP (45 novos + 183 preexistentes sem regressão, incluindo os 4
+  arquivos de fixture que precisaram de um helper `tests.approve_*_revision`
+  para continuar publicando questão/material como fixture depois do gate
+  novo) e 24/24 Playwright (1 novo — fluxo completo pela Área Editorial real:
+  bloqueia publicar sem revisão aprovada, cria revisão, decide claim, atesta,
+  só então publica). Duas armadilhas novas encontradas e corrigidas durante
+  este prompt, ver seção de armadilhas: `select (func()).* \gset` chama a
+  função uma vez por coluna; um trigger "imutável para sempre, mesmo
+  postgres" quebra `ON DELETE CASCADE` legítimo quando o material/questão
+  pai é apagado. Pendente: mesclar em `main`, aplicar a migration no
+  Supabase remoto, e então liberar 21-A2/20-A conforme a fila da diretoria.
 - Migração Firebase → Supabase: **concluída**, Firebase removido do
   código.
 - Conteúdo: 33 compêndios + 393 questões carregados e publicados no

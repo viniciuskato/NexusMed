@@ -28,8 +28,9 @@ returning id as v_discipline_id \gset
 insert into public.themes (discipline_id, name) values (:'v_discipline_id', 'Tema Sync3A Teste')
 returning id as v_theme_id \gset
 
-insert into public.materials (discipline_id, theme_id, title, status) values (:'v_discipline_id', :'v_theme_id', 'Compendio Sync3A', 'published')
+insert into public.materials (discipline_id, theme_id, title) values (:'v_discipline_id', :'v_theme_id', 'Compendio Sync3A')
 returning id as v_material_id \gset
+select tests.force_publish_material(:'v_material_id');
 
 insert into public.questions (discipline_id, theme_id, cycle, difficulty, clinical_vignette, question_stem)
 values (:'v_discipline_id', :'v_theme_id', 'clinico', 'medio', 'Vinheta Sync3A', 'Enunciado Sync3A')
@@ -42,6 +43,7 @@ update public.question_option_keys set is_correct = true, explanation = 'Explica
 update public.question_option_keys set explanation = 'Explicação errada' where option_id = :'v_opt_b';
 
 select tests.authenticate_as(:'v_admin');
+select tests.approve_question_revision(:'v_question_id');
 select public.publish_question(:'v_question_id');
 select tests.clear_auth();
 
@@ -250,6 +252,7 @@ insert into public.question_answer_keys (question_id, general_commentary, high_y
 update public.question_option_keys set is_correct = true, explanation = 'Explicação correta 2' where option_id = :'v_opt_a2';
 update public.question_option_keys set explanation = 'Explicação errada 2' where option_id = :'v_opt_b2';
 select tests.authenticate_as(:'v_admin');
+select tests.approve_question_revision(:'v_question_id_2');
 select public.publish_question(:'v_question_id_2');
 select tests.authenticate_as(:'v_user_a');
 

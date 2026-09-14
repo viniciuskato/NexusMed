@@ -333,3 +333,77 @@ export interface LastReadingSession {
   sectionTitle?: string;
   updatedAt: number;
 }
+
+// ============================================================================
+// Proveniência editorial e atestação humana (Prompt 23-B).
+// Ver supabase/migrations/20260914120000_content_provenance_attestation.sql.
+// ============================================================================
+
+/**
+ * Rótulo de exibição do estado de proveniência de um material/questão,
+ * calculado server-side por get_provenance_status() — nunca inferido no
+ * cliente (evitaria recomputar o hash canônico do conteúdo).
+ */
+export type ProvenanceStatus =
+  | 'legacy_unmapped'
+  | 'em_revisao'
+  | 'aprovado_para_esta_versao'
+  | 'aprovacao_desatualizada';
+
+export interface ContentRevision {
+  id: string;
+  materialId: string | null;
+  questionId: string | null;
+  revisionNumber: number;
+  snapshotHash: string;
+  policyVersion: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export type ClaimKind = 'source_claim' | 'synthesized_claim' | 'inference';
+export type ClaimDecision = 'pendente' | 'aprovado' | 'requer_correcao_ou_fonte' | 'inferencia_aceita';
+export type RiskCategory = 'alto' | 'medio' | 'baixo';
+
+export interface Claim {
+  id: string;
+  contentRevisionId: string;
+  claimText: string;
+  claimKind: ClaimKind;
+  contentLocator: string;
+  riskCategory: RiskCategory | null;
+  requiresSource: boolean;
+  decision: ClaimDecision;
+  decidedBy: string | null;
+  decidedAt: string | null;
+  sortOrder: number;
+}
+
+export type EvidenceRelation = 'supports' | 'contextualizes' | 'contradicts';
+export type ConsultationBasis = 'directly_consulted' | 'indirectly_reported';
+export type SourceConfidence = 'alta' | 'media' | 'baixa';
+
+export interface ClaimSource {
+  id: string;
+  claimId: string;
+  sourceId: string;
+  evidenceRelation: EvidenceRelation;
+  consultationBasis: ConsultationBasis;
+  sourceLocator: string | null;
+  verified: boolean;
+  confidence: SourceConfidence | null;
+  sortOrder: number;
+}
+
+export type ContentReviewDecision = 'aprovado' | 'rejeitado';
+
+export interface ContentReview {
+  id: string;
+  contentRevisionId: string;
+  reviewerUserId: string;
+  decision: ContentReviewDecision;
+  checklist: Record<string, unknown>;
+  policyVersion: string;
+  revisionHash: string;
+  createdAt: string;
+}
