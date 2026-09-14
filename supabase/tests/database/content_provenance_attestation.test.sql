@@ -175,9 +175,15 @@ returning id as v_discipline_id \gset
 insert into public.themes (discipline_id, name) values (:'v_discipline_id', 'Tema Prov')
 returning id as v_theme_id \gset
 
--- Fonte curada para claim_sources.
+-- Fonte curada para claim_sources. `sources.id` é text (não uuid) — ao
+-- contrário das demais fixtures deste arquivo (uuid via gen_random_uuid()),
+-- um id fixo colide em qualquer segunda execução de `test:db` sem `supabase
+-- db reset` entre elas. ON CONFLICT DO UPDATE mantém o id estável (outros
+-- testes/dumps podem referenciá-lo) e ainda assim permite rodar o arquivo
+-- repetidas vezes sem reset.
 insert into public.sources (id, citation_text, tipo, verificacao)
 values ('prov-source-1', 'Fonte de teste — proveniência', 'material_interno', 'verificada')
+on conflict (id) do update set citation_text = excluded.citation_text
 returning id as v_source_id \gset
 
 -- Material A: draft, 1 seção, 1 referência (com source_id — prova indireta
