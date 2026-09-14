@@ -242,14 +242,49 @@ export function getSeedIds(): SeedIds {
   return cachedSeedIds;
 }
 
+// ── Helpers do Prompt 22-A (Estudo Temático) ────────────────────────────────
+// Materiais são conteúdo GLOBAL (não pertencem a um usuário): tudo criado aqui
+// usa o prefixo abaixo no título e é removido no `finally` de cada teste.
+export const MATERIAL_PREFIX = 'e2e-22a-';
+
+/** Cria um material publicado no MESMO tema do seed, com uma seção. Devolve o id. */
+export function insertPublishedMaterial(title: string, seed: SeedIds = getSeedIds()): string {
+  const fullTitle = `${MATERIAL_PREFIX}${title}`;
+  const materialId = psqlLocal(
+    `insert into public.materials (discipline_id, theme_id, title, subtitle, mode, study_lens, estimated_read_time_minutes, author, tags, provenance, source, license) ` +
+      `values ('${seed.disciplineId}', '${seed.themeId}', '${fullTitle}', 'Material de teste 22-A', 'mecanismos', 'fisiopatologia', 3, 'E2E', array['e2e'], 'e2e-22a', 'fixture', 'uso interno') ` +
+      `returning id;`
+  )
+    .split('\n')[0]
+    .trim();
+  psqlLocal(
+    `insert into public.material_sections (material_id, sort_order, title, mechanism_tag, content, key_takeaways) ` +
+      `values ('${materialId}', 1, 'Seção de teste 22-A', 'Fisiopatologia', 'Conteúdo de teste.', array['ponto']);`
+  );
+  psqlLocal(`update public.materials set status = 'published' where id = '${materialId}';`);
+  return materialId;
+}
+
+/** Remove todos os materiais criados por esta suíte (cascade nas seções). */
+export function deleteE2EMaterials(): void {
+  psqlLocal(`delete from public.materials where title like '${MATERIAL_PREFIX}%';`);
+}
+
 /** Cria um flashcard PRÓPRIO do usuário de teste (com flashcard_srs_state inicial) para exercitar submit_flashcard_review em concorrência real. */
-export function insertFlashcardForUser(userId: string, seed: SeedIds = getSeedIds()): string {
+export function insertFlashcardForUser(
+  userId: string,
+  seed: SeedIds = getSeedIds(),
+  options: { materialId?: string | null; isCustom?: boolean; front?: string } = {}
+): string {
   // `psql -t -A` suprime cabeçalho mas NÃO suprime a tag de conclusão
   // ("INSERT 0 1") quando a instrução tem `returning` — fica numa segunda
   // linha da mesma saída. Só a primeira linha é o valor retornado.
+  const front = options.front ?? 'Frente demonstrativa 13-B';
+  const materialValue = options.materialId ? `'${options.materialId}'` : 'null';
+  const isCustom = options.isCustom ?? true;
   const insertOutput = psqlLocal(
-    `insert into public.flashcards (user_id, discipline_id, theme_id, front, back, difficulty) ` +
-      `values ('${userId}', '${seed.disciplineId}', '${seed.themeId}', 'Frente demonstrativa 13-B', 'Verso demonstrativo 13-B', 'medio') ` +
+    `insert into public.flashcards (user_id, discipline_id, theme_id, material_id, is_custom, front, back, difficulty) ` +
+      `values ('${userId}', '${seed.disciplineId}', '${seed.themeId}', ${materialValue}, ${isCustom}, '${front}', 'Verso demonstrativo', 'medio') ` +
       `returning id;`
   );
   const flashcardId = insertOutput.split('\n')[0].trim();

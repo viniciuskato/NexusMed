@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
+  Compass,
+  LayoutDashboard,
+  BookOpen,
+  HelpCircle,
+  Layers,
   Flame,
   Sun,
   Moon,
@@ -53,6 +58,7 @@ export const Header: React.FC<HeaderProps> = ({
     return () => observer.disconnect();
   }, []);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [resourcesOpen, setResourcesOpen] = useState(false);
 
   // Fechar o menu de usuário com a tecla Escape
   useEffect(() => {
@@ -65,6 +71,32 @@ export const Header: React.FC<HeaderProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [userDropdownOpen]);
+
+  useEffect(() => {
+    if (!resourcesOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setResourcesOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [resourcesOpen]);
+
+  // Navegação principal (Prompt 22-A): Início, Estudo Temático e Recursos —
+  // este último agrupando os três acervos (Biblioteca, Questões, Cards).
+  const resourceItems = [
+    { id: 'compendiums', label: 'Biblioteca', icon: BookOpen, activeAlso: ['compendium-reader'] },
+    { id: 'questions', label: 'Questões', icon: HelpCircle, activeAlso: ['simulados', 'simulado-session'] },
+    { id: 'flashcards', label: 'Cards', icon: Layers, activeAlso: ['flashcard-session'] },
+  ];
+  const isResourceActive = resourceItems.some(
+    (item) => activeView === item.id || item.activeAlso.includes(activeView)
+  );
+  const navButtonClass = (active: boolean) =>
+    `min-h-11 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border ${
+      active
+        ? 'bg-teal-600/10 dark:bg-teal-400/15 text-teal-800 dark:text-teal-200 border-teal-500/30 dark:border-teal-400/40'
+        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#142038] border-transparent'
+    }`;
 
   const displayName = profile?.displayName || user?.user_metadata?.display_name || 'Estudante';
   const photoURL = profile?.photoURL || user?.user_metadata?.avatar_url || null;
@@ -96,6 +128,90 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
+        {/* Center: Navegação principal (desktop/tablet) */}
+        <nav
+          id="header-main-nav"
+          aria-label="Navegação principal"
+          className="hidden md:flex items-center gap-1 min-w-0"
+        >
+          <button
+            type="button"
+            id="nav-dashboard"
+            onClick={() => onSelectView('dashboard')}
+            aria-current={activeView === 'dashboard' ? 'page' : undefined}
+            className={navButtonClass(activeView === 'dashboard')}
+          >
+            <LayoutDashboard className="w-3.5 h-3.5" />
+            <span>Início</span>
+          </button>
+
+          <button
+            type="button"
+            id="nav-thematic-study"
+            onClick={() => onSelectView('thematic-study')}
+            aria-current={activeView === 'thematic-study' ? 'page' : undefined}
+            className={navButtonClass(activeView === 'thematic-study')}
+          >
+            <Compass className="w-3.5 h-3.5" />
+            <span>Estudo Temático</span>
+          </button>
+
+          <div className="relative">
+            <button
+              type="button"
+              id="nav-resources"
+              onClick={() => setResourcesOpen((prev) => !prev)}
+              aria-haspopup="menu"
+              aria-expanded={resourcesOpen}
+              aria-controls="nav-resources-menu"
+              className={navButtonClass(isResourceActive)}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Recursos</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform ${resourcesOpen ? 'rotate-180' : ''}`}
+                aria-hidden="true"
+              />
+            </button>
+
+            {resourcesOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setResourcesOpen(false)}
+                  aria-hidden="true"
+                />
+                <div
+                  id="nav-resources-menu"
+                  role="menu"
+                  aria-orientation="vertical"
+                  aria-labelledby="nav-resources"
+                  className="absolute left-0 mt-2 w-52 rounded-xl bg-white dark:bg-[#111827] border border-[#E2E8F0] dark:border-[#263244] elev-lg py-2 z-50"
+                >
+                  {resourceItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        role="menuitem"
+                        id={`nav-resources-${item.id}`}
+                        onClick={() => {
+                          setResourcesOpen(false);
+                          onSelectView(item.id);
+                        }}
+                        className="w-full text-left px-4 py-2 text-xs text-[#172033] dark:text-[#E5E7EB] hover:bg-slate-100 dark:hover:bg-[#182235] flex items-center gap-2 cursor-pointer"
+                      >
+                        <Icon className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        </nav>
 
         {/* Right: Quick Search, Streak, Theme Toggle, Profile */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">

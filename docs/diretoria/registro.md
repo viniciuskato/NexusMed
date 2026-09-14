@@ -1276,3 +1276,50 @@ sessão futura decidir prioridade: (a) corrigir a corrida entre abas do
 mesmo `BrowserContext` na fila de sincronização (achado desta sessão);
 (b) cobertura de acessibilidade de teclado do `AdminCMSView` (pendência
 já herdada do 12-B/13-A).
+
+## 22-A — Estudo Temático por packs de material (2026-09-13, sessão executiva) — NÃO PUBLICADO
+
+**Base**: branch `work/22a-estudo-tematico`, criada a partir de
+`origin/main = eb37a91`. O prompt informava `42252b9`; o remoto já havia
+avançado 4 commits publicados (hotfix de revisão de flashcard + a remoção
+da infraestrutura de e2e e o `revert` dessa remoção, que se anulam —
+`git diff b8795ab eb37a91` vazio). Como `main == origin/main`, árvore
+limpa e nenhuma worktree extra, a divergência foi tratada como avanço já
+publicado, não como conflito concorrente.
+
+**Transposição a partir do snapshot do AI Studio** (usado como fonte de
+código, nunca como projeto-base): aproveitados a ideia de packs, a
+navegação Início/Estudo Temático/Recursos, a persistência sanitizada de
+view/pack e os estados de vazio/parcial. Reescritos: a montagem dos packs
+(agora função pura e testada) e a tela (≈600 linhas em vez de 1.371,
+delegando leitura/questões/SRS aos componentes canônicos). Descartados:
+`package.json`, configs, scripts, migrations, testes e documentação do
+snapshot, além de `FlashcardReviewSession.tsx`/`FlashcardReviewer.tsx` —
+o SRS atômico do 13-B (`reviewFlashcard()` → `submit_flashcard_review`)
+ficou intacto.
+
+**Defeito central corrigido na transposição**: o protótipo adotava, em
+cada pack, qualquer conteúdo do mesmo tema sem `compendiumRefId` — com
+dois materiais no tema, o mesmo conteúdo aparecia duplicado nos dois
+packs. Agora o vínculo é só por referência explícita; conteúdo sem
+referência aparece uma única vez em "Conteúdo do tema sem material
+associado"; cards personalizados ficam só em "Meus Cards Personalizados";
+referência para material indisponível vai para seção avulsa factual, sem
+nenhuma inferência por nome/similaridade.
+
+**Validações**: `npm run verify:full` verde (typecheck limpo, lint 89
+avisos/0 erros — abaixo do teto 93, vitest 24/24 incluindo 9 testes novos
+de `thematicPacks`, build, pgTAP 183/183, Playwright 23/23 com 5 specs
+novos de Estudo Temático). `git diff --check` limpo, gate de bundle sem
+debug OK, 0 fixtures residuais. Bundle antes/depois (só métrica):
+999,09 kB → 1.037,46 kB (gzip 256,37 → 263,77 kB).
+
+**Regressão encontrada e corrigida na própria suíte**: 9 specs antigos
+navegavam clicando no texto dos botões do dock ("Questões", "Biblioteca",
+"Cards"), que passaram para dentro do agrupador "Recursos" — helpers
+atualizados para os ids novos (`#dock-nav-resources` →
+`#dock-resources-*`). Nenhuma alteração de produto foi feita para
+acomodar teste.
+
+**Estado de publicação**: não publicado — sem merge em `main`, sem push,
+sem PR, sem deploy, sem migration e sem escrita remota.

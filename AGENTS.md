@@ -165,6 +165,16 @@ protótipo).
     só é visível em desktop (`xl:inline`); em telas menores o mesmo item
     é o 3º botão (índice 2, sem texto, só ícone) do dock fixo
     `#mobile-floating-dock`.
+    **ATUALIZADO no Prompt 22-A (2026-09-13)**: a navegação principal
+    passou a ser Início / Estudo Temático / Recursos, e os três acervos
+    (Biblioteca, Questões, Cards) ficam DENTRO do agrupador "Recursos" —
+    no header (`#nav-resources` → `#nav-resources-compendiums|questions|
+    flashcards`, visível a partir de `md`) e no dock (`#dock-nav-resources`
+    → `#dock-resources-*`). Navegar por texto ("Questões") não funciona
+    mais: use os ids. Isso quebrou 9 specs de e2e que clicavam pelo texto
+    do dock — todos corrigidos no mesmo prompt. Cada item do dock tem id
+    estável `#dock-nav-<view>` (`dashboard`, `thematic-study`,
+    `resources`, `admin`).
 
 13. **O padrão `Resilient*Repository` (grava local, espelha no Supabase com
     `catch {}` silencioso) foi confirmado como risco real, não só teórico**
@@ -1383,6 +1393,35 @@ protótipo).
   feito com commit explícito (`--no-ff`). Ver `docs/diretoria/
   registro.md`, entrada "13-B", para o detalhamento completo (runs de CI,
   hashes, deploy, smoke).
+
+- **Prompt 22-A (2026-09-13), sessão executiva — NÃO PUBLICADO**: branch
+  `work/22a-estudo-tematico` (a partir de `origin/main = eb37a91`).
+  Estudo Temático transposto seletivamente do snapshot do AI Studio (ver
+  armadilha #6 — código de fora sempre revisado linha a linha): nova view
+  `thematic-study`, um pack por material (`compendium.id`) agrupado sob
+  tema/disciplina. **Regra de vínculo**: questão/card entra no pack SÓ com
+  `compendiumRefId === compendium.id`; nada é associado por nome ou
+  similaridade. O protótipo adotava também qualquer conteúdo do mesmo tema
+  sem referência, o que DUPLICAVA esse conteúdo em todos os packs do tema
+  — corrigido. Conteúdo sem referência aparece uma única vez em "Conteúdo
+  do tema sem material associado"; `isCustom` fica só em "Meus Cards
+  Personalizados"; referência para material indisponível vai para seção
+  avulsa factual. A regra vive em `src/services/thematicPacks.ts` (função
+  pura, com invariante "cada item aparece em exatamente um lugar" coberta
+  por teste unitário) — a tela só organiza e navega; leitura, questões e
+  SRS continuam nos componentes canônicos (`CompendiumReader`,
+  `QuestionsView`, `FlashcardReviewSession`), com escopo por material via
+  a prop nova `filterCompendiumId` (aceita também `SCOPE_UNLINKED`/
+  `SCOPE_CUSTOM`) e retorno explícito ao pack. `reviewFlashcard()` →
+  `submit_flashcard_review` intacto; nenhuma migration, RPC, RLS, auth ou
+  CI tocada. `activeView` e o pack aberto passam a ser persistidos por
+  usuário (`StorageService.getUIState`, chaves `nav_active_view`/
+  `nav_thematic_pack`) com lista de PERMISSÃO de views e validação do id
+  salvo contra os compêndios disponíveis — sessões efêmeras
+  (`simulado-session`, `flashcard-session`, `compendium-reader`) NÃO são
+  restauradas de propósito (dependem de estado em memória). Ver também a
+  atualização da armadilha #12 (navegação). `verify:full` verde
+  (vitest 24/24, pgTAP 183/183, Playwright 23/23).
 
 ## Manter este arquivo atualizado
 

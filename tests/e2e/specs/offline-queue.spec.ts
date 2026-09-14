@@ -18,7 +18,10 @@ async function login(page: Page, user: CreatedTestUser) {
 }
 
 async function goToQuestionsBank(page: Page) {
-  await page.locator('#mobile-floating-dock').getByText('Questões', { exact: true }).click();
+  // Prompt 22-A: "Questões" passou a ficar dentro do agrupador "Recursos" do
+  // dock (Início / Estudo Temático / Recursos).
+  await page.locator('#dock-nav-resources').click();
+  await page.locator('#dock-resources-questions').click();
 }
 
 function countAttemptsForUser(userId: string): number {

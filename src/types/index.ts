@@ -199,6 +199,7 @@ export interface Flashcard {
 
 export type AppView =
   | 'dashboard'
+  | 'thematic-study'
   | 'compendiums'
   | 'compendium_reader'
   | 'questions'
