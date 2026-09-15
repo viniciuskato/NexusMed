@@ -466,7 +466,7 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
             className={`px-3 py-1.5 rounded-xl font-semibold shrink-0 transition-all cursor-pointer ${
               selectedDisciplineId === 'all'
                 ? 'bg-slate-900 dark:bg-teal-600 text-white elev-xs'
-                : 'bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                : 'bg-white dark:bg-[#142038] border border-slate-300 dark:border-[#263750] text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#1A2845] hover:border-slate-400 shadow-2xs'
             }`}
           >
             Todas ({compendiums.length})
@@ -481,7 +481,7 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
                 className={`px-3 py-1.5 rounded-xl font-semibold shrink-0 transition-all flex items-center gap-1.5 cursor-pointer ${
                   isSelected
                     ? 'bg-slate-900 dark:bg-teal-600 text-white elev-xs'
-                    : 'bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    : 'bg-white dark:bg-[#142038] border border-slate-300 dark:border-[#263750] text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#1A2845] hover:border-slate-400 shadow-2xs'
                 }`}
               >
                 <span>{disc.name}</span>
@@ -521,8 +521,8 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
                 onClick={() => setSelectedLens(isSelected ? 'all' : lens.id)}
                 className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                   isSelected
-                    ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-300 dark:border-teal-700 elev-xs'
-                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                    ? 'bg-teal-50 dark:bg-teal-950/60 border-teal-500 dark:border-teal-400 ring-2 ring-teal-500/20 elev-xs'
+                    : 'bg-white dark:bg-[#0E1726] border-slate-300/80 dark:border-[#243652] hover:border-teal-500/60 hover:bg-slate-50 dark:hover:bg-[#152238] shadow-2xs'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">

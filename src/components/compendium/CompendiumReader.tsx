@@ -22,6 +22,7 @@ import {
   MoreHorizontal,
   Copy,
   Check,
+  GraduationCap,
 } from 'lucide-react';
 import { Compendium, CompendiumSection, Discipline, Theme } from '../../types';
 import { StorageService } from '../../services/storage';
@@ -763,6 +764,21 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
                       </span>
                       <p className="text-sm text-[#172033] dark:text-[#E5E7EB] leading-relaxed">
                         {sec.warningAlert}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Consenso de Prova vs. Prática Clínica (Indigo border) */}
+                {sec.examConsensus && (
+                  <div className="mt-4 p-4 rounded-r-lg border-l-4 border-indigo-600 bg-indigo-500/5 dark:bg-indigo-500/10 flex items-start gap-3">
+                    <GraduationCap className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 block mb-0.5">
+                        Consenso de Prova vs. Prática de Plantão
+                      </span>
+                      <p className="text-sm text-[#172033] dark:text-[#E5E7EB] leading-relaxed">
+                        {sec.examConsensus}
                       </p>
                     </div>
                   </div>

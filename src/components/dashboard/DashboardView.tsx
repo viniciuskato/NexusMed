@@ -43,6 +43,9 @@ import {
   DailyQuest,
 } from '../../services/gamification';
 import { IntegratedCadernoErros } from './IntegratedCadernoErros';
+import { ClinicalCognitiveProfile } from './ClinicalCognitiveProfile';
+import { BancaPerformanceRadar } from './BancaPerformanceRadar';
+import { DailyHandoffModal } from '../common/DailyHandoffModal';
 
 interface DashboardViewProps {
   disciplines: Discipline[];
@@ -101,6 +104,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   >({});
   const [errorLogs, setErrorLogs] = useState<ErrorLogItem[]>([]);
   const [showAchievementsModal, setShowAchievementsModal] = useState(false);
+  const [showDailyHandoffModal, setShowDailyHandoffModal] = useState(false);
 
   const reloadData = async () => {
     const [nextAnswers, nextProgress, nextErrorLogs] = await Promise.all([
@@ -357,15 +361,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* ── Seletor de Modo de Dados Pessoais: Visão Geral vs Caderno de Erros ── */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-[#243452] pb-3">
-        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100 dark:bg-[#142038] border border-slate-200/80 dark:border-[#243452] self-start">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-slate-300 dark:border-[#243652] pb-3">
+        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-200/90 dark:bg-[#121D32] border border-slate-300 dark:border-[#223350] self-start shadow-2xs">
           <button
             type="button"
             onClick={() => handleSwitchTab('overview')}
             className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'overview'
-                ? 'bg-white dark:bg-[#0F172A] text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                ? 'bg-white dark:bg-[#0E1726] text-slate-900 dark:text-white shadow-xs border border-slate-300/80 dark:border-white/10'
+                : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100/60 dark:hover:bg-[#182640]'
             }`}
           >
             <Activity className="w-4 h-4 text-teal-600 dark:text-teal-400" />
@@ -377,8 +381,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => handleSwitchTab('errors')}
             className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'errors'
-                ? 'bg-white dark:bg-[#0F172A] text-rose-600 dark:text-rose-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                ? 'bg-white dark:bg-[#0E1726] text-rose-600 dark:text-rose-400 shadow-xs border border-slate-300/80 dark:border-white/10'
+                : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100/60 dark:hover:bg-[#182640]'
             }`}
           >
             <BookMarked className="w-4 h-4 text-rose-500" />
@@ -390,6 +394,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             )}
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setShowDailyHandoffModal(true)}
+          className="px-4 py-2 rounded-2xl bg-teal-50 dark:bg-teal-950/30 border border-teal-300 dark:border-teal-800 text-teal-800 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/40 text-xs font-bold transition-all cursor-pointer flex items-center gap-2 self-start sm:self-auto shadow-2xs"
+          title="Abrir síntese diária de fechamento de estudos"
+        >
+          <Stethoscope className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+          <span>Passagem de Plantão</span>
+        </button>
       </div>
 
       {activeTab === 'errors' ? (
@@ -406,7 +420,68 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         />
       ) : (
         <>
-      {/* ── 2. Cards Vitais de Desempenho Pessoal (KPIs) ── */}
+      {/* ── 2. Card de Missão do Dia: Ação Cirúrgica Imediata ── */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-teal-900/40 via-slate-900 to-indigo-950/50 border border-teal-500/30 elev-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-5 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-80 h-full bg-teal-500/5 blur-2xl pointer-events-none" />
+        <div className="space-y-2 relative z-10 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-[11px] font-extrabold uppercase tracking-wider border border-teal-400/30">
+              <Zap className="w-3.5 h-3.5 fill-teal-400 text-teal-400" />
+              Missão Prioritária de Hoje
+            </span>
+            <span className="text-[11px] text-teal-200/80 font-medium">
+              Recomendação baseada nas suas métricas cognitivas
+            </span>
+          </div>
+          <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+            {dueCards.length > 0
+              ? `Revisar ${dueCards.length} flashcard${dueCards.length > 1 ? 's' : ''} do ciclo de repetição espaçada`
+              : errorLogs.length > 0
+              ? `Reforçar ${Math.min(5, errorLogs.length)} questão(ões) pendente(s) do seu Caderno de Erros`
+              : 'Consolidar acervo: Treinar 10 novas questões de alta incidência'}
+          </h3>
+          <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+            {dueCards.length > 0
+              ? 'A retenção de longo prazo exige consolidar os conceitos com intervalo vencido antes de avançar em novos temas teóricos.'
+              : errorLogs.length > 0
+              ? 'Identificamos lacunas cognitivas recentes. Revisitá-las reduz a chance de reincidência em provas oficiais da residência médica.'
+              : 'Seu circuito de SRS e Caderno de Erros estão em dia! Continue avançando no banco de questões para acumular XP e dominar novas bancas.'}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0 relative z-10 w-full sm:w-auto">
+          {dueCards.length > 0 ? (
+            <button
+              type="button"
+              onClick={onStartSRS}
+              className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-300 hover:to-cyan-300 text-slate-950 font-black text-xs elev-md shadow-teal-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Brain className="w-4 h-4" />
+              <span>Iniciar Revisão SRS ({dueCards.length})</span>
+            </button>
+          ) : errorLogs.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => handleSwitchTab('errors')}
+              className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-slate-950 font-black text-xs elev-md shadow-rose-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Superar Erros no Caderno</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onSelectView('questions')}
+              className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-300 hover:to-cyan-300 text-slate-950 font-black text-xs elev-md shadow-teal-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span>Resolver Questões Agora</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── 3. Cards Vitais de Desempenho Pessoal (KPIs) ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI 1: Acurácia Geral */}
         <div className="p-5 rounded-3xl bg-white dark:bg-[#0F172A] border border-slate-200/90 dark:border-[#243452] elev-xs space-y-3">
@@ -554,6 +629,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* ── Motor de Identidade & Perfil Cognitivo Clínico (Exclusivo NexusMed) ── */}
+      <ClinicalCognitiveProfile
+        answers={answers}
+        questions={questions}
+        errorLogs={errorLogs}
+        onSelectView={onSelectView}
+      />
 
       {/* ── 3. Painel Principal Dividido: Análise Clínica + Painel Lateral Pessoal ── */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-7 items-start">

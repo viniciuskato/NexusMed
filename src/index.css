@@ -4,32 +4,32 @@
 
 @layer base {
   :root {
-    --bg-canvas: #F8FAFC;
+    --bg-canvas: #EDF2F7;
     --bg-surface: #FFFFFF;
     --bg-surface-secondary: #F1F5F9;
     --bg-surface-elevated: #FFFFFF;
-    --border-color: #E2E8F0;
-    --border-subtle: #F1F5F9;
+    --border-color: #CBD5E1;
+    --border-subtle: #E2E8F0;
     --text-primary: #0F172A;
-    --text-secondary: #475569;
-    --text-tertiary: #94A3B8;
+    --text-secondary: #334155;
+    --text-tertiary: #64748B;
     --ac: #0D9488;
     --ac-hover: #0F766E;
     --ac-light: #F0FDFA;
-    --ac-amber: #F59E0B;
-    --ac-purple: #8B5CF6;
-    --ac-emerald: #10B981;
-    --card-shadow: 0 4px 20px -2px rgb(15 23 42 / 0.05);
+    --ac-amber: #D97706;
+    --ac-purple: #7C3AED;
+    --ac-emerald: #059669;
+    --card-shadow: 0 4px 20px -2px rgb(15 23 42 / 0.08);
     color-scheme: light;
   }
 
   .dark {
-    --bg-canvas: #090E17;
-    --bg-surface: #0F172A;
-    --bg-surface-secondary: #142038;
-    --bg-surface-elevated: #1A2845;
-    --border-color: #243452;
-    --border-subtle: #19263E;
+    --bg-canvas: #070B14;
+    --bg-surface: #0E1726;
+    --bg-surface-secondary: #152238;
+    --bg-surface-elevated: #1B2B48;
+    --border-color: #243652;
+    --border-subtle: #19273D;
     --text-primary: #F8FAFC;
     --text-secondary: #94A3B8;
     --text-tertiary: #64748B;
@@ -39,7 +39,7 @@
     --ac-amber: #FBBF24;
     --ac-purple: #A78BFA;
     --ac-emerald: #34D399;
-    --card-shadow: 0 4px 24px -2px rgb(0 0 0 / 0.4);
+    --card-shadow: 0 4px 24px -2px rgb(0 0 0 / 0.55);
     color-scheme: dark;
   }
 
@@ -81,6 +81,39 @@ html {
   background-color: var(--ac2bg);
   color: var(--ac2);
   border: 1px solid var(--ac2);
+}
+
+/* Caixas de Destaque Editorial Médico Padronizadas */
+.box-gold-rule {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-left: 4px solid #10B981;
+  border-radius: 0 12px 12px 0;
+  padding: 14px 18px;
+}
+
+.box-trap {
+  background: rgba(244, 63, 94, 0.08);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  border-left: 4px solid #F43F5E;
+  border-radius: 0 12px 12px 0;
+  padding: 14px 18px;
+}
+
+.box-physio {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-left: 4px solid #F59E0B;
+  border-radius: 0 12px 12px 0;
+  padding: 14px 18px;
+}
+
+.box-consensus {
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-left: 4px solid #6366F1;
+  border-radius: 0 12px 12px 0;
+  padding: 14px 18px;
 }
 
 .pergunta-box {

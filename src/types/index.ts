@@ -58,6 +58,7 @@ export interface CompendiumSection {
   keyTakeaways: string[];
   clinicalPearl?: string;
   warningAlert?: string;
+  examConsensus?: string;
   diagramSvgKey?: string;
 }
 
@@ -69,6 +70,7 @@ export interface CompendiumSectionSnapshot {
   keyTakeaways: string[];
   clinicalPearl?: string;
   warningAlert?: string;
+  examConsensus?: string;
 }
 
 /** Snapshot completo de uma seção de compêndio, gravado a cada edição via CMS. */

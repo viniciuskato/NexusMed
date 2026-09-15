@@ -138,7 +138,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             role="menu"
             aria-orientation="vertical"
             aria-labelledby="dock-nav-resources"
-            className="pointer-events-auto z-40 flex items-center gap-1 px-2 py-1.5 rounded-2xl bg-white/95 dark:bg-slate-950/95 backdrop-blur-2xl border border-slate-200/80 dark:border-white/15 shadow-[0_8px_32px_rgba(0,0,0,0.18)]"
+            className="pointer-events-auto z-40 flex items-center gap-1 px-2 py-1.5 rounded-2xl bg-white/98 dark:bg-[#0A1220]/98 backdrop-blur-2xl border border-slate-300/90 dark:border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.22)]"
           >
             {resourceItems.map((item) => {
               const Icon = item.icon;
@@ -155,8 +155,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                   }}
                   className={`relative flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all cursor-pointer min-w-[56px] ${
                     isActive
-                      ? 'bg-teal-600/15 dark:bg-teal-400/20 text-teal-800 dark:text-teal-200 font-bold border border-teal-500/30 dark:border-teal-400/40'
-                      : 'text-slate-700 dark:text-slate-300 hover:bg-white/30 dark:hover:bg-white/10 border border-transparent font-medium'
+                      ? 'bg-teal-600/15 dark:bg-teal-400/20 text-teal-950 dark:text-teal-100 font-bold border border-teal-600/40 dark:border-teal-400/50 shadow-2xs'
+                      : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 border border-transparent font-medium'
                   }`}
                 >
                   <div className="relative">
@@ -179,7 +179,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       <nav
         id="mobile-floating-dock"
         aria-label="Navegação Principal"
-        className="pointer-events-auto flex items-center justify-center gap-1 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-2xl bg-white/95 dark:bg-slate-950/95 backdrop-blur-2xl border border-slate-200/80 dark:border-white/15 shadow-[0_8px_32px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] transition-all"
+        className="pointer-events-auto flex items-center justify-center gap-1 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-2xl bg-white/98 dark:bg-[#0A1220]/98 backdrop-blur-2xl border border-slate-300/90 dark:border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.7)] transition-all"
       >
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -204,8 +204,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               aria-current={item.id !== 'resources' && isActive ? 'page' : undefined}
               className={`relative flex flex-col items-center justify-center py-1.5 px-3 sm:px-4 rounded-xl transition-all cursor-pointer min-w-[56px] sm:min-w-[64px] ${
                 isActive
-                  ? 'bg-teal-600/15 dark:bg-teal-400/20 text-teal-800 dark:text-teal-200 font-bold border border-teal-500/30 dark:border-teal-400/40 shadow-xs'
-                  : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-white/30 dark:hover:bg-white/10 border border-transparent font-medium'
+                  ? 'bg-teal-600/15 dark:bg-teal-400/20 text-teal-950 dark:text-teal-100 font-bold border border-teal-600/40 dark:border-teal-400/50 shadow-xs'
+                  : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 border border-transparent font-medium'
               }`}
             >
               <div className="relative">

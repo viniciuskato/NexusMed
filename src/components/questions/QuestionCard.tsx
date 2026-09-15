@@ -104,7 +104,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       }|${hydrated.bookmarked}|${hydrated.reaction ?? ''}`
     : null;
 
-  // Carrega a resposta/favorito/reação já registrados para esta questão.
+  const [isHovered, setIsHovered] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -170,6 +171,37 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question.id, hydratedKey]);
 
+  // Confete automático só em marcos reais: ao completar uma sequência de
+  // CELEBRATION_STREAK_LENGTH respostas corretas seguidas dentro da mesma
+  // disciplina. Calculado em memória a partir de `answers`, sem persistir
+  // nada novo no banco.
+  const checkStreakCelebration = async () => {
+    const [allAnswers, allQuestions] = await Promise.all([
+      answersRepository.getAnswers(),
+      questionsRepository.getQuestions(),
+    ]);
+    const disciplineByQuestionId = new Map(allQuestions.map((q) => [q.id, q.disciplineId]));
+
+    const sameDisciplineAnswers = Object.values(allAnswers)
+      .filter((a) => disciplineByQuestionId.get(a.questionId) === question.disciplineId)
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    let streak = 0;
+    for (let i = sameDisciplineAnswers.length - 1; i >= 0; i--) {
+      if (!sameDisciplineAnswers[i].isCorrect) break;
+      streak++;
+    }
+
+    if (streak > 0 && streak % CELEBRATION_STREAK_LENGTH === 0) {
+      GamificationService.triggerCelebration();
+    }
+  };
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   const handleConfirmAnswer = async () => {
     if (!selectedOption) return;
 
@@ -208,37 +240,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     }
   };
 
-  // Confete automático só em marcos reais: ao completar uma sequência de
-  // CELEBRATION_STREAK_LENGTH respostas corretas seguidas dentro da mesma
-  // disciplina. Calculado em memória a partir de `answers`, sem persistir
-  // nada novo no banco.
-  const checkStreakCelebration = async () => {
-    const [allAnswers, allQuestions] = await Promise.all([
-      answersRepository.getAnswers(),
-      questionsRepository.getQuestions(),
-    ]);
-    const disciplineByQuestionId = new Map(allQuestions.map((q) => [q.id, q.disciplineId]));
-
-    const sameDisciplineAnswers = Object.values(allAnswers)
-      .filter((a) => disciplineByQuestionId.get(a.questionId) === question.disciplineId)
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-    let streak = 0;
-    for (let i = sameDisciplineAnswers.length - 1; i >= 0; i--) {
-      if (!sameDisciplineAnswers[i].isCorrect) break;
-      streak++;
-    }
-
-    if (streak > 0 && streak % CELEBRATION_STREAK_LENGTH === 0) {
-      GamificationService.triggerCelebration();
-    }
-  };
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
-
   const handleSelectOption = (letter: 'A' | 'B' | 'C' | 'D' | 'E') => {
     if (isSubmitted) return;
     if (isExamMode) {
@@ -247,6 +248,33 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     }
     setSelectedOption(letter);
   };
+
+  // Atalhos de teclado quando o cursor estiver sobre o card ou quando o card estiver selecionado
+  useEffect(() => {
+    if (isSubmitted || !isHovered) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Evita disparar atalho se o estudante estiver digitando num input/textarea
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea') return;
+
+      const key = e.key.toUpperCase();
+      if (['A', 'B', 'C', 'D', 'E'].includes(key)) {
+        const letter = key as 'A' | 'B' | 'C' | 'D' | 'E';
+        // Verifica se a questão possui essa opção
+        if (question.options.some((o) => o.letter === letter)) {
+          e.preventDefault();
+          handleSelectOption(letter);
+        }
+      } else if (e.key === 'Enter' && selectedOption && !isSubmitted && !isExamMode) {
+        e.preventDefault();
+        handleConfirmAnswer();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSubmitted, isHovered, selectedOption, isExamMode, question.options, handleConfirmAnswer, handleSelectOption]);
 
   const handleToggleReaction = async (val: 'up' | 'down') => {
     const nextVal = myReaction === val ? null : val;
@@ -288,12 +316,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     <div
       id={`question-${question.id}`}
       data-answer-origin={answerOrigin ?? 'unanswered'}
-      className={`bg-white dark:bg-[#0F172A] rounded-3xl border transition-all p-6 sm:p-8 elev-xs relative ${
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`bg-white dark:bg-[#0E1726] rounded-3xl border transition-all p-6 sm:p-8 elev-xs relative ${
         isSubmitted
           ? isCorrect
-            ? 'border-emerald-300 dark:border-emerald-700/80 ring-1 ring-emerald-100 dark:ring-emerald-950/40'
-            : 'border-rose-300 dark:border-rose-700/80 ring-1 ring-rose-100 dark:ring-rose-950/40'
-          : 'border-slate-200 dark:border-[#243452]'
+            ? 'border-emerald-400 dark:border-emerald-600 ring-2 ring-emerald-400/20 dark:ring-emerald-950/40'
+            : 'border-rose-400 dark:border-rose-600 ring-2 ring-rose-400/20 dark:ring-rose-950/40'
+          : 'border-slate-300/80 dark:border-[#243652]'
       }`}
     >
       {/* Toast */}
@@ -381,26 +411,26 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           const isEliminated = eliminatedOptions.includes(opt.letter);
           const reviewOpt = reviewByLetter.get(opt.letter);
 
-          let optBg = 'bg-white dark:bg-[#142038] border-slate-200 dark:border-[#243452] hover:border-slate-300 dark:hover:border-slate-600';
-          let letterBg = 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300';
+          let optBg = 'bg-slate-50/90 dark:bg-[#131F35] border-slate-300/80 dark:border-[#283C5A] hover:bg-white dark:hover:bg-[#182640] hover:border-teal-500/80 dark:hover:border-teal-400 text-slate-900 dark:text-slate-100 shadow-2xs hover:shadow-xs';
+          let letterBg = 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300/80 dark:border-slate-700 font-bold shadow-2xs';
 
           if (isExamMode) {
             if (isSelected) {
-              optBg = 'bg-teal-50 dark:bg-teal-950/40 border-teal-600 dark:border-teal-500 ring-2 ring-teal-600/30';
-              letterBg = 'bg-teal-700 text-white';
+              optBg = 'bg-teal-50/90 dark:bg-teal-950/60 border-teal-600 dark:border-teal-400 ring-2 ring-teal-600/30 text-teal-950 dark:text-teal-100 shadow-xs';
+              letterBg = 'bg-teal-700 text-white font-bold border border-teal-700';
             }
           } else if (isSubmitted && reviewOpt) {
             if (reviewOpt.isCorrect) {
-              optBg = 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-600 ring-1 ring-emerald-300 dark:ring-emerald-800';
-              letterBg = 'bg-emerald-600 text-white';
+              optBg = 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-500 dark:border-emerald-500 ring-2 ring-emerald-500/20 text-emerald-950 dark:text-emerald-100 shadow-xs';
+              letterBg = 'bg-emerald-600 text-white font-bold border border-emerald-600';
             } else if (isSelected && !reviewOpt.isCorrect) {
-              optBg = 'bg-rose-50/90 dark:bg-rose-950/40 border-rose-400 dark:border-rose-600 ring-1 ring-rose-300 dark:ring-rose-800';
-              letterBg = 'bg-rose-600 text-white';
+              optBg = 'bg-rose-50 dark:bg-rose-950/50 border-rose-500 dark:border-rose-500 ring-2 ring-rose-500/20 text-rose-950 dark:text-rose-100 shadow-xs';
+              letterBg = 'bg-rose-600 text-white font-bold border border-rose-600';
             }
           } else {
             if (isSelected) {
-              optBg = 'bg-teal-50 dark:bg-teal-950/40 border-teal-600 dark:border-teal-500 ring-2 ring-teal-600/30';
-              letterBg = 'bg-teal-700 text-white';
+              optBg = 'bg-teal-50/90 dark:bg-teal-950/60 border-teal-600 dark:border-teal-400 ring-2 ring-teal-600/30 text-teal-950 dark:text-teal-100 shadow-xs';
+              letterBg = 'bg-teal-700 text-white font-bold border border-teal-700';
             }
           }
 
@@ -480,8 +510,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             disabled={!selectedOption}
             className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all elev-xs ${
               selectedOption
-                ? 'bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white cursor-pointer'
-                : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                ? 'bg-teal-700 hover:bg-teal-800 active:bg-teal-900 dark:bg-teal-600 dark:hover:bg-teal-500 text-white cursor-pointer shadow-sm active:scale-[0.99]'
+                : 'bg-slate-200/90 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 border border-slate-300/60 dark:border-slate-700/60 cursor-not-allowed'
             }`}
           >
             Confirmar Resposta

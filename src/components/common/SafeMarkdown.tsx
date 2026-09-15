@@ -233,12 +233,75 @@ export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({ content, className =
           }
         }
 
-        // Blockquote (> ...)
+        // Blockquote (> ...) e Destaques Editoriais Clínicos
         if (trimmed.startsWith('>')) {
           const quoteLines = trimmed
             .split('\n')
             .map((l) => l.replace(/^>\s?/, ''))
             .join(' ');
+
+          const isGoldRule =
+            /^\s*\[!(NOTE|TIP)\]/i.test(quoteLines) ||
+            /^\s*\*\*(Diretriz|Conduta de Ouro|Ponto Chave)/i.test(quoteLines);
+
+          const isTrap =
+            /^\s*\[!(WARNING|CAUTION)\]/i.test(quoteLines) ||
+            /^\s*\*\*(Pegadinha|Armadilha|Atenção|Alerta)/i.test(quoteLines);
+
+          const isPhysio =
+            /^\s*\*\*(Fisiopatologia|Mecanismo|Farmacologia)/i.test(quoteLines);
+
+          const isConsensus =
+            /^\s*\*\*(Consenso de Prova|Prova vs\.? Plantão|Prática vs\.? Prova|Consenso vs\.? Prática|Pérola de Prova)/i.test(
+              quoteLines
+            );
+
+          if (isGoldRule) {
+            const cleanText = quoteLines.replace(/^\s*\[!(NOTE|TIP)\]\s*/i, '');
+            return (
+              <div key={bIdx} className="box-gold-rule my-3 text-sm text-slate-800 dark:text-slate-200">
+                <div className="font-bold text-emerald-800 dark:text-emerald-300 text-xs mb-1 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>✦ Conduta de Ouro / Diretriz Oficial</span>
+                </div>
+                {parseInline(cleanText)}
+              </div>
+            );
+          }
+
+          if (isTrap) {
+            const cleanText = quoteLines.replace(/^\s*\[!(WARNING|CAUTION)\]\s*/i, '');
+            return (
+              <div key={bIdx} className="box-trap my-3 text-sm text-slate-800 dark:text-slate-200">
+                <div className="font-bold text-rose-800 dark:text-rose-300 text-xs mb-1 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>⚠ Armadilha da Banca / Pegadinha Frequente</span>
+                </div>
+                {parseInline(cleanText)}
+              </div>
+            );
+          }
+
+          if (isPhysio) {
+            return (
+              <div key={bIdx} className="box-physio my-3 text-sm text-slate-800 dark:text-slate-200">
+                <div className="font-bold text-amber-800 dark:text-amber-300 text-xs mb-1 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>⚙ Fisiopatologia & Mecanismo de Ação</span>
+                </div>
+                {parseInline(quoteLines)}
+              </div>
+            );
+          }
+
+          if (isConsensus) {
+            return (
+              <div key={bIdx} className="box-consensus my-3.5 text-sm text-slate-800 dark:text-slate-200">
+                <div className="font-bold text-indigo-800 dark:text-indigo-300 text-xs mb-1 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>✦ Consenso de Prova vs. Prática de Plantão</span>
+                </div>
+                {parseInline(quoteLines)}
+              </div>
+            );
+          }
+
           return (
             <blockquote
               key={bIdx}

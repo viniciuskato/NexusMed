@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ArrowLeft,
   RotateCcw,
@@ -34,6 +34,11 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
   const [isFlipped, setIsFlipped] = useState(false);
   const [sessionCompleted, setSessionCompleted] = useState(false);
   const [reviewedCount, setReviewedCount] = useState(0);
+
+  // Gesto de Swipe no Flashcard (Touch e Mouse Drag)
+  const [dragStartX, setDragStartX] = useState<number | null>(null);
+  const [dragCurrentX, setDragCurrentX] = useState<number | null>(null);
+  const lastTouchEndRef = useRef(0);
 
   const currentCard = queue[currentIdx];
 
@@ -184,15 +189,65 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
 
       {/* Card Arena */}
       <div className="max-w-2xl mx-auto px-4 pt-4">
-        {/* Flashcard Box */}
-        <div
-          onClick={() => setIsFlipped(!isFlipped)}
-          className={`min-h-[340px] sm:min-h-[380px] bg-white dark:bg-[#0F172A] rounded-3xl border transition-all cursor-pointer p-8 sm:p-10 elev-sm flex flex-col justify-between relative group select-none ${
-            isFlipped
-              ? 'border-teal-300 dark:border-teal-600 ring-2 ring-teal-50 dark:ring-teal-950/40 elev-md'
-              : 'border-slate-200 dark:border-[#243452] hover:border-slate-300 dark:hover:border-slate-600'
-          }`}
-        >
+        {/* Flashcard Box com suporte a Gestos (Swipe) */}
+        {(() => {
+          const deltaX = dragStartX !== null && dragCurrentX !== null ? dragCurrentX - dragStartX : 0;
+          const rotation = deltaX * 0.05;
+          const isDragging = dragStartX !== null;
+
+          return (
+            <div
+              onTouchStart={(e) => {
+                setDragStartX(e.touches[0].clientX);
+                setDragCurrentX(e.touches[0].clientX);
+              }}
+              onTouchMove={(e) => {
+                if (dragStartX !== null) setDragCurrentX(e.touches[0].clientX);
+              }}
+              onTouchEnd={() => {
+                lastTouchEndRef.current = Date.now();
+                if (Math.abs(deltaX) > 80 && isFlipped) {
+                  if (deltaX < 0) {
+                    // Swipe para a esquerda: Errei / Difícil
+                    handleRate(1);
+                  } else {
+                    // Swipe para a direita: Bom / Fácil
+                    handleRate(3);
+                  }
+                } else if (Math.abs(deltaX) < 10) {
+                  setIsFlipped(!isFlipped);
+                }
+                setDragStartX(null);
+                setDragCurrentX(null);
+              }}
+              onClick={() => {
+                // Ignora o clique sintético gerado após o evento touch em telas móveis
+                if (Date.now() - lastTouchEndRef.current < 450) return;
+                if (Math.abs(deltaX) < 10) {
+                  setIsFlipped(!isFlipped);
+                }
+              }}
+              style={{
+                transform: deltaX !== 0 ? `translateX(${deltaX}px) rotate(${rotation}deg)` : undefined,
+                transition: isDragging ? 'none' : 'transform 0.25s ease-out',
+              }}
+              className={`min-h-[340px] sm:min-h-[380px] bg-white dark:bg-[#0E1726] rounded-3xl border transition-all cursor-pointer p-8 sm:p-10 elev-sm flex flex-col justify-between relative group select-none ${
+                isFlipped
+                  ? 'border-teal-500 dark:border-teal-400 ring-2 ring-teal-500/20 elev-md'
+                  : 'border-slate-300/90 dark:border-[#243652] hover:border-teal-500/60 dark:hover:border-teal-500/60'
+              }`}
+            >
+              {/* Feedback visual durante o swipe */}
+              {isFlipped && deltaX < -30 && (
+                <div className="absolute top-4 left-4 z-20 px-3 py-1 rounded-xl bg-rose-500 text-white font-black text-xs shadow-lg animate-in fade-in">
+                  ← 1. Errei
+                </div>
+              )}
+              {isFlipped && deltaX > 30 && (
+                <div className="absolute top-4 right-4 z-20 px-3 py-1 rounded-xl bg-emerald-500 text-white font-black text-xs shadow-lg animate-in fade-in">
+                  3. Bom →
+                </div>
+              )}
           {/* Top metadata */}
           <div className="flex items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-2">
@@ -329,6 +384,8 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
             )}
           </div>
         </div>
+        );
+      })()}
 
         {/* SRS Rating Control Bar */}
         <div className="mt-6">
@@ -350,57 +407,57 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
                 {/* 1: Errei */}
                 <button
                   onClick={() => handleRate(1)}
-                  className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-left transition-all group cursor-pointer"
+                  className="p-3 rounded-2xl bg-rose-50/90 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/70 border border-rose-300 dark:border-rose-700 text-rose-950 dark:text-rose-100 text-left transition-all group cursor-pointer shadow-2xs"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-bold text-xs">1. Errei</span>
-                    <kbd className="text-[10px] font-mono px-1.5 py-0.5 bg-rose-200/60 dark:bg-rose-800 rounded text-rose-800 dark:text-rose-200">
+                    <kbd className="text-[10px] font-mono px-1.5 py-0.5 bg-rose-200 dark:bg-rose-800 rounded text-rose-900 dark:text-rose-100 font-semibold">
                       1
                     </kbd>
                   </div>
-                  <span className="text-[10px] text-rose-600 dark:text-rose-300 block">Rever hoje (&lt;10m)</span>
+                  <span className="text-[10px] text-rose-700 dark:text-rose-300 font-medium block">Rever hoje (&lt;10m)</span>
                 </button>
 
                 {/* 2: Dificil */}
                 <button
                   onClick={() => handleRate(2)}
-                  className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-left transition-all cursor-pointer"
+                  className="p-3 rounded-2xl bg-amber-50/90 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/70 border border-amber-300 dark:border-amber-700 text-amber-950 dark:text-amber-100 text-left transition-all cursor-pointer shadow-2xs"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-bold text-xs">2. Difícil</span>
-                    <kbd className="text-[10px] font-mono px-1.5 py-0.5 bg-amber-200/60 dark:bg-amber-800 rounded text-amber-800 dark:text-amber-200">
+                    <kbd className="text-[10px] font-mono px-1.5 py-0.5 bg-amber-200 dark:bg-amber-800 rounded text-amber-900 dark:text-amber-100 font-semibold">
                       2
                     </kbd>
                   </div>
-                  <span className="text-[10px] text-amber-600 dark:text-amber-300 block">Rever em 1 dia</span>
+                  <span className="text-[10px] text-amber-700 dark:text-amber-300 font-medium block">Rever em 1 dia</span>
                 </button>
 
                 {/* 3: Bom */}
                 <button
                   onClick={() => handleRate(3)}
-                  className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 text-left transition-all cursor-pointer"
+                  className="p-3 rounded-2xl bg-blue-50/90 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/70 border border-blue-300 dark:border-blue-700 text-blue-950 dark:text-blue-100 text-left transition-all cursor-pointer shadow-2xs"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-bold text-xs">3. Bom</span>
-                    <kbd className="text-[10px] font-mono px-1.5 py-0.5 bg-blue-200/60 dark:bg-blue-800 rounded text-blue-800 dark:text-blue-200">
+                    <kbd className="text-[10px] font-mono px-1.5 py-0.5 bg-blue-200 dark:bg-blue-800 rounded text-blue-900 dark:text-blue-100 font-semibold">
                       3
                     </kbd>
                   </div>
-                  <span className="text-[10px] text-blue-600 dark:text-blue-300 block">Rever em ~3-6 dias</span>
+                  <span className="text-[10px] text-blue-700 dark:text-blue-300 font-medium block">Rever em ~3-6 dias</span>
                 </button>
 
                 {/* 4: Facil */}
                 <button
                   onClick={() => handleRate(4)}
-                  className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-left transition-all cursor-pointer"
+                  className="p-3 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 border border-emerald-300 dark:border-emerald-700 text-emerald-950 dark:text-emerald-100 text-left transition-all cursor-pointer shadow-2xs"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-bold text-xs">4. Fácil</span>
-                    <kbd className="text-[10px] font-mono px-1.5 py-0.5 bg-emerald-200/60 dark:bg-emerald-800 rounded text-emerald-800 dark:text-emerald-200">
+                    <kbd className="text-[10px] font-mono px-1.5 py-0.5 bg-emerald-200 dark:bg-emerald-800 rounded text-emerald-900 dark:text-emerald-100 font-semibold">
                       4
                     </kbd>
                   </div>
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-300 block">Rever em ~10+ dias</span>
+                  <span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-medium block">Rever em ~10+ dias</span>
                 </button>
               </div>
             </div>

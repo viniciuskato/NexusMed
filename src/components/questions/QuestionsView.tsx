@@ -5,6 +5,10 @@ import {
   Timer,
   BookOpen,
   ArrowLeft,
+  Maximize2,
+  Minimize2,
+  Keyboard,
+  Building2,
 } from 'lucide-react';
 import { Question, Discipline, Theme, QuestionAnswerRecord, QuestionReactionValue, Compendium, LastReadingSession } from '../../types';
 import { bookmarksRepository } from '../../repositories/BookmarksRepository';
@@ -67,10 +71,12 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
   const [selectedDiscipline, setSelectedDiscipline] = usePersistedState<string>('questions_discipline', 'all');
   const [selectedTheme, setSelectedTheme] = usePersistedState<string>('questions_theme', filterThemeId || 'all');
   const [selectedDifficulty, setSelectedDifficulty] = usePersistedState<string>('questions_difficulty', 'all');
+  const [selectedInstitution, setSelectedInstitution] = usePersistedState<string>('questions_institution', 'all');
   const [selectedStatus, setSelectedStatus] = usePersistedState<'all' | 'unanswered' | 'correct' | 'incorrect' | 'bookmarked'>(
     'questions_status',
     initialStatusFilter || 'all'
   );
+  const [isFocusMode, setIsFocusMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   useScrollMemory('questions');
 
@@ -141,6 +147,9 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
       if (selectedDifficulty !== 'all' && q.difficulty !== selectedDifficulty) {
         return false;
       }
+      if (selectedInstitution !== 'all' && !q.institution.toLowerCase().includes(selectedInstitution.toLowerCase())) {
+        return false;
+      }
 
       // Status filter
       const ans = answers[q.id];
@@ -166,6 +175,7 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
     selectedDiscipline,
     selectedTheme,
     selectedDifficulty,
+    selectedInstitution,
     selectedStatus,
     searchQuery,
     answers,
@@ -227,32 +237,35 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
         </div>
       )}
 
-      {/* Top Header */}
-      <div className="bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 rounded-3xl p-5 sm:p-6 text-white elev-sm border border-teal-900/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-[11px] font-semibold border border-teal-400/30">
-            <HelpCircle className="w-3.5 h-3.5" />
-            <span>+35 XP por acerto · Justificativa comentada</span>
+      {/* Top Header (Recolhido em Modo Foco) */}
+      {!isFocusMode && (
+        <div className="bg-gradient-to-r from-slate-950 via-teal-950 to-slate-900 rounded-3xl p-5 sm:p-6 text-white elev-sm border border-teal-900/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-[11px] font-semibold border border-teal-400/30">
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>+35 XP por acerto · Justificativa comentada</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">
+              Banco de Questões Médicas
+            </h1>
+            <p className="text-slate-300 text-xs max-w-xl leading-relaxed">
+              Treino deliberado com análise detalhada de distratores, classificação de erros e correlação teórica.
+            </p>
           </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">
-            Banco de Questões Médicas
-          </h1>
-          <p className="text-slate-300 text-xs max-w-xl leading-relaxed">
-            Treino deliberado com análise detalhada de distratores, classificação de erros e correlação teórica.
-          </p>
+
+          <button
+            onClick={onOpenCreateSimulado}
+            className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 font-extrabold text-xs elev-md shadow-teal-500/20 transition-all flex items-center gap-2 shrink-0 cursor-pointer"
+          >
+            <Timer className="w-4 h-4" />
+            <span>Criar Simulado Personalizado</span>
+          </button>
         </div>
+      )}
 
-        <button
-          onClick={onOpenCreateSimulado}
-          className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 font-extrabold text-xs elev-md shadow-teal-500/20 transition-all flex items-center gap-2 shrink-0 cursor-pointer"
-        >
-          <Timer className="w-4 h-4" />
-          <span>Criar Simulado Personalizado</span>
-        </button>
-      </div>
-
-      {/* Multi-Filter Bar */}
-      <div className="bg-white dark:bg-[#0F172A] rounded-3xl border border-slate-200 dark:border-[#243452] p-5 elev-xs space-y-4">
+      {/* Multi-Filter Bar (Recolhido em Modo Foco) */}
+      {!isFocusMode && (
+        <div className="bg-white dark:bg-[#0E1726] rounded-3xl border border-slate-300/80 dark:border-[#243652] p-5 elev-xs space-y-4">
         {/* Top filter row: Search & Status Pills */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="w-full md:w-96 relative">
@@ -262,7 +275,7 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
               placeholder="Pesquisar por vinheta clínica, banca (USP, ENARE)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-[#243452] bg-slate-50 dark:bg-[#142038] focus:bg-white dark:focus:bg-[#1A2845] focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
+              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-[#263750] bg-white dark:bg-[#142038] focus:bg-white dark:focus:bg-[#1A2845] focus:outline-none focus:ring-2 focus:ring-teal-500/30 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 shadow-2xs"
             />
           </div>
 
@@ -280,8 +293,8 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
                 onClick={() => setSelectedStatus(st.id as any)}
                 className={`px-3 py-1.5 rounded-xl font-semibold shrink-0 transition-all cursor-pointer ${
                   selectedStatus === st.id
-                    ? 'bg-gradient-to-r from-teal-600 to-cyan-600 text-white elev-xs'
-                    : 'bg-slate-100 dark:bg-[#142038] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#1A2845]'
+                    ? 'bg-slate-900 dark:bg-teal-600 text-white elev-xs font-bold'
+                    : 'bg-white dark:bg-[#142038] text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-[#263750] hover:bg-slate-50 dark:hover:bg-[#1A2845] hover:border-slate-400 shadow-2xs'
                 }`}
               >
                 {st.label}
@@ -290,18 +303,18 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
           </div>
         </div>
 
-        {/* Bottom filter row: Discipline, Theme, Difficulty */}
-        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
+        {/* Bottom filter row: Discipline, Theme, Difficulty, Institutions */}
+        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-slate-200 dark:border-slate-800 text-xs">
           {/* Discipline Select */}
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-500 dark:text-slate-400">Disciplina:</span>
+            <span className="font-bold text-slate-600 dark:text-slate-400">Disciplina:</span>
             <select
               value={selectedDiscipline}
               onChange={(e) => {
                 setSelectedDiscipline(e.target.value);
                 setSelectedTheme('all');
               }}
-              className="p-1.5 rounded-lg border border-slate-200 dark:border-[#243452] bg-slate-50 dark:bg-[#142038] text-slate-800 dark:text-slate-200 font-medium focus:outline-none"
+              className="p-1.5 rounded-lg border border-slate-300 dark:border-[#263750] bg-white dark:bg-[#142038] text-slate-900 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/30 shadow-2xs cursor-pointer"
             >
               <option value="all">Todas</option>
               {disciplines.map((d) => (
@@ -314,11 +327,11 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
 
           {/* Theme Select */}
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-500 dark:text-slate-400">Tema:</span>
+            <span className="font-bold text-slate-600 dark:text-slate-400">Tema:</span>
             <select
               value={selectedTheme}
               onChange={(e) => setSelectedTheme(e.target.value)}
-              className="p-1.5 rounded-lg border border-slate-200 dark:border-[#243452] bg-slate-50 dark:bg-[#142038] text-slate-800 dark:text-slate-200 font-medium focus:outline-none max-w-xs truncate"
+              className="p-1.5 rounded-lg border border-slate-300 dark:border-[#263750] bg-white dark:bg-[#142038] text-slate-900 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/30 max-w-xs truncate shadow-2xs cursor-pointer"
             >
               <option value="all">Todos os Temas</option>
               {themes
@@ -333,11 +346,11 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
 
           {/* Difficulty Select */}
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-500 dark:text-slate-400">Dificuldade:</span>
+            <span className="font-bold text-slate-600 dark:text-slate-400">Dificuldade:</span>
             <select
               value={selectedDifficulty}
               onChange={(e) => setSelectedDifficulty(e.target.value)}
-              className="p-1.5 rounded-lg border border-slate-200 dark:border-[#243452] bg-slate-50 dark:bg-[#142038] text-slate-800 dark:text-slate-200 font-medium focus:outline-none"
+              className="p-1.5 rounded-lg border border-slate-300 dark:border-[#263750] bg-white dark:bg-[#142038] text-slate-900 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/30 shadow-2xs cursor-pointer"
             >
               <option value="all">Todas</option>
               <option value="facil">Fácil</option>
@@ -350,6 +363,7 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
           {(selectedDiscipline !== 'all' ||
             selectedTheme !== 'all' ||
             selectedDifficulty !== 'all' ||
+            selectedInstitution !== 'all' ||
             selectedStatus !== 'all' ||
             searchQuery) && (
             <button
@@ -357,25 +371,85 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
                 setSelectedDiscipline('all');
                 setSelectedTheme('all');
                 setSelectedDifficulty('all');
+                setSelectedInstitution('all');
                 setSelectedStatus('all');
                 setSearchQuery('');
               }}
-              className="text-teal-700 hover:underline font-semibold ml-auto"
+              className="text-teal-700 dark:text-teal-400 hover:underline font-semibold ml-auto cursor-pointer"
             >
               Limpar Filtros
             </button>
           )}
         </div>
-      </div>
 
-      {/* Results Header Count */}
-      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-2">
-        <span>
-          Exibindo <strong className="text-slate-800 dark:text-slate-200">{filteredQuestions.length} questões</strong>
-        </span>
-        <span className="text-teal-600 dark:text-teal-400 font-semibold">
-          Modo Estudo: Responda para ver a justificativa por alternativa (+35 XP)
-        </span>
+        {/* Quick Institution Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-2.5 border-t border-slate-200/80 dark:border-slate-800/80 text-xs">
+          <div className="flex items-center gap-1.5 mr-1 text-slate-500 dark:text-slate-400 font-bold">
+            <Building2 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+            <span>Banca Rápida:</span>
+          </div>
+          {[
+            { id: 'all', label: 'Todas as Bancas' },
+            { id: 'USP', label: 'USP' },
+            { id: 'ENARE', label: 'ENARE' },
+            { id: 'UNIFESP', label: 'UNIFESP' },
+            { id: 'UNICAMP', label: 'UNICAMP' },
+            { id: 'SUS-SP', label: 'SUS-SP' },
+            { id: 'SURCE', label: 'SURCE' },
+            { id: 'AMRIGS', label: 'AMRIGS' },
+          ].map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => setSelectedInstitution(b.id)}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                selectedInstitution === b.id
+                  ? 'bg-teal-600 dark:bg-teal-500 text-white font-bold shadow-2xs'
+                  : 'bg-slate-100 dark:bg-[#142038] text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#1A2845]'
+              }`}
+            >
+              {b.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      )}
+
+      {/* Results Header Count & Focus Mode Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 px-2">
+        <div className="flex items-center gap-3">
+          <span>
+            Exibindo <strong className="text-slate-800 dark:text-slate-200">{filteredQuestions.length} questões</strong>
+          </span>
+          <div className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-800 text-[11px] font-mono text-slate-600 dark:text-slate-300">
+            <Keyboard className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+            <span>Atalhos: [A-E] Alternativas · [Enter] Confirmar</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <button
+            type="button"
+            onClick={() => setIsFocusMode(!isFocusMode)}
+            className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer border ${
+              isFocusMode
+                ? 'bg-teal-50 dark:bg-teal-950/60 border-teal-400 dark:border-teal-600 text-teal-700 dark:text-teal-300'
+                : 'bg-white dark:bg-[#0E1726] border-slate-300 dark:border-[#243652] text-slate-700 dark:text-slate-300 hover:border-teal-500'
+            }`}
+          >
+            {isFocusMode ? (
+              <>
+                <Minimize2 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                <span>Expandir Painel</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                <span>Modo Foco Zen</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Questions Stack */}

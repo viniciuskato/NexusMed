@@ -97,6 +97,7 @@ import { CreateFlashcardModal } from './components/flashcards/CreateFlashcardMod
 import { SimuladosView } from './components/simulados/SimuladosView';
 import { AdminCMSView } from './components/admin/AdminCMSView';
 import { ThematicStudyView } from './components/thematic/ThematicStudyView';
+import { ClinicalPomodoroWidget } from './components/common/ClinicalPomodoroWidget';
 
 // Views que podem ser restauradas depois de um reload (Prompt 22-A). É uma
 // lista de PERMISSÃO: qualquer outro valor salvo (inclusive um valor futuro
@@ -893,6 +894,9 @@ function AuthenticatedApp() {
           }}
         />
       )}
+
+      {/* Widget Global do Plantão de Foco Clínico (Pomodoro) */}
+      <ClinicalPomodoroWidget />
     </div>
   );
 }
