@@ -18,7 +18,8 @@
 | ID | Prioridade | Estado | Dependência | Impacto em produção | Próxima ação |
 |---|---|---|---|---|---|
 | TASK-2026-09-17-01 — Entrega 40-A (continuidade operacional) | P1 | concluído; integração bloqueada | Retorno 40-A auditado pela diretoria em 2026-09-17 | Nenhum no conteúdo; merge em `main` acionaria novo deploy | Decidir integração junto com a 41-A (mesma branch candidata contém as duas) |
-| TASK-2026-09-17-02 — Entrega 41-A: auditar `fe20832` e restaurar reprodutibilidade | P1 (era P0) | concluído; só local | Nenhuma | Alto se mesclado — `main` já contém `fe20832` sem correções; branch candidata `work/41a-auditoria-fe20832` não enviada ao remoto | Diretoria decide merge/push de `work/41a-auditoria-fe20832`; pgTAP (`npm run test`) ainda não executado nesta trilha por falta de Docker no ambiente — rodar antes de aprovar publicação em produção |
+| TASK-2026-09-17-02 — Entrega 41-A: auditar `fe20832` e restaurar reprodutibilidade | P1 (era P0) | concluído; superado pela 41-B | Nenhuma | Nenhum diretamente — branch candidata substituída por `work/41b-gate-final-fe20832` | Ver TASK-2026-09-17-03 |
+| TASK-2026-09-17-03 — Entrega 41-B: gate final da auditoria `fe20832` (pgTAP/Playwright/hooks/teste focado) | P0 | concluído; branch candidata enviada ao remoto (`origin/work/41b-gate-final-fe20832`), não mesclada | Depende de `work/41a-auditoria-fe20832` @ `6c1f108` | Alto se mesclado — `main` já contém `fe20832` sem estas correções; branch candidata não mesclada, produção não tocada | Diretoria decide merge/push de `work/41b-gate-final-fe20832` para `main`; produção/Vercel/Supabase remoto seguem não verificados por esta trilha, verificar antes de autorizar publicação |
 
 ## Como adicionar uma tarefa
 

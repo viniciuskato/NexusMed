@@ -86,6 +86,98 @@ Ver `docs/diretoria/registro.md` (retorno 41-A) para a matriz completa
 achado → evidência → ação, e `docs/diretoria/prompts/41-A.txt` para o
 prompt original. Branch candidata **só local**, não enviada ao remoto.
 
+## Entrega 41-B (2026-09-17) — gate final da auditoria `fe20832`
+
+Fechou os gates que a 41-A deixou pendentes (Docker indisponível) e revisou
+as duas supressões de lint introduzidas para satisfazer o teto de warnings.
+Base: `work/41a-auditoria-fe20832` @ `6c1f108`. Branch candidata:
+`work/41b-gate-final-fe20832`, em worktree separada (fora da árvore do
+checkout principal): `C:\Users\vinic\OneDrive\Projetos\SynapseMed\worktrees\41b-gate-final-fe20832`.
+
+- **As duas supressões `react-hooks/exhaustive-deps` da 41-A foram
+  removidas**, não mantidas com justificativa: `playChime` (Pomodoro) e
+  `handleConfirmAnswer`/`handleSelectOption` (atalhos de teclado do
+  `QuestionCard`) foram estabilizados com `useCallback` e suas dependências
+  reais, e as listas de dependências dos `useEffect` voltaram a ser
+  completas e verdadeiras (sem `eslint-disable`). Risco concreto
+  identificado: no código da 41-A, o listener de teclado do `QuestionCard`
+  não era remontado quando `onAnswerRecorded`/`onSelectOptionInExam`
+  mudavam de referência sem que `isSubmitted`/`selectedOption`/`isExamMode`/
+  `question.options` também mudassem — nesse caso o Enter/tecla de letra
+  continuaria chamando a callback **antiga** do pai. Prova por teste
+  automatizado (ver abaixo) e por controle negativo manual: revertendo só
+  esses dois arquivos para a versão `6c1f108` (suprimida), os dois testes
+  novos falham exatamente como esperado; com a correção, passam.
+- **Teste focado novo**: `tests/component/questionCardKeyboardShortcuts.test.tsx`
+  (categoria nova, `tests/component/**`, jsdom via `vitest` projects — só
+  para este tipo de prova; `tests/unit/**` continua puro/sem DOM como
+  antes). Dois casos: Enter chama o `onAnswerRecorded` **atual** após
+  rerender que só troca essa prop; tecla de letra chama o
+  `onSelectOptionInExam` **atual** da mesma forma. Ambos falham no código da
+  41-A e passam no código desta entrega — controle negativo executado e
+  revertido manualmente durante a auditoria, não é suposição.
+  Dependências novas (dev-only): `jsdom`, `@testing-library/react`,
+  `@testing-library/dom` — `package-lock.json` regenerado com `npm install`
+  e depois validado com `npm ci` limpo (`rm -rf node_modules && npm ci`).
+- **Gates executados nesta entrega, com Docker Desktop ativo** (a sessão
+  encontrou o daemon parado, iniciou o Docker Desktop instalado em
+  `%LOCALAPPDATA%\Programs\DockerDesktop`, e confirmou o daemon pronto antes
+  de prosseguir — nenhuma etapa foi pulada por indisponibilidade):
+  - `npm ci` limpo (via `rm -rf node_modules && npm ci`): reproduzível.
+  - `npm run typecheck`: limpo, 0 erros.
+  - `npm run lint`: 0 erros, 89 warnings (teto vigente: 93; mesmo número da
+    baseline pré-`fe20832`, mesmo depois de remover as duas supressões).
+  - `npm run test:unit` (Vitest): 26/26 passam (24 pré-existentes + 2 novos
+    do teste focado).
+  - `npm run test` (pgTAP via `supabase test db`, Supabase local via
+    Docker): 228/228 asserções, 6/6 arquivos, `Result: PASS`.
+  - `npm run test:e2e` (Playwright oficial, `chromium`, contra Supabase
+    local em `127.0.0.1`, build `--mode test` + preview isolado na porta
+    4183): 24/24 specs passam.
+  - `npm run build`: build de produção real, sem `--mode test`, ok.
+  - `npm run check:no-debug-bundle`: `0 ocorrências` de
+    `__syncDebug`/`__setTestBackoffOverride` no bundle de produção.
+- **Achado não bloqueante, fora de escopo desta entrega**: após rodar a
+  suíte Playwright oficial completa, `select count(*) from auth.users where
+  email like 'e2e-13a-%'` no Supabase local retornou `1`
+  (`e2e-13a-prov-admin-...@e2e.local`, do spec
+  `provenance-attestation-23b.spec.ts`), quando o README documenta `0`
+  esperado. Não é código tocado por `fe20832` nem por esta entrega — apenas
+  registrado para uma futura auditoria da suíte 23-B. Não afeta produção
+  (fixture só existe no Supabase local, resetado a cada `supabase db
+  reset`).
+- **Smoke em navegador real** (Chromium via Playwright, `npm run dev` em
+  `localhost:3000`, modo demo local — `local-demo-user`, sem Supabase
+  configurado, dados em `localStorage`, sessão descartada ao fechar o
+  browser): Plantão de Foco (Pomodoro) inicia e mostra o cronômetro
+  rodando; Modo Foco Zen alterna o layout da tela de Questões; uma questão
+  respondida via atalho de teclado (tecla `B` seleciona, `Enter` confirma)
+  aparece corretamente registrada; Passagem de Plantão reflete a resposta
+  do dia (`Questões Hoje: 1`, `Erros Catalogados: 1`); Aproveitamento por
+  Banca Examinadora atualiza a banca correspondente (`USP - Residência
+  Médica`) com o resultado real. Zero erros de console/página em toda a
+  sessão. **Isto é smoke local, não é verificação de produção** — produção
+  continua não verificada nesta entrega, como nas anteriores.
+- **Vulnerabilidades moderadas**: `npm audit` continua reportando as mesmas
+  2 vulnerabilidades moderadas pré-existentes, ambas em `vitest`/`@vitest/mocker`
+  (dev-only — `npm audit --omit=dev` retorna 0). Não introduzidas pelas
+  dependências novas desta entrega (`jsdom`, `@testing-library/*`), não
+  bloqueiam `npm ci`, e não foram investigadas/corrigidas — fora de escopo
+  por instrução explícita.
+- **Segredos**: varredura do diff completo desde `23de8fe` (excluindo
+  `package-lock.json`) por padrões de chave/token/JWT não encontrou nenhuma
+  ocorrência. `.env.test.local`, criado nesta sessão só para rodar o
+  Playwright contra o Supabase local, está coberto por `.env.*` no
+  `.gitignore` e não foi commitado.
+- **Não verificado nesta entrega**: produção/Vercel (não tocado, por
+  restrição explícita); estado do Supabase remoto (não tocado); se
+  `work/41b-gate-final-fe20832` deve ser mesclada em `main` — decisão da
+  diretoria.
+
+Ver `docs/diretoria/registro.md` (retorno 41-B) para o relato completo.
+Branch candidata enviada **apenas** a `origin/work/41b-gate-final-fe20832`
+— `main` e produção permanecem inalterados.
+
 ## Risco crítico — HISTÓRICO, resolvido pela 41-A acima
 
 **Existe um commit em `origin/main`, posterior ao último estado documentado,

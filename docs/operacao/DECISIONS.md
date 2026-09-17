@@ -6,6 +6,41 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-17 — Gate final da 41-B: pgTAP e Playwright oficial fecham a auditoria de `fe20832`
+
+A Entrega 41-B partiu de `work/41a-auditoria-fe20832` @ `6c1f108` numa
+worktree separada (`work/41b-gate-final-fe20832`) e fechou os itens que a
+41-A tinha deixado pendentes por falta de Docker: com o Docker Desktop
+iniciado nesta sessão, pgTAP (228/228 asserções) e Playwright oficial
+(24/24 specs, contra Supabase local) passaram integralmente.
+
+Além disso, revisou com ceticismo as duas supressões
+`react-hooks/exhaustive-deps` que a 41-A tinha introduzido para voltar ao
+teto de warnings — a instrução explícita da diretoria foi não aceitar essas
+supressões só porque "reinstalar o listener seria desnecessário", e exigir
+prova técnica real. A revisão encontrou um risco genuíno (não hipotético):
+o listener de teclado do `QuestionCard` podia ficar preso a uma callback
+antiga do componente pai (`onAnswerRecorded`/`onSelectOptionInExam`) se o
+pai trocasse essa prop de referência sem que `isSubmitted`/`selectedOption`/
+`isExamMode`/`question.options` também mudassem — cenário plausível, já que
+o próprio código do `QuestionCard` documenta (comentário sobre `hydrated`)
+que o componente pai recria objetos a cada render. Decisão: **as duas
+supressões foram removidas**, não mantidas — `playChime` e
+`handleConfirmAnswer`/`handleSelectOption` foram estabilizados com
+`useCallback` e dependências reais, permitindo listas de dependências
+completas e verdadeiras nos `useEffect`. Um teste focado novo
+(`tests/component/questionCardKeyboardShortcuts.test.tsx`) prova isso: falha
+no código da 41-A (confirmado por controle negativo manual nesta sessão) e
+passa no código corrigido.
+
+Decisão: `work/41b-gate-final-fe20832` fica **enviada ao remoto**
+(`origin/work/41b-gate-final-fe20832`), mas **não mesclada em `main`** — a
+decisão de integração continua sendo da diretoria. `main`, produção
+(Vercel) e o Supabase remoto não foram tocados nesta entrega; permanecem no
+mesmo estado de antes, com `fe20832` no ar sem as correções das 41-A/41-B.
+
+---
+
 ## 2026-09-17 — Veredito da auditoria 41-A sobre `fe20832`: aceitar com correções
 
 A sessão executiva da Entrega 41-A revisou linha a linha o diff completo de
