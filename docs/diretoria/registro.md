@@ -29,6 +29,20 @@
 |---|---|---|---|
 | Continuidade operacional | 40-A | Preparado | Pode enviar a uma sessão executiva isolada; não executar em paralelo com outra escritora de documentação. |
 
+### Retorno e decisão — 40-A, 2026-09-17
+
+Retorno recebido e auditado contra a branch candidata no commit `7e29870`.
+Entrega aceita como concluída: camada operacional criada, histórico preservado,
+escopo documental e validações confirmados. Integração em `main` bloqueada até
+a auditoria P0 do commit `fe20832`, porque qualquer push dispara deploy e a
+base atual está sem `package-lock.json`. Preparada a Entrega 41-A; envio ainda
+não confirmado.
+
+| Entrega | Etapa/ID atual | Estado | Próxima ação / dependência |
+|---|---|---|---|
+| Continuidade operacional | 40-A | Concluído; não publicado | Aguarda 41-A e autorização específica de integração |
+| Auditoria de `fe20832` | 41-A | Preparado | Pode enviar; não executar junto de outra sessão escritora |
+
 > Cópia versionada do acompanhamento de prompts entre diretoria e
 > sessões executivas, proposta em `docs/CONTINUIDADE-MULTI-MAQUINA.md`
 > (seção 8) para que o histórico sobreviva à troca de máquina, de

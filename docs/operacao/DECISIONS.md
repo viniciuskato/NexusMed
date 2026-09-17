@@ -6,6 +6,21 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-17 — Aceitação do 40-A e bloqueio de integração até auditoria P0
+
+A diretoria auditou o retorno e a branch `work/40a-continuidade-operacional`:
+escopo exclusivamente documental, preservação histórica, redução do caminho
+crítico, links e `git diff --check` foram confirmados. A Entrega 40-A está
+**concluída tecnicamente**, mas sua integração em `main` permanece bloqueada.
+
+Motivo: qualquer push em `main` dispara novo deploy, e a base atual `fe20832`
+removeu `package-lock.json`. Um novo build sem lockfile pode resolver versões
+transitivas diferentes. A próxima entrega obrigatória é a 41-A, auditoria do
+commit e restauração da reprodutibilidade. Somente depois haverá decisão
+separada de publicação para integrar 40-A e eventuais correções.
+
+---
+
 ## 2026-09-17 — Continuidade operacional e fonte única de verdade
 
 Decisão da diretoria, origem da Entrega 40-A:

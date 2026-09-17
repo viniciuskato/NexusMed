@@ -17,8 +17,8 @@
 
 | ID | Prioridade | Estado | Dependência | Impacto em produção | Próxima ação |
 |---|---|---|---|---|---|
-| TASK-2026-09-17-01 — Entrega 40-A (continuidade operacional) | P1 | em execução | nenhuma | Nenhum — só documentação | Sessão executiva finaliza, valida e devolve "RETORNO: 40-A"; diretoria decide sobre merge em `main` |
-| TASK-2026-09-17-02 — Auditar commit `fe20832` (Clinical Pomodoro/UI, 2026-09-14, sem retorno registrado) | **P0** | pendente | Nenhuma (mas deve rodar antes de qualquer entrega que assuma "produto = 23-C") | Alto — já pode estar em produção (push=deploy automático) sem revisão nem `package-lock.json` reconstituído | Diretoria autoriza uma sessão a: (1) revisar o diff linha a linha, (2) recriar `package-lock.json`/rodar `npm ci`+`tsc`+`build`, (3) testar contra Supabase local, (4) decidir aceitar retroativamente (com retorno documentado) ou reverter |
+| TASK-2026-09-17-01 — Entrega 40-A (continuidade operacional) | P1 | concluído; integração bloqueada | Retorno 40-A auditado pela diretoria em 2026-09-17 | Nenhum no conteúdo; merge em `main` acionaria novo deploy | Integrar somente depois do 41-A restaurar a reprodutibilidade e a diretoria aprovar publicação específica |
+| TASK-2026-09-17-02 — Entrega 41-A: auditar `fe20832` e restaurar reprodutibilidade | **P0** | preparado | Executar antes de qualquer novo push em `main` | Alto — `main` já contém código sem auditoria formal e sem `package-lock.json` | Pode enviar para sessão executiva isolada usando `docs/diretoria/prompts/41-A.txt`; não executar em paralelo com outra escritora de código/documentação |
 
 ## Como adicionar uma tarefa
 
