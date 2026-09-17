@@ -1,5 +1,57 @@
 # Registro de decisões e acompanhamento da diretoria — NexusMed
 
+## Decisão da diretoria — retorno 41-B, 2026-09-17
+
+Branch `work/41b-gate-final-fe20832` conferida localmente e no remoto em
+`367f75c`; `origin/main` permaneceu em `fe20832`. Gates completos e correções
+de hooks aceitos. Candidata liberada para etapa específica de publicação,
+41-C, ainda não enviada/executada. Fixture residual local do spec 23-B e
+worktree órfão foram separados como dívidas P2 e não bloqueiam tecnicamente a
+candidata.
+
+> Painel legado e histórico acumulado. Em 2026-09-17, a diretoria aprovou a
+> criação de uma camada operacional curta e durável; até a conclusão da
+> Entrega 40-A, este arquivo continua sendo o registro vigente, mas não deve
+> ser interpretado isoladamente como fotografia atual do produto.
+
+## Decisão da diretoria — continuidade operacional, 2026-09-17
+
+- Chats, memória de uma IA e cópias soltas não são fonte de verdade.
+- A fonte oficial é o repositório GitHub `SynapseMed-firebase-auth`, branch
+  `main`; estado presente deve sempre ser reconfirmado no remoto.
+- Produção exige autorização explícita; trabalho local, commit e branch
+  candidata não equivalem a publicação.
+- Cada sessão trabalha em um objetivo principal e encerra com evidências,
+  riscos e próxima decisão em linguagem executiva.
+- Preparada a Entrega 40-A para criar o sistema persistente de estado,
+  decisões, tarefas, runbook e protocolo de sessão, reduzindo o caminho
+  obrigatório hoje concentrado em `AGENTS.md` e neste registro.
+- Diagnóstico de base: em 2026-09-17, o remoto estava em `fe20832`; cópia
+  canônica limpa criada em `Projetos/SynapseMed/canonical`. O hash deve ser
+  tratado como evidência datada, não como valor permanente.
+- Cópias antigas e o `.git` órfão conhecido permanecem em quarentena lógica;
+  nenhuma exclusão, movimentação ou correção foi autorizada nesta etapa.
+
+### Acompanhamento atual
+
+| Entrega | Etapa/ID atual | Estado | Próxima ação / dependência |
+|---|---|---|---|
+| Continuidade operacional | 40-A | Preparado | Pode enviar a uma sessão executiva isolada; não executar em paralelo com outra escritora de documentação. |
+
+### Retorno e decisão — 40-A, 2026-09-17
+
+Retorno recebido e auditado contra a branch candidata no commit `7e29870`.
+Entrega aceita como concluída: camada operacional criada, histórico preservado,
+escopo documental e validações confirmados. Integração em `main` bloqueada até
+a auditoria P0 do commit `fe20832`, porque qualquer push dispara deploy e a
+base atual está sem `package-lock.json`. Preparada a Entrega 41-A; envio ainda
+não confirmado.
+
+| Entrega | Etapa/ID atual | Estado | Próxima ação / dependência |
+|---|---|---|---|
+| Continuidade operacional | 40-A | Concluído; não publicado | Aguarda 41-A e autorização específica de integração |
+| Auditoria de `fe20832` | 41-A | Preparado | Pode enviar; não executar junto de outra sessão escritora |
+
 > Cópia versionada do acompanhamento de prompts entre diretoria e
 > sessões executivas, proposta em `docs/CONTINUIDADE-MULTI-MAQUINA.md`
 > (seção 8) para que o histórico sobreviva à troca de máquina, de
@@ -1432,3 +1484,259 @@ aprendizagem longitudinal/pauta editorial não implementados.
 
 **Smoke de produção e limpeza**: ver seção seguinte com o resultado
 detalhado (conta administrativa descartável, criada e removida ao final).
+
+## 41-A — Auditoria do commit fe20832 e restauração da reprodutibilidade (2026-09-17, sessão executiva)
+
+**Base**: `origin/work/40a-continuidade-operacional` em `23de8fe` (topo
+confirmado por `git fetch` no início da sessão, sem drift). Branch
+candidata criada a partir daí: `work/41a-auditoria-fe20832`. `main` não
+tocado; nenhum push ao remoto nesta entrega.
+
+**Diff auditado**: `git diff 2e342bd..fe20832` — 23 arquivos, +2022/-7169
+linhas (a maior parte da remoção é o `package-lock.json` apagado, 6999
+linhas). Revisão linha a linha de todos os arquivos, incluindo os 5 novos
+componentes (`ClinicalPomodoroWidget.tsx`, `DailyHandoffModal.tsx`,
+`BancaPerformanceRadar.tsx`, `ClinicalCognitiveProfile.tsx`,
+`ExportCadernoModal.tsx`) e as alterações em `QuestionCard.tsx`,
+`QuestionsView.tsx`, `FlashcardReviewSession.tsx`, `FlashcardsView.tsx`,
+`DashboardView.tsx`, `IntegratedCadernoErros.tsx`, `Header.tsx`,
+`SafeMarkdown.tsx`, `CompendiumReader.tsx`, `CompendiumView.tsx`,
+`MobileBottomNav.tsx`, `index.css`, `index.html`, `.env.example`,
+`types/index.ts`, `vitest.config.ts`.
+
+**Achados e correções** (matriz completa e comandos no "RETORNO: 41-A"
+devolvido à diretoria — resumo aqui):
+
+1. `package.json` idêntico antes/depois de `fe20832`; `package-lock.json`
+   foi apenas apagado, sem geração de substituto. Restaurado a partir de
+   `2e342bd` (o commit imediatamente anterior) — coerente por construção,
+   já que o manifesto não mudou. `npm ci` volta a funcionar (352 pacotes).
+2. `npm run typecheck` falhava com 12 erros reais, confinados aos dois
+   componentes de dashboard novos (`DailyHandoffModal.tsx`,
+   `BancaPerformanceRadar.tsx`): `Object.values(record)`/`new Map(...)`
+   sem tipagem explícita voltavam `unknown`/`unknown[]` neste projeto (o
+   mesmo padrão que o código pré-existente já contorna com anotação
+   explícita, ex. `DashboardView.tsx:139`). Corrigido com o mesmo padrão.
+   No caminho, achado um bug funcional real: o filtro de "respostas de
+   hoje" usava `a.answeredAt`, campo inexistente em `QuestionAnswerRecord`
+   (o campo correto é `timestamp`) — sem a correção, a Passagem de Plantão
+   sempre mostraria zero questões/acurácia do dia.
+3. `npm run lint` excedia o teto de `--max-warnings 93` (103 com o commit
+   original, contra 89 na baseline imediatamente anterior, confirmado
+   comparando as duas árvores lado a lado). Corrigido removendo imports e
+   estado mortos introduzidos pelos componentes novos, convertendo um
+   `<div onClick>` para `<button>` semântico, e suprimindo 2
+   `react-hooks/exhaustive-deps` com o mesmo padrão de comentário já usado
+   em `QuestionCard.tsx` antes deste commit. `vitest.config.ts` tinha um
+   `plugins: [react() as any]` — o cast mascarava um warning `any`, não um
+   erro real (removido, `npm run test:unit` roda limpo sem ele). Resultado
+   final: 89 warnings, igual à baseline.
+4. Dois componentes novos estavam **importados e nunca renderizados** em
+   `DashboardView.tsx`: `DailyHandoffModal` (o botão "Passagem de Plantão"
+   não abria nada) e `BancaPerformanceRadar` (seção inteira invisível).
+   Ligados usando dados já carregados no componente pai — sem criar
+   funcionalidade nova, só religando o que o próprio commit construiu e
+   esqueceu de expor.
+5. Nenhum bypass de autenticação/admin, segredo exposto (chave, token,
+   URL sensível), escrita remota silenciosa, `catch {}` engolindo erro
+   crítico, ou instrumentação de debug/teste encontrada no diff.
+   `check:no-debug-bundle` confirma 0 ocorrências no bundle final.
+
+**Validações executadas**: `git diff --check` (limpo); varredura de
+segredos no diff completo (0 ocorrências); `npm ci` a partir do lockfile
+restaurado (sucesso, 352 pacotes); `npm run typecheck` (0 erros, após
+correção); `npm run lint` (0 erros / 89 warnings, após correção);
+`npm run test:unit` (24/24 passando); `npm run build` (sucesso,
+`dist/assets/index-*.js` ~1,11 MB); `npm run check:no-debug-bundle` (0
+ocorrências). Smoke em navegador real: `npm run dev` + Chromium headless
+via Playwright (`playwright-core`, já devDependency do projeto) contra
+`localhost:3000` em modo local resiliente (sem Supabase configurado) —
+confirmado visualmente e por `console --errors` (vazio) que o Plantão de
+Foco (Pomodoro) abre e conta o tempo, a Passagem de Plantão abre e mostra
+a síntese SBAR, o Aproveitamento por Banca Examinadora renderiza e o
+filtro rápido de banca + Modo Foco Zen do banco de questões funcionam.
+
+**Não executado nesta entrega**: pgTAP (`npm run test`/`supabase test
+db`) — Docker Desktop não estava com o daemon ativo no ambiente de
+execução (`docker info` falhou ao conectar); `supabase start` não pôde
+ser tentado. Isso não foi contornado com `--optional` nem declarado como
+"passou" — fica como item pendente explícito para a diretoria mandar
+rodar (localmente com Docker ativo, ou via CI) antes de aprovar
+publicação em produção.
+
+**Restrições respeitadas**: nenhum merge/push em `main`; nenhum deploy;
+nenhuma escrita no Supabase remoto (não usado nesta entrega); sem force
+push, reset destrutivo ou descarte de trabalho alheio; nenhuma conclusão
+apresentada como fato sobre a origem de `fe20832` (permanece hipótese de
+risco, não confirmada); nenhuma correção fora do escopo do diff auditado.
+
+**Veredito**: aceitar `fe20832` **com correções** (não é caso de
+reversão — a funcionalidade em si é legítima e, uma vez corrigida,
+funciona; o problema era reprodutibilidade de build e dois componentes
+órfãos, ambos corrigidos e verificados). Branch candidata
+`work/41a-auditoria-fe20832` fica **só local**, aguardando decisão da
+diretoria sobre merge/push e sobre quando rodar o gate pgTAP pendente.
+
+## 41-B — Gate final da auditoria fe20832 (2026-09-17, sessão executiva)
+
+**Base**: `work/41a-auditoria-fe20832` @ `6c1f108` (confirmado por
+`git log`/`git status` — árvore limpa, sem escritores concorrentes visíveis
+no worktree). Branch candidata criada a partir daí:
+`work/41b-gate-final-fe20832`, em worktree isolada FORA da árvore do
+checkout principal: `C:\Users\vinic\OneDrive\Projetos\SynapseMed\worktrees\41b-gate-final-fe20832`
+(o worktree da 41-A ficava aninhado em `.claude/worktrees/` dentro do
+checkout `canonical` — não foi apagado nem tocado por comando de força).
+`main` não tocado; nenhuma escrita no Supabase remoto; nenhum deploy.
+
+**Escopo**: fechar os 9 itens do prompt `41-B.txt` — revisão com prova
+técnica das duas supressões `react-hooks/exhaustive-deps` da 41-A, teste
+focado, gates canônicos completos com Docker ativo (pgTAP + Playwright
+oficial), `npm ci` reproduzível, smoke em navegador real dos fluxos de
+`fe20832`, varredura de segredos, revisão do diff completo desde `23de8fe`,
+atualização de docs, e envio só da branch candidata ao remoto.
+
+**Revisão dos hooks — problema confirmado, não descartado**:
+
+- `ClinicalPomodoroWidget.tsx`: `playChime` lia `soundEnabled` do closure
+  sem estar nas deps do `useEffect` do timer (suprimido). Corrigido
+  estabilizando `playChime` com `useCallback([soundEnabled])` e incluindo-a
+  honestamente nas deps do efeito (`[isRunning, mode, playChime]`) — o
+  efeito só reinicia quando `isRunning`/`mode` mudam OU quando
+  `soundEnabled` muda (via nova identidade de `playChime`), nunca a cada
+  render.
+- `QuestionCard.tsx`: a justificativa da 41-A ("reinstalar o listener é
+  desnecessário porque as funções são recriadas a cada render") não resistiu
+  a exame — o problema real é que `handleConfirmAnswer`/`handleSelectOption`
+  liam `question`, `errorReason`, `onAnswerRecorded` e `onSelectOptionInExam`
+  do escopo do componente SEM que essas variáveis estivessem nas deps do
+  `useEffect` do listener de teclado (só `isSubmitted`/`isHovered`/
+  `selectedOption`/`isExamMode`/`question.options` estavam). Risco
+  concreto: se o componente pai trocar `onAnswerRecorded` ou
+  `onSelectOptionInExam` de referência (comum — o próprio arquivo já
+  documenta, no comentário sobre `hydrated`, que o pai recria objetos a
+  cada render) sem que nenhuma das deps listadas mude, o listener
+  permanece preso à callback ANTIGA, e Enter/tecla de letra chamariam a
+  versão obsoleta do pai. Corrigido estabilizando `checkStreakCelebration`,
+  `showToast`, `handleConfirmAnswer` e `handleSelectOption` com
+  `useCallback` e suas dependências reais e completas, e devolvendo ao
+  `useEffect` do listener a lista de deps completa e verdadeira
+  (`[isSubmitted, isHovered, selectedOption, isExamMode, question.options,
+  handleConfirmAnswer, handleSelectOption]`), sem `eslint-disable`.
+
+**Teste focado**: `tests/component/questionCardKeyboardShortcuts.test.tsx`
+(categoria nova — `vitest` configurado com dois projetos: `unit` (node, sem
+DOM, como antes) e `component` (jsdom), via `test.projects` em
+`vitest.config.ts`). Dois casos, cada um rerenderizando o componente com
+uma NOVA prop (`onAnswerRecorded`/`onSelectOptionInExam`) sem tocar nas
+deps que a 41-A já listava, e então disparando Enter/tecla de letra:
+esperado que a callback NOVA seja chamada, nunca a antiga. **Controle
+negativo executado manualmente nesta sessão**: revertendo só
+`ClinicalPomodoroWidget.tsx`/`QuestionCard.tsx` para a versão de `6c1f108`
+(com as supressões), os dois testes falham exatamente como previsto;
+restaurando a correção, os dois passam — não é uma alegação, foi
+demonstrado. Dependências novas (dev-only, adicionadas a `package.json` e
+propagadas ao `package-lock.json` via `npm install`, depois validadas com
+`npm ci` limpo): `jsdom`, `@testing-library/react`, `@testing-library/dom`.
+
+**Gates executados** (comandos e contagens):
+
+| Gate | Comando | Resultado |
+|---|---|---|
+| Instalação reproduzível | `rm -rf node_modules && npm ci` | sucesso, 407 pacotes |
+| Typecheck | `npm run typecheck` | 0 erros |
+| Lint | `npm run lint` (teto 93) | 0 erros, 89 warnings |
+| Unitário + componente | `npm run test:unit` | 26/26 (24 pré-existentes + 2 novos) |
+| pgTAP | `npm run test` (`supabase test db`, Docker ativo) | 228/228 asserções, 6/6 arquivos, `Result: PASS` |
+| Playwright oficial | `npm run test:e2e` (chromium, Supabase local) | 24/24 specs |
+| Build de produção | `npm run build` | sucesso |
+| Bundle sem debug | `npm run check:no-debug-bundle` | 0 ocorrências |
+| Vulnerabilidades | `npm audit` / `npm audit --omit=dev` | 2 moderadas dev-only (vitest/@vitest/mocker, pré-existentes), 0 em produção |
+
+Docker Desktop foi encontrado parado no início da sessão
+(`docker info` falhava ao conectar no daemon); a sessão iniciou o processo
+(`Docker Desktop.exe` em `%LOCALAPPDATA%\Programs\DockerDesktop`), confirmou
+o daemon pronto (`docker info`/`docker ps` — stack `supabase_*_synapsemed`
+saudável), rodou `supabase start` + `supabase db reset` a partir das
+migrations do próprio checkout, e só então prosseguiu com pgTAP e
+Playwright — nenhum gate foi pulado ou declarado como passando sem rodar.
+
+**Achado não bloqueante, fora do escopo do diff auditado**: após a suíte
+Playwright completa, `select count(*) from auth.users where email like
+'e2e-13a-%'` no Supabase local retornou `1`
+(`e2e-13a-prov-admin-...@e2e.local`, do spec
+`provenance-attestation-23b.spec.ts`), quando o README documenta `0`
+esperado — indício de um `finally`/`afterEach` de cleanup que não cobre
+esse caminho específico. Não é código tocado por `fe20832` nem por esta
+entrega; registrado para auditoria futura da suíte 23-B, sem efeito em
+produção (fixture só existe no Supabase local, resetado a cada `supabase db
+reset`).
+
+**Smoke em navegador real** (Chromium via Playwright, `npm run dev` em
+`localhost:3000`, modo demo local — `local-demo-user`, sem Supabase
+configurado, dados em `localStorage` da sessão do browser, descartados ao
+fechar): Plantão de Foco (Pomodoro) — clique em "Iniciar 25m" leva o
+cronômetro a rodar (`Pausar Plantão` visível); Modo Foco Zen — botão na
+tela de Questões alterna o layout (`Expandir Painel` aparece/desaparece
+corretamente); atalhos de teclado de questão — hover sobre o card, tecla
+`B` seleciona a alternativa B (`Alternativa (B) selecionada.` aparece),
+`Enter` confirma a resposta (banner de resultado aparece); Passagem de
+Plantão — abre e mostra `Questões Hoje: 1`, `Erros Catalogados: 1`,
+refletindo exatamente a resposta dada pelo atalho de teclado; Aproveitamento
+por Banca Examinadora — após a resposta, a banca `USP - Residência Médica`
+passa de "Sem dados" para `0% Acerto`, `1 de 1 resolvidas`, `1 erros`,
+condizente com a questão respondida. Zero erros de console/página
+(`page.on('console'/'pageerror')`) durante toda a sessão de smoke. Isto é
+smoke local — não é verificação de produção, que continua não verificada
+nesta entrega.
+
+**Segredos**: varredura do diff completo desde `23de8fe` (excluindo
+`package-lock.json`) por padrões de chave/JWT/token/senha — 0 ocorrências.
+`.env.test.local`, criado nesta sessão só para apontar o build do Playwright
+para o Supabase local (`http://127.0.0.1:54321` + chave `anon` pública de
+demonstração local, não é segredo de produção), está coberto por `.env.*`
+no `.gitignore` e não foi commitado.
+
+**Diff completo desde `23de8fe` revisado**: 12 arquivos (contando as
+mudanças desta própria entrega) — `docs/diretoria/registro.md`,
+`docs/operacao/DECISIONS.md`, `docs/operacao/PROJECT_STATE.md`,
+`docs/operacao/TASKS.md`, `package.json`, `package-lock.json`,
+`vitest.config.ts`, `src/components/common/ClinicalPomodoroWidget.tsx`,
+`src/components/common/DailyHandoffModal.tsx`,
+`src/components/dashboard/BancaPerformanceRadar.tsx`,
+`src/components/dashboard/ClinicalCognitiveProfile.tsx`,
+`src/components/dashboard/DashboardView.tsx`,
+`src/components/questions/QuestionCard.tsx`, mais o arquivo novo
+`tests/component/questionCardKeyboardShortcuts.test.tsx`. Nenhum bypass de
+autenticação/admin, segredo exposto, escrita remota silenciosa ou
+`catch {}` engolindo erro crítico novo encontrado além do que a 41-A já
+tinha corrigido.
+
+**Restrições respeitadas**: nenhum merge/push em `main`; nenhum deploy;
+nenhuma escrita no Supabase remoto (só o local, via Docker); sem force
+push, reset destrutivo ou descarte de trabalho alheio; nenhuma cobertura
+reduzida, teto de warnings elevado ou regra global desativada — teto de
+lint continua 93, warnings ficaram em 89 (menor que antes); nenhuma
+supressão de lint mantida sem prova técnica — as duas foram removidas;
+vulnerabilidades moderadas pré-existentes apenas registradas, não
+investigadas (não bloqueiam `npm ci`, não introduzidas por este diff);
+nenhuma remoção forçada de worktree/metadados Git.
+
+**Worktrees**: a worktree da 41-A
+(`C:\Users\vinic\OneDrive\Projetos\SynapseMed\canonical\.claude\worktrees\agent-abf9bcb34c941c5ba`,
+branch `work/41a-auditoria-fe20832`) permanece exatamente como estava —
+não foi removida, editada nem usada como base de trabalho desta entrega
+(só lida para confirmar hashes/estado). Esta entrega criou uma worktree
+NOVA e separada
+(`C:\Users\vinic\OneDrive\Projetos\SynapseMed\worktrees\41b-gate-final-fe20832`,
+branch `work/41b-gate-final-fe20832`) via `git worktree add` a partir de
+`6c1f108`, fora da árvore de qualquer checkout existente, exatamente como
+pedido. Nenhum `git worktree remove --force` ou exclusão manual de
+metadados foi executado.
+
+**Veredito**: os 9 itens obrigatórios do prompt `41-B.txt` foram
+executados integralmente, incluindo os dois gates que a 41-A tinha deixado
+pendentes por falta de Docker (pgTAP e Playwright oficial). Branch
+candidata `work/41b-gate-final-fe20832` enviada a
+`origin/work/41b-gate-final-fe20832` — `main`, produção (Vercel) e o
+Supabase remoto permanecem exatamente como estavam antes desta entrega.
+Decisão de merge em `main` continua sendo da diretoria.

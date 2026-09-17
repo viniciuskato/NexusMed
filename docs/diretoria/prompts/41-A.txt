@@ -1,0 +1,80 @@
+ENTREGA 41-A — AUDITORIA P0 DO COMMIT FE20832 E RESTAURAÇÃO DA REPRODUTIBILIDADE
+
+Papel da sessão
+Você é uma sessão executiva do NexusMed. Audite, corrija somente defeitos comprovados dentro deste escopo e devolva evidência verificável. Não mescle em main, não publique e não toque no Supabase remoto.
+
+Objetivo executivo
+Determinar se o commit `fe20832791bad02d174461f7cf4bab8d0dcd632e` ("feat: add Clinical Pomodoro and UI enhancements") é seguro para permanecer como base do produto, restaurar a reprodutibilidade do build e produzir uma decisão fundamentada: aceitar retroativamente, aceitar com correções, ou recomendar reversão.
+
+Base e isolamento
+- Repositório oficial: https://github.com/viniciuskato/SynapseMed-firebase-auth.git
+- Cópia recomendada: `C:\Users\vinic\OneDrive\Projetos\SynapseMed\canonical`.
+- A camada de governança 40-A está na branch remota `origin/work/40a-continuidade-operacional`, commit inicial `7e29870`; use o HEAD remoto mais recente dessa branch após `git fetch` como base, para que os achados e decisões sobrevivam no novo sistema.
+- Crie branch isolada `work/41a-auditoria-fe20832` a partir dessa base. Não trabalhar em `main`.
+- Antes de editar, confirmar que não há mudanças locais, drift inesperado nem outra sessão escrevendo nos mesmos arquivos. Se houver, parar e relatar.
+
+Contexto confirmado
+- `fe20832` é um commit posterior ao último estado formalmente documentado (23-C), sem prompt/retorno correspondente.
+- Ele altera 23 arquivos e remove `package-lock.json` (aproximadamente 6999 linhas), quebrando `npm ci` e a reprodutibilidade da resolução de dependências.
+- `main` já contém esse commit; portanto, a auditoria é retroativa. Isso não autoriza novas mudanças em produção.
+- A integração do 40-A está bloqueada porque qualquer push em `main` dispara deploy e, sem lockfile, pode resolver dependências diferentes.
+
+Escopo obrigatório — diagnóstico antes de correção
+1. Reconfirmar `origin/main`, a base 40-A e o grafo de commits.
+2. Revisar integralmente `git diff 2e342bd..fe20832`, arquivo por arquivo e linha por linha.
+3. Classificar cada mudança: funcionalidade intencional, regressão comprovada, risco não provado, código morto/órfão, ou mudança de configuração/dependência.
+4. Investigar especialmente:
+   - atalhos de autenticação, permissões administrativas ou qualquer bypass;
+   - `catch {}`/tratamento silencioso de erro e gravação local/remota;
+   - dados clínicos ou métricas apresentados como reais sem origem válida;
+   - integrações incompletas, imports mortos, componentes inacessíveis e estados não persistidos;
+   - alterações em QuestionCard, QuestionsView, FlashcardReviewSession, DashboardView, Header, SafeMarkdown e CSS;
+   - acessibilidade básica, responsividade e erros de runtime;
+   - exposição de segredo, URL, token ou instrumentação de teste;
+   - impacto do `package-lock.json` removido e alterações em `package.json`.
+5. Antes de gerar lockfile, identificar no histórico o último `package-lock.json` válido e comparar `package.json` antes/depois. Restaurar/gerar lockfile de modo coerente com o manifesto atual, documentando se houve alteração de versões transitivas.
+6. Executar instalação reproduzível com o lockfile candidato (`npm ci`) e os gates aplicáveis do projeto. Não usar sucesso de `npm install` como substituto de `npm ci`.
+7. Testar as funcionalidades introduzidas por `fe20832` em navegador real, preferencialmente contra Supabase local quando houver leitura/escrita de dados. Nenhum dado remoto.
+8. Corrigir apenas defeitos reproduzidos ou violações objetivas de segurança/reprodutibilidade encontradas na auditoria. Não redesenhar UI nem ampliar funcionalidades.
+9. Atualizar `docs/operacao/PROJECT_STATE.md`, `TASKS.md` e, se houver decisão durável, `DECISIONS.md`. Registrar o retorno em `docs/diretoria/registro.md` sem apagar histórico.
+
+Restrições
+- Nenhum merge/push em `main`; nenhum deploy; nenhuma escrita no Supabase remoto.
+- Nenhuma migration remota, alteração de usuário real ou uso de dados clínicos reais.
+- Sem force push, reset destrutivo ou descarte de trabalho alheio.
+- Não concluir que o commit veio de ferramenta externa sem prova; isso é hipótese de risco, não fato confirmado.
+- Não aprovar por aparência visual. É necessária prova de build, runtime e fluxos afetados.
+- Não transformar achados fora do escopo em correções oportunistas; registrar como tarefa separada.
+
+Validação mínima
+- `git diff --check`.
+- Varredura de segredos no diff completo da candidata.
+- `npm ci` bem-sucedido a partir do lockfile candidato.
+- Typecheck, lint, testes unitários e build pelos scripts canônicos do `package.json`.
+- Testes de banco e navegador aplicáveis; se algum gate não puder rodar, explicar exatamente o impedimento e não declarar validação total.
+- Busca no bundle por instrumentação de teste/debug conhecida.
+- Testes focados e smoke local das funcionalidades adicionadas pelo commit.
+- Lista explícita de arquivos revisados e matriz achado → evidência → correção/decisão.
+
+Critérios de conclusão
+- Todo o diff de `fe20832` foi revisado e classificado.
+- `package-lock.json` está restaurado e `npm ci` funciona de forma reproduzível.
+- Não há bypass de autenticação/admin, segredo ou escrita remota silenciosa introduzida pelo commit, ou qualquer ocorrência encontrada foi corrigida e testada.
+- Funcionalidades novas têm caminho de acesso e comportamento mínimo demonstrados, ou são classificadas objetivamente como órfãs/incompletas.
+- A branch candidata contém somente 40-A + correções/documentação justificadas da auditoria.
+- Existe recomendação final inequívoca: aceitar, aceitar com correções, ou reverter `fe20832`.
+
+Formato obrigatório do retorno
+RETORNO: 41-A
+Resultado: concluído | parcial | bloqueado
+Base e branch: hashes e nome
+Veredito sobre fe20832: aceitar | aceitar com correções | recomendar reversão
+Matriz da auditoria: arquivo/área; achado; evidência; ação
+Lockfile e dependências: origem, diferenças e resultado de npm ci
+Correções realizadas: arquivos e justificativa
+Validações: comandos, contagens e resultados
+Ambientes tocados: local | Supabase local | remoto | produção
+Riscos e itens não verificados
+Estado de publicação: branch candidata enviada | somente local; confirmar main/produção inalterados
+Próxima decisão da diretoria
+

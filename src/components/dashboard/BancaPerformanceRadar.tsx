@@ -1,12 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   GraduationCap,
   Award,
   AlertTriangle,
-  TrendingUp,
-  ArrowRight,
-  Filter,
-  CheckCircle2,
   ChevronRight,
 } from 'lucide-react';
 import { Question, QuestionAnswerRecord } from '../../types';
@@ -14,20 +10,16 @@ import { Question, QuestionAnswerRecord } from '../../types';
 interface BancaPerformanceRadarProps {
   questions: Question[];
   answers: Record<string, QuestionAnswerRecord>;
-  onSelectBanca?: (banca: string) => void;
   onOpenQuestions: () => void;
 }
 
 export const BancaPerformanceRadar: React.FC<BancaPerformanceRadarProps> = ({
   questions,
   answers,
-  onSelectBanca,
   onOpenQuestions,
 }) => {
-  const [selectedBanca, setSelectedBanca] = useState<string | null>(null);
-
   const bancaStats = useMemo(() => {
-    const questionsMap = new Map(questions.map((q) => [q.id, q]));
+    const questionsMap = new Map<string, Question>(questions.map((q) => [q.id, q]));
     const groups: Record<
       string,
       {
@@ -55,7 +47,8 @@ export const BancaPerformanceRadar: React.FC<BancaPerformanceRadarProps> = ({
     }
 
     // Computa respostas
-    for (const a of Object.values(answers)) {
+    const answersArray: QuestionAnswerRecord[] = Object.values(answers);
+    for (const a of answersArray) {
       const q = questionsMap.get(a.questionId);
       if (q) {
         const b = (q.institution || 'Outras').trim();

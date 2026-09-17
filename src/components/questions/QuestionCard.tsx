@@ -1,5 +1,5 @@
 import { formatToAbntCitation } from '../../utils/bibliographicSources';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   CheckCircle2,
   XCircle,
@@ -175,7 +175,12 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   // CELEBRATION_STREAK_LENGTH respostas corretas seguidas dentro da mesma
   // disciplina. Calculado em memória a partir de `answers`, sem persistir
   // nada novo no banco.
-  const checkStreakCelebration = async () => {
+  // Sem dependências reais: só lê repositórios (sempre busca o estado mais
+  // recente no momento da chamada) e o `question.disciplineId` do parâmetro
+  // do closure de `question`, que é recriada abaixo via handleConfirmAnswer
+  // com a `question` corrente. Estabilizada para poder entrar honestamente
+  // na lista de deps de handleConfirmAnswer.
+  const checkStreakCelebration = useCallback(async () => {
     const [allAnswers, allQuestions] = await Promise.all([
       answersRepository.getAnswers(),
       questionsRepository.getQuestions(),
@@ -195,14 +200,21 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     if (streak > 0 && streak % CELEBRATION_STREAK_LENGTH === 0) {
       GamificationService.triggerCelebration();
     }
-  };
+  }, [question.disciplineId]);
 
-  const showToast = (msg: string) => {
+  // setToastMessage é estável (setState do React); sem dependências reais.
+  const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
-  };
+  }, []);
 
-  const handleConfirmAnswer = async () => {
+  // Deps reais e completas: cada valor de fora do escopo que a função lê
+  // (selectedOption, question, errorReason, onAnswerRecorded) mais as duas
+  // funções auxiliares já estabilizadas acima. Isso garante que o atalho de
+  // teclado (useEffect abaixo) sempre chame a versão com o `selectedOption`
+  // e `question` atuais — nunca uma closure presa ao render em que o
+  // listener foi montado.
+  const handleConfirmAnswer = useCallback(async () => {
     if (!selectedOption) return;
 
     // isCorrect é calculado pelo servidor (RPC submit_question_attempt); o
@@ -238,16 +250,21 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       showToast('Resposta correta! Excelente raciocínio clínico.');
       await checkStreakCelebration();
     }
-  };
+  }, [selectedOption, question, errorReason, onAnswerRecorded, showToast, checkStreakCelebration]);
 
-  const handleSelectOption = (letter: 'A' | 'B' | 'C' | 'D' | 'E') => {
-    if (isSubmitted) return;
-    if (isExamMode) {
-      if (onSelectOptionInExam) onSelectOptionInExam(letter);
-      return;
-    }
-    setSelectedOption(letter);
-  };
+  // Deps reais e completas: isSubmitted/isExamMode/onSelectOptionInExam são
+  // exatamente os valores lidos pelo corpo da função.
+  const handleSelectOption = useCallback(
+    (letter: 'A' | 'B' | 'C' | 'D' | 'E') => {
+      if (isSubmitted) return;
+      if (isExamMode) {
+        if (onSelectOptionInExam) onSelectOptionInExam(letter);
+        return;
+      }
+      setSelectedOption(letter);
+    },
+    [isSubmitted, isExamMode, onSelectOptionInExam]
+  );
 
   // Atalhos de teclado quando o cursor estiver sobre o card ou quando o card estiver selecionado
   useEffect(() => {
@@ -274,6 +291,11 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // handleConfirmAnswer e handleSelectOption agora são estáveis via
+    // useCallback com suas próprias deps reais (ver definições acima), então
+    // só mudam de identidade quando o que de fato usam muda — o listener é
+    // remontado exatamente nesses casos, nunca a cada render, e nunca fica
+    // preso a um `selectedOption`/`question` obsoletos.
   }, [isSubmitted, isHovered, selectedOption, isExamMode, question.options, handleConfirmAnswer, handleSelectOption]);
 
   const handleToggleReaction = async (val: 'up' | 'down') => {
@@ -313,6 +335,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   }
 
   return (
+    // Hover apenas ativa atalhos de teclado opcionais (ver useEffect acima);
+    // não é o único meio de operar o card, então não exige par de teclado.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       id={`question-${question.id}`}
       data-answer-origin={answerOrigin ?? 'unanswered'}

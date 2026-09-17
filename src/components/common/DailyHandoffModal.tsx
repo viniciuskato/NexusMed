@@ -1,14 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import {
-  ClipboardCheck,
   CheckCircle2,
   AlertTriangle,
-  Flame,
-  Brain,
   Copy,
   Check,
   X,
-  Sparkles,
   Stethoscope,
   Moon,
 } from 'lucide-react';
@@ -33,7 +29,6 @@ export const DailyHandoffModal: React.FC<DailyHandoffModalProps> = ({
   disciplines,
   themes,
   answers,
-  errorLogs,
   streakDays,
 }) => {
   const { profile, user } = useAuth();
@@ -47,13 +42,14 @@ export const DailyHandoffModal: React.FC<DailyHandoffModalProps> = ({
   const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   const todayStats = useMemo(() => {
-    const questionsMap = new Map(questions.map((q) => [q.id, q]));
-    const themesMap = new Map(themes.map((t) => [t.id, t.name]));
-    const disciplinesMap = new Map(disciplines.map((d) => [d.id, d.name]));
+    const questionsMap = new Map<string, Question>(questions.map((q) => [q.id, q]));
+    const themesMap = new Map<string, string>(themes.map((t) => [t.id, t.name]));
+    const disciplinesMap = new Map<string, string>(disciplines.map((d) => [d.id, d.name]));
 
-    const todayAnswers = Object.values(answers).filter((a) => {
-      if (!a.answeredAt) return false;
-      return a.answeredAt.slice(0, 10) === todayStr;
+    const allAnswers: QuestionAnswerRecord[] = Object.values(answers);
+    const todayAnswers = allAnswers.filter((a) => {
+      if (!a.timestamp) return false;
+      return a.timestamp.slice(0, 10) === todayStr;
     });
 
     const totalToday = todayAnswers.length;

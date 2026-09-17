@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Timer,
   Play,
@@ -37,7 +37,10 @@ export const ClinicalPomodoroWidget: React.FC<ClinicalPomodoroWidgetProps> = () 
 
   const timerRef = useRef<number | null>(null);
 
-  const playChime = () => {
+  // useCallback com [soundEnabled] como única dependência real: a função só
+  // precisa mudar de identidade quando essa flag muda, e o efeito do timer
+  // abaixo pode então listá-la honestamente em vez de suprimir o lint.
+  const playChime = useCallback(() => {
     if (!soundEnabled) return;
     try {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -57,7 +60,7 @@ export const ClinicalPomodoroWidget: React.FC<ClinicalPomodoroWidgetProps> = () 
     } catch {
       // Navegador sem suporte a Web Audio ou interação bloqueada
     }
-  };
+  }, [soundEnabled]);
 
   useEffect(() => {
     if (isRunning) {
@@ -98,7 +101,12 @@ export const ClinicalPomodoroWidget: React.FC<ClinicalPomodoroWidgetProps> = () 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isRunning, mode, soundEnabled]);
+    // playChime agora é estável via useCallback([soundEnabled]) e só muda de
+    // identidade quando soundEnabled muda — a mesma condição que antes exigia
+    // suprimir o lint. Listá-la é honesto: o efeito reinicia o intervalo
+    // exatamente quando isRunning/mode mudam OU quando soundEnabled muda
+    // (via nova identidade de playChime), nunca a cada render.
+  }, [isRunning, mode, playChime]);
 
   const switchMode = (newMode: PomodoroMode, mins: number) => {
     setIsRunning(false);
@@ -156,7 +164,12 @@ export const ClinicalPomodoroWidget: React.FC<ClinicalPomodoroWidgetProps> = () 
     return (
       <aside aria-label="Plantão de Foco" className="fixed bottom-20 sm:bottom-6 left-4 z-40">
         <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border border-teal-500/50 shadow-xl elev-md text-slate-800 dark:text-slate-200">
-          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setIsMinimized(false)}>
+          <button
+            type="button"
+            className="flex items-center gap-1.5 cursor-pointer"
+            onClick={() => setIsMinimized(false)}
+            title="Expandir Plantão de Foco"
+          >
             <div className={`w-2 h-2 rounded-full ${mode === 'focus' ? 'bg-teal-500' : 'bg-amber-500'} ${isRunning ? 'animate-ping' : ''}`} />
             <span className="font-mono text-xs font-black tabular-nums text-slate-900 dark:text-white">
               {formattedTime}
@@ -164,7 +177,7 @@ export const ClinicalPomodoroWidget: React.FC<ClinicalPomodoroWidgetProps> = () 
             <span className="text-[10px] font-bold text-slate-400">
               {mode === 'focus' ? 'Foco' : 'Pausa'}
             </span>
-          </div>
+          </button>
 
           <button
             type="button"

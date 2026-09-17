@@ -19,7 +19,6 @@ interface ClinicalCognitiveProfileProps {
 
 export const ClinicalCognitiveProfile: React.FC<ClinicalCognitiveProfileProps> = ({
   answers,
-  questions,
   errorLogs,
   onSelectView,
 }) => {
@@ -49,12 +48,10 @@ export const ClinicalCognitiveProfile: React.FC<ClinicalCognitiveProfileProps> =
     // Contabiliza causas de erros
     let trapErrors = 0;
     let theoryErrors = 0;
-    let attentionErrors = 0;
 
     for (const log of errorLogs) {
       if (log.errorReason === 'pegadinha') trapErrors++;
       if (log.errorReason === 'lacuna_teorica') theoryErrors++;
-      if (log.errorReason === 'falta_atencao') attentionErrors++;
     }
 
     const totalErrors = Math.max(1, total - correctCount);
