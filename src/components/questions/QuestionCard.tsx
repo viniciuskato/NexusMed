@@ -274,7 +274,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSubmitted, isHovered, selectedOption, isExamMode, question.options, handleConfirmAnswer, handleSelectOption]);
+    // handleConfirmAnswer/handleSelectOption são recriadas a cada render;
+    // incluí-las forçaria remontar o listener continuamente sem necessidade.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSubmitted, isHovered, selectedOption, isExamMode, question.options]);
 
   const handleToggleReaction = async (val: 'up' | 'down') => {
     const nextVal = myReaction === val ? null : val;
@@ -313,6 +316,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   }
 
   return (
+    // Hover apenas ativa atalhos de teclado opcionais (ver useEffect acima);
+    // não é o único meio de operar o card, então não exige par de teclado.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       id={`question-${question.id}`}
       data-answer-origin={answerOrigin ?? 'unanswered'}

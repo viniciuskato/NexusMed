@@ -6,6 +6,41 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-17 — Veredito da auditoria 41-A sobre `fe20832`: aceitar com correções
+
+A sessão executiva da Entrega 41-A revisou linha a linha o diff completo de
+`fe20832` (`git diff 2e342bd..fe20832`, 23 arquivos) e classifica o commit
+como **aceitar com correções** — não é caso de reversão, mas também não
+podia ser aceito como estava:
+
+- Reprodutibilidade de build estava genuinamente quebrada: `package.json`
+  idêntico antes/depois, `package-lock.json` apagado sem substituto;
+  restaurado a partir de `2e342bd` (só possível porque o manifesto não
+  mudou — se tivesse mudado, teria exigido gerar lockfile novo e revisar
+  dependências transitivas).
+- `npm run typecheck` e `npm run lint` — os dois gates que compõem
+  `npm run verify:fast` junto com testes/build — **falhavam** com o commit
+  original. Isso significa que `fe20832` nunca passou por `npm run verify`
+  antes de chegar em `main`, reforçando a hipótese (não confirmada como
+  fato, mas consistente com a evidência) de que o processo de gate normal
+  foi pulado nesse commit específico.
+- Dois componentes novos ficavam **inacessíveis** (importados, nunca
+  renderizados) — não é o mesmo padrão de "atalho perigoso" (bypass de
+  auth, escrita silenciosa), mas é uma funcionalidade anunciada no diff que
+  simplesmente não existia para o usuário final até a correção da 41-A.
+- Nenhum problema de segurança (segredo exposto, bypass de auth/admin,
+  escrita remota silenciosa) foi encontrado no diff.
+
+Decisão: a branch `work/41a-auditoria-fe20832` (40-A + correções da 41-A)
+fica **só local** até a diretoria decidir merge/push. `main` continua com
+`fe20832` no ar sem essas correções até essa decisão. O gate pgTAP
+(`npm run test`) não pôde ser executado nesta entrega por falta de Docker
+no ambiente de execução — isso é um item pendente, não uma aprovação
+implícita; a diretoria deve mandar rodar esse gate (localmente ou em CI)
+antes de aprovar publicação em produção.
+
+---
+
 ## 2026-09-17 — Aceitação do 40-A e bloqueio de integração até auditoria P0
 
 A diretoria auditou o retorno e a branch `work/40a-continuidade-operacional`:

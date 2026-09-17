@@ -638,6 +638,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onSelectView={onSelectView}
       />
 
+      {/* ── Aproveitamento por Banca Examinadora ── */}
+      <BancaPerformanceRadar
+        questions={questions}
+        answers={answers}
+        onOpenQuestions={() => onSelectView('questions')}
+      />
+
       {/* ── 3. Painel Principal Dividido: Análise Clínica + Painel Lateral Pessoal ── */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-7 items-start">
         {/* ═══ COLUNA PRINCIPAL (8 Colunas em telas largas): Desempenho & Vulnerabilidades ═══ */}
@@ -1168,6 +1175,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
       )}
+
+      <DailyHandoffModal
+        isOpen={showDailyHandoffModal}
+        onClose={() => setShowDailyHandoffModal(false)}
+        questions={questions}
+        disciplines={disciplines}
+        themes={themes}
+        answers={answers}
+        errorLogs={errorLogs}
+        streakDays={stats.streakDays}
+      />
     </div>
   );
 };

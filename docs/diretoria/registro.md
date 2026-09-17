@@ -1475,3 +1475,95 @@ aprendizagem longitudinal/pauta editorial não implementados.
 
 **Smoke de produção e limpeza**: ver seção seguinte com o resultado
 detalhado (conta administrativa descartável, criada e removida ao final).
+
+## 41-A — Auditoria do commit fe20832 e restauração da reprodutibilidade (2026-09-17, sessão executiva)
+
+**Base**: `origin/work/40a-continuidade-operacional` em `23de8fe` (topo
+confirmado por `git fetch` no início da sessão, sem drift). Branch
+candidata criada a partir daí: `work/41a-auditoria-fe20832`. `main` não
+tocado; nenhum push ao remoto nesta entrega.
+
+**Diff auditado**: `git diff 2e342bd..fe20832` — 23 arquivos, +2022/-7169
+linhas (a maior parte da remoção é o `package-lock.json` apagado, 6999
+linhas). Revisão linha a linha de todos os arquivos, incluindo os 5 novos
+componentes (`ClinicalPomodoroWidget.tsx`, `DailyHandoffModal.tsx`,
+`BancaPerformanceRadar.tsx`, `ClinicalCognitiveProfile.tsx`,
+`ExportCadernoModal.tsx`) e as alterações em `QuestionCard.tsx`,
+`QuestionsView.tsx`, `FlashcardReviewSession.tsx`, `FlashcardsView.tsx`,
+`DashboardView.tsx`, `IntegratedCadernoErros.tsx`, `Header.tsx`,
+`SafeMarkdown.tsx`, `CompendiumReader.tsx`, `CompendiumView.tsx`,
+`MobileBottomNav.tsx`, `index.css`, `index.html`, `.env.example`,
+`types/index.ts`, `vitest.config.ts`.
+
+**Achados e correções** (matriz completa e comandos no "RETORNO: 41-A"
+devolvido à diretoria — resumo aqui):
+
+1. `package.json` idêntico antes/depois de `fe20832`; `package-lock.json`
+   foi apenas apagado, sem geração de substituto. Restaurado a partir de
+   `2e342bd` (o commit imediatamente anterior) — coerente por construção,
+   já que o manifesto não mudou. `npm ci` volta a funcionar (352 pacotes).
+2. `npm run typecheck` falhava com 12 erros reais, confinados aos dois
+   componentes de dashboard novos (`DailyHandoffModal.tsx`,
+   `BancaPerformanceRadar.tsx`): `Object.values(record)`/`new Map(...)`
+   sem tipagem explícita voltavam `unknown`/`unknown[]` neste projeto (o
+   mesmo padrão que o código pré-existente já contorna com anotação
+   explícita, ex. `DashboardView.tsx:139`). Corrigido com o mesmo padrão.
+   No caminho, achado um bug funcional real: o filtro de "respostas de
+   hoje" usava `a.answeredAt`, campo inexistente em `QuestionAnswerRecord`
+   (o campo correto é `timestamp`) — sem a correção, a Passagem de Plantão
+   sempre mostraria zero questões/acurácia do dia.
+3. `npm run lint` excedia o teto de `--max-warnings 93` (103 com o commit
+   original, contra 89 na baseline imediatamente anterior, confirmado
+   comparando as duas árvores lado a lado). Corrigido removendo imports e
+   estado mortos introduzidos pelos componentes novos, convertendo um
+   `<div onClick>` para `<button>` semântico, e suprimindo 2
+   `react-hooks/exhaustive-deps` com o mesmo padrão de comentário já usado
+   em `QuestionCard.tsx` antes deste commit. `vitest.config.ts` tinha um
+   `plugins: [react() as any]` — o cast mascarava um warning `any`, não um
+   erro real (removido, `npm run test:unit` roda limpo sem ele). Resultado
+   final: 89 warnings, igual à baseline.
+4. Dois componentes novos estavam **importados e nunca renderizados** em
+   `DashboardView.tsx`: `DailyHandoffModal` (o botão "Passagem de Plantão"
+   não abria nada) e `BancaPerformanceRadar` (seção inteira invisível).
+   Ligados usando dados já carregados no componente pai — sem criar
+   funcionalidade nova, só religando o que o próprio commit construiu e
+   esqueceu de expor.
+5. Nenhum bypass de autenticação/admin, segredo exposto (chave, token,
+   URL sensível), escrita remota silenciosa, `catch {}` engolindo erro
+   crítico, ou instrumentação de debug/teste encontrada no diff.
+   `check:no-debug-bundle` confirma 0 ocorrências no bundle final.
+
+**Validações executadas**: `git diff --check` (limpo); varredura de
+segredos no diff completo (0 ocorrências); `npm ci` a partir do lockfile
+restaurado (sucesso, 352 pacotes); `npm run typecheck` (0 erros, após
+correção); `npm run lint` (0 erros / 89 warnings, após correção);
+`npm run test:unit` (24/24 passando); `npm run build` (sucesso,
+`dist/assets/index-*.js` ~1,11 MB); `npm run check:no-debug-bundle` (0
+ocorrências). Smoke em navegador real: `npm run dev` + Chromium headless
+via Playwright (`playwright-core`, já devDependency do projeto) contra
+`localhost:3000` em modo local resiliente (sem Supabase configurado) —
+confirmado visualmente e por `console --errors` (vazio) que o Plantão de
+Foco (Pomodoro) abre e conta o tempo, a Passagem de Plantão abre e mostra
+a síntese SBAR, o Aproveitamento por Banca Examinadora renderiza e o
+filtro rápido de banca + Modo Foco Zen do banco de questões funcionam.
+
+**Não executado nesta entrega**: pgTAP (`npm run test`/`supabase test
+db`) — Docker Desktop não estava com o daemon ativo no ambiente de
+execução (`docker info` falhou ao conectar); `supabase start` não pôde
+ser tentado. Isso não foi contornado com `--optional` nem declarado como
+"passou" — fica como item pendente explícito para a diretoria mandar
+rodar (localmente com Docker ativo, ou via CI) antes de aprovar
+publicação em produção.
+
+**Restrições respeitadas**: nenhum merge/push em `main`; nenhum deploy;
+nenhuma escrita no Supabase remoto (não usado nesta entrega); sem force
+push, reset destrutivo ou descarte de trabalho alheio; nenhuma conclusão
+apresentada como fato sobre a origem de `fe20832` (permanece hipótese de
+risco, não confirmada); nenhuma correção fora do escopo do diff auditado.
+
+**Veredito**: aceitar `fe20832` **com correções** (não é caso de
+reversão — a funcionalidade em si é legítima e, uma vez corrigida,
+funciona; o problema era reprodutibilidade de build e dois componentes
+órfãos, ambos corrigidos e verificados). Branch candidata
+`work/41a-auditoria-fe20832` fica **só local**, aguardando decisão da
+diretoria sobre merge/push e sobre quando rodar o gate pgTAP pendente.

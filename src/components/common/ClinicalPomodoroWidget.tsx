@@ -98,6 +98,9 @@ export const ClinicalPomodoroWidget: React.FC<ClinicalPomodoroWidgetProps> = () 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
+    // playChime é recriada a cada render; incluí-la reiniciaria o intervalo
+    // sem necessidade. Depende apenas de soundEnabled (já capturado abaixo).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRunning, mode, soundEnabled]);
 
   const switchMode = (newMode: PomodoroMode, mins: number) => {
@@ -156,7 +159,12 @@ export const ClinicalPomodoroWidget: React.FC<ClinicalPomodoroWidgetProps> = () 
     return (
       <aside aria-label="Plantão de Foco" className="fixed bottom-20 sm:bottom-6 left-4 z-40">
         <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border border-teal-500/50 shadow-xl elev-md text-slate-800 dark:text-slate-200">
-          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setIsMinimized(false)}>
+          <button
+            type="button"
+            className="flex items-center gap-1.5 cursor-pointer"
+            onClick={() => setIsMinimized(false)}
+            title="Expandir Plantão de Foco"
+          >
             <div className={`w-2 h-2 rounded-full ${mode === 'focus' ? 'bg-teal-500' : 'bg-amber-500'} ${isRunning ? 'animate-ping' : ''}`} />
             <span className="font-mono text-xs font-black tabular-nums text-slate-900 dark:text-white">
               {formattedTime}
@@ -164,7 +172,7 @@ export const ClinicalPomodoroWidget: React.FC<ClinicalPomodoroWidgetProps> = () 
             <span className="text-[10px] font-bold text-slate-400">
               {mode === 'focus' ? 'Foco' : 'Pausa'}
             </span>
-          </div>
+          </button>
 
           <button
             type="button"
