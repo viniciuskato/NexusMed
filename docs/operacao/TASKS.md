@@ -19,7 +19,10 @@
 |---|---|---|---|---|---|
 | TASK-2026-09-17-01 — Entrega 40-A (continuidade operacional) | P1 | concluído; integração bloqueada | Retorno 40-A auditado pela diretoria em 2026-09-17 | Nenhum no conteúdo; merge em `main` acionaria novo deploy | Decidir integração junto com a 41-A (mesma branch candidata contém as duas) |
 | TASK-2026-09-17-02 — Entrega 41-A: auditar `fe20832` e restaurar reprodutibilidade | P1 (era P0) | concluído; superado pela 41-B | Nenhuma | Nenhum diretamente — branch candidata substituída por `work/41b-gate-final-fe20832` | Ver TASK-2026-09-17-03 |
-| TASK-2026-09-17-03 — Entrega 41-B: gate final da auditoria `fe20832` (pgTAP/Playwright/hooks/teste focado) | P0 | concluído; branch candidata enviada ao remoto (`origin/work/41b-gate-final-fe20832`), não mesclada | Depende de `work/41a-auditoria-fe20832` @ `6c1f108` | Alto se mesclado — `main` já contém `fe20832` sem estas correções; branch candidata não mesclada, produção não tocada | Diretoria decide merge/push de `work/41b-gate-final-fe20832` para `main`; produção/Vercel/Supabase remoto seguem não verificados por esta trilha, verificar antes de autorizar publicação |
+| TASK-2026-09-17-03 — Entrega 41-B: gate final da auditoria `fe20832` | P1 | concluído e aprovado; candidata remota `367f75c` | Gates completos verdes | Nenhum até integração; candidata não mesclada | Publicar somente pela Entrega 41-C |
+| TASK-2026-09-17-04 — Entrega 41-C: integrar e publicar 40-A/41-A/41-B | **P0** | preparado | `origin/main = fe20832` e candidata `367f75c` sem drift | Alto — push em main aciona deploy | Pode enviar com autorização explícita; executar gates, merge `--no-ff`, deploy e smoke |
+| TASK-2026-09-17-05 — Corrigir limpeza residual do spec 23-B | P2 | pendente | Nenhuma; executar depois da publicação | Nenhum em produção; fixture somente local | Auditar `finally`/`afterEach` do spec de proveniência em entrega separada |
+| TASK-2026-09-17-06 — Sanear worktree órfão `.claude/worktrees/agent-abf9bcb34c941c5ba` | P2 | pendente | Commits 41-A/41-B preservados local e remotamente | Nenhum em produção | Fazer manutenção Git separada, com permissões adequadas; não remover manualmente sem inventário final |
 
 ## Como adicionar uma tarefa
 

@@ -6,6 +6,22 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-17 — 41-B aprovada para etapa de publicação
+
+A diretoria conferiu a candidata `367f75c` e confirmou no remoto que
+`origin/work/41b-gate-final-fe20832` aponta para o mesmo commit, enquanto
+`origin/main` permanece em `fe20832`. Os gates completos passaram: pgTAP
+228/228, Playwright 24/24, testes unitários/componentes 26/26, typecheck,
+lint, build e bundle sem debug. As supressões de hooks foram substituídas por
+dependências reais e teste com controle negativo.
+
+A candidata está tecnicamente aprovada. Publicação somente pela Entrega 41-C,
+com preflight sem drift, merge `--no-ff`, repetição dos gates, deploy e smoke.
+A fixture residual local do spec 23-B e o worktree órfão são tarefas separadas
+e não devem ser misturados com o deploy.
+
+---
+
 ## 2026-09-17 — Gate final da 41-B: pgTAP e Playwright oficial fecham a auditoria de `fe20832`
 
 A Entrega 41-B partiu de `work/41a-auditoria-fe20832` @ `6c1f108` numa

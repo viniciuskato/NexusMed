@@ -1,5 +1,14 @@
 # Registro de decisões e acompanhamento da diretoria — NexusMed
 
+## Decisão da diretoria — retorno 41-B, 2026-09-17
+
+Branch `work/41b-gate-final-fe20832` conferida localmente e no remoto em
+`367f75c`; `origin/main` permaneceu em `fe20832`. Gates completos e correções
+de hooks aceitos. Candidata liberada para etapa específica de publicação,
+41-C, ainda não enviada/executada. Fixture residual local do spec 23-B e
+worktree órfão foram separados como dívidas P2 e não bloqueiam tecnicamente a
+candidata.
+
 > Painel legado e histórico acumulado. Em 2026-09-17, a diretoria aprovou a
 > criação de uma camada operacional curta e durável; até a conclusão da
 > Entrega 40-A, este arquivo continua sendo o registro vigente, mas não deve
