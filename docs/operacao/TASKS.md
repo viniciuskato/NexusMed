@@ -23,6 +23,7 @@
 | TASK-2026-09-17-04 — Entrega 41-C: integrar e publicar 40-A/41-A/41-B | P1 (era P0) | **concluído e publicado** | Nenhuma | `main` avançou `fe20832` → `a359b3d` (merge `c2b412d` + registro), deploy em produção confirmado | Nenhuma — ver "RETORNO: 41-C" em `docs/diretoria/registro.md` |
 | TASK-2026-09-17-05 — Corrigir limpeza residual do spec 23-B | P2 | pendente | Nenhuma; executar depois da publicação | Nenhum em produção; fixture somente local | Auditar `finally`/`afterEach` do spec de proveniência em entrega separada |
 | TASK-2026-09-17-06 — Sanear worktree órfão `.claude/worktrees/agent-abf9bcb34c941c5ba` | P2 | pendente | Commits 41-A/41-B preservados local e remotamente | Nenhum em produção | Fazer manutenção Git separada, com permissões adequadas; não remover manualmente sem inventário final |
+| TASK-2026-09-17-07 — Tornar `canonical` realmente canônica (main, limpa, sem worktree aninhado) | P1 | em execução | Correções de `git diff --check` e da AUDITORIA-CONSOLIDACAO-AMBIENTE-2026-09-17.md commitadas nesta candidata (`work/fase2-reconciliacao-consolidada`) | Nenhum — só limpeza local de worktrees transitórios já consolidados, sem tocar main/produção/Supabase remoto | Enviar a candidata ao remoto para preservação; remover (sem `--force`) só os worktrees transitórios já consolidados e sem processo ativo; deixar `canonical` em `main` com fast-forward para `origin/main` |
 
 ## Como adicionar uma tarefa
 

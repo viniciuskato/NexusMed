@@ -17,13 +17,15 @@ Supabase remoto não foi tocado.
 - `fb989a4` é muito anterior a toda a linha 07/09/11–13/21–23/40/41
   documentada em `docs/diretoria/registro.md`. Ambos os clones já constam
   na lista de "cópias antigas, não são fonte de verdade" em
-  `PROJECT_STATE.md` — confirmação pessoal não encontrou conteúdo
-  divergente ou único que justifique revisar essa classificação. Ambos têm
-  arquivos `docs/diretoria/*.txt` não rastreados (prompts avulsos
-  copiados manualmente em sessões anteriores) e uma modificação local não
-  commitada em `docs/diretoria/registro.md`/`MODELO-DIRETORIA.md` — não
-  inspecionado byte a byte nesta auditoria por serem clones já quarentenados
-  e fora de escopo de qualquer entrega ativa.
+  `PROJECT_STATE.md` — quanto ao histórico versionado (HEAD em `fb989a4`),
+  confirmação pessoal não encontrou conteúdo divergente ou único que
+  justifique revisar essa classificação. Ambos têm arquivos
+  `docs/diretoria/*.txt` não rastreados (prompts avulsos copiados
+  manualmente em sessões anteriores) e uma modificação local não commitada
+  em `docs/diretoria/registro.md`/`MODELO-DIRETORIA.md` — esse conteúdo não
+  versionado não foi inspecionado byte a byte nesta auditoria por serem
+  clones já quarentenados e fora de escopo de qualquer entrega ativa, e a
+  conclusão de "sem conteúdo divergente" acima não se estende a ele.
 
 ## 2. Links de fase4/fase5 (`PROJECT_STATE.md`, seção "Riscos e quarentenas")
 

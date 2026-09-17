@@ -54,4 +54,3 @@ Ambientes tocados
 Riscos e itens não verificados
 Estado de publicação: branch remota candidata; confirmar main/produção inalterados
 Recomendação final: liberar integração | manter bloqueada
-
