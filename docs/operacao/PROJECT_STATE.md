@@ -178,6 +178,66 @@ Ver `docs/diretoria/registro.md` (retorno 41-B) para o relato completo.
 Branch candidata enviada **apenas** a `origin/work/41b-gate-final-fe20832`
 — `main` e produção permanecem inalterados.
 
+## Missão 42-B (2026-09-17) — Correção da importação atômica
+
+A diretoria revisou a 42-A e exigiu correção antes de qualquer publicação:
+`SupabaseMaterialsRepository.saveCompendium()` grava material, seções e
+referências em requisições HTTP independentes, e o repositório resiliente
+gravava a cópia local antes de confirmar o Supabase — uma falha
+intermediária podia deixar rascunho parcial no banco e divergência local.
+
+- Branch candidata **ainda só local**, mesma branch da 42-A:
+  `work/42a-import-assistido`, agora em `2bcac36` (dois commits acima da
+  42-A: `8f7c4cb` + `80ba996` + `2bcac36`). Não enviada ao remoto, não
+  mesclada em `main`.
+- **Correção real, não superficial**: nova função `public.import_compendium_draft()`
+  (migration `20260917120000_import_compendium_draft.sql`) faz TODA a
+  gravação (material + seções + referências) dentro de uma única chamada
+  PL/pgSQL — em Postgres isso já é atômico por natureza (uma função
+  invocada como instrução única roda dentro de uma transação implícita;
+  qualquer exceção não capturada desfaz tudo). A função exige admin ativo,
+  valida disciplina/tema existentes e coerentes entre si, bloqueia
+  duplicidade de título no servidor (case-insensitive, independente da
+  checagem client-side) e só aceita criação em `draft` (nem recebe
+  parâmetro de status).
+- Cliente: `SupabaseMaterialsRepository.importCompendiumDraft()` chama essa
+  RPC; `ResilientMaterialsRepository.importCompendiumDraft()` só grava a
+  cópia local **depois** do sucesso remoto integral (ao contrário do padrão
+  usado pelos demais métodos deste repositório) — sem Supabase configurado,
+  grava só local, sem fingir sincronização inexistente.
+  `ImportMaterialModal` passou a chamar este método em vez de
+  `saveCompendium` (que continua existindo, intocado, para o formulário
+  manual de edição/criação — fora do escopo desta correção).
+- **Prova de atomicidade (controle negativo)**: teste pgTAP
+  (`supabase/tests/database/import_compendium_draft.test.sql`, 21
+  asserções) provoca deliberadamente uma violação de constraint
+  (`citation_text` nulo numa referência) DEPOIS que material e seção já
+  teriam sido inseridos na mesma chamada — confirmado por consulta SQL
+  direta: 0 materiais, 0 seções, 0 referências remanescentes.
+- Validações executadas: `tsc --noEmit` limpo; `npm run lint` 0 erros/89
+  warnings; `npm run test` (pgTAP) 249/249 (228 pré-existentes + 21 novos);
+  Vitest unit+component 43/43 (3 novos casos de repositório + 1 novo caso
+  de componente para falha remota); `npm run test:e2e` completo 28/28 após
+  `supabase db reset` limpo (as 4 falhas observadas numa execução anterior,
+  sem reset entre duas rodadas seguidas da suíte no mesmo dia, foram
+  isoladas como poluição de dados de execuções repetidas — specs
+  `estudo-tematico-22a`/`concurrencia-13b`, não tocados por esta missão —
+  e desapareceram com o banco local resetado; não é regressão introduzida
+  aqui); `npm run build` e `check:no-debug-bundle` OK; `git diff --check`
+  limpo; varredura de segredos no diff sem ocorrências.
+- **Correção de contagem da 42-A**: o retorno anterior relatou 10 arquivos
+  alterados — a contagem real (incluindo a atualização de documentação
+  operacional feita no fechamento daquela sessão) é **13 arquivos**. Com a
+  42-B, o total acumulado da branch candidata é 18 arquivos.
+- Ambientes tocados: local (código) e Supabase **local** (schema novo via
+  migration + dados de teste criados/removidos pelos próprios testes
+  pgTAP/e2e). Supabase remoto, `main` e produção **não tocados**.
+- Fora de escopo, deliberadamente não implementado nesta correção: criação
+  automática de disciplina/tema, atualização por reimportação, taxonomia
+  nova, questões/flashcards, publicação do material, refatoração geral de
+  `saveCompendium()` (mantido intacto — só o caminho de importação passou a
+  usar a RPC nova).
+
 ## Missão 42-A (2026-09-17) — Entrada assistida de materiais ("Importar material")
 
 Fase 3 (Área Editorial operacional sem programação). Objetivo: uma pessoa

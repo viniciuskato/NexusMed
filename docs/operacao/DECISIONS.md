@@ -6,6 +6,28 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-17 — Gravação multi-tabela editorial nova deve ser RPC transacional, não requisições independentes
+
+A diretoria rejeitou a 42-A (importação de compêndio) por gravar material,
+seções e referências em requisições HTTP independentes
+(`saveCompendium()`), com a cópia local escrita antes da confirmação
+remota — uma falha intermediária podia deixar rascunho parcial no banco. A
+correção (42-B) criou `public.import_compendium_draft()`, uma função
+PL/pgSQL que faz a gravação inteira numa única chamada (atômica por
+natureza no Postgres) e só atualiza a cópia local depois do sucesso remoto
+integral.
+
+**Como aplicar**: qualquer funcionalidade nova que precise criar/atualizar
+mais de uma tabela relacionada como uma única operação lógica (não é o caso
+de `saveCompendium()` do formulário manual, que fica como está, fora de
+escopo) deve seguir esse padrão — RPC dedicada com validação de
+autorização/coerência no servidor, não confiar em checagem client-side, e
+nunca gravar a cópia local antes de confirmar o Supabase quando a escrita
+for multi-etapa. Não "resolver" atomicidade com limpeza client-side
+best-effort em caso de falha parcial.
+
+---
+
 ## 2026-09-17 — Merge/push que dispara deploy exige sessão fora do modo
 automático
 
