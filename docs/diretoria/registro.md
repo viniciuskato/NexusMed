@@ -1,5 +1,34 @@
 # Registro de decisões e acompanhamento da diretoria — NexusMed
 
+> Painel legado e histórico acumulado. Em 2026-09-17, a diretoria aprovou a
+> criação de uma camada operacional curta e durável; até a conclusão da
+> Entrega 40-A, este arquivo continua sendo o registro vigente, mas não deve
+> ser interpretado isoladamente como fotografia atual do produto.
+
+## Decisão da diretoria — continuidade operacional, 2026-09-17
+
+- Chats, memória de uma IA e cópias soltas não são fonte de verdade.
+- A fonte oficial é o repositório GitHub `SynapseMed-firebase-auth`, branch
+  `main`; estado presente deve sempre ser reconfirmado no remoto.
+- Produção exige autorização explícita; trabalho local, commit e branch
+  candidata não equivalem a publicação.
+- Cada sessão trabalha em um objetivo principal e encerra com evidências,
+  riscos e próxima decisão em linguagem executiva.
+- Preparada a Entrega 40-A para criar o sistema persistente de estado,
+  decisões, tarefas, runbook e protocolo de sessão, reduzindo o caminho
+  obrigatório hoje concentrado em `AGENTS.md` e neste registro.
+- Diagnóstico de base: em 2026-09-17, o remoto estava em `fe20832`; cópia
+  canônica limpa criada em `Projetos/SynapseMed/canonical`. O hash deve ser
+  tratado como evidência datada, não como valor permanente.
+- Cópias antigas e o `.git` órfão conhecido permanecem em quarentena lógica;
+  nenhuma exclusão, movimentação ou correção foi autorizada nesta etapa.
+
+### Acompanhamento atual
+
+| Entrega | Etapa/ID atual | Estado | Próxima ação / dependência |
+|---|---|---|---|
+| Continuidade operacional | 40-A | Preparado | Pode enviar a uma sessão executiva isolada; não executar em paralelo com outra escritora de documentação. |
+
 > Cópia versionada do acompanhamento de prompts entre diretoria e
 > sessões executivas, proposta em `docs/CONTINUIDADE-MULTI-MAQUINA.md`
 > (seção 8) para que o histórico sobreviva à troca de máquina, de
