@@ -23,7 +23,44 @@
 | TASK-2026-09-17-04 — Entrega 41-C: integrar e publicar 40-A/41-A/41-B | P1 (era P0) | **concluído e publicado** | Nenhuma | `main` avançou `fe20832` → `a359b3d` (merge `c2b412d` + registro), deploy em produção confirmado | Nenhuma — ver "RETORNO: 41-C" em `docs/diretoria/registro.md` |
 | TASK-2026-09-17-05 — Corrigir limpeza residual do spec 23-B | P2 | pendente | Nenhuma; executar depois da publicação | Nenhum em produção; fixture somente local | Auditar `finally`/`afterEach` do spec de proveniência em entrega separada |
 | TASK-2026-09-17-06 — Sanear worktree órfão `.claude/worktrees/agent-abf9bcb34c941c5ba` | P2 | pendente | Commits 41-A/41-B preservados local e remotamente | Nenhum em produção | Fazer manutenção Git separada, com permissões adequadas; não remover manualmente sem inventário final |
-| TASK-2026-09-17-07 — Tornar `canonical` realmente canônica (main, limpa, sem worktree aninhado) | P1 | em execução | Correções de `git diff --check` e da AUDITORIA-CONSOLIDACAO-AMBIENTE-2026-09-17.md commitadas nesta candidata (`work/fase2-reconciliacao-consolidada`) | Nenhum — só limpeza local de worktrees transitórios já consolidados, sem tocar main/produção/Supabase remoto | Enviar a candidata ao remoto para preservação; remover (sem `--force`) só os worktrees transitórios já consolidados e sem processo ativo; deixar `canonical` em `main` com fast-forward para `origin/main` |
+| TASK-2026-09-17-07 — Tornar `canonical` realmente canônica (main, limpa, sem worktree aninhado) | P1 | parcialmente concluído — ver nota abaixo | Correções de `git diff --check` e da AUDITORIA-CONSOLIDACAO-AMBIENTE-2026-09-17.md commitadas nesta candidata (`work/fase2-reconciliacao-consolidada`) | Nenhum — só limpeza local de worktrees transitórios, sem tocar main/produção/Supabase remoto | Decidir o que fazer com `work/41b-gate-final-fe20832` (servidor dev ainda ativo nela) e com os commits soltos `66aff30`/`0cbcb8c`; publicar esta candidata quando a diretoria aprovar |
+
+**Nota sobre a limpeza de worktrees da TASK-07 (2026-09-17, execução real)**:
+
+- Removidas com `git worktree remove` (sem `--force`), após confirmar
+  árvore limpa e nenhum processo com handle aberto na pasta:
+  `worktrees/41a-consolidacao-docfix` (branch `work/41a-consolidacao-docfix`,
+  ponta em `66aff30`) e `worktrees/reconciliacao-docs-pos-41c` (branch
+  `work/reconciliacao-docs-pos-41c`, ponta em `0cbcb8c`). Em ambos os
+  casos o `git worktree remove` desregistrou a worktree mas falhou ao
+  apagar alguns arquivos da pasta física (`Permission denied` — lock
+  transitório do OneDrive); confirmado que o `.git` interno já tinha sido
+  removido (pasta comum, não mais um worktree Git) antes de apagar o
+  restante com uma remoção de arquivo comum. As branches não foram
+  apagadas — os commits `66aff30` e `0cbcb8c` continuam alcançáveis por
+  elas, mas **não estão mesclados em `main` nem na candidata remota
+  `work/fase2-reconciliacao-consolidada` (`552dcea`)** — são apenas
+  correções de texto em `PROJECT_STATE.md`/`TASKS.md`, sobrepostas pelo
+  conteúdo desta própria candidata; decisão de descartar as branches ou
+  reaproveitar o texto fica para a diretoria.
+- **Não removida**: `worktrees/41b-gate-final-fe20832` (branch
+  `work/41b-gate-final-fe20832`, `b5a8f7f` — já mesclada em `main` via
+  `c2b412d`, então sem perda de conteúdo se fosse removida). Encontrado
+  processo ativo usando a pasta: `node.exe` (PID 33140, `vite --port=3000
+  --host=0.0.0.0`, iniciado 2026-09-17 13:50) com filho `esbuild.exe`
+  (PID 5656). Como a missão só autorizava remoção após confirmar ausência
+  de processo, a remoção foi propositalmente pulada; o processo não foi
+  encerrado.
+- Pasta órfã `canonical/.claude/worktrees/agent-a24024165df13bbd9`
+  (sem `.git`, sem processo ativo, apenas build/`node_modules` de execução
+  antiga de agente) removida com aprovação interativa específica do
+  usuário, sem curinga, sem tocar `agent-abf9bcb34c941c5ba` (que segue
+  pendente — TASK-2026-09-17-06) nem o resto de `.claude/`.
+- `canonical` confirmado em `main`, árvore limpa (só `.claude/` não
+  rastreado), `main` == `origin/main` == `a359b3d`.
+- Nenhum branch local apagado; nenhuma escrita em Supabase/produção/AI
+  Studio/clones antigos/junções; esta candidata **não foi publicada**
+  nesta sessão.
 
 ## Como adicionar uma tarefa
 
