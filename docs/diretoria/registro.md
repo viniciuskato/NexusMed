@@ -1,5 +1,100 @@
 # Registro de decisões e acompanhamento da diretoria — NexusMed
 
+## RETORNO: 41-C — Integração e publicação da governança 40-A e correções fe20832 (2026-09-17, sessão executiva)
+
+**Resultado**: concluído.
+
+**Preflight**: `origin/main = fe20832791bad02d174461f7cf4bab8d0dcd632e`
+(reconfirmado por `fetch` imediatamente antes do merge). Candidata
+corrigida por complemento da diretoria de `367f75c` para
+`origin/work/41b-gate-final-fe20832 = b5a8f7f8ab523c67841ee97021dd8d9956e9fc78`
+— avanço `367f75c → b5a8f7f` conferido como só documentação (o próprio
+prompt 41-C + registro/decisões/tasks), sem código. Árvore local limpa
+antes de agir.
+
+**Merge e commits**: `git merge --no-ff origin/work/41b-gate-final-fe20832`
+em `main`, commit `c2b412d32d132ef61cc49430c42b57b1c8e63a29`. Diff
+`fe20832...b5a8f7f` conferido antes do merge: 21 arquivos — só governança
+(40-A/41-A/41-C, `registro.md`, `DECISIONS.md`, `PROJECT_STATE.md`,
+`RUNBOOK.md`, `SESSION_PROTOCOL.md`, `TASKS.md`, reorganização do
+`AGENTS.md` para `docs/archive/`), lockfile restaurado
+(`package-lock.json`/`package.json`) e as correções pontuais já auditadas
+em 41-A/41-B (`ClinicalPomodoroWidget.tsx`, `DailyHandoffModal.tsx`,
+`BancaPerformanceRadar.tsx`, `ClinicalCognitiveProfile.tsx`,
+`DashboardView.tsx`, `QuestionCard.tsx` + teste novo
+`questionCardKeyboardShortcuts.test.tsx`, `vitest.config.ts`). Nenhuma
+mudança de código fora desse escopo.
+
+**Bloqueio intermediário e resolução**: as duas primeiras tentativas desta
+entrega (sessão em worktree isolado, depois esta mesma sessão em modo
+automático) tiveram o `git merge --no-ff` negado pelo classificador de
+segurança do Claude Code (motivos "[Production Deploy]" e depois
+"[Auto-Mode Bypass]") — bloqueio de plataforma, não um problema de
+hashes/escopo. Nenhuma tentativa de contorno foi feita. Resolvido saindo
+do modo automático e obtendo aprovação interativa explícita do usuário
+para repetir a sequência completa (preflight → merge local → gates →
+push só se tudo verde).
+
+**Gates**: rodados na candidata e depois repetidos em `main` pós-merge —
+`npm ci` (407 pacotes, 0 erros), `npm run verify:full` (typecheck limpo;
+lint 0 erros/89 avisos, abaixo do teto 93; vitest 26/26 unitário + 2 de
+componente incluindo o teste novo de atalhos de teclado; `supabase test
+db` pgTAP 228/228; `supabase db reset` aplicado sem erro, 19 migrations;
+Playwright 24/24 contra Supabase local). `npm run build` limpo, bundle
+`assets/index-DcBPGanJ.js` (1.112.106 bytes). `check:no-debug-bundle`: 0
+ocorrências de `__syncDebug`/`__setTestBackoffOverride`. `git diff
+--check` limpo (só 2 avisos triviais de linha em branco no fim de
+`docs/diretoria/prompts/41-A.txt`/`41-C.txt`). Varredura por padrões de
+segredo no diff de código: 0 ocorrências. `.env.test.local` (git-ignorado,
+necessário para o Playwright local nesta worktree nova) criado e nunca
+commitado.
+
+**Publicação**: `git push origin main` — `main` avançou
+`fe20832..c2b412d`, deploy automático no Vercel disparado. Confirmado por
+polling da URL pública: hash do bundle publicado mudou durante a janela
+de push (`CJA-0s1s` → `CTeokEhF`, estabilizado), tamanho do JS publicado
+(1.112.400 bytes) e `Last-Modified` (segundos após o push) coerentes com
+o build local recém-gerado.
+
+**Smoke de produção**: por restrição explícita do prompt e do complemento
+("não tocar no Supabase remoto" / "esta autorização não inclui Supabase
+remoto"), o smoke NÃO criou a conta descartável que o padrão do
+`RUNBOOK.md` normalmente usa para exercitar fluxos autenticados —
+decisão de escopo desta sessão, registrada aqui em vez de omitida.
+Executado em vez disso um smoke não autenticado real (Playwright/Chromium
+contra a URL pública): página carrega (`title: NexusMed`), tela de login
+renderiza (marcadores de e-mail/senha presentes), 0 erros de console, 0
+requisições com falha. Os fluxos autenticados citados no prompo (dashboard,
+Pomodoro, Passagem de Plantão, Aproveitamento por Banca, Questões, Modo
+Foco Zen) **não foram exercitados nesta entrega** — ficam cobertos pelos
+24/24 testes Playwright reais contra Supabase local rodados nos gates
+(mesmo código, mesmo bundle, ambiente diferente).
+
+**Ambientes tocados**: local (build, testes, Supabase local resetado
+duas vezes) e produção (deploy via push em `main`, leitura HTTP não
+autenticada). Supabase remoto: **não tocado** — nenhuma migration, nenhum
+`db push`, nenhuma escrita, nenhuma conta criada.
+
+**Dados/fixtures**: nenhuma fixture remota criada nesta entrega (por
+restrição de escopo). Fixtures do Playwright local são efêmeras e o
+próprio `supabase db reset` já as descartou.
+
+**Riscos e pendências**: (1) lacuna de cobertura reconhecida — os fluxos
+autenticados de produção citados no prompt não foram verificados
+diretamente em produção nesta entrega, só localmente; se a diretoria
+quiser essa cobertura, precisa autorizar explicitamente a criação de uma
+conta descartável remota (o que este prompt vedou). (2) Fixture residual
+do spec 23-B — não tocada, dívida P2 já registrada. (3) Worktree órfão
+`.claude/worktrees/agent-abf9bcb34c941c5ba` e
+`synapsemed-baseline-2e342bd` — `git fetch --prune` continua falhando por
+permissão ao tentar removê-los; não tocados, manutenção é entrega
+separada, conforme restrição.
+
+**Próxima decisão da diretoria**: decidir se a lacuna de smoke autenticado
+em produção (item 1 acima) precisa ser fechada com uma entrega específica
+autorizando conta descartável remota, ou se a cobertura local (24/24
+Playwright) é aceita como suficiente para esta publicação.
+
 ## Decisão da diretoria — retorno 41-B, 2026-09-17
 
 Branch `work/41b-gate-final-fe20832` conferida localmente e no remoto em

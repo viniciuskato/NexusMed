@@ -6,6 +6,20 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-17 — Merge/push que dispara deploy exige sessão fora do modo
+automático
+
+Durante a 41-C, `git merge --no-ff` em `main` foi negado duas vezes pelo
+classificador de segurança do Claude Code em modo automático (motivos
+"[Production Deploy]" e "[Auto-Mode Bypass]"), mesmo com hashes/escopo já
+validados e autorização textual da diretoria no prompt. Não é contornável
+por texto de autorização nem por ferramentas alternativas — exige sair do
+modo automático e aprovar a ação interativamente, ação por ação. **Como
+aplicar**: qualquer entrega futura que termine em merge em `main` seguido
+de push deve prever que essa etapa específica só roda com o operador
+presente e o modo automático desligado; não vale a pena tentar autorizar
+isso por texto de prompt com antecedência.
+
 ## 2026-09-17 — 41-B aprovada para etapa de publicação
 
 A diretoria conferiu a candidata `367f75c` e confirmou no remoto que

@@ -263,8 +263,13 @@ documentação futuras sem autorização específica)
 
 ## Estado de publicação desta própria entrega
 
-Ver o "RETORNO: 40-A" devolvido pela sessão executiva que produziu esta
-camada — branch candidata `work/40a-continuidade-operacional`, **não
-mesclada em `main`** até autorização explícita. A entrega 41-A partiu
-dessa base e também ficou **só local**, em `work/41a-auditoria-fe20832`
-— ver "RETORNO: 41-A" em `docs/diretoria/registro.md`.
+**Atualizado pela 41-C (2026-09-17): publicado.** `main = origin/main =
+c2b412d` (merge `--no-ff` de `work/41b-gate-final-fe20832`, hash
+`b5a8f7f`, sobre `fe20832`), contendo 40-A + as correções auditadas em
+41-A/41-B (lockfile restaurado, `useCallback` real nos atalhos de teclado
+do `QuestionCard`, ajustes de tipagem/lint). Deploy automático no Vercel
+confirmado (bundle publicado com tamanho e timestamp coerentes com o
+build local imediatamente após o push). Ver "RETORNO: 41-C" em
+`docs/diretoria/registro.md` para a matriz completa de gates e o smoke de
+produção realizado (limitado a verificação não autenticada, por restrição
+explícita de não tocar o Supabase remoto nesta entrega).
