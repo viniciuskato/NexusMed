@@ -16,6 +16,7 @@ import {
   Clock,
   Lightbulb,
   FileText,
+  FileUp,
   X,
   ChevronDown,
   Users,
@@ -35,6 +36,7 @@ import { feedbackRepository } from '../../repositories/FeedbackRepository';
 import { supabase } from '../../lib/supabaseClient';
 import SectionEditor from './SectionEditor';
 import ProvenanceReviewPanel from './ProvenanceReviewPanel';
+import ImportMaterialModal from './ImportMaterialModal';
 import { getErrorMessage } from '../../utils/errorMessage';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
@@ -207,6 +209,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
 
   // ── Compendium State ───────────────────────────────────────────
   const [isCompendiumFormOpen, setIsCompendiumFormOpen] = useState(false);
+  const [isImportMaterialOpen, setIsImportMaterialOpen] = useState(false);
   const [editingCompId, setEditingCompId] = useState<string | null>(null);
   const [compSearch, setCompSearch] = useState('');
   // Editor de seção (piloto CMS) — guarda só o id, não o objeto Compendium,
@@ -687,6 +690,15 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
             </button>
 
             <button
+              onClick={() => setIsImportMaterialOpen(true)}
+              className="px-3.5 py-2 rounded-lg border border-teal-200 dark:border-teal-900 bg-teal-50 dark:bg-teal-950/40 hover:bg-teal-100 hover:dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+              title="Cria um rascunho a partir de um arquivo de compêndio (.yaml) já pronto"
+            >
+              <FileUp className="w-4 h-4" />
+              <span>Importar material</span>
+            </button>
+
+            <button
               onClick={handleOpenNewCompendium}
               className="px-4 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white dark:bg-teal-600 dark:hover:bg-teal-500 text-xs font-bold transition-all flex items-center justify-center gap-1.5 elev-xs shrink-0 cursor-pointer"
             >
@@ -694,6 +706,16 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               <span>Novo Compêndio / Mecanismo</span>
             </button>
           </div>
+
+          {isImportMaterialOpen && (
+            <ImportMaterialModal
+              disciplines={disciplines}
+              themes={themes}
+              compendiums={compendiums}
+              onClose={() => setIsImportMaterialOpen(false)}
+              onImported={onRefreshData}
+            />
+          )}
 
           {/* ── Section Editor (piloto CMS: histórico + reversão) ──── */}
           {editingSectionsCompId && (() => {
