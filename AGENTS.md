@@ -104,6 +104,17 @@ seção "Armadilhas já descobertas".
    deliberada**: só `status === 'active'` entra no app; qualquer outro
    valor (inclusive um futuro valor de enum não tratado) cai em tela de
    bloqueio. Não "corrigir" isso para ser permissivo.
+10. **TypeScript (5.8, este projeto) às vezes não estreita uma union
+    discriminada por `!resultado.ok`/`if (resultado.ok)` quando o tipo vem
+    de um `import` de outro arquivo** (confirmado com repro mínimo isolado,
+    2026-09-17, missão 42-A) — o mesmo padrão funciona perfeitamente
+    quando a interface e o uso estão no mesmo arquivo. Sintoma: erro
+    `Property 'x' does not exist on type 'A | B'` mesmo com `ok: true`/
+    `ok: false` literais corretos nas duas interfaces. Contorno que
+    funciona sempre: comparar explicitamente (`if (resultado.ok === false)`
+    em vez de `if (!resultado.ok)`). Não gastar tempo tentando "consertar"
+    os tipos — o problema é o `!`/truthy check cross-módulo, não a
+    modelagem dos tipos.
 
 ## Convenções de trabalho
 

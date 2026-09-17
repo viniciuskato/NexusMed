@@ -24,6 +24,7 @@
 | TASK-2026-09-17-05 — Corrigir limpeza residual do spec 23-B | P2 | pendente | Nenhuma; executar depois da publicação | Nenhum em produção; fixture somente local | Auditar `finally`/`afterEach` do spec de proveniência em entrega separada |
 | TASK-2026-09-17-06 — Sanear worktree órfão `.claude/worktrees/agent-abf9bcb34c941c5ba` | P2 | **bloqueado** — ver nota abaixo | Nenhuma | Nenhum em produção | Encerrar `node`/`esbuild` ativos na pasta (não autorizado nesta entrega) e então remover com aprovação interativa específica |
 | TASK-2026-09-17-07 — Tornar `canonical` realmente canônica (main, limpa, sem worktree aninhado) | P1 | **concluído nesta entrega** — ver nota abaixo | Nenhuma | Nenhum — só limpeza local de worktrees transitórios, sem tocar main/produção/Supabase remoto | Nenhuma para `41b`/branches locais; TASK-2026-09-17-06 segue como único item aberto |
+| Missão 42-A — Entrada assistida de materiais ("Importar material" no CMS) | P1 | **concluído tecnicamente, branch candidata só local** | Nenhuma | Nenhum — `work/42a-import-assistido` não foi enviada ao remoto nem mesclada em `main` | Diretoria decide: revisar diff e autorizar push da branch candidata / merge em `main` |
 
 **Nota sobre a limpeza de worktrees da TASK-07 (2026-09-17, execução real)**:
 

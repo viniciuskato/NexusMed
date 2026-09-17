@@ -178,6 +178,56 @@ Ver `docs/diretoria/registro.md` (retorno 41-B) para o relato completo.
 Branch candidata enviada **apenas** a `origin/work/41b-gate-final-fe20832`
 — `main` e produção permanecem inalterados.
 
+## Missão 42-A (2026-09-17) — Entrada assistida de materiais ("Importar material")
+
+Fase 3 (Área Editorial operacional sem programação). Objetivo: uma pessoa
+leiga consegue escolher o arquivo de um compêndio (formato de autoria
+`.compendium.yaml`), conferir uma pré-visualização e criar um rascunho no
+CMS só pela interface — sem terminal, UUID ou conhecimento de YAML.
+
+- Branch candidata **só local**: `work/42a-import-assistido`, commit
+  `8f7c4cb`, worktree
+  `C:\Users\vinic\OneDrive\Projetos\SynapseMed\worktrees\42a-import-assistido`
+  (base: `origin/main` = `b56e828`, sem drift confirmado no preflight). Não
+  enviada ao remoto, não mesclada em `main`.
+- Adiciona botão "Importar material" na aba de compêndios do
+  `AdminCMSView`, o componente `ImportMaterialModal` (wizard: escolher
+  arquivo → pré-visualização → confirmar/cancelar → rascunho) e o módulo
+  puro `src/utils/compendiumImport.ts` (parse YAML, validação, resolução de
+  disciplina/tema por nome, detecção de duplicata por título normalizado).
+- Dependência nova: `yaml` (`^2.9.1`), único parser YAML do projeto até
+  aqui.
+- **Caso de prova real** (`meningite-bacteriana.compendium.yaml`, fora do
+  repositório, **não modificado** — hash MD5 conferido antes/depois):
+  confirmado em navegador real (Playwright/Chromium) contra Supabase
+  local — rascunho criado com exatamente 11 seções e 13 referências,
+  `status = 'draft'`, nenhuma publicação/atestação acionada. Disciplina
+  "Infectologia"/tema "Clínica" não existiam no seed mínimo local (só
+  Cardiologia) — criados como fixture do próprio teste e2e, removidos no
+  `afterEach`.
+- Se disciplina/tema do arquivo não existem no catálogo carregado, a
+  pré-visualização exige seleção manual (dropdown, mesmo padrão do form
+  manual existente) antes de liberar "Salvar rascunho" — **decisão
+  deliberada de não criar disciplina/tema novos automaticamente** nesta
+  missão (ver "descobertas separadas" no retorno de diretoria, RETORNO
+  42-A, categoria "opcional").
+- Validações executadas: `tsc --noEmit` limpo; `npm run lint` 0 erros/89
+  warnings (mesma baseline); `npm run test` (pgTAP) 228/228; unit tests
+  (Vitest) 6 novos casos do parser + suíte completa 36/36; component tests
+  4 novos casos do wizard (arquivo válido, arquivo inválido, duplicata
+  bloqueada, cancelar); `npm run test:e2e` completo 28/28 (24 specs
+  pré-existentes + 4 novos casos de import, incluindo o caso de prova real
+  de Meningite); `npm run build` e `check:no-debug-bundle` OK; `git diff
+  --check` limpo; varredura de segredos no diff sem ocorrências (só senha
+  de fixture de teste, mesmo padrão já usado nos specs existentes).
+- **Achado técnico novo registrado em `AGENTS.md`** (risco #10): TypeScript
+  5.8 neste projeto não estreita union discriminada por `!x.ok` quando o
+  tipo vem de outro módulo — contorno é comparar explicitamente
+  (`=== false`/`=== true`).
+- Ambientes tocados: local (código) e Supabase **local** (schema não
+  alterado, só dados de teste criados/removidos pelo próprio teste e2e).
+  Supabase remoto, `main` e produção **não tocados**.
+
 ## Risco crítico — HISTÓRICO, resolvido pela 41-A acima
 
 **Existe um commit em `origin/main`, posterior ao último estado documentado,
