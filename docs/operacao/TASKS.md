@@ -22,8 +22,8 @@
 | TASK-2026-09-17-03 — Entrega 41-B: gate final da auditoria `fe20832` | P1 | **concluído e publicado** (via 41-C) | Nenhuma | Nenhum — já em produção | Nenhuma — ver TASK-2026-09-17-04 |
 | TASK-2026-09-17-04 — Entrega 41-C: integrar e publicar 40-A/41-A/41-B | P1 (era P0) | **concluído e publicado** | Nenhuma | `main` avançou `fe20832` → `a359b3d` (merge `c2b412d` + registro), deploy em produção confirmado | Nenhuma — ver "RETORNO: 41-C" em `docs/diretoria/registro.md` |
 | TASK-2026-09-17-05 — Corrigir limpeza residual do spec 23-B | P2 | pendente | Nenhuma; executar depois da publicação | Nenhum em produção; fixture somente local | Auditar `finally`/`afterEach` do spec de proveniência em entrega separada |
-| TASK-2026-09-17-06 — Sanear worktree órfão `.claude/worktrees/agent-abf9bcb34c941c5ba` | P2 | pendente | Commits 41-A/41-B preservados local e remotamente | Nenhum em produção | Fazer manutenção Git separada, com permissões adequadas; não remover manualmente sem inventário final |
-| TASK-2026-09-17-07 — Tornar `canonical` realmente canônica (main, limpa, sem worktree aninhado) | P1 | parcialmente concluído — ver nota abaixo | Correções de `git diff --check` e da AUDITORIA-CONSOLIDACAO-AMBIENTE-2026-09-17.md commitadas nesta candidata (`work/fase2-reconciliacao-consolidada`) | Nenhum — só limpeza local de worktrees transitórios, sem tocar main/produção/Supabase remoto | Decidir o que fazer com `work/41b-gate-final-fe20832` (servidor dev ainda ativo nela) e com os commits soltos `66aff30`/`0cbcb8c`; publicar esta candidata quando a diretoria aprovar |
+| TASK-2026-09-17-06 — Sanear worktree órfão `.claude/worktrees/agent-abf9bcb34c941c5ba` | P2 | **bloqueado** — ver nota abaixo | Nenhuma | Nenhum em produção | Encerrar `node`/`esbuild` ativos na pasta (não autorizado nesta entrega) e então remover com aprovação interativa específica |
+| TASK-2026-09-17-07 — Tornar `canonical` realmente canônica (main, limpa, sem worktree aninhado) | P1 | **concluído nesta entrega** — ver nota abaixo | Nenhuma | Nenhum — só limpeza local de worktrees transitórios, sem tocar main/produção/Supabase remoto | Nenhuma para `41b`/branches locais; TASK-2026-09-17-06 segue como único item aberto |
 
 **Nota sobre a limpeza de worktrees da TASK-07 (2026-09-17, execução real)**:
 
@@ -61,6 +61,41 @@
 - Nenhum branch local apagado; nenhuma escrita em Supabase/produção/AI
   Studio/clones antigos/junções; esta candidata **não foi publicada**
   nesta sessão.
+
+**Nota sobre a conclusão da limpeza local da Fase 2 (2026-09-17, segunda execução)**:
+
+- Candidata `work/fase2-reconciliacao-consolidada` publicada no remoto no
+  commit `555bab2` (ponta desta nota, antes de commitá-la) sem tocar `main`.
+- `worktrees/41b-gate-final-fe20832`: confirmado que `node.exe` (PID 33140,
+  `vite --port=3000 --host=0.0.0.0`, pai `cmd.exe` PID 8052) e `esbuild.exe`
+  (PID 5656, filho do node) pertenciam só a esse servidor de dev. Ambos
+  encerrados normalmente (sem `-Force`); pai `cmd.exe` também terminou.
+  Árvore confirmada limpa e `git worktree remove` (sem `--force`) executado:
+  desregistrou a worktree, mas voltou a falhar em apagar alguns arquivos da
+  pasta física (`Permission denied`, provável lock transitório do OneDrive).
+  Como da vez anterior, confirmado que a pasta já não era mais um worktree
+  Git (metadados removidos) antes de eliminar o restante com uma remoção de
+  arquivo comum — conteúdo já preservado no branch `work/41b-gate-final-fe20832`
+  (`b5a8f7f`, mesclado em `main` via `c2b412d`), sem perda.
+- Branches locais superadas apagadas: `work/41a-consolidacao-docfix`
+  (`66aff30`) e `work/reconciliacao-docs-pos-41c` (`0cbcb8c`). Nenhuma branch
+  remota tocada; os commits seguem alcançáveis em `origin` pelas branches
+  remotas homônimas.
+- Pasta `canonical/.claude/worktrees/agent-abf9bcb34c941c5ba` verificada:
+  sem `.git` (confirmado — não é worktree Git), conteúdo próprio (checkout
+  de `fe20832` mais `node_modules`/`dist` locais), mas **com processo ativo**:
+  `node.exe` (PID 28852, `vite --port=3000 --host=0.0.0.0`) e `esbuild.exe`
+  filho (PID 32692) rodando dentro dela — diferente da pasta irmã
+  `agent-a24024165df13bbd9`, já removida numa entrega anterior. Como esse
+  encerramento de processo não estava autorizado no escopo desta tarefa
+  (só os PIDs do worktree `41b` foram autorizados) e a missão também exige
+  aprovação interativa específica antes de remover, a pasta **não foi
+  tocada** — TASK-2026-09-17-06 permanece bloqueada até o usuário autorizar
+  encerrar esse servidor e aprovar a remoção.
+- `canonical` confirmado em `main`, `main` == `origin/main`, árvore limpa
+  (só `.claude/` não rastreado, como antes). Nenhuma escrita em
+  Supabase/produção/AI Studio/clones antigos/junções; `main` não foi
+  mesclada nem publicada nesta sessão.
 
 ## Como adicionar uma tarefa
 
