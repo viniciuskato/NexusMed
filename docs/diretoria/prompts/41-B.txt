@@ -1,0 +1,57 @@
+ENTREGA 41-B — GATE FINAL DA AUDITORIA FE20832
+
+Papel da sessão
+Você é uma sessão executiva do NexusMed. Feche somente os gates pendentes da 41-A e prepare uma candidata publicável. Não mescle em main, não faça deploy e não toque no Supabase remoto.
+
+Objetivo executivo
+Validar de ponta a ponta a candidata `work/41a-auditoria-fe20832`, eliminar dúvidas de correção introduzidas para satisfazer lint e entregar uma branch remota limpa para decisão final da diretoria.
+
+Base e isolamento
+- Repositório oficial: https://github.com/viniciuskato/SynapseMed-firebase-auth.git
+- Base local confirmada pela diretoria: `work/41a-auditoria-fe20832` @ `6c1f108`.
+- Crie `work/41b-gate-final-fe20832` a partir de `6c1f108`, preferencialmente em worktree fora da árvore do próprio repositório. Não trabalhar em main.
+- O worktree atual está aninhado em `.claude/worktrees/` dentro do checkout principal e deixa `.claude/` não rastreado. Não apagar manualmente metadados Git. Depois de preservar todo o trabalho e enviar a branch candidata, saneie apenas por comandos próprios de `git worktree`; se houver erro de permissão, registre e pare sem forçar remoção.
+
+Escopo obrigatório
+1. Reconfirmar hashes, árvore limpa e ausência de escritores concorrentes.
+2. Revisar as duas supressões `react-hooks/exhaustive-deps` adicionadas na 41-A:
+   - `ClinicalPomodoroWidget.tsx`: provar que não há closure obsoleta; preferir estabilizar `playChime` com `useCallback` ou mover a lógica de forma que a lista de dependências seja verdadeira.
+   - `QuestionCard.tsx`: não aceitar a justificativa de que reinstalar o listener é, por si só, razão para omitir `handleConfirmAnswer` e `handleSelectOption`. Provar que os atalhos usam sempre props/estado/callbacks atuais. Preferir `useCallback`, refs deliberadas ou outra solução idiomática sem esconder dependência real.
+3. Adicionar ou ajustar teste focado que falhe se Enter/letras usarem callback ou estado obsoleto após rerender relevante.
+4. Com Docker Desktop ativo, iniciar/verificar Supabase local e executar os gates canônicos completos, incluindo pgTAP e Playwright oficial. Nenhuma conexão remota.
+5. Reexecutar `npm ci` a partir de estado reproduzível e todos os gates de typecheck, lint, unit, build e bundle sem debug.
+6. Verificar em navegador real os fluxos de `fe20832`, incluindo: Pomodoro, Passagem de Plantão com resposta do dia, Aproveitamento por Banca, Foco Zen e atalhos de teclado de questão.
+7. Fazer varredura final de segredos e revisar o diff completo desde `23de8fe`.
+8. Atualizar `PROJECT_STATE.md`, `TASKS.md`, `DECISIONS.md` e `registro.md` com resultados reais, sem declarar produção verificada.
+9. Commitar uma série pequena e coerente e enviar somente `work/41b-gate-final-fe20832` ao remoto. Não enviar ou alterar main.
+
+Restrições
+- Sem Supabase remoto, Vercel, merge ou push em main.
+- Sem reduzir cobertura, elevar teto de warnings, desativar regra global ou remover teste para obter verde.
+- Supressão local de lint só pode permanecer com prova objetiva de segurança e justificativa técnica específica; preferência por dependências corretas.
+- Não investigar/corrigir as duas vulnerabilidades moderadas nesta entrega, salvo se bloquearem `npm ci` ou forem diretamente introduzidas pelo diff auditado; apenas registrar.
+- Não usar remoção forçada de worktree/metadados.
+
+Critérios de conclusão
+- `npm ci` reproduzível.
+- Typecheck e lint limpos dentro do teto vigente.
+- Unitários, pgTAP e Playwright oficial passam integralmente.
+- Teste focado cobre callbacks/estado atuais dos atalhos após rerender.
+- Build e gate sem debug passam.
+- Smoke local dos fluxos novos sem erro de console.
+- Branch candidata está no remoto; main, produção e Supabase remoto permanecem inalterados.
+- Worktrees e status são descritos com precisão; nenhum metadado foi apagado à força.
+
+Formato obrigatório do retorno
+RETORNO: 41-B
+Resultado: concluído | parcial | bloqueado
+Base, branch e commits
+Revisão dos hooks: problema confirmado ou descartado; solução; teste
+Gates: comando, contagem e resultado
+Smoke dos fluxos: cenário e evidência
+Worktrees: estado inicial, saneamento feito e estado final
+Ambientes tocados
+Riscos e itens não verificados
+Estado de publicação: branch remota candidata; confirmar main/produção inalterados
+Recomendação final: liberar integração | manter bloqueada
+
