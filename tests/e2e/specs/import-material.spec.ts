@@ -2,7 +2,7 @@ import path from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
 import { createTestUser, deleteTestUser, psqlLocal, type CreatedTestUser } from '../fixtures/localSupabase';
 
-// Missão 42-A — Entrada assistida de materiais.
+// Missão 42-A/42-B — Entrada assistida de materiais.
 //
 // Prova de ponta a ponta, contra Supabase LOCAL, que uma pessoa sem
 // conhecimento de programação consegue: escolher o arquivo do compêndio,
@@ -10,6 +10,15 @@ import { createTestUser, deleteTestUser, psqlLocal, type CreatedTestUser } from 
 // terminal, sem UUID, sem editar YAML. Caso de prova real: o compêndio de
 // Meningite Bacteriana Aguda (arquivo fora do repositório, não editado por
 // este teste, só lido).
+//
+// 42-B trocou a gravação por baixo dos panos para a RPC atômica
+// `import_compendium_draft` (material+seções+referências numa única
+// transação) — o teste de controle negativo que prova a reversão integral
+// sob falha vive em pgTAP
+// (supabase/tests/database/import_compendium_draft.test.sql), porque é lá
+// que dá para forçar uma violação de constraint no meio da transação e
+// consultar o banco diretamente depois. Este arquivo continua provando só o
+// que só o navegador prova: o fluxo real end-to-end pela UI.
 
 const MATERIAL_PREFIX = 'Meningite Bacteriana Aguda';
 const MENINGITE_YAML_PATH = path.resolve(

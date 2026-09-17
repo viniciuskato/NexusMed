@@ -94,7 +94,7 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
         disciplineId,
         themeId
       );
-      await materialsRepository.saveCompendium(compendium);
+      await materialsRepository.importCompendiumDraft(compendium);
       onImported();
       setState({ step: 'success', title: state.preview.title });
     } catch (err) {

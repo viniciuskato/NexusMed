@@ -3,19 +3,20 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { Compendium, Discipline, Theme } from '../../src/types';
 
-// Missão 42-A — Entrada assistida de materiais.
+// Missão 42-A/42-B — Entrada assistida de materiais.
 //
 // Prova o fluxo do wizard "Importar material" na Área Editorial sem precisar
-// de Supabase real: mocka `materialsRepository.saveCompendium` e simula a
-// seleção de um arquivo via `File`/`FileReader` (jsdom). Cobre: arquivo
-// válido -> pré-visualização -> confirmar (só então grava); arquivo inválido
-// -> erro em linguagem simples, sem gravação; duplicata -> bloqueada; e
-// cancelar antes de confirmar -> nenhuma gravação.
+// de Supabase real: mocka `materialsRepository.importCompendiumDraft` (42-B:
+// gravação atômica dedicada, não mais `saveCompendium`) e simula a seleção
+// de um arquivo via `File`/`FileReader` (jsdom). Cobre: arquivo válido ->
+// pré-visualização -> confirmar (só então grava); arquivo inválido -> erro
+// em linguagem simples, sem gravação; duplicata -> bloqueada; e cancelar
+// antes de confirmar -> nenhuma gravação.
 
-const saveCompendiumMock = vi.fn().mockResolvedValue(undefined);
+const importCompendiumDraftMock = vi.fn().mockImplementation((c: unknown) => Promise.resolve(c));
 vi.mock('../../src/repositories/MaterialsRepository', () => ({
   materialsRepository: {
-    saveCompendium: (...args: unknown[]) => saveCompendiumMock(...args),
+    importCompendiumDraft: (...args: unknown[]) => importCompendiumDraftMock(...args),
   },
 }));
 
@@ -74,7 +75,7 @@ async function selectFile(file: File) {
 
 afterEach(() => {
   cleanup();
-  saveCompendiumMock.mockClear();
+  importCompendiumDraftMock.mockClear();
 });
 
 describe('ImportMaterialModal', () => {
@@ -94,12 +95,12 @@ describe('ImportMaterialModal', () => {
 
     await waitFor(() => screen.getByText('Meningite Bacteriana Aguda'));
     expect(screen.getByText(/apenas um/i)).toBeTruthy(); // aviso "cria apenas um rascunho"
-    expect(saveCompendiumMock).not.toHaveBeenCalled();
+    expect(importCompendiumDraftMock).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: /salvar rascunho/i }));
 
-    await waitFor(() => expect(saveCompendiumMock).toHaveBeenCalledTimes(1));
-    const saved = saveCompendiumMock.mock.calls[0][0] as Compendium;
+    await waitFor(() => expect(importCompendiumDraftMock).toHaveBeenCalledTimes(1));
+    const saved = importCompendiumDraftMock.mock.calls[0][0] as Compendium;
     expect(saved.title).toBe('Meningite Bacteriana Aguda');
     expect(saved.disciplineId).toBe('disc-infecto');
     expect(saved.themeId).toBe('tema-clinica');
@@ -123,7 +124,7 @@ describe('ImportMaterialModal', () => {
 
     await waitFor(() => screen.getByText(/não foi possível importar/i));
     expect(screen.getByText(/título/i)).toBeTruthy();
-    expect(saveCompendiumMock).not.toHaveBeenCalled();
+    expect(importCompendiumDraftMock).not.toHaveBeenCalled();
   });
 
   it('bloqueia confirmação quando já existe material com o mesmo título', async () => {
@@ -156,7 +157,7 @@ describe('ImportMaterialModal', () => {
     expect(confirmButton.disabled).toBe(true);
 
     fireEvent.click(confirmButton);
-    expect(saveCompendiumMock).not.toHaveBeenCalled();
+    expect(importCompendiumDraftMock).not.toHaveBeenCalled();
   });
 
   it('cancelar antes de confirmar fecha sem gravar nada', async () => {
@@ -177,6 +178,28 @@ describe('ImportMaterialModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /^cancelar$/i }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
-    expect(saveCompendiumMock).not.toHaveBeenCalled();
+    expect(importCompendiumDraftMock).not.toHaveBeenCalled();
+  });
+
+  it('falha na gravação atômica mostra erro, não declara sucesso e não chama onImported', async () => {
+    importCompendiumDraftMock.mockRejectedValueOnce(new Error('falha simulada de rede/servidor'));
+    const onImported = vi.fn();
+    render(
+      <ImportMaterialModal
+        disciplines={[discipline]}
+        themes={[theme]}
+        compendiums={[]}
+        onClose={vi.fn()}
+        onImported={onImported}
+      />
+    );
+
+    await selectFile(makeYamlFile(validYaml));
+    await waitFor(() => screen.getByText('Meningite Bacteriana Aguda'));
+    fireEvent.click(screen.getByRole('button', { name: /salvar rascunho/i }));
+
+    await waitFor(() => screen.getByText(/não foi possível salvar o rascunho agora/i));
+    expect(screen.queryByText(/criado com sucesso/i)).toBeNull();
+    expect(onImported).not.toHaveBeenCalled();
   });
 });
