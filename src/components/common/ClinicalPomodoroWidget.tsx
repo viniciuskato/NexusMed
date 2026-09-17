@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Timer,
   Play,
@@ -37,7 +37,10 @@ export const ClinicalPomodoroWidget: React.FC<ClinicalPomodoroWidgetProps> = () 
 
   const timerRef = useRef<number | null>(null);
 
-  const playChime = () => {
+  // useCallback com [soundEnabled] como única dependência real: a função só
+  // precisa mudar de identidade quando essa flag muda, e o efeito do timer
+  // abaixo pode então listá-la honestamente em vez de suprimir o lint.
+  const playChime = useCallback(() => {
     if (!soundEnabled) return;
     try {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -57,7 +60,7 @@ export const ClinicalPomodoroWidget: React.FC<ClinicalPomodoroWidgetProps> = () 
     } catch {
       // Navegador sem suporte a Web Audio ou interação bloqueada
     }
-  };
+  }, [soundEnabled]);
 
   useEffect(() => {
     if (isRunning) {
@@ -98,10 +101,12 @@ export const ClinicalPomodoroWidget: React.FC<ClinicalPomodoroWidgetProps> = () 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-    // playChime é recriada a cada render; incluí-la reiniciaria o intervalo
-    // sem necessidade. Depende apenas de soundEnabled (já capturado abaixo).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRunning, mode, soundEnabled]);
+    // playChime agora é estável via useCallback([soundEnabled]) e só muda de
+    // identidade quando soundEnabled muda — a mesma condição que antes exigia
+    // suprimir o lint. Listá-la é honesto: o efeito reinicia o intervalo
+    // exatamente quando isRunning/mode mudam OU quando soundEnabled muda
+    // (via nova identidade de playChime), nunca a cada render.
+  }, [isRunning, mode, playChime]);
 
   const switchMode = (newMode: PomodoroMode, mins: number) => {
     setIsRunning(false);
