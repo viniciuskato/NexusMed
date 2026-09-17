@@ -254,19 +254,27 @@ documentação futuras sem autorização específica)
   (este conjunto de 5 arquivos) como porta de entrada única para sessões
   novas, e reduzir `AGENTS.md` a um índice curto — ver
   [`DECISIONS.md`](DECISIONS.md) para o racional completo.
-- **Próximo gate (atualizado pela 41-A)**: a diretoria decide se
-  `work/41a-auditoria-fe20832` é mesclada em `main` (contém 40-A + as
-  correções de reprodutibilidade/tipagem/lint da 41-A) e, se sim, quando
-  publicar — lembrando que `main` já está com `fe20832` no ar e que o gate
-  pgTAP ainda não foi executado nesta trilha (Docker indisponível no
-  ambiente de execução da 41-A).
+- **Próximo gate (aberto pela 41-A, resolvido pela 41-C — ver seção
+  seguinte)**: esta pendência (mesclar `work/41a-auditoria-fe20832` em
+  `main` e rodar o gate pgTAP faltante) foi superada por um caminho
+  diferente do previsto: a 41-B abriu `work/41b-gate-final-fe20832` a
+  partir de `fe20832` (não a partir de `work/41a-auditoria-fe20832`, que
+  permanece sem merge e com um commit — `f945fa2`, "exige gate final
+  41-B" — não presente em `main`), executou os gates pendentes (pgTAP e
+  Playwright) e foi mesclada `--no-ff` em `main` pela 41-C, já publicada.
+  Não há mais gate técnico em aberto nesta frente; falta apenas a decisão
+  da diretoria sobre descartar `work/41a-auditoria-fe20832` (conteúdo já
+  coberto por 41-B/41-C). O texto de `f945fa2` foi preservado em
+  [`docs/diretoria/prompts/41-B.txt`](../diretoria/prompts/41-B.txt) por
+  esta própria entrega, antes de qualquer proposta de exclusão da branch.
 
 ## Estado de publicação desta própria entrega
 
 **Atualizado pela 41-C (2026-09-17): publicado.** `main = origin/main =
-c2b412d` (merge `--no-ff` de `work/41b-gate-final-fe20832`, hash
-`b5a8f7f`, sobre `fe20832`), contendo 40-A + as correções auditadas em
-41-A/41-B (lockfile restaurado, `useCallback` real nos atalhos de teclado
+a359b3d` (commit de registro documental sobre `c2b412d`, merge `--no-ff`
+de `work/41b-gate-final-fe20832`, hash `b5a8f7f`, sobre `fe20832`),
+contendo 40-A + as correções auditadas em 41-A/41-B (lockfile restaurado,
+`useCallback` real nos atalhos de teclado
 do `QuestionCard`, ajustes de tipagem/lint). Deploy automático no Vercel
 confirmado (bundle publicado com tamanho e timestamp coerentes com o
 build local imediatamente após o push). Ver "RETORNO: 41-C" em
