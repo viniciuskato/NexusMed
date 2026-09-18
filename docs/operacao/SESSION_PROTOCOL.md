@@ -1,17 +1,26 @@
 # SESSION_PROTOCOL.md — contrato de abertura e fechamento de sessão
 
 > Vale para qualquer sessão de IA que trabalhe neste repositório —
-> diretoria ou executiva, Claude, Codex ou outra ferramenta.
+> auditoria, diretoria ou executiva, Claude, Codex ou outra ferramenta.
+> Três papéis desde 2026-09-18, ver
+> [`../diretoria/MODELO-DIRETORIA.md`](../diretoria/MODELO-DIRETORIA.md):
+> a sessão de auditoria é esporádica e só sob pedido explícito do
+> usuário; diretoria e executiva seguem exatamente como antes.
 
 ## Abertura obrigatória
 
 1. Ler, nesta ordem: [`PROJECT_STATE.md`](PROJECT_STATE.md) →
    [`DECISIONS.md`](DECISIONS.md) → [`TASKS.md`](TASKS.md) → `AGENTS.md`
-   (raiz do repositório). Ler [`RUNBOOK.md`](RUNBOOK.md) quando a sessão
-   for executar algo (build, teste, publicação), não só planejar. Se a
-   sessão for a executiva de um encaminhamento (não a diretoria), ler
-   também [`EXECUTOR_PROTOCOL.md`](EXECUTOR_PROTOCOL.md) antes de
-   começar.
+   (raiz do repositório). Se a sessão for de diretoria, ler também
+   [`../diretoria/BACKLOG-ESTRATEGICO.md`](../diretoria/BACKLOG-ESTRATEGICO.md)
+   para ver se há item estratégico pendente relevante à entrega. Ler
+   [`RUNBOOK.md`](RUNBOOK.md) quando a sessão for executar algo (build,
+   teste, publicação), não só planejar. Se a sessão for a executiva de
+   um encaminhamento (não a diretoria), ler também
+   [`EXECUTOR_PROTOCOL.md`](EXECUTOR_PROTOCOL.md) antes de começar. Se a
+   sessão for de auditoria, ler o projeto inteiro conforme escopo
+   descrito em `MODELO-DIRETORIA.md` — este checklist de abertura ainda
+   vale como piso mínimo.
 2. Reconfirmar estado real, nunca assumir a partir de memória de
    conversa anterior:
    ```

@@ -134,11 +134,16 @@ seção "Armadilhas já descobertas".
   push é um deploy real em produção. Rodar `tsc --noEmit` + `npm run
   build` antes de commitar, sempre. Detalhe completo em
   `docs/operacao/RUNBOOK.md`.
-- **Modelo "sessão diretoria / sessão executiva"**: mudanças maiores são
-  planejadas por uma sessão que escreve um prompt autocontido, e uma
-  sessão executiva separada implementa, verifica com as próprias
+- **Modelo "sessão de auditoria / sessão diretoria / sessão
+  executiva"** (três papéis desde 2026-09-18): mudanças maiores são
+  planejadas por uma sessão diretoria que escreve um prompt autocontido,
+  e uma sessão executiva separada implementa, verifica com as próprias
   ferramentas e reporta objetivamente — sem mesclar em `main` sozinha,
-  sem inventar escopo novo. Modelo completo:
+  sem inventar escopo novo. Acima delas, uma sessão de auditoria
+  esporádica (só sob pedido explícito) pensa o projeto inteiro e a
+  evolução de longo prazo, sem gerar encaminhamento — só registra itens
+  em [`docs/diretoria/BACKLOG-ESTRATEGICO.md`](docs/diretoria/BACKLOG-ESTRATEGICO.md)
+  para a diretoria consultar depois. Modelo completo:
   [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md).
 - **Testar contra Supabase LOCAL** antes de considerar qualquer mudança
   de schema/RPC pronta. Nunca validar mudança de escrita direto no

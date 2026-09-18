@@ -2,6 +2,33 @@
 
 Convenção aprovada pelo usuário em 2026-09-07. Este modelo substitui formatos anteriores de acompanhamento que conflitem com ele.
 
+## Três papéis, não dois (atualização 2026-09-18)
+
+Desde 2026-09-18 existem três papéis de sessão, não dois. O que este
+documento chama de "diretoria" abaixo permanece **exatamente como
+sempre foi** — planeja, formula encaminhamentos, verifica retorno — não
+foi renomeado. O que mudou é que um papel novo, mais raro, foi separado
+dela: a **sessão de auditoria** (ver seção própria mais abaixo), que
+pensa o projeto inteiro e a evolução de longo prazo, sem gerar
+encaminhamento nenhum. Resumo dos três:
+
+1. **Sessão de auditoria** — esporádica, só sob pedido explícito do
+   usuário (equivalente ao `raio-x-cowork`/`autocritica-cowork` do
+   ambiente Cowork, aplicado a este projeto). Lê o projeto inteiro,
+   audita, propõe evolução criativa. Não escreve encaminhamento — só
+   registra itens em
+   [`docs/diretoria/BACKLOG-ESTRATEGICO.md`](BACKLOG-ESTRATEGICO.md).
+2. **Sessão diretoria** — o papel já descrito no resto deste documento,
+   sem mudança. Escopo fechado (uma entrega/fase), pega itens do
+   backlog estratégico ou pendências já conhecidas, formula
+   encaminhamentos, verifica retorno.
+3. **Sessão executiva** — sem mudança, ver `EXECUTOR_PROTOCOL.md`.
+
+A ponte entre auditoria e diretoria é sempre o arquivo de backlog, nunca
+uma sessão viva esperando resposta síncrona da outra — isso evita
+inflar o laço barato e frequente diretoria→executiva com mais uma troca
+de sessão obrigatória a cada entrega.
+
 ## Papel
 A diretoria é criativa e interativa: discute, questiona, decide, prepara instruções autocontidas e avalia resultados. As executivas implementam e verificam. A diretoria registra decisões e convenções; não assume a execução por receber um retorno ou uma cópia de prompt. A diretoria também tem autoridade para recusar um plano falho na raiz — não se limita a decidir escopo dentro de um plano ruim; se o pedido não faz sentido técnico, o correto é dizer isso e propor refazer, não executar mesmo assim.
 
@@ -40,3 +67,15 @@ Por padrão, diretoria e executiva resolvem cada passo com ferramentas diretas (
 
 ## Verificação cruzada
 Para mudanças de risco alto (merge em `main`, decisão de taxonomia/conteúdo médico, qualquer escrita remota), prefira que a verificação seja feita por um modelo diferente do que executou, quando disponível — o mesmo modelo reconferindo o próprio trabalho tende a repetir os mesmos pontos cegos. Verificação pelo mesmo modelo que executou ainda vale mais que nenhuma verificação, mas não é equivalente a uma checagem cruzada real.
+
+## Sessão de auditoria (papel estratégico, adicionado 2026-09-18)
+
+**Quando abrir**: só sob pedido explícito do usuário — "faz um raio-x do projeto", pedido de evolução criativa, fechamento de um marco grande. Nunca automaticamente ao fechar uma entrega ou fase; isso continua sendo fechamento normal de diretoria.
+
+**Escopo**: o projeto inteiro, não uma entrega. Ler `AGENTS.md`, `docs/operacao/PROJECT_STATE.md`, `DECISIONS.md`, `TASKS.md`, `docs/diretoria/registro.md` e o que mais for necessário para avaliar direção, não só estado pontual.
+
+**Saída — e só esta**: itens novos ou atualizados em [`docs/diretoria/BACKLOG-ESTRATEGICO.md`](BACKLOG-ESTRATEGICO.md). A sessão de auditoria **não escreve encaminhamento** (isso é trabalho da diretoria) e **não implementa nada**. Cada item precisa ser autocontido o bastante para uma sessão de diretoria futura, sem contexto da auditoria, entender do que se trata e decidir se/quando puxar — ver formato exigido no próprio arquivo de backlog.
+
+**Depois de registrar os itens**, a sessão de auditoria encerra. Não fica aguardando uma diretoria pegar o item nem cobra retorno — a diretoria consulta o backlog estratégico por conta própria ao abrir uma sessão nova, do mesmo jeito que já consulta `TASKS.md` e `docs/diretoria/registro.md`.
+
+**A diretoria também pode escrever no backlog estratégico**, no sentido contrário: se, no meio de uma entrega, perceber algo maior que o escopo daquela entrega ("isso é reformulação, não ajuste"), registra um item novo lá em vez de tentar resolver dentro do encaminhamento atual ou convocar uma sessão de auditoria ao vivo.
