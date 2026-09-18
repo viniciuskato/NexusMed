@@ -70,7 +70,7 @@ class ResilientMaterialsRepository implements MaterialsRepository {
     if (!isSupabaseConfigured) return this.local.getDisciplines();
     try {
       const res = await this.supa.getDisciplines();
-      return res && res.length > 0 ? res : this.local.getDisciplines();
+      return res;
     } catch {
       return this.local.getDisciplines();
     }
@@ -87,7 +87,7 @@ class ResilientMaterialsRepository implements MaterialsRepository {
     if (!isSupabaseConfigured) return this.local.getThemes();
     try {
       const res = await this.supa.getThemes();
-      return res && res.length > 0 ? res : this.local.getThemes();
+      return res;
     } catch {
       return this.local.getThemes();
     }
@@ -104,7 +104,7 @@ class ResilientMaterialsRepository implements MaterialsRepository {
     if (!isSupabaseConfigured) return this.local.getCompendiums();
     try {
       const res = await this.supa.getCompendiums();
-      return res && res.length > 0 ? res : this.local.getCompendiums();
+      return res;
     } catch {
       return this.local.getCompendiums();
     }

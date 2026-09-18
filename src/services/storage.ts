@@ -24,6 +24,14 @@ import {
 import { calculateNextSRS, createInitialSRS } from './srsAlgorithm';
 import { onActiveUserChanged } from './syncQueue';
 import { recoverLegacyLocalProgress } from './legacyRecovery';
+import { isSupabaseConfigured } from '../lib/supabaseClient';
+
+// Conteúdo de demonstração (mockData) só existe no modo local, sem Supabase.
+// Com Supabase configurado, o cache local começa vazio: nunca mostrar ao
+// estudante material/questão fictícios como se fossem conteúdo real.
+function demoContent<T>(items: T[]): T[] {
+  return isSupabaseConfigured ? [] : items;
+}
 
 export const STORAGE_KEYS = {
   DISCIPLINES: 'synapse_disciplines_v1',
@@ -100,21 +108,21 @@ export const StorageService = {
 
   // --- Content Loaders (Globais / Compartilhados) ---
   getDisciplines(): Discipline[] {
-    return getItem<Discipline[]>(STORAGE_KEYS.DISCIPLINES, INITIAL_DISCIPLINES);
+    return getItem<Discipline[]>(STORAGE_KEYS.DISCIPLINES, demoContent(INITIAL_DISCIPLINES));
   },
   saveDisciplines(disciplines: Discipline[]): void {
     setItem(STORAGE_KEYS.DISCIPLINES, disciplines);
   },
 
   getThemes(): Theme[] {
-    return getItem<Theme[]>(STORAGE_KEYS.THEMES, INITIAL_THEMES);
+    return getItem<Theme[]>(STORAGE_KEYS.THEMES, demoContent(INITIAL_THEMES));
   },
   saveThemes(themes: Theme[]): void {
     setItem(STORAGE_KEYS.THEMES, themes);
   },
 
   getCompendiums(): Compendium[] {
-    return getItem<Compendium[]>(STORAGE_KEYS.COMPENDIUMS, INITIAL_COMPENDIUMS);
+    return getItem<Compendium[]>(STORAGE_KEYS.COMPENDIUMS, demoContent(INITIAL_COMPENDIUMS));
   },
   saveCompendiums(compendiums: Compendium[]): void {
     setItem(STORAGE_KEYS.COMPENDIUMS, compendiums);
@@ -135,7 +143,7 @@ export const StorageService = {
   },
 
   getQuestions(): Question[] {
-    return getItem<Question[]>(STORAGE_KEYS.QUESTIONS, INITIAL_QUESTIONS);
+    return getItem<Question[]>(STORAGE_KEYS.QUESTIONS, demoContent(INITIAL_QUESTIONS));
   },
   saveQuestions(questions: Question[]): void {
     setItem(STORAGE_KEYS.QUESTIONS, questions);
@@ -155,13 +163,13 @@ export const StorageService = {
     this.saveQuestions(all);
   },
 
-  // --- Flashcards (Isolados por UID, com preservação dos cards padrão para cada novo usuário) ---
+  // --- Flashcards (Isolados por UID; cards de demonstração só no modo local) ---
   getFlashcards(): Flashcard[] {
     const key = getUserKey(STORAGE_KEYS.FLASHCARDS);
-    if (currentUserId && localStorage.getItem(key) === null) {
+    if (!isSupabaseConfigured && currentUserId && localStorage.getItem(key) === null) {
       setItem(key, INITIAL_FLASHCARDS);
     }
-    const cards = getItem<Flashcard[]>(key, INITIAL_FLASHCARDS);
+    const cards = getItem<Flashcard[]>(key, demoContent(INITIAL_FLASHCARDS));
     return cards.map((c) => ({
       ...c,
       srs: c.srs || createInitialSRS(),

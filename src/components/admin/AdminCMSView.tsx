@@ -401,12 +401,12 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       moduleNumber: compModuleNumber.trim() ? Number(compModuleNumber) : undefined,
       estimatedReadTimeMinutes: Number(compEstimatedTime) || 15,
       lastUpdated: new Date().toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }),
-      author: compAuthor.trim() || 'Equipe Editorial',
+      author: compAuthor.trim(),
       mode: compMode,
-      tags: tags.length > 0 ? tags : ['Geral', 'Medicina'],
+      tags,
       dependencies: dependencies.length > 0 ? dependencies : undefined,
       sections: compSections,
-      references: references.length > 0 ? references : ['Diretrizes Médicas de Referência'],
+      references,
     };
 
     await materialsRepository.saveCompendium(newComp);
@@ -1173,7 +1173,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                     <div className="flex items-center gap-2 text-[11px] text-stone-500 dark:text-slate-400 pt-1">
                       <span>{c.sections.length} {c.sections.length === 1 ? 'seção' : 'seções'} estruturadas</span>
                       <span>·</span>
-                      <span>Autor: {c.author}</span>
+                      <span>Autor: {c.author || 'não informado'}</span>
                     </div>
 
                     {c.tags && c.tags.length > 0 && (
