@@ -1,5 +1,7 @@
 import { FlashcardSRS } from '../types';
 
+const MAX_INTERVAL_DAYS = 36500;
+
 /**
  * SuperMemo SM-2 Spaced Repetition Algorithm implementation for Medical Flashcards
  * Rating:
@@ -41,7 +43,9 @@ export function calculateNextSRS(
     } else {
       // Calculate new interval using Ease Factor
       const multiplier = rating === 2 ? 1.2 : rating === 3 ? easeFactor : easeFactor * 1.3;
-      intervalDays = Math.round(intervalDays * multiplier);
+      // Teto de 100 anos: sem ele, "Fácil" repetido faz o intervalo crescer
+      // ~3,9x por revisão até estourar o Date (RangeError).
+      intervalDays = Math.min(MAX_INTERVAL_DAYS, Math.round(intervalDays * multiplier));
     }
     repetitionCount += 1;
     newState = intervalDays >= 21 ? 'mastered' : 'review';
@@ -58,7 +62,7 @@ export function calculateNextSRS(
   nextDueDateObj.setDate(nextDueDateObj.getDate() + intervalDays);
 
   const reviewHistory = [
-    ...(currentSRS.reviewHistory || []),
+    ...(baseSRS.reviewHistory || []),
     {
       date: reviewDate.toISOString(),
       rating,

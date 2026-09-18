@@ -14,6 +14,17 @@ const env: Record<string, string | undefined> = (import.meta as unknown as { env
   typeof process !== 'undefined' ? (process.env as Record<string, string | undefined>) : {}
 );
 
+function isSecretKey(key: string): boolean {
+  if (key.startsWith('sb_secret_')) return true;
+  if (!key.startsWith('eyJ')) return false;
+  try {
+    const payload = key.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(payload)).role === 'service_role';
+  } catch {
+    return false;
+  }
+}
+
 interface ResolvedConfig {
   url: string;
   anonKey: string;
@@ -28,9 +39,16 @@ function resolveConfig(): ResolvedConfig {
   if (rawUrl && (rawUrl.startsWith('sb_publishable_') || rawUrl.startsWith('sb_secret_') || rawUrl.startsWith('eyJ'))) {
     const keyFromUrl = rawUrl;
     rawUrl = 'https://jfvhwwvixwvgjfqzlkkb.supabase.co';
-    if (!rawKey || rawKey.startsWith('sb_secret_')) {
+    if (!rawKey || isSecretKey(rawKey)) {
       rawKey = keyFromUrl;
     }
+  }
+
+  // Uma chave secreta/service_role ignora toda a RLS e, aqui, iria para o
+  // bundle público. Nunca usar — o app fica sem Supabase e o erro aparece.
+  if (rawKey && isSecretKey(rawKey)) {
+    console.error('[supabaseClient] VITE_SUPABASE_ANON_KEY contém uma chave secreta (service_role). Use a chave anon/publishable.');
+    rawKey = undefined;
   }
 
   // Caso o usuário tenha informado apenas a referência do projeto

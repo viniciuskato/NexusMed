@@ -7,6 +7,7 @@ import {
   insertFlashcardForUser,
   insertPublishedMaterial,
   countFlashcardReviews,
+  runCleanup,
   type CreatedTestUser,
 } from '../fixtures/localSupabase';
 
@@ -41,10 +42,9 @@ test.describe('Estudo Temático (22-A)', () => {
   let cleanup: (() => Promise<void> | void)[] = [];
 
   test.afterEach(async () => {
-    for (const fn of cleanup) {
-      await Promise.resolve(fn()).catch(() => undefined);
-    }
+    const fns = cleanup;
     cleanup = [];
+    await runCleanup(fns);
   });
 
   async function setupUser(localPart: string): Promise<CreatedTestUser> {
