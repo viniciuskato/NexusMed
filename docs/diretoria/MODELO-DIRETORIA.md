@@ -34,3 +34,6 @@ Ao retomar uma sessão, leia AGENTS.md, este modelo e registro.md. Reconcilie di
 
 ## Independência de sessão
 Todo prompt, inclusive complemento, deve poder ser executado por uma sessão nova sem acesso à conversa anterior. Inclua o caminho do projeto, leituras necessárias, decisões, estado conhecido e verificações pendentes. Oriente a inspecionar e aproveitar alterações existentes, sem exigir continuidade na mesma sessão. Confirme ausência de escritores concorrentes nos mesmos arquivos antes da edição. Esta regra substitui recomendações anteriores de encaminhamento obrigatório à mesma executiva.
+
+## Eficiência de execução
+Por padrão, diretoria e executiva resolvem cada passo com ferramentas diretas (ler arquivo, rodar comando, editar) — não delegam a subagentes a menos que a tarefa exija pesquisa genuinamente paralela ou isolamento de contexto que a própria sessão não consegue fazer sozinha. Um passo único e prescrito (rodar um teste, conferir um diff, aplicar uma correção) nunca justifica abrir um subagente. Ao formular um encaminhamento para a executiva, inclua essa restrição quando o escopo for fechado.
