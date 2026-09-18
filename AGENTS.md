@@ -115,6 +115,18 @@ seção "Armadilhas já descobertas".
     em vez de `if (!resultado.ok)`). Não gastar tempo tentando "consertar"
     os tipos — o problema é o `!`/truthy check cross-módulo, não a
     modelagem dos tipos.
+11. **`npm run lint` rodado direto na raiz de `canonical` varre também
+    outras worktrees aninhadas em `.claude/worktrees/**`** (não
+    rastreadas pelo git, mas presentes em disco) — sem uma entrada de
+    `ignores` para esse caminho, isso gera milhares de erros fantasmas de
+    código de outras branches/checkouts. Corrigido em 2026-09-18
+    (`eslint.config.js`), achado só porque foi a primeira vez que um gate
+    completo rodou a partir da raiz canônica em vez de uma worktree isolada
+    fora dela. Rodar `npm run test:e2e` (Playwright completo) logo depois
+    de `npm run test` (pgTAP) sem `supabase db reset` entre os dois também
+    falha de forma parecida (specs `estudo-tematico-22a`/`concurrencia-13b`)
+    por fixtures do pgTAP não limpas — sempre resetar antes do e2e se o
+    pgTAP rodou primeiro na mesma sessão.
 
 ## Convenções de trabalho
 

@@ -44,6 +44,68 @@ escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
   naquela data (ver detalhamento arquivado em
   [`docs/archive/AGENTS-HISTORICO-2026-09-17.md`](../archive/AGENTS-HISTORICO-2026-09-17.md)).
 
+## Missão AS1-B3.2 — Publicação (2026-09-18)
+
+Publica a cadeia AS1-B1→AS1-B3.2 (auditoria científica, conversão para
+`.compendium.yaml`, auditoria independente e correção da sobreposição
+visual do importador — tema Distúrbio Acidobásico). Detalhamento
+completo de cada missão em `docs/operacao/TASKS.md`, linhas AS1-B1 a
+AS1-B3.2.
+
+- **Preflight**: `origin/main` confirmado em `d84f52a` (sem drift) antes
+  do merge. Candidata `work/as1-b3-2-correcao-visual-importador-acidobasico`
+  em `d0f92c0`, merge-base = `d84f52a` (descendente limpa). Diff completo
+  `main...candidata`: 18 arquivos — só documentação/YAML de rascunho em
+  `docs/editorial/as1/` e `docs/diretoria/prompts/`, mais o código real:
+  `ImportMaterialModal.tsx` (overlay `fixed inset-0 z-[60]`) e o teste de
+  regressão `import-material.spec.ts`. `git diff --check` e varredura de
+  segredos no diff completo, limpos.
+- **Merge**: `git merge --no-ff`, commit `5104763`. Sem conflitos (a
+  única sobreposição de arquivo — `MODELO-DIRETORIA.md`, que só `main`
+  havia tocado, com a seção de eficiência de subagentes — foi resolvida
+  automaticamente pelo merge, sem perda).
+- **Achado durante o próprio gate desta entrega, corrigido antes de
+  publicar** (commit `f42917d`): `eslint.config.js` não ignorava
+  `.claude/worktrees/**` — rodar `npm run lint` a partir da raiz
+  `canonical` (nunca feito antes; gates anteriores sempre rodaram numa
+  worktree fora dessa árvore) varre também o conteúdo em disco de outras
+  worktrees registradas ali, gerando ~2900 erros fantasmas de código de
+  outras branches. Corrigido; confirmado de volta à baseline real (0
+  erros, 89 warnings). Registrado como risco #11 em `AGENTS.md`.
+- **Gates completos pós-merge, todos verdes**: `npm ci` limpo (reprodutível,
+  408 pacotes); `tsc --noEmit` 0 erros; `npm run lint` 0 erros/89 warnings;
+  `npm run test:unit` (Vitest) 40/40; `supabase db reset` limpo + `npm run
+  test` (pgTAP) 249/249; `npm run test:e2e` (Playwright, Chromium) **30/30**
+  após reset limpo (uma primeira rodada, sem reset entre pgTAP e e2e na
+  mesma sessão, teve 4 falhas em `estudo-tematico-22a`/`concurrencia-13b`
+  — poluição de fixtures do pgTAP, mesmo padrão já documentado na 42-B;
+  desapareceram com reset, não é regressão); `npm run build` e `check:
+  no-debug-bundle` OK.
+- **Push**: `git push origin main` — `d84f52a..f42917d main -> main`,
+  confirmado pelo usuário (bloqueio do classificador de segurança do
+  Claude Code para escrita remota, mesmo padrão já documentado).
+- **Deploy confirmado em produção**: bundle
+  `https://synapse-med-firebase-auth.vercel.app/assets/index-BR5TcDUB.js`
+  (1.228.904 bytes, `Last-Modified` coerente com o horário do push) contém
+  a string `import-missing-fields-panel` (1 ocorrência, marca única do
+  fix desta missão) e 0 ocorrências de `__syncDebug`/
+  `__setTestBackoffOverride`.
+- **Smoke de produção (não autenticado)**: Chromium headless via
+  Playwright contra a URL real — título "NexusMed", `#auth-email-input`/
+  `#auth-password-input` presentes, 0 erros de console. Nenhuma conta
+  criada, nenhum arquivo importado, nenhuma escrita em produção além do
+  próprio push de código.
+- **Taxonomia (fora deste merge, decisão relacionada)**: disciplina
+  "Nefrologia" já existia no catálogo remoto real; tema "Distúrbio
+  Acidobásico" foi criado pelo usuário via `insert` direto (comando
+  fornecido pela diretoria, escrita confirmada pelo `RETURNING` da
+  query) — id `cbc160bc-9666-45a2-aa73-fbfccc8a7732`. Nenhum material,
+  questão ou outra linha criada.
+- **Não verificado nesta entrega**: importação real do material
+  Acidobásico como rascunho (decisão pendente do usuário — precisa de
+  sessão admin autenticada em produção); smoke autenticado da Área
+  Editorial (mesma restrição já registrada na 42-C).
+
 ## Entrega 41-A (2026-09-17) — auditoria de `fe20832` concluída
 
 O risco crítico abaixo foi **auditado e corrigido** na branch local
