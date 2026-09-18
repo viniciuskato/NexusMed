@@ -1,0 +1,217 @@
+MISSÃO AS1-B2 — CORREÇÃO E CONVERSÃO DO MATERIAL DE DISTÚRBIO ACIDOBÁSICO
+
+CONTEXTO EXECUTIVO
+
+Estamos na Fase 3 do NexusMed: tornar a Área Editorial utilizável por um proprietário sem conhecimento de programação.
+
+Dentro do plano emergencial da AS1, estamos executando a primeira onda editorial:
+
+1. Distúrbio acidobásico;
+2. Diagnóstico diferencial da dispneia;
+3. Endocardite infecciosa.
+
+O tema atual é Distúrbio acidobásico.
+
+A auditoria científica da fonte foi concluída pelas missões AS1-B1 e AS1-B1.1. O parecer consolidado é:
+
+"Nenhum achado impede aproveitar o material como base; quatro correções impedem publicá-lo sem ajuste."
+
+FASE DESTA MISSÃO
+
+Esta é uma missão de DESENVOLVIMENTO EDITORIAL.
+
+Ela deve corrigir e converter o conteúdo aprovado para o formato nativo de autoria/importação do NexusMed.
+
+Não é uma missão de publicação, importação no banco, atestação ou revisão científica final.
+
+BASE OBRIGATÓRIA
+
+Branch de origem:
+
+work/as1-b1-auditoria-acidobasico
+
+Commit aprovado:
+
+bfa2d93
+
+Crie uma branch isolada:
+
+work/as1-b2-conversao-acidobasico
+
+Antes de editar, confirme:
+
+1. que bfa2d93 é o topo da branch de origem;
+2. que a árvore está limpa;
+3. que os documentos da AS1-B1 estão presentes;
+4. que não existe drift não explicado.
+
+Se houver divergência, pare e reporte. Não reconcilie silenciosamente.
+
+FONTES AUTORIZADAS
+
+1. PDF original, somente leitura:
+
+C:\Users\vinic\OneDrive\Estudos\Base de Estudos\Biblioteca\Medicina\Nefrologia\Fisiologia\Equilíbrio Ácido-Base.pdf
+
+2. Auditoria científica:
+
+docs/editorial/as1/ACIDOBASE-AUDITORIA-CIENTIFICA-2026-09-17.md
+
+3. Plano de correção:
+
+docs/editorial/as1/ACIDOBASE-PLANO-DE-CORRECAO-2026-09-17.md
+
+4. Padrão editorial NexusMed vigente.
+
+Não altere o PDF original.
+
+OBJETIVO
+
+Produzir um arquivo `.compendium.yaml` corrigido, completo e compatível com o importador assistido do NexusMed.
+
+O YAML será o artefato estruturado de autoria. A experiência final de estudo será renderizada pelo próprio NexusMed.
+
+Antes de criar o arquivo, inspecione os exemplos reais de `.compendium.yaml` já existentes no projeto e siga exatamente o schema aceito pelo importador publicado na 42-C. Não invente campos incompatíveis.
+
+ESCOPO OBRIGATÓRIO
+
+1. Converter o conteúdo útil do PDF para uma estrutura didática progressiva.
+
+2. Preservar e apresentar corretamente:
+   - fundamentos fisiológicos;
+   - equação de Henderson–Hasselbalch;
+   - relação entre pH e concentração de H+;
+   - compensações respiratórias e metabólicas;
+   - fórmula de Winter;
+   - ânion gap;
+   - correção do ânion gap;
+   - delta ratio;
+   - distúrbios mistos;
+   - abordagem sistemática da gasometria;
+   - cinco casos clínicos recalculados e conferidos;
+   - limites, exceções e armadilhas clínicas.
+
+3. Aplicar obrigatoriamente as quatro correções da auditoria:
+   - BICAR-ICU: usar AKIN 2–3, e não KDIGO 2–3, além de descrever corretamente o desfecho composto;
+   - corrigir a autoria de Madias, sem tratar "Nicolaos" como sobrenome;
+   - corrigir o ano do guia da SBN para 2025;
+   - remover, completar ou substituir "Wilkins RL et al., 2010", que não pode permanecer como referência não identificável.
+
+4. Incorporar corretamente o BICARICU-2:
+   - Jung B et al.;
+   - JAMA, 2025;
+   - PMID 41159812;
+   - DOI 10.1001/jama.2025.20231;
+   - mortalidade em 90 dias sem diferença significativa;
+   - menor utilização de terapia renal substitutiva;
+   - não transformar redução de TRS em alegação de benefício de mortalidade.
+
+5. Usar citações autor-data conforme NBR 10520:2023 e referências conforme NBR 6023:2018.
+
+6. Garantir que:
+   - toda afirmação crítica tenha fonte rastreável;
+   - toda referência listada seja efetivamente utilizada;
+   - não existam referências órfãs;
+   - números, fórmulas e pontos de corte coincidam com a auditoria;
+   - incertezas e controvérsias sejam explicitadas;
+   - nenhuma afirmação nova não verificada seja introduzida.
+
+7. Classificar o material como rascunho/desenvolvimento. Não o declarar atestado, aprovado para publicação ou publicado.
+
+TAXONOMIA
+
+Usar os conceitos curriculares:
+
+- disciplina principal: Nefrologia;
+- tema curricular: Distúrbio Acidobásico;
+- coleção curricular: AS1 — Saúde do Adulto 1.
+
+Não criar disciplina, tema ou relacionamento novo no banco.
+
+Se os nomes existentes no catálogo não corresponderem exatamente, registre a divergência para seleção manual futura. Não altere a taxonomia nesta missão.
+
+VALIDAÇÃO DO ARQUIVO
+
+Executar, sem gravar no banco:
+
+1. parsing real do YAML com o mesmo mecanismo usado pelo importador;
+2. validação dos campos obrigatórios;
+3. pré-visualização da importação;
+4. conferência de título, subtítulo, disciplina, tema, tags, seções e referências;
+5. detecção de referências órfãs;
+6. busca pelas quatro incorreções que deveriam ter sido removidas;
+7. conferência independente dos cálculos e casos clínicos;
+8. `git diff --check`;
+9. varredura de segredos no diff.
+
+Se for possível testar a tela de pré-visualização localmente sem salvar, faça-o. Não pressione "Salvar rascunho".
+
+DOCUMENTAÇÃO
+
+Produza:
+
+docs/editorial/as1/ACIDOBASE-RELATORIO-DE-CONVERSAO-2026-09-18.md
+
+O relatório deve registrar:
+
+- caminho do arquivo produzido;
+- hash do PDF original;
+- estrutura final e quantidade de seções;
+- quantidade de referências;
+- como cada uma das quatro correções foi aplicada;
+- resultado da validação do YAML;
+- divergências ou lacunas remanescentes;
+- estado editorial: desenvolvimento;
+- recomendação para a missão AS1-B3.
+
+Atualize também:
+
+docs/operacao/TASKS.md
+
+Registre este prompt em:
+
+docs/diretoria/prompts/AS1-B2.txt
+
+LIMITES DE AUTORIZAÇÃO
+
+Não:
+
+- importar o material no Supabase local ou remoto;
+- salvar rascunho no CMS;
+- alterar banco, migration ou taxonomia;
+- publicar ou atestar o material;
+- tocar produção ou Vercel;
+- modificar o PDF original;
+- alterar código do produto, salvo se encontrar um bloqueio real — nesse caso, pare e reporte;
+- fazer push, merge ou alterar main;
+- limpar branches, worktrees ou metadados de outras sessões.
+
+CONDIÇÃO DE PARADA
+
+Encerre quando existir:
+
+1. um `.compendium.yaml` corrigido e validado;
+2. o relatório de conversão;
+3. o registro da missão;
+4. um commit local na branch isolada;
+5. nenhuma importação ou publicação realizada.
+
+RETORNO OBRIGATÓRIO
+
+RETORNO: AS1-B2
+
+Informe em linguagem executiva:
+
+- resultado;
+- branch, base e commit;
+- caminho do YAML;
+- número de seções e referências;
+- como as quatro correções foram aplicadas;
+- resultado dos cálculos e casos clínicos;
+- resultado do parsing e da pré-visualização;
+- divergências ou lacunas remanescentes;
+- arquivos alterados;
+- ambientes tocados;
+- confirmação de que PDF, banco, main e produção não foram alterados;
+- estado de publicação;
+- recomendação para AS1-B3.
