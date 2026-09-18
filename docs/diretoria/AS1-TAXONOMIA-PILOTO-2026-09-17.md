@@ -171,13 +171,17 @@ Macrocítica" como diagnósticos possíveis dentro dele.
   única do banco só não permite marcar as duas ao mesmo tempo — ver
   relatório de inventário)
 - **Tipo**: doença
-- **Relações**: é complicação de [17/18 Valvopatias — valva danificada
-  predispõe]; é causa de [20 Insuficiência Cardíaca]; faz diagnóstico
+- **Relações**: é causa de [20 Insuficiência Cardíaca]; faz diagnóstico
   diferencial com [febre reumática, endocardite trombótica não
   bacteriana, endocardite de Libman-Sacks — fora dos 21]; é tratado com
   [antibioticoterapia prolongada, cirurgia valvar]. Omitida a relação
   inversa "é achado de [16 Semiologia Cardíaca] (sopro novo)" — mesma
-  justificativa do conceito 17
+  justificativa do conceito 17. Omitida também a relação com [17/18
+  Valvopatias]: valva previamente lesada é fator de predisposição para
+  endocardite, não seu desfecho — não é "é complicação de" na direção
+  usada no resto deste documento (X é complicação de Y = Y causa X), e
+  o vocabulário controlado aprovado não tem um tipo de relação para
+  "predispõe a"; criar um tipo novo está fora do escopo desta missão
 
 ### 20. Insuficiência Cardíaca
 - **Sinônimos**: IC, ICFEr, ICFEp

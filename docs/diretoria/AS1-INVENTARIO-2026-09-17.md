@@ -10,31 +10,45 @@
 Dos 21 temas da AS1, **nenhum tem cobertura A completa e formalmente
 auditada**. Isso não significa que o acervo esteja vazio — pelo
 contrário: existem **cinco materiais publicados no banco** que tocam
-algum dos 21 temas (ver tabela "Materiais encontrados no banco"), dos
-quais **quatro foram lidos integralmente** nesta missão (Avaliação da
-Função Renal, as seções de anemia do material de Hemograma, a seção
-"HAS primária versus secundária" do material de hipertensão, e
-Semiologia Cardíaca) e um teve apenas uma seção curta conferida
-(Síndromes Bronco-Pleuro-Pulmonares, que cobre o tema 15 de forma
-superficial). Juntos, esses cinco materiais tocam sete dos 21 temas
-(1, 6 parcial, 8, 9, 10, 11, 15 parcial, 16 — oito entradas de tema
-porque o material de Hemograma cobre quatro temas ao mesmo tempo).
-Fora do banco, existem **cinco arquivos no acervo de estudo lidos
-integralmente nesta missão**, com conteúdo forte e citações
-verificáveis, cobrindo mais três temas dedicados (3, 12, 19) e dois
-temas de apoio (ver tabela "Lidos integralmente"). O achado central
-para a diretoria: **o trabalho de pesquisa e redação para 13 dos 21
-temas já foi feito ou está avançado** (os 9 temas B + os 4 temas C que
-têm material ou questões parciais no banco/acervo) — em lugares
-diferentes (banco de dados, `Biblioteca/Medicina`, `Casos
-Clínicos/tutorial`), em formatos diferentes (HTML, DOCX, PDF), e com
-graus de acabamento e de auditoria editorial diferentes. O trabalho
-que falta não é, na maior parte dos casos, "escrever do zero" — é
-"localizar, ler por completo, auditar cientificamente, converter para
-o padrão canônico (HTML) e publicar" (temas B), ou "complementar o que
-já existe" (temas C). Só **quatro dos 21 temas (2, 5, 7, 13 —
-cobertura D)** exigem produção do zero, porque nenhum conteúdo
-aproveitável foi localizado para eles nem no banco nem no acervo.
+algum dos 21 temas (ver tabela "Materiais encontrados no banco"), com
+três profundidades de leitura distintas nesta missão, sem promover
+leitura parcial a leitura integral:
+- **lido por inteiro**: Semiologia Cardíaca (o material só toca o
+  tema 16, então ler as seções relevantes equivale a ler o material
+  inteiro);
+- **todas as seções relevantes à AS1 lidas** (não o material inteiro):
+  Avaliação da Função Renal (só as seções do tema 1, dentro de 16
+  seções totais) e Hemograma (as seções de anemia do material
+  "Hematologia Clínica — Hemograma e Anemias", que cobrem os temas 8,
+  9, 10 e 11);
+- **apenas uma seção conferida** (não todas as seções relevantes):
+  a seção "HAS primária versus secundária" do material de hipertensão
+  (relevante só ao tema 6, parcial) e a seção curta de Síndromes
+  Bronco-Pleuro-Pulmonares (relevante só ao tema 15, parcial).
+
+Juntos, esses cinco materiais tocam **oito dos 21 temas** (1, 6
+parcial, 8, 9, 10, 11, 15 parcial, 16). Fora do banco, existem **cinco
+arquivos no acervo de estudo lidos integralmente nesta missão**, com
+conteúdo forte e citações verificáveis, cobrindo mais três temas
+dedicados (3, 12, 19) e dois temas de apoio (ver tabela "Lidos
+integralmente"). O achado central para a diretoria, em contagem
+verificável (ver tabela "Cobertura por área"): **9 temas em cobertura
+B, 8 temas em cobertura C e 4 temas em cobertura D** (0 + 9 + 8 + 4 =
+21). Os 9 temas B têm material substancial já lido (no banco ou no
+acervo), em lugares diferentes (banco de dados, `Biblioteca/Medicina`,
+`Casos Clínicos/tutorial`) e formatos diferentes (HTML, DOCX, PDF); o
+trabalho que falta neles é majoritariamente "auditar cientificamente,
+converter para o padrão canônico (HTML) e publicar", não escrever do
+zero. Os 8 temas C têm apenas ativos parciais, mas **a natureza desses
+ativos varia tema a tema e não equivale, por si só, a redação
+avançada**: em alguns casos é um material publicado que cobre só uma
+fração do tema (6, 15), em outros são questões e/ou flashcards
+publicados no banco sem nenhum material vinculado (4, 14, 20), e em
+outros é um único arquivo de acervo ainda não lido (17, 18, 21) — ver
+a Matriz dos 21 temas para o detalhe caso a caso. Só **4 dos 21 temas
+(2, 5, 7, 13 — cobertura D)** exigem produção do zero, porque nenhum
+conteúdo aproveitável foi localizado para eles nem no banco nem no
+acervo.
 
 Nenhum material published no banco tem registro de auditoria formal
 (`content_revisions`, `claims`, `content_reviews` — ver seção
@@ -47,7 +61,7 @@ distintas em toda a matriz abaixo.
 
 | # | Tema | Área | Cobertura | Evidência resumida |
 |---|---|---|---|---|
-| 1 | Avaliação da Função Renal | Nefrologia | **B** | Material publicado no banco ("Avaliação da Função Renal", 16 seções, 9 referências, lido integralmente) + 2 candidatos adicionais no acervo (tutorial de caso e exame de urina), não integrados |
+| 1 | Avaliação da Função Renal | Nefrologia | **B** | Material publicado no banco ("Avaliação da Função Renal", 16 seções, 9 referências; todas as seções relevantes ao tema lidas, não o material inteiro) + 2 candidatos adicionais no acervo (tutorial de caso e exame de urina), não integrados |
 | 2 | Radiologia em Nefrologia | Nefrologia | **D** | Nada encontrado no banco nem no acervo especificamente sobre imagem renal |
 | 3 | Distúrbio Acidobásico | Nefrologia | **B** | Nenhum material/questão no banco; acervo tem PDF de 18 páginas lido na íntegra, excelente, não importado |
 | 4 | Distúrbios do Metabolismo de Sódio e Água | Nefrologia | **C** | 24 questões publicadas no banco, mas com classificação insuficiente para descoberta curricular pela AS1 (etiquetadas em Fisiologia, área à qual também pertencem legitimamente) e sem material vinculado; 1 arquivo de caso no acervo, localizado não lido |
@@ -126,15 +140,19 @@ correspondem a nenhum dos 21 temas oficiais da AS1** — são pré-requisitos
 ou temas adjacentes úteis para referência cruzada, não objetivos da
 prova em si.
 
-Quatro dos cinco materiais que tocam a AS1 foram **lidos
-integralmente** nesta missão (não só localizados) para poder
-classificar além de "publicado no banco": "Avaliação da Função Renal"
-(seções relevantes ao tema 1), as seções de anemia do material de
-Hemograma, a seção "HAS primária versus secundária" do material de
-hipertensão, e "Semiologia Cardíaca" (tema 16). O quinto, "Síndromes
-Bronco-Pleuro-Pulmonares", teve apenas a seção curta relevante ao tema
-15 conferida, não o material inteiro. Os quatro lidos integralmente
-citam fontes verificáveis
+Os cinco materiais que tocam a AS1 foram lidos com três profundidades
+distintas nesta missão (não só localizados), para poder classificar
+além de "publicado no banco": "Semiologia Cardíaca" (tema 16) foi
+**lido por inteiro**, já que o material só toca esse tema; "Avaliação
+da Função Renal" (tema 1) e o material de Hemograma tiveram **todas as
+seções relevantes à AS1 lidas** (as seções do tema 1 num total de 16, e
+as seções de anemia que cobrem os temas 8-11), mas não o material
+inteiro; a seção "HAS primária versus secundária" do material de
+hipertensão (tema 6) e a seção curta de "Síndromes
+Bronco-Pleuro-Pulmonares" (tema 15) tiveram **apenas uma seção
+conferida**, não todas as seções relevantes. Os três materiais lidos
+por inteiro ou com todas as seções relevantes lidas citam fontes
+verificáveis
 (KDIGO 2024, CKD-EPI 2021/NEJM, PCDT MS 1247/2014, OMS 2024 etc.) e
 seguem estrutura próxima da exigida por `PADRAO-TUTORIAL.md`
 (fundamentos → mecanismo → discussão → perguntas em aberto). **Isso não
