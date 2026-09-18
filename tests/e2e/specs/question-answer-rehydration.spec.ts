@@ -41,7 +41,7 @@ test.describe('Resposta de questão + reidratação', () => {
   });
 
   test.afterEach(async () => {
-    await deleteTestUser(user.id).catch(() => undefined);
+    await deleteTestUser(user.id);
   });
 
   test('responder, reidratar após reload sem nova tentativa, e reenviar não duplica XP', async ({ page }) => {
