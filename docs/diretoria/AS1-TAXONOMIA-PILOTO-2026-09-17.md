@@ -47,7 +47,11 @@ Macrocítica" como diagnósticos possíveis dentro dele.
 - **Sinônimos**: hipercalemia, hipocalemia
 - **Área principal**: Nefrologia · **Relacionadas**: Cardiologia (arritmia)
 - **Tipo**: alteração laboratorial
-- **Relações**: é complicação de [3 Distúrbio Acidobásico]; pode causar [arritmia cardíaca]; é avaliado por [gasometria, eletrólitos séricos, ECG]
+- **Relações**: compartilha mecanismo com [3 Distúrbio Acidobásico]
+  (troca H+/K+ — a relação é bidirecional: um distúrbio acidobásico
+  pode causar hipercalemia/hipocalemia e vice-versa, por isso não é
+  tratada aqui como "complicação de" em uma única direção); pode causar
+  [arritmia cardíaca]; é avaliado por [gasometria, eletrólitos séricos, ECG]
 
 ### 6. Hipertensão Arterial Secundária
 - **Sinônimos**: HAS secundária, hipertensão renovascular, hiperaldosteronismo, feocromocitoma (como causas)
@@ -61,7 +65,15 @@ Macrocítica" como diagnósticos possíveis dentro dele.
 - **Sinônimos**: nefropatia diabética, DRD
 - **Área principal**: Nefrologia · **Relacionadas**: Endocrinologia (fora do escopo direto)
 - **Tipo**: doença
-- **Relações**: é complicação de [diabetes mellitus, fora do escopo direto da AS1]; é avaliado por [1 Avaliação da Função Renal]; modifica a conduta de [6 Hipertensão Arterial Secundária] (quando coexistem)
+- **Relações**: é complicação de [diabetes mellitus, fora do escopo
+  direto da AS1]; é avaliado por [1 Avaliação da Função Renal]. Omitida
+  a relação com [6 Hipertensão Arterial Secundária]: doença renal
+  diabética e HAS secundária são categorias diagnósticas distintas (uma
+  é complicação de diabetes, a outra é um diagnóstico diferencial de
+  hipertensão) que podem coexistir no mesmo paciente e compartilhar
+  escolha de anti-hipertensivo, mas isso é uma nota de manejo clínico
+  pontual, não uma relação taxonômica estável entre os dois conceitos —
+  registrar "modifica a conduta de" sugeria uma hierarquia que não existe
 
 ### 8. Hemograma
 - **Sinônimos**: eritrograma, leucograma, plaquetograma, CBC
@@ -80,14 +92,23 @@ Macrocítica" como diagnósticos possíveis dentro dele.
 - **Sinônimos**: anemia por deficiência de ferro, IDA
 - **Área principal**: Hematologia
 - **Tipo**: doença
-- **Relações**: é achado de [9 Abordagem da Anemia]; é tratado com [reposição de ferro oral/IV]; faz diagnóstico diferencial com [11 Anemia Macrocítica] (raro coexistirem e mascarar VCM)
+- **Relações**: é tratado com [reposição de ferro oral/IV]; faz
+  diagnóstico diferencial com [11 Anemia Macrocítica] (raro coexistirem
+  e mascarar VCM). A relação com [9 Abordagem da Anemia] já está
+  registrada em 9 como "componente de" — omitida aqui a relação
+  inversa "é achado de", que descrevia um diagnóstico como resultado de
+  um método de forma imprecisa
 
 ### 11. Anemia Macrocítica
 - **Sinônimos**: anemia megaloblástica, deficiência de B12/folato
 - **Área principal**: Hematologia
 - **Tipo**: doença
 - **Componentes**: deficiência de B12, deficiência de folato, causas não-megaloblásticas (hipotireoidismo, hepatopatia, álcool — presentes só em tabela no material atual, não desenvolvidas)
-- **Relações**: é achado de [9 Abordagem da Anemia]; pode causar [degeneração combinada subaguda da medula — só na deficiência de B12]; faz diagnóstico diferencial com [10 Anemia Ferropriva]
+- **Relações**: pode causar [degeneração combinada subaguda da medula
+  — só na deficiência de B12]; faz diagnóstico diferencial com [10
+  Anemia Ferropriva]. Mesma nota de 10: relação com [9 Abordagem da
+  Anemia] já registrada em 9 como "componente de"; "é achado de" omitida
+  aqui pelo mesmo motivo
 
 ### 12. Diagnóstico Diferencial da Dispneia
 - **Sinônimos**: falta de ar, dispneia aguda/crônica
@@ -117,38 +138,66 @@ Macrocítica" como diagnósticos possíveis dentro dele.
 - **Sinônimos**: exame físico cardiovascular, ausculta cardíaca, propedêutica cardiovascular
 - **Área principal**: Cardiologia
 - **Tipo**: exame / mecanismo
-- **Relações**: é pré-requisito de [17 Valvopatias Aórtica e Pulmonar]; é pré-requisito de [18 Valvopatias Mitral e Tricúspide]; é pré-requisito de [19 Endocardite Infecciosa]; é pré-requisito de [20 Insuficiência Cardíaca]; é avaliado por [ausculta, palpação, inspeção]
+- **Componentes**: ausculta, palpação, inspeção
+- **Relações**: é pré-requisito de [17 Valvopatias Aórtica e Pulmonar]; é pré-requisito de [18 Valvopatias Mitral e Tricúspide]; é pré-requisito de [19 Endocardite Infecciosa]; é pré-requisito de [20 Insuficiência Cardíaca]. Removida a relação "é avaliado por [ausculta, palpação, inspeção]": essas técnicas são componentes da própria semiologia cardíaca, não um método externo que a avalia — movidas para "Componentes" acima
 
 ### 17. Valvopatias Aórtica e Pulmonar
 - **Sinônimos**: estenose aórtica, insuficiência aórtica, valvopatia pulmonar
 - **Área principal**: Cardiologia
 - **Tipo**: doença
-- **Relações**: é causa de [20 Insuficiência Cardíaca]; é achado de [16 Semiologia Cardíaca]; é complicação de [febre reumática — não é um dos 21, mas é pré-requisito causal encontrado no acervo]; faz diagnóstico diferencial com [18 Valvopatias Mitral e Tricúspide]
+- **Relações**: é causa de [20 Insuficiência Cardíaca]; é complicação
+  de [febre reumática — não é um dos 21, mas é pré-requisito causal
+  encontrado no acervo]; faz diagnóstico diferencial com [18 Valvopatias
+  Mitral e Tricúspide]. Omitida a relação inversa "é achado de [16
+  Semiologia Cardíaca]" — o conceito 16 já declara, na direção correta,
+  "é pré-requisito de [17]"
 
 ### 18. Valvopatias Mitral e Tricúspide
 - **Sinônimos**: estenose mitral, insuficiência mitral, valvopatia tricúspide
 - **Área principal**: Cardiologia
 - **Tipo**: doença
-- **Relações**: é causa de [20 Insuficiência Cardíaca]; é achado de [16 Semiologia Cardíaca]; é complicação de [febre reumática — fora dos 21]; faz diagnóstico diferencial com [17 Valvopatias Aórtica e Pulmonar]; pode causar [14 Tosse e Hemoptise] (congestão pulmonar por estenose mitral)
+- **Relações**: é causa de [20 Insuficiência Cardíaca]; é complicação
+  de [febre reumática — fora dos 21]; faz diagnóstico diferencial com
+  [17 Valvopatias Aórtica e Pulmonar]; pode causar [14 Tosse e
+  Hemoptise] (congestão pulmonar por estenose mitral). Omitida a
+  relação inversa "é achado de [16 Semiologia Cardíaca]" — mesma
+  justificativa do conceito 17
 
 ### 19. Endocardite Infecciosa
 - **Sinônimos**: EI, endocardite bacteriana
-- **Área principal**: Cardiologia (**no banco está registrada sob Infectologia** — ver risco de taxonomia no relatório de inventário)
+- **Área principal**: Cardiologia (**no banco está registrada sob
+  Infectologia** — classificação legítima, já que endocardite é tema de
+  Infectologia e se relaciona com Cardiologia; o modelo de associação
+  única do banco só não permite marcar as duas ao mesmo tempo — ver
+  relatório de inventário)
 - **Tipo**: doença
-- **Relações**: é complicação de [17/18 Valvopatias — valva danificada predispõe]; é causa de [20 Insuficiência Cardíaca]; é achado de [16 Semiologia Cardíaca] (sopro novo); faz diagnóstico diferencial com [febre reumática, endocardite trombótica não bacteriana, endocardite de Libman-Sacks — fora dos 21]; é tratado com [antibioticoterapia prolongada, cirurgia valvar]
+- **Relações**: é complicação de [17/18 Valvopatias — valva danificada
+  predispõe]; é causa de [20 Insuficiência Cardíaca]; faz diagnóstico
+  diferencial com [febre reumática, endocardite trombótica não
+  bacteriana, endocardite de Libman-Sacks — fora dos 21]; é tratado com
+  [antibioticoterapia prolongada, cirurgia valvar]. Omitida a relação
+  inversa "é achado de [16 Semiologia Cardíaca] (sopro novo)" — mesma
+  justificativa do conceito 17
 
 ### 20. Insuficiência Cardíaca
 - **Sinônimos**: IC, ICFEr, ICFEp
 - **Área principal**: Cardiologia
 - **Tipo**: síndrome
-- **Relações**: é complicação de [17 Valvopatias Aórtica e Pulmonar], [18 Valvopatias Mitral e Tricúspide], [19 Endocardite Infecciosa], [21 Cardiomiopatias]; é achado de [16 Semiologia Cardíaca]; é causa de [12 Dispneia] (ortopneia, DPN); é avaliado por [BNP, ecocardiograma]
+- **Relações**: é complicação de [17 Valvopatias Aórtica e Pulmonar],
+  [18 Valvopatias Mitral e Tricúspide], [19 Endocardite Infecciosa],
+  [21 Cardiomiopatias]; é causa de [12 Dispneia] (ortopneia, DPN); é
+  avaliado por [BNP, ecocardiograma]. Omitida a relação inversa "é
+  achado de [16 Semiologia Cardíaca]" — mesma justificativa do conceito 17
 
 ### 21. Cardiomiopatias
 - **Sinônimos**: cardiomiopatia dilatada, hipertrófica, restritiva
 - **Área principal**: Cardiologia
 - **Tipo**: doença
 - **Componentes**: cardiomiopatia dilatada, hipertrófica (única com material candidato no acervo), restritiva
-- **Relações**: é causa de [20 Insuficiência Cardíaca]; é achado de [16 Semiologia Cardíaca]; faz diagnóstico diferencial com [17/18 Valvopatias] (sopros podem confundir)
+- **Relações**: é causa de [20 Insuficiência Cardíaca]; faz diagnóstico
+  diferencial com [17/18 Valvopatias] (sopros podem confundir). Omitida
+  a relação inversa "é achado de [16 Semiologia Cardíaca]" — mesma
+  justificativa do conceito 17
 
 ## Sobreposições e duplicações identificadas na taxonomia
 
@@ -211,13 +260,17 @@ citados como evidência no relatório de inventário.
 
 ## Ondas de produção
 
-| Onda | Temas | Por quê nesta ordem | Esforço estimado | Risco científico | Pode rodar em paralelo com |
-|---|---|---|---|---|---|
-| **0 — Reconciliação** | Não é um tema, é trabalho prévio: ler os ~12 arquivos "localizados, não auditados" e decidir as 4 duplicatas prováveis | Sem isso, qualquer produção corre risco de duplicar o que já existe (ver relatório de inventário) | Baixo (leitura, sem redação) | Baixo | — (é pré-requisito de tudo abaixo) |
-| **1 — Auditoria + conversão** | 3, 12, 19 | Conteúdo já excelente e completo fora do banco; falta só Gates 7-9 (auditoria científica formal + HTML) | Médio (auditoria, não pesquisa nova) | Baixo (conteúdo já denso, risco é só de auditoria superficial) | Onda 2 |
-| **2 — Revisão do publicado** | 1, 8, 9, 10, 11, 16 | Já publicado no banco, mas sem auditoria formal; decisão de fazer antes/depois da prova é da diretoria | Médio | Médio (publicado sem attestação — risco reputacional se erro for encontrado depois da prova) | Onda 1 |
-| **3 — Produção nova apoiada em fragmentos** | 4, 6, 14, 15, 17, 18, 20, 21 | Há questões, seções curtas ou candidatos parciais; produção "do zero" aqui na verdade é "complementar o que existe" | Alto (redação nova, mas com apoio) | Médio (17 e 19 têm pré-requisito comum, produzir junto reduz risco de inconsistência) | Onda 4, parcialmente |
-| **4 — Produção do zero** | 2, 5, 7, 13 | Nenhum atalho de aproveitamento encontrado | Alto | Alto (sem nenhuma base prévia para conferir consistência) | Onda 3 |
+Ordem aprovada pela diretoria (complemento AS1-A.1): a reconciliação
+das duplicatas prováveis não é um bloqueio global — cada onda
+reconcilia apenas os arquivos diretamente relacionados aos temas que
+produz.
+
+| Onda | Temas | Por quê nesta ordem | Reconciliação local desta onda | Esforço estimado | Risco científico | Pode rodar em paralelo com |
+|---|---|---|---|---|---|---|
+| **1 — Primeira onda editorial** | 3, 12, 19 | Conteúdo já excelente e completo fora do banco; falta só Gates 7-9 (auditoria científica formal + HTML) | Duplicata 3 (Endocardite — DOCX "em revisão" vs. `Caso 3 - Endocardite Infecciosa.pdf` + anotações), só antes de fechar o tema 19; 3 e 12 sem duplicata | Médio (auditoria, não pesquisa nova) | Baixo (conteúdo já denso, risco é só de auditoria superficial) | Onda 2 |
+| **2 — Segunda onda: auditoria dos materiais que cobrem 1, 8, 9, 10, 11 e 16** | 1, 8, 9, 10, 11, 16 | Já publicado no banco, mas sem auditoria formal; decisão de fazer antes/depois da prova é da diretoria | Duplicata 1 (Avaliação da Função Renal), só antes de fechar o tema 1; duplicata 2 (Semiologia Cardíaca), só antes de fechar o tema 16; 8, 9, 10, 11 sem duplicata | Médio | Médio (publicado sem attestação — risco reputacional se erro for encontrado depois da prova) | Onda 1 |
+| **3 — Temas C restantes: produção nova apoiada em fragmentos** | 4, 6, 14, 15, 17, 18, 20, 21 | Há questões, seções curtas ou candidatos parciais; produção "do zero" aqui na verdade é "complementar o que existe" | Duplicata 4 (semiologia respiratória), só antes de produzir o tema 15; demais temas desta onda sem duplicata | Alto (redação nova, mas com apoio) | Médio (17 e 19 têm pré-requisito comum, produzir junto reduz risco de inconsistência) | Onda 4, parcialmente |
+| **4 — Temas D: produção do zero** | 2, 5, 7, 13 | Nenhum atalho de aproveitamento encontrado | Nenhuma (sem candidato no acervo/banco) | Alto | Alto (sem nenhuma base prévia para conferir consistência) | Onda 3 |
 
 Notas de sequenciamento explícitas pedidas pela missão:
 
@@ -242,10 +295,15 @@ Notas de sequenciamento explícitas pedidas pela missão:
 1. Rodar auditoria científica formal (Gates 7-8) nos 5 materiais já
    publicados antes da prova de 21/09, ou aceitar o risco e revisar
    depois?
-2. Corrigir a taxonomia de disciplina no banco (Endocardite →
-   Cardiologia, Sódio/Água → Nefrologia, HAS/SRAA → cruzar com
-   Nefrologia) antes ou depois de produzir os materiais que faltam?
-   Esta missão não alterou o banco — é decisão e execução futuras.
+2. Ampliar a associação disciplina↔questão no banco para permitir mais
+   de uma disciplina relacionada (ex.: Endocardite em Infectologia +
+   relação com Cardiologia; Sódio/Água em Fisiologia + relação com
+   Nefrologia; HAS/SRAA em Farmacologia + relação com
+   Nefrologia/Cardiologia), de modo a tornar essas questões
+   descobríveis pela coleção AS1 sem mudar a disciplina primária —
+   antes ou depois de produzir os materiais que faltam? Esta missão não
+   alterou o banco nem implementou esse modelo — é decisão e execução
+   futuras (ver item 7 do complemento AS1-A.1).
 3. Qual dos pares de "duplicata provável" deve virar o material oficial
    e qual deve ser arquivado/legado — decisão editorial, não técnica.
 4. Aceitar DOCX/PDF como fonte de pesquisa e só converter para HTML no

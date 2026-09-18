@@ -9,20 +9,32 @@
 
 Dos 21 temas da AS1, **nenhum tem cobertura A completa e formalmente
 auditada**. Isso não significa que o acervo esteja vazio — pelo
-contrário: existem **três materiais publicados no banco** com conteúdo
-denso e bem referenciado que cobrem, juntos, sete dos 21 temas (total
-ou parcialmente, alguns como seções de um material mais amplo), e
-existem **pelo menos oito arquivos no acervo de estudo, fora do banco,
-com conteúdo forte e citações verificáveis**, cobrindo mais seis temas.
-O achado central para a diretoria: **grande parte do trabalho de
-pesquisa e redação para uns 12-13 dos 21 temas já foi feito** — em
-lugares diferentes (banco de dados, `Biblioteca/Medicina`, `Casos
+contrário: existem **cinco materiais publicados no banco** que tocam
+algum dos 21 temas (ver tabela "Materiais encontrados no banco"), dos
+quais **quatro foram lidos integralmente** nesta missão (Avaliação da
+Função Renal, as seções de anemia do material de Hemograma, a seção
+"HAS primária versus secundária" do material de hipertensão, e
+Semiologia Cardíaca) e um teve apenas uma seção curta conferida
+(Síndromes Bronco-Pleuro-Pulmonares, que cobre o tema 15 de forma
+superficial). Juntos, esses cinco materiais tocam sete dos 21 temas
+(1, 6 parcial, 8, 9, 10, 11, 15 parcial, 16 — oito entradas de tema
+porque o material de Hemograma cobre quatro temas ao mesmo tempo).
+Fora do banco, existem **cinco arquivos no acervo de estudo lidos
+integralmente nesta missão**, com conteúdo forte e citações
+verificáveis, cobrindo mais três temas dedicados (3, 12, 19) e dois
+temas de apoio (ver tabela "Lidos integralmente"). O achado central
+para a diretoria: **o trabalho de pesquisa e redação para 13 dos 21
+temas já foi feito ou está avançado** (os 9 temas B + os 4 temas C que
+têm material ou questões parciais no banco/acervo) — em lugares
+diferentes (banco de dados, `Biblioteca/Medicina`, `Casos
 Clínicos/tutorial`), em formatos diferentes (HTML, DOCX, PDF), e com
 graus de acabamento e de auditoria editorial diferentes. O trabalho
 que falta não é, na maior parte dos casos, "escrever do zero" — é
 "localizar, ler por completo, auditar cientificamente, converter para
-o padrão canônico (HTML) e publicar", ou, para 8 dos 21 temas, "escrever
-do zero mesmo", porque nenhum conteúdo aproveitável foi localizado.
+o padrão canônico (HTML) e publicar" (temas B), ou "complementar o que
+já existe" (temas C). Só **quatro dos 21 temas (2, 5, 7, 13 —
+cobertura D)** exigem produção do zero, porque nenhum conteúdo
+aproveitável foi localizado para eles nem no banco nem no acervo.
 
 Nenhum material published no banco tem registro de auditoria formal
 (`content_revisions`, `claims`, `content_reviews` — ver seção
@@ -38,7 +50,7 @@ distintas em toda a matriz abaixo.
 | 1 | Avaliação da Função Renal | Nefrologia | **B** | Material publicado no banco ("Avaliação da Função Renal", 16 seções, 9 referências, lido integralmente) + 2 candidatos adicionais no acervo (tutorial de caso e exame de urina), não integrados |
 | 2 | Radiologia em Nefrologia | Nefrologia | **D** | Nada encontrado no banco nem no acervo especificamente sobre imagem renal |
 | 3 | Distúrbio Acidobásico | Nefrologia | **B** | Nenhum material/questão no banco; acervo tem PDF de 18 páginas lido na íntegra, excelente, não importado |
-| 4 | Distúrbios do Metabolismo de Sódio e Água | Nefrologia | **C** | 24 questões publicadas no banco, mas sob disciplina errada (Fisiologia, não Nefrologia) e sem material vinculado; 1 arquivo de caso no acervo, localizado não lido |
+| 4 | Distúrbios do Metabolismo de Sódio e Água | Nefrologia | **C** | 24 questões publicadas no banco, mas com classificação insuficiente para descoberta curricular pela AS1 (etiquetadas em Fisiologia, área à qual também pertencem legitimamente) e sem material vinculado; 1 arquivo de caso no acervo, localizado não lido |
 | 5 | Distúrbios do Metabolismo do Potássio | Nefrologia | **D** | Nada encontrado como tema dedicado (só menções pontuais dentro do material de ácido-base) |
 | 6 | Hipertensão Arterial Secundária | Nefrologia | **C** | Material do banco sobre HAS cobre primária/farmacologia, com só 2 parágrafos sobre secundária (sinais de alerta, sem investigação); 38 questões + 13 flashcards no banco sob tema/disciplina que não é Nefrologia, sem material |
 | 7 | Doença Renal Diabética | Nefrologia | **D** | Nada encontrado |
@@ -53,7 +65,7 @@ distintas em toda a matriz abaixo.
 | 16 | Semiologia Cardíaca | Cardiologia | **B** | Material publicado no banco (23 seções, 7 referências, lido integralmente) + candidato mais antigo no acervo (possível duplicata/precursor) |
 | 17 | Valvopatias Aórtica e Pulmonar | Cardiologia | **C*** | Nenhum material/questão no banco; acervo tem HTML de tutorial com citação estruturada (confirmado por busca, não lido na íntegra) — candidato forte, pendente de leitura completa |
 | 18 | Valvopatias Mitral e Tricúspide | Cardiologia | **C** | Nenhum material/questão no banco; 1 PDF de caso no acervo cobrindo só estenose mitral, localizado não lido; nada sobre tricúspide |
-| 19 | Endocardite Infecciosa | Cardiologia | **B** | 52 questões + 19 flashcards publicados no banco sob disciplina errada (Infectologia, não Cardiologia), sem material; acervo tem DOCX lido na íntegra, excelente, com manifesto editorial próprio declarando "em revisão"; mais 2 arquivos de caso relacionados, não lidos |
+| 19 | Endocardite Infecciosa | Cardiologia | **B** | 52 questões + 19 flashcards publicados no banco com classificação insuficiente para descoberta curricular pela AS1 (etiquetadas em Infectologia, área à qual pertencem legitimamente e se relacionam com Cardiologia), sem material; acervo tem DOCX lido na íntegra, excelente, com manifesto editorial próprio declarando "em revisão"; mais 2 arquivos de caso relacionados, não lidos |
 | 20 | Insuficiência Cardíaca | Cardiologia | **C** | 40 questões + 2 flashcards publicados no banco (disciplina correta), sem material nenhum |
 | 21 | Cardiomiopatias | Cardiologia | **C** | Nenhum material/questão no banco; 1 DOCX recente no acervo cobrindo só cardiomiopatia hipertrófica, localizado não lido |
 
@@ -114,11 +126,15 @@ correspondem a nenhum dos 21 temas oficiais da AS1** — são pré-requisitos
 ou temas adjacentes úteis para referência cruzada, não objetivos da
 prova em si.
 
-Três materiais foram **lidos integralmente** nesta missão (não só
-localizados) para poder classificar além de "publicado no banco":
-"Avaliação da Função Renal" (seções relevantes ao tema 1), as seções
-de anemia do material de Hemograma, e a seção "HAS primária versus
-secundária" do material de hipertensão. Todos citam fontes verificáveis
+Quatro dos cinco materiais que tocam a AS1 foram **lidos
+integralmente** nesta missão (não só localizados) para poder
+classificar além de "publicado no banco": "Avaliação da Função Renal"
+(seções relevantes ao tema 1), as seções de anemia do material de
+Hemograma, a seção "HAS primária versus secundária" do material de
+hipertensão, e "Semiologia Cardíaca" (tema 16). O quinto, "Síndromes
+Bronco-Pleuro-Pulmonares", teve apenas a seção curta relevante ao tema
+15 conferida, não o material inteiro. Os quatro lidos integralmente
+citam fontes verificáveis
 (KDIGO 2024, CKD-EPI 2021/NEJM, PCDT MS 1247/2014, OMS 2024 etc.) e
 seguem estrutura próxima da exigida por `PADRAO-TUTORIAL.md`
 (fundamentos → mecanismo → discussão → perguntas em aberto). **Isso não
@@ -132,21 +148,28 @@ zeradas para esses materiais.
 
 | Tema/theme no banco | Disciplina no banco | Questões publicadas | Flashcards | Material vinculado | Tema AS1 |
 |---|---|---|---|---|---|
-| Insuficiência Cardíaca | Cardiologia (correta) | 40 | 2 | Nenhum | 20 |
-| Endocardite Infecciosa | **Infectologia** (deveria ser Cardiologia p/ AS1) | 52 | 19 | Nenhum | 19 |
-| Tosse Crônica e Hemoptise | Pneumologia (correta) | 24 | 0 | Nenhum | 14 |
-| Espirometria e Função Pulmonar | Pneumologia (correta) | 27 | 0 | Nenhum | tangencial a 12 |
-| Distúrbios de Sódio e Água | **Fisiologia e fisiopatologia** (deveria ser Nefrologia p/ AS1) | 24 | 0 | Nenhum | 4 |
-| Hipertensão Arterial e SRAA | **Farmacologia** (deveria cruzar com Nefrologia p/ AS1) | 38 | 13 | Nenhum | 6 (tangencial) |
+| Insuficiência Cardíaca | Cardiologia | 40 | 2 | Nenhum | 20 |
+| Endocardite Infecciosa | **Infectologia** (área legítima; relaciona-se com Cardiologia) | 52 | 19 | Nenhum | 19 |
+| Tosse Crônica e Hemoptise | Pneumologia | 24 | 0 | Nenhum | 14 |
+| Espirometria e Função Pulmonar | Pneumologia | 27 | 0 | Nenhum | tangencial a 12 |
+| Distúrbios de Sódio e Água | **Fisiologia** (área legítima; relaciona-se com Nefrologia) | 24 | 0 | Nenhum | 4 |
+| Hipertensão Arterial e SRAA | **Farmacologia** (área legítima; relaciona-se com Nefrologia/Cardiologia) | 38 | 13 | Nenhum | 6 (tangencial) |
 | Radiografia de Tórax Básica | Radiologia | 18 | 0 | Nenhum | não corresponde a nenhum dos 21 (é tórax, não renal) |
 
-O desalinhamento de disciplina/tema já era um achado registrado em
-auditorias anteriores do NexusMed (ver memória de sessões passadas
-sobre desalinhamento de taxonomia disciplina×material×questão); esta
-missão confirma que ele **também afeta diretamente 3 dos 21 temas da
-AS1** (4, 6, 19) — quem for buscar essas questões filtrando por
-"Nefrologia" ou "Cardiologia" no admin não as encontra, porque estão
-etiquetadas noutra disciplina.
+O modelo atual de associação única disciplina↔questão já era um
+achado registrado em auditorias anteriores do NexusMed (ver memória de
+sessões passadas sobre desalinhamento de taxonomia
+disciplina×material×questão); esta missão confirma que ele **também
+dificulta a descoberta de conteúdo para 3 dos 21 temas da AS1** (4, 6,
+19). Endocardite pode legitimamente pertencer à Infectologia e
+relacionar-se com Cardiologia; Sódio/Água pode legitimamente pertencer
+à Fisiologia e relacionar-se com Nefrologia; HAS/SRAA pode
+legitimamente pertencer à Farmacologia e relacionar-se com
+Nefrologia/Cardiologia. Nenhuma dessas classificações está
+objetivamente errada — o problema é que o modelo de associação única
+não permite marcar também a relação com Nefrologia/Cardiologia, então
+quem busca essas questões filtrando por essas disciplinas no admin não
+as encontra.
 
 **Flashcards são conteúdo de usuário, não editorial**: a tabela
 `flashcards` tem `user_id` obrigatório e `is_custom` — os 42 flashcards
@@ -162,6 +185,24 @@ Nefrologia,Pneumologia}`, `Casos Clínicos/tutorial/{Cardiologia,
 Nefrologia,Pneumologia,Infectologia}`, `_acervo/{semiologia,
 farmacologia,fisiopatologia}` e `provas/medicina`. `_archive` foi
 localizado mas não tratado como fonte vigente, conforme instrução.
+
+**Contagens reconciliadas** (universo: arquivos do acervo com caminho
+identificado nesta busca, fora do banco):
+
+| Categoria | Quantidade | Composição |
+|---|---|---|
+| Total localizado com caminho identificado | **22** | 5 lidos integralmente + 17 localizados e não auditados |
+| Lido integralmente | **5** | ver tabela "Lidos integralmente" |
+| Localizado e não auditado | **17** | ver tabela "Localizados, não auditados" |
+| Envolvido em duplicata provável | **10** (subconjunto dos 22 acima) | 2 na duplicata 1 (Avaliação da Função Renal), 1 na duplicata 2 (Semiologia Cardíaca), 3 na duplicata 3 (Endocardite — 1 já lido integralmente + 2 não auditados), 4 na duplicata 4 (semiologia respiratória) |
+
+Além desses 22, a varredura também encontrou um número **não
+determinado** de arquivos de nome genérico (ex.: "Caso 4.docx",
+"Quarto caso clínico.docx", "Quinto caso.docx", em pastas de
+Cardiologia/Nefrologia/Pneumologia) que não entraram nas tabelas acima
+porque não foi possível atribuir tema sem abri-los. Isso é uma
+categoria à parte, não uma aproximação do total de 22 — nenhum desses
+arquivos genéricos foi contado nem lido nesta missão.
 
 ### Lidos integralmente nesta missão
 
@@ -251,10 +292,13 @@ redundante.
 
 ## Riscos
 
-- **Taxonomia de disciplina no banco não bate com a área da AS1** para
-  3 temas (4, 6, 19) — quem planejar produção olhando só pela
-  disciplina no admin vai concluir erroneamente que não há nenhuma
-  questão para Nefrologia/Cardiologia nesses pontos.
+- **Classificação de disciplina insuficiente para descoberta
+  curricular** em 3 temas (4, 6, 19) — a disciplina registrada é
+  legítima (Fisiologia, Farmacologia, Infectologia), mas o modelo de
+  associação única não expõe a relação com Nefrologia/Cardiologia;
+  quem planejar produção olhando só pela disciplina no admin vai
+  concluir erroneamente que não há nenhuma questão para esses pontos
+  da AS1.
 - **"Publicado" ≠ "auditado"**: nenhum dos materiais existentes,
   mesmo os de leitura excelente, tem attestação formal no sistema de
   proveniência (`content_revisions`/`claims`/`content_reviews`
@@ -276,8 +320,9 @@ redundante.
 
 ## Itens não verificados nesta missão
 
-- Conteúdo integral de 12 dos ~20 arquivos do acervo listados como
-  "localizado, não auditado" (tabela acima).
+- Conteúdo integral dos 17 arquivos do acervo listados como
+  "localizado, não auditado" (tabela acima) — nenhum deles foi lido
+  nesta missão, só localizado e classificado por metadado/grep.
 - Se as quatro "duplicatas prováveis" são de fato conteúdo
   sobreposto/redundante ou complementar.
 - Estado do Supabase remoto além do recorte de tabelas de conteúdo
@@ -291,27 +336,34 @@ redundante.
 
 ## Ordem recomendada de produção
 
-Ver `docs/diretoria/AS1-TAXONOMIA-PILOTO-2026-09-17.md`, seção "Ondas
-de produção", para o detalhamento tema a tema com pré-requisitos,
-esforço estimado e risco científico.
+Ordem aprovada pela diretoria (complemento AS1-A.1): a reconciliação
+das duplicatas prováveis **não é um bloqueio global** antes de
+produzir qualquer coisa — cada onda reconcilia apenas os arquivos
+diretamente relacionados aos temas que ela produz. Ver
+`docs/diretoria/AS1-TAXONOMIA-PILOTO-2026-09-17.md`, seção "Ondas de
+produção", para o detalhamento tema a tema com pré-requisitos, esforço
+estimado e risco científico.
 
 Resumo em uma frase por onda:
 
-- **Onda 0 (antes de produzir qualquer coisa)**: ler por completo os
-  ~12 arquivos "localizados, não auditados" e decidir as 4 duplicatas
-  prováveis — sem isso, qualquer ordem de produção corre risco de
-  duplicar trabalho.
-- **Onda 1 (auditoria + conversão, não produção nova)**: os 3 temas
-  com material excelente já fora do banco e ainda não publicado (3, 12,
-  19) — rodar Gates 7-9 do `PADRAO-TUTORIAL.md` sobre conteúdo já
-  escrito.
-- **Onda 2 (revisão/complementação do que já está publicado)**: os
-  temas 1, 8, 9, 10, 11, 16 — já têm material publicado no banco, mas
-  sem auditoria formal; a decisão da diretoria aqui é se roda auditoria
-  retroativa antes ou depois da prova, dado o prazo.
-- **Onda 3 (produção nova apoiada em fragmentos)**: temas 4, 6, 14, 15,
-  17, 18, 20, 21 — há questões, seções curtas ou candidatos de leitura
-  parcial, mas nenhum material completo; produção precisa considerar o
-  que já existe para não repetir.
-- **Onda 4 (produção do zero, sem atalho)**: temas 2, 5, 7, 13 — nada
-  aproveitável encontrado.
+- **Primeira onda editorial — temas 3, 12 e 19**: material excelente
+  já fora do banco e ainda não publicado; rodar Gates 7-9 do
+  `PADRAO-TUTORIAL.md` sobre conteúdo já escrito. Reconciliação local
+  desta onda: decidir a duplicata 3 (Endocardite — DOCX "em revisão"
+  vs. `Caso 3 - Endocardite Infecciosa.pdf` + anotações) antes de
+  publicar o tema 19; temas 3 e 12 não têm duplicata identificada.
+- **Segunda onda — auditoria dos materiais que cobrem os temas 1, 8, 9,
+  10, 11 e 16**: já publicados no banco, mas sem auditoria formal;
+  decisão da diretoria é se roda antes ou depois da prova, dado o
+  prazo. Reconciliação local desta onda: decidir a duplicata 1
+  (Avaliação da Função Renal — material do banco vs.
+  `fechamento-avaliacao-funcao-renal.html` + caso clínico) antes de
+  fechar o tema 1; decidir a duplicata 2 (Semiologia Cardíaca —
+  material do banco vs. `Propedeutica_Cardiovascular.docx`) antes de
+  fechar o tema 16; temas 8, 9, 10, 11 não têm duplicata identificada.
+- **Depois — temas D (2, 5, 7, 13, produção do zero) e temas C
+  restantes (4, 6, 14, 15, 17, 18, 20, 21, produção apoiada em
+  fragmentos)**: reconciliação local do tema 15 inclui decidir a
+  duplicata 4 (quatro arquivos de semiologia respiratória em
+  `_acervo/semiologia/` vs. "Síndromes Bronco-Pleuro-Pulmonares" do
+  banco) antes de produzir esse tema.
