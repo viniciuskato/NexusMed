@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { createTestUser, deleteTestUser, type CreatedTestUser } from '../fixtures/localSupabase';
+import { createTestUser, deleteTestUser, runCleanup, type CreatedTestUser } from '../fixtures/localSupabase';
 
 // Isolamento por usuário: dois usuários reais (A/B) nunca veem dado um do
 // outro, na mesma janela (login/logout sequencial) e em duas BrowserContext
@@ -41,8 +41,7 @@ test.describe('Isolamento entre contas (A/B)', () => {
   });
 
   test.afterEach(async () => {
-    await deleteTestUser(userA.id).catch(() => undefined);
-    await deleteTestUser(userB.id).catch(() => undefined);
+    await runCleanup([() => deleteTestUser(userA.id), () => deleteTestUser(userB.id)]);
   });
 
   test('login A -> logout -> login B na mesma janela: B nunca vê a sessão/e-mail de A', async ({ page }) => {

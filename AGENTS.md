@@ -124,6 +124,14 @@ seção "Armadilhas já descobertas".
     falha de forma parecida (specs `estudo-tematico-22a`/`concurrencia-13b`)
     por fixtures do pgTAP não limpas — sempre resetar antes do e2e se o
     pgTAP rodou primeiro na mesma sessão.
+12. **`supabase.auth.admin.deleteUser()` (e o supabase-js em geral) não
+    rejeita a promise em erro — devolve `{ error }`.** Um `.catch()` em
+    volta não pega nada; é preciso checar o `error` retornado. Ignorar isso
+    escondeu por semanas que o spec 23-B nunca apagava seu admin de teste
+    (FK `RESTRICT` intencional — quem atestou conteúdo não pode ser
+    apagado, ver `docs/operacao/DECISIONS.md` 2026-09-18). Em testes e2e,
+    limpeza vai por `runCleanup` (`tests/e2e/fixtures/localSupabase.ts`),
+    nunca `.catch(() => undefined)`.
 
 ## Convenções de trabalho
 

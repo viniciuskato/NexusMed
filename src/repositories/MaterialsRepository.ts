@@ -70,7 +70,7 @@ class ResilientMaterialsRepository implements MaterialsRepository {
     if (!isSupabaseConfigured) return this.local.getDisciplines();
     try {
       const res = await this.supa.getDisciplines();
-      return res && res.length > 0 ? res : this.local.getDisciplines();
+      return res;
     } catch {
       return this.local.getDisciplines();
     }
@@ -87,7 +87,7 @@ class ResilientMaterialsRepository implements MaterialsRepository {
     if (!isSupabaseConfigured) return this.local.getThemes();
     try {
       const res = await this.supa.getThemes();
-      return res && res.length > 0 ? res : this.local.getThemes();
+      return res;
     } catch {
       return this.local.getThemes();
     }
@@ -104,7 +104,7 @@ class ResilientMaterialsRepository implements MaterialsRepository {
     if (!isSupabaseConfigured) return this.local.getCompendiums();
     try {
       const res = await this.supa.getCompendiums();
-      return res && res.length > 0 ? res : this.local.getCompendiums();
+      return res;
     } catch {
       return this.local.getCompendiums();
     }
@@ -117,11 +117,15 @@ class ResilientMaterialsRepository implements MaterialsRepository {
     }
   }
 
+  // Como importCompendiumDraft: com Supabase configurado, a cópia local só é
+  // atualizada depois do sucesso remoto (a RPC save_compendium é atômica).
   async saveCompendium(compendium: Compendium): Promise<void> {
-    this.local.saveCompendium(compendium);
-    if (isSupabaseConfigured) {
-      try { await this.supa.saveCompendium(compendium); } catch (err) { console.error(`[MaterialsRepository] falha ao sincronizar saveCompendium com Supabase:`, err); throw err; }
+    if (!isSupabaseConfigured) {
+      this.local.saveCompendium(compendium);
+      return;
     }
+    try { await this.supa.saveCompendium(compendium); } catch (err) { console.error(`[MaterialsRepository] falha ao sincronizar saveCompendium com Supabase:`, err); throw err; }
+    this.local.saveCompendium(compendium);
   }
 
   async deleteCompendium(id: string): Promise<void> {
