@@ -182,7 +182,7 @@ export function parseCompendiumYamlText(
   const preview: CompendiumImportPreview = {
     title,
     subtitle,
-    author: author || 'Equipe Editorial',
+    author: author || '',
     estimatedReadTimeMinutes: estimatedReadTimeMinutes || 15,
     disciplineName,
     themeName,
