@@ -8,7 +8,10 @@
 1. Ler, nesta ordem: [`PROJECT_STATE.md`](PROJECT_STATE.md) →
    [`DECISIONS.md`](DECISIONS.md) → [`TASKS.md`](TASKS.md) → `AGENTS.md`
    (raiz do repositório). Ler [`RUNBOOK.md`](RUNBOOK.md) quando a sessão
-   for executar algo (build, teste, publicação), não só planejar.
+   for executar algo (build, teste, publicação), não só planejar. Se a
+   sessão for a executiva de um encaminhamento (não a diretoria), ler
+   também [`EXECUTOR_PROTOCOL.md`](EXECUTOR_PROTOCOL.md) antes de
+   começar.
 2. Reconfirmar estado real, nunca assumir a partir de memória de
    conversa anterior:
    ```
