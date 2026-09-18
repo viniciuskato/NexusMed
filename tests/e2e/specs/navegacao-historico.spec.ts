@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { createTestUser, deleteTestUser, type CreatedTestUser } from '../fixtures/localSupabase';
+import { createTestUser, deleteTestUser, runCleanup, type CreatedTestUser } from '../fixtures/localSupabase';
 
 // Auditoria 2026-09-18 — a tela ativa passa a ser refletida na URL (#/tela):
 // o "voltar" do navegador/celular navega dentro do app em vez de sair dele,
@@ -17,10 +17,9 @@ test.describe('Navegação pelo histórico do navegador', () => {
   let cleanup: (() => Promise<void> | void)[] = [];
 
   test.afterEach(async () => {
-    for (const fn of cleanup.reverse()) {
-      await Promise.resolve(fn()).catch(() => undefined);
-    }
+    const fns = cleanup;
     cleanup = [];
+    await runCleanup(fns);
   });
 
   test('voltar e avançar do navegador trocam de tela dentro do app', async ({ page }) => {
