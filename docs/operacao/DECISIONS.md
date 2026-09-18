@@ -6,6 +6,32 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-18 — Tags de material nunca levam rótulo de coleção/curso externo; a plataforma tem que se entender sozinha
+
+Na pré-visualização da importação real de `acidobase.compendium.yaml`, o
+usuário notou que as tags incluíam "AS1" e "Saúde do Adulto 1" — o nome da
+coleção curricular/prova de uma faculdade específica, não um conceito
+clínico. Causa: o prompt da missão AS1-B2
+(`docs/diretoria/prompts/AS1-B2.txt`, linha 127) instruía "coleção
+curricular: AS1 — Saúde do Adulto 1" sem dizer onde isso deveria ser
+registrado; sem um campo próprio de "coleção" no schema, a sessão
+executora colocou o rótulo em `tags`, que é visível a qualquer usuário do
+NexusMed, misturando "por que produzimos isso agora" com "o que este
+material é". Corrigido no YAML antes de importar (removidas as duas tags;
+17 seções e 14 referências continuam intactas, confirmado pelo parser
+real).
+
+**Como aplicar**: `tags` de um material só leva vocabulário clínico livre
+(disciplina, subtemas, fármacos/estruturas — como já instruído em
+`docs/architecture/compendium-extraction-prompt.md`, item 8). Identificadores
+de coleção/curso/prova externos (AS1, nome de faculdade, sigla de
+disciplina de um currículo específico) nunca entram em `tags` — ficam só
+no documento da coleção (`docs/diretoria/AS1-TAXONOMIA-PILOTO-2026-09-17.md`,
+que já se descreve como "não duplica nenhum material, só referencia").
+Prompts futuros de conversão (temas 12, 19 e as próximas ondas da AS1)
+devem dizer isso explicitamente, não só mencionar "coleção curricular: X"
+e deixar a sessão executora decidir onde colocar.
+
 ## 2026-09-17 — Gravação multi-tabela editorial nova deve ser RPC transacional, não requisições independentes
 
 A diretoria rejeitou a 42-A (importação de compêndio) por gravar material,
