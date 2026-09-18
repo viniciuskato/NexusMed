@@ -21,8 +21,11 @@ import { createTestUser, deleteTestUser, psqlLocal, type CreatedTestUser } from 
 // que só o navegador prova: o fluxo real end-to-end pela UI.
 
 const MATERIAL_PREFIX = 'Meningite Bacteriana Aguda';
+// Fixture versionada (mesma forma do caso de prova real: 11 seções, 13
+// referências). Para rodar contra o arquivo real do acervo, aponte
+// E2E_MENINGITE_YAML para ele.
 const MENINGITE_YAML_PATH = path.resolve(
-  'C:/Users/vinic/OneDrive/Estudos/Base de Estudos/Biblioteca/Medicina/Infectologia/Clínica/_nexusmed-nativo/meningite-bacteriana.compendium.yaml'
+  process.env.E2E_MENINGITE_YAML ?? 'tests/e2e/fixtures/meningite-e2e.compendium.yaml'
 );
 
 async function login(page: Page, user: CreatedTestUser) {

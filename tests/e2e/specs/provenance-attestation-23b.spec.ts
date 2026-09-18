@@ -50,8 +50,12 @@ function deleteE2EMaterials(): void {
 test.describe('Proveniência e atestação editorial (23-B)', () => {
   let cleanup: (() => Promise<void> | void)[] = [];
 
+  // Ordem inversa (LIFO): o material precisa sair antes do admin — as
+  // revisões/atestações dele referenciam auth.users sem cascade, e apagar o
+  // usuário primeiro falhava em silêncio, deixando o e2e-13a-prov-admin-*
+  // para trás (TASK-2026-09-17-05).
   test.afterEach(async () => {
-    for (const fn of cleanup) {
+    for (const fn of cleanup.reverse()) {
       await Promise.resolve(fn()).catch(() => undefined);
     }
     cleanup = [];
