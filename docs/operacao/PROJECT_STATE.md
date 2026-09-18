@@ -33,6 +33,17 @@ git log --oneline -10 origin/main
 Qualquer hash citado neste documento é **baseline histórica de quando foi
 escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
 
+## Auditoria técnica de 2026-09-18 — PRs abertos
+
+Achados graves corrigidos em PR, **ainda não mesclados** (produção continua com os bugs até o merge):
+
+- #1 RPC `submit_question_attempt` devolvia gabarito de qualquer questão (inclusive rascunho) reaproveitando `client_op_id` — migration.
+- #2 "Salvar" do formulário de compêndio no CMS apagava anotações de alunos, histórico e imagens das seções (cascata) — migration, aplicar **antes** do merge. Até lá, não editar material publicado pelo formulário.
+- #6 CI do `main` estava vermelho (spec dependente de arquivo pessoal + fixture residual) — mesclar primeiro.
+- Demais: #3 mocks/autoria fictícia, #4 CSP/grants/logout (migration), #5 strict + bugs do painel/SRS, #7 code splitting + botão voltar, #8 processo via PR, #9 backlog da auditoria, #10 produto/negócio.
+
+Ordem de merge e pendências: `TASKS.md`. Achados não resolvidos: `docs/diretoria/BACKLOG-ESTRATEGICO.md` (AUD-01 a AUD-10).
+
 ## Baseline verificada nesta entrega (Entrega 40-A, 2026-09-17)
 
 - `origin/main` = `fe20832791bad02d174461f7cf4bab8d0dcd632e` (confirmado por
