@@ -12,6 +12,8 @@ export interface MaterialsRepository {
   getCompendiums(): Promise<Compendium[]>;
   saveCompendiums(compendiums: Compendium[]): Promise<void>;
   saveCompendium(compendium: Compendium): Promise<void>;
+  /** Missão 42-B: grava material+seções+referências atomicamente (tudo ou nada) — usado pela importação assistida. */
+  importCompendiumDraft(compendium: Compendium): Promise<Compendium>;
   deleteCompendium(id: string): Promise<void>;
   publishCompendium(id: string): Promise<void>;
   unpublishCompendium(id: string): Promise<void>;
@@ -41,6 +43,10 @@ class LocalStorageMaterialsRepository implements MaterialsRepository {
   }
   async saveCompendium(compendium: Compendium): Promise<void> {
     StorageService.saveCompendium(compendium);
+  }
+  async importCompendiumDraft(compendium: Compendium): Promise<Compendium> {
+    StorageService.saveCompendium({ ...compendium, publicationStatus: 'draft' });
+    return compendium;
   }
   async deleteCompendium(id: string): Promise<void> {
     StorageService.deleteCompendium(id);
@@ -123,6 +129,25 @@ class ResilientMaterialsRepository implements MaterialsRepository {
     if (isSupabaseConfigured) {
       try { await this.supa.deleteCompendium(id); } catch (err) { console.error(`[MaterialsRepository] falha ao sincronizar deleteCompendium com Supabase:`, err); throw err; }
     }
+  }
+
+  /**
+   * Missão 42-B: ao contrário dos demais métodos deste repositório
+   * resiliente (que gravam local primeiro e tentam sincronizar depois), a
+   * cópia local só é atualizada DEPOIS do sucesso integral da gravação
+   * remota — se o Supabase estiver configurado e a operação atômica
+   * falhar, nada é escrito localmente (evita um "sucesso" local fantasma
+   * quando a gravação real não aconteceu). Sem Supabase configurado, grava
+   * só local (modo local genuíno — não há sincronização remota para
+   * declarar, então nada é fingido).
+   */
+  async importCompendiumDraft(compendium: Compendium): Promise<Compendium> {
+    if (!isSupabaseConfigured) {
+      return this.local.importCompendiumDraft(compendium);
+    }
+    const saved = await this.supa.importCompendiumDraft(compendium);
+    await this.local.importCompendiumDraft(saved);
+    return saved;
   }
 
   async publishCompendium(id: string): Promise<void> {

@@ -1,0 +1,4 @@
+# Fixture de teste (42-A): arquivo sem título, disciplina, tema nem seções —
+# usado para provar que a importação rejeita arquivos inválidos com mensagem
+# em linguagem simples, sem gravar nada.
+subtitle: "Arquivo incompleto de propósito, para teste de importação"

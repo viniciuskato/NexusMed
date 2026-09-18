@@ -311,6 +311,46 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
     }
   }
 
+  /**
+   * Missão 42-B: grava material + seções + referências numa ÚNICA chamada
+   * RPC (`import_compendium_draft`), atômica no servidor — ao contrário de
+   * `saveCompendium` (várias requisições independentes), aqui ou tudo é
+   * gravado ou nada é. Usada só pelo fluxo de importação assistida
+   * (ImportMaterialModal); `saveCompendium` continua sendo o caminho do
+   * formulário manual de edição/criação, fora do escopo desta correção.
+   */
+  async importCompendiumDraft(compendium: Compendium): Promise<Compendium> {
+    const sectionsPayload = compendium.sections.map((s) => ({
+      id: s.id,
+      title: s.title,
+      mechanism_tag: s.mechanismTag ?? null,
+      content: s.content,
+      key_takeaways: s.keyTakeaways ?? [],
+      clinical_pearl: s.clinicalPearl ?? null,
+      warning_alert: s.warningAlert ?? null,
+    }));
+
+    const { data, error } = await supabase.rpc('import_compendium_draft', {
+      p_id: compendium.id,
+      p_discipline_id: compendium.disciplineId,
+      p_theme_id: compendium.themeId,
+      p_title: compendium.title,
+      p_subtitle: compendium.subtitle || null,
+      p_author: compendium.author || null,
+      p_estimated_read_time_minutes: compendium.estimatedReadTimeMinutes ?? null,
+      p_tags: compendium.tags ?? [],
+      p_sections: sectionsPayload,
+      p_references: compendium.references ?? [],
+    });
+    if (error) throw error;
+    const materialRow = data as MaterialRow;
+    return {
+      ...compendium,
+      lastUpdated: materialRow.updated_at,
+      publicationStatus: (materialRow.status as Compendium['publicationStatus']) ?? 'draft',
+    };
+  }
+
   async saveCompendium(compendium: Compendium): Promise<void> {
     const materialRow = {
       id: compendium.id,

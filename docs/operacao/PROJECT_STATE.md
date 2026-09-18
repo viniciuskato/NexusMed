@@ -178,6 +178,116 @@ Ver `docs/diretoria/registro.md` (retorno 41-B) para o relato completo.
 Branch candidata enviada **apenas** a `origin/work/41b-gate-final-fe20832`
 — `main` e produção permanecem inalterados.
 
+## Missão 42-B (2026-09-17) — Correção da importação atômica
+
+A diretoria revisou a 42-A e exigiu correção antes de qualquer publicação:
+`SupabaseMaterialsRepository.saveCompendium()` grava material, seções e
+referências em requisições HTTP independentes, e o repositório resiliente
+gravava a cópia local antes de confirmar o Supabase — uma falha
+intermediária podia deixar rascunho parcial no banco e divergência local.
+
+- Branch candidata **ainda só local**, mesma branch da 42-A:
+  `work/42a-import-assistido`, agora em `2bcac36` (dois commits acima da
+  42-A: `8f7c4cb` + `80ba996` + `2bcac36`). Não enviada ao remoto, não
+  mesclada em `main`.
+- **Correção real, não superficial**: nova função `public.import_compendium_draft()`
+  (migration `20260917120000_import_compendium_draft.sql`) faz TODA a
+  gravação (material + seções + referências) dentro de uma única chamada
+  PL/pgSQL — em Postgres isso já é atômico por natureza (uma função
+  invocada como instrução única roda dentro de uma transação implícita;
+  qualquer exceção não capturada desfaz tudo). A função exige admin ativo,
+  valida disciplina/tema existentes e coerentes entre si, bloqueia
+  duplicidade de título no servidor (case-insensitive, independente da
+  checagem client-side) e só aceita criação em `draft` (nem recebe
+  parâmetro de status).
+- Cliente: `SupabaseMaterialsRepository.importCompendiumDraft()` chama essa
+  RPC; `ResilientMaterialsRepository.importCompendiumDraft()` só grava a
+  cópia local **depois** do sucesso remoto integral (ao contrário do padrão
+  usado pelos demais métodos deste repositório) — sem Supabase configurado,
+  grava só local, sem fingir sincronização inexistente.
+  `ImportMaterialModal` passou a chamar este método em vez de
+  `saveCompendium` (que continua existindo, intocado, para o formulário
+  manual de edição/criação — fora do escopo desta correção).
+- **Prova de atomicidade (controle negativo)**: teste pgTAP
+  (`supabase/tests/database/import_compendium_draft.test.sql`, 21
+  asserções) provoca deliberadamente uma violação de constraint
+  (`citation_text` nulo numa referência) DEPOIS que material e seção já
+  teriam sido inseridos na mesma chamada — confirmado por consulta SQL
+  direta: 0 materiais, 0 seções, 0 referências remanescentes.
+- Validações executadas: `tsc --noEmit` limpo; `npm run lint` 0 erros/89
+  warnings; `npm run test` (pgTAP) 249/249 (228 pré-existentes + 21 novos);
+  Vitest unit+component 43/43 (3 novos casos de repositório + 1 novo caso
+  de componente para falha remota); `npm run test:e2e` completo 28/28 após
+  `supabase db reset` limpo (as 4 falhas observadas numa execução anterior,
+  sem reset entre duas rodadas seguidas da suíte no mesmo dia, foram
+  isoladas como poluição de dados de execuções repetidas — specs
+  `estudo-tematico-22a`/`concurrencia-13b`, não tocados por esta missão —
+  e desapareceram com o banco local resetado; não é regressão introduzida
+  aqui); `npm run build` e `check:no-debug-bundle` OK; `git diff --check`
+  limpo; varredura de segredos no diff sem ocorrências.
+- **Correção de contagem da 42-A**: o retorno anterior relatou 10 arquivos
+  alterados — a contagem real (incluindo a atualização de documentação
+  operacional feita no fechamento daquela sessão) é **13 arquivos**. Com a
+  42-B, o total acumulado da branch candidata é 18 arquivos.
+- Ambientes tocados: local (código) e Supabase **local** (schema novo via
+  migration + dados de teste criados/removidos pelos próprios testes
+  pgTAP/e2e). Supabase remoto, `main` e produção **não tocados**.
+- Fora de escopo, deliberadamente não implementado nesta correção: criação
+  automática de disciplina/tema, atualização por reimportação, taxonomia
+  nova, questões/flashcards, publicação do material, refatoração geral de
+  `saveCompendium()` (mantido intacto — só o caminho de importação passou a
+  usar a RPC nova).
+
+## Missão 42-A (2026-09-17) — Entrada assistida de materiais ("Importar material")
+
+Fase 3 (Área Editorial operacional sem programação). Objetivo: uma pessoa
+leiga consegue escolher o arquivo de um compêndio (formato de autoria
+`.compendium.yaml`), conferir uma pré-visualização e criar um rascunho no
+CMS só pela interface — sem terminal, UUID ou conhecimento de YAML.
+
+- Branch candidata **só local**: `work/42a-import-assistido`, commit
+  `8f7c4cb`, worktree
+  `C:\Users\vinic\OneDrive\Projetos\SynapseMed\worktrees\42a-import-assistido`
+  (base: `origin/main` = `b56e828`, sem drift confirmado no preflight). Não
+  enviada ao remoto, não mesclada em `main`.
+- Adiciona botão "Importar material" na aba de compêndios do
+  `AdminCMSView`, o componente `ImportMaterialModal` (wizard: escolher
+  arquivo → pré-visualização → confirmar/cancelar → rascunho) e o módulo
+  puro `src/utils/compendiumImport.ts` (parse YAML, validação, resolução de
+  disciplina/tema por nome, detecção de duplicata por título normalizado).
+- Dependência nova: `yaml` (`^2.9.1`), único parser YAML do projeto até
+  aqui.
+- **Caso de prova real** (`meningite-bacteriana.compendium.yaml`, fora do
+  repositório, **não modificado** — hash MD5 conferido antes/depois):
+  confirmado em navegador real (Playwright/Chromium) contra Supabase
+  local — rascunho criado com exatamente 11 seções e 13 referências,
+  `status = 'draft'`, nenhuma publicação/atestação acionada. Disciplina
+  "Infectologia"/tema "Clínica" não existiam no seed mínimo local (só
+  Cardiologia) — criados como fixture do próprio teste e2e, removidos no
+  `afterEach`.
+- Se disciplina/tema do arquivo não existem no catálogo carregado, a
+  pré-visualização exige seleção manual (dropdown, mesmo padrão do form
+  manual existente) antes de liberar "Salvar rascunho" — **decisão
+  deliberada de não criar disciplina/tema novos automaticamente** nesta
+  missão (ver "descobertas separadas" no retorno de diretoria, RETORNO
+  42-A, categoria "opcional").
+- Validações executadas: `tsc --noEmit` limpo; `npm run lint` 0 erros/89
+  warnings (mesma baseline); `npm run test` (pgTAP) 228/228; unit tests
+  (Vitest) 6 novos casos do parser + suíte completa 36/36; component tests
+  4 novos casos do wizard (arquivo válido, arquivo inválido, duplicata
+  bloqueada, cancelar); `npm run test:e2e` completo 28/28 (24 specs
+  pré-existentes + 4 novos casos de import, incluindo o caso de prova real
+  de Meningite); `npm run build` e `check:no-debug-bundle` OK; `git diff
+  --check` limpo; varredura de segredos no diff sem ocorrências (só senha
+  de fixture de teste, mesmo padrão já usado nos specs existentes).
+- **Achado técnico novo registrado em `AGENTS.md`** (risco #10): TypeScript
+  5.8 neste projeto não estreita union discriminada por `!x.ok` quando o
+  tipo vem de outro módulo — contorno é comparar explicitamente
+  (`=== false`/`=== true`).
+- Ambientes tocados: local (código) e Supabase **local** (schema não
+  alterado, só dados de teste criados/removidos pelo próprio teste e2e).
+  Supabase remoto, `main` e produção **não tocados**.
+
 ## Risco crítico — HISTÓRICO, resolvido pela 41-A acima
 
 **Existe um commit em `origin/main`, posterior ao último estado documentado,
