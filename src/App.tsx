@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import {
   ShieldAlert,
 } from 'lucide-react';
@@ -86,18 +86,21 @@ import { PlanModal } from './components/PlanModal';
 
 // Views
 import { DashboardView } from './components/dashboard/DashboardView';
-import { CompendiumView } from './components/compendium/CompendiumView';
-import { CompendiumReader } from './components/compendium/CompendiumReader';
-import { QuestionsView } from './components/questions/QuestionsView';
-import { SimuladoSession } from './components/questions/SimuladoSession';
 import { CreateSimuladoModal } from './components/questions/CreateSimuladoModal';
-import { FlashcardsView } from './components/flashcards/FlashcardsView';
-import { FlashcardReviewSession } from './components/flashcards/FlashcardReviewSession';
 import { CreateFlashcardModal } from './components/flashcards/CreateFlashcardModal';
-import { SimuladosView } from './components/simulados/SimuladosView';
-import { AdminCMSView } from './components/admin/AdminCMSView';
-import { ThematicStudyView } from './components/thematic/ThematicStudyView';
 import { ClinicalPomodoroWidget } from './components/common/ClinicalPomodoroWidget';
+
+// Telas carregadas sob demanda: o bundle inicial leva só o painel. O CMS
+// (com o parser YAML do importador) nunca é baixado por quem não é admin.
+const CompendiumView = lazy(() => import('./components/compendium/CompendiumView').then((m) => ({ default: m.CompendiumView })));
+const CompendiumReader = lazy(() => import('./components/compendium/CompendiumReader').then((m) => ({ default: m.CompendiumReader })));
+const QuestionsView = lazy(() => import('./components/questions/QuestionsView').then((m) => ({ default: m.QuestionsView })));
+const SimuladoSession = lazy(() => import('./components/questions/SimuladoSession').then((m) => ({ default: m.SimuladoSession })));
+const FlashcardsView = lazy(() => import('./components/flashcards/FlashcardsView').then((m) => ({ default: m.FlashcardsView })));
+const FlashcardReviewSession = lazy(() => import('./components/flashcards/FlashcardReviewSession').then((m) => ({ default: m.FlashcardReviewSession })));
+const SimuladosView = lazy(() => import('./components/simulados/SimuladosView').then((m) => ({ default: m.SimuladosView })));
+const AdminCMSView = lazy(() => import('./components/admin/AdminCMSView').then((m) => ({ default: m.AdminCMSView })));
+const ThematicStudyView = lazy(() => import('./components/thematic/ThematicStudyView').then((m) => ({ default: m.ThematicStudyView })));
 
 // Views que podem ser restauradas depois de um reload (Prompt 22-A). É uma
 // lista de PERMISSÃO: qualquer outro valor salvo (inclusive um valor futuro
@@ -116,6 +119,10 @@ const PERSISTED_VIEWS = [
   'errors',
   'admin',
 ] as const;
+
+function viewFromHash(): string {
+  return window.location.hash.replace(/^#\/?/, '');
+}
 
 function AuthenticatedApp() {
   const { user, profile, loading, isEmailVerified } = useAuth();
@@ -279,7 +286,11 @@ function AuthenticatedApp() {
   useEffect(() => {
     if (!user?.id || dataLoading || navStateRestored) return;
 
-    const savedView = StorageService.getUIState<string>('nav_active_view', 'dashboard');
+    // Link direto (#/questoes etc.) tem prioridade sobre a tela salva.
+    const hashView = viewFromHash();
+    const savedView = (PERSISTED_VIEWS as readonly string[]).includes(hashView)
+      ? hashView
+      : StorageService.getUIState<string>('nav_active_view', 'dashboard');
     const isAllowedView = (PERSISTED_VIEWS as readonly string[]).includes(savedView);
     const canUseAdmin = profile?.role === 'admin' && profile?.status === 'active';
     const restoredView = isAllowedView && (savedView !== 'admin' || canUseAdmin) ? savedView : 'dashboard';
@@ -308,6 +319,40 @@ function AuthenticatedApp() {
       (PERSISTED_VIEWS as readonly string[]).includes(activeView) ? activeView : 'dashboard'
     );
   }, [activeView, navStateRestored]);
+
+  // Histórico do navegador: cada troca de tela vira uma entrada (#/tela), para
+  // o "voltar" do navegador/celular navegar dentro do app em vez de sair dele.
+  // Ao sair de uma sessão efêmera (simulado, revisão, leitor), a entrada dela
+  // é substituída — "voltar" nunca reabre uma sessão cujo estado já acabou.
+  const previousViewRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!navStateRestored) return;
+    const target = `#/${activeView}`;
+    const previous = previousViewRef.current;
+    previousViewRef.current = activeView;
+    if (window.location.hash === target) return;
+    const leavingEphemeral = previous !== null && !(PERSISTED_VIEWS as readonly string[]).includes(previous);
+    if (previous === null || leavingEphemeral) {
+      window.history.replaceState(null, '', target);
+    } else {
+      window.history.pushState(null, '', target);
+    }
+  }, [activeView, navStateRestored]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const view = viewFromHash();
+      if ((PERSISTED_VIEWS as readonly string[]).includes(view)) {
+        setActiveView(view);
+      } else {
+        // Entrada de sessão efêmera (via "avançar"): o estado dela não existe
+        // mais — permanece na tela atual.
+        window.history.replaceState(null, '', `#/${previousViewRef.current ?? 'dashboard'}`);
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   useEffect(() => {
     if (!navStateRestored) return;
@@ -598,6 +643,13 @@ function AuthenticatedApp() {
         >
 
           {/* View Router */}
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center py-24 text-sm text-slate-500 dark:text-slate-400" role="status">
+                Carregando…
+              </div>
+            }
+          >
           {activeView === 'dashboard' && (
             <DashboardView
               disciplines={disciplines}
@@ -812,6 +864,7 @@ function AuthenticatedApp() {
               </div>
             )
           )}
+          </Suspense>
         </main>
       </div>
 

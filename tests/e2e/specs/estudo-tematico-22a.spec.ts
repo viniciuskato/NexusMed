@@ -208,7 +208,9 @@ test.describe('Estudo Temático (22-A)', () => {
       ([key]) => window.localStorage.setItem(key, JSON.stringify('view-que-nao-existe')),
       [uiStateKey(user.id, 'nav_active_view')]
     );
-    await page.reload();
+    // Abre sem hash: com #/tela na URL, o link tem prioridade sobre o valor
+    // salvo — aqui o que se testa é o fallback do valor salvo.
+    await page.goto('/');
     await expect(page.locator('#thematic-study-view')).toHaveCount(0, { timeout: 20_000 });
     await expect(page.locator('#nav-dashboard')).toHaveAttribute('aria-current', 'page');
   });
