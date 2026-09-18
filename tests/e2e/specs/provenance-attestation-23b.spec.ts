@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { createTestUser, deleteTestUser, psqlLocal, getSeedIds, type CreatedTestUser } from '../fixtures/localSupabase';
+import { createTestUser, deleteTestUser, psqlLocal, getSeedIds, runCleanup, type CreatedTestUser } from '../fixtures/localSupabase';
 
 // Prompt 23-B — proveniência e atestação editorial.
 //
@@ -53,12 +53,12 @@ test.describe('Proveniência e atestação editorial (23-B)', () => {
   // Ordem inversa (LIFO): o material precisa sair antes do admin — as
   // revisões/atestações dele referenciam auth.users sem cascade, e apagar o
   // usuário primeiro falhava em silêncio, deixando o e2e-13a-prov-admin-*
-  // para trás (TASK-2026-09-17-05).
+  // para trás (TASK-2026-09-17-05). O RESTRICT é intencional (DECISIONS.md
+  // 2026-09-18); `runCleanup` garante que uma ordem errada reprove o teste.
   test.afterEach(async () => {
-    for (const fn of cleanup.reverse()) {
-      await Promise.resolve(fn()).catch(() => undefined);
-    }
+    const fns = cleanup.reverse();
     cleanup = [];
+    await runCleanup(fns);
   });
 
   test('material sem revisão aprovada não publica; fluxo completo de revisão/atestação libera a publicação', async ({

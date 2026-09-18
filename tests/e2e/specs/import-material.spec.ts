@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
-import { createTestUser, deleteTestUser, psqlLocal, type CreatedTestUser } from '../fixtures/localSupabase';
+import { createTestUser, deleteTestUser, psqlLocal, runCleanup, type CreatedTestUser } from '../fixtures/localSupabase';
 
 // Missão 42-A/42-B — Entrada assistida de materiais.
 //
@@ -80,10 +80,9 @@ test.describe('Importar material (42-A)', () => {
   let cleanup: (() => Promise<void> | void)[] = [];
 
   test.afterEach(async () => {
-    for (const fn of cleanup) {
-      await Promise.resolve(fn()).catch(() => undefined);
-    }
+    const fns = cleanup;
     cleanup = [];
+    await runCleanup(fns);
   });
 
   test('arquivo válido (Meningite Bacteriana Aguda): pré-visualização, confirmação e rascunho com 11 seções e 13 referências', async ({
