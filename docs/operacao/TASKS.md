@@ -26,7 +26,7 @@
 | TASK-2026-09-17-07 — Tornar `canonical` realmente canônica (main, limpa, sem worktree aninhado) | P1 | **concluído nesta entrega** — ver nota abaixo | Nenhuma | Nenhum — só limpeza local de worktrees transitórios, sem tocar main/produção/Supabase remoto | Nenhuma para `41b`/branches locais; TASK-2026-09-17-06 segue como único item aberto |
 | Missão 42-A — Entrada assistida de materiais ("Importar material" no CMS) | P1 | **superada pela 42-B/42-C** — ver nota abaixo | Nenhuma | Ver 42-C | Nenhuma isolada |
 | Missão 42-B — Corrigir gravação da importação para atômica (RPC `import_compendium_draft`) | P1 | **superada pela 42-C** — ver nota abaixo | Nenhuma | Ver 42-C | Nenhuma isolada |
-| Missão 42-C — Publicação controlada da importação assistida (merge + migration remota + deploy) | P1 | **em execução — merge local e migration remota concluídos; push de `main` pendente de confirmação interativa** | Nenhuma | `main` local em `4850429` (merge), à frente de `origin/main`; migration `20260917120000` já aplicada e verificada no Supabase remoto; push ainda não executado | Confirmação interativa do usuário para `git push origin main`, depois smoke de produção |
+| Missão 42-C — Publicação controlada da importação assistida (merge + migration remota + deploy) | P1 | **concluído e publicado** | Nenhuma | `main`/`origin/main` = `62091da`, deploy confirmado em produção (bundle com o novo código, sem debug), migration remota aplicada e verificada | Smoke autenticado (Área Editorial/botão "Importar material" em produção) fica pendente para quando houver sessão de admin disponível — não bloqueia a entrega |
 
 **Nota sobre a limpeza de worktrees da TASK-07 (2026-09-17, execução real)**:
 

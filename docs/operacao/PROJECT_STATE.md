@@ -226,9 +226,36 @@ material" na Área Editorial, com gravação atômica via RPC
   `GRANT ... TO authenticated` — `anon` nunca teve grant próprio, logo sem
   acesso. Nenhuma linha de material foi criada: garantido estruturalmente,
   a migration aplicada não contém nenhum `INSERT`/`UPDATE`/`DELETE`.
-- **Restante desta seção** (push de `main`, deploy, smoke de produção):
-  ver a próxima atualização desta mesma entrega logo abaixo, feita depois
-  da confirmação interativa para o push final.
+- **Push de `main`**: confirmado interativamente pelo usuário. Executado
+  `git push origin main` — `b56e828..62091da main -> main`. `origin/main`
+  passou a apontar para `62091da` (commit documental de fechamento da
+  42-C, sobre o merge `4850429`).
+- **Deploy confirmado**: bundle de produção
+  (`https://synapse-med-firebase-auth.vercel.app/assets/index-ksOjcgwi.js`,
+  1.228.604 bytes, HTTP 200) contém as strings `"Importar material"` (2
+  ocorrências) e `"import_compendium_draft"` (1 ocorrência) — confirma que
+  o deploy corresponde ao novo `main`, não a uma versão anterior em cache.
+  Zero ocorrências de `__syncDebug`/`__setTestBackoffOverride` no bundle
+  publicado.
+- **Smoke de produção (não destrutivo)**: Chromium headless via Playwright
+  contra a URL de produção real — título "NexusMed", tela de login
+  carrega com `#auth-email-input`/`#auth-password-input` presentes, **zero
+  erros de console**. Nenhum arquivo foi selecionado, nenhum material foi
+  importado, nenhuma conta foi criada em produção.
+- **Smoke autenticado NÃO executado**: esta sessão não tinha (nem tentou
+  obter ou inventar) credenciais de administrador de produção. Portanto
+  não foi verificado visualmente nesta entrega: acesso à Área Editorial em
+  produção, presença do botão "Importar material" na UI real, abertura/
+  fechamento do modal, ou o aviso de "só cria rascunho" em produção — isso
+  fica como verificação pendente para quando houver sessão administrativa
+  disponível (não é um "não verificado" motivo de suspeita; é uma
+  restrição explícita desta missão, que proibia criar usuário remoto sem
+  autorização específica).
+- **Confirmação de que nenhum conteúdo foi importado**: nenhum arquivo
+  (Meningite, PCSK9 ou qualquer outro) foi selecionado ou submetido contra
+  o Supabase remoto em nenhum momento desta entrega; nenhuma disciplina,
+  tema, material, revisão ou atestação foi criada no remoto. A única
+  escrita remota desta entrega foi a migration (função + grants).
 
 ## Missão 42-B (2026-09-17) — Correção da importação atômica
 

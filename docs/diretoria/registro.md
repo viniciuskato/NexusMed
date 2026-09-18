@@ -1,11 +1,9 @@
 # Registro de decisões e acompanhamento da diretoria — NexusMed
 
-## RETORNO: 42-C — Publicação controlada da importação assistida (em andamento)
+## RETORNO: 42-C — Publicação controlada da importação assistida
 
-**Resultado**: em execução — merge local e migration remota concluídos e
-verificados; push de `main` pendente de confirmação interativa do usuário
-(próximo passo desta mesma sessão). Este registro será complementado após
-o push/deploy/smoke.
+**Resultado**: concluído. Código, migration remota e deploy coerentes e
+verificados.
 
 **Preflight**: `origin/main = b56e828dbcf4615f21e142321a2777f12f5c6ce0`
 (sem drift), candidata `work/42a-import-assistido =
@@ -42,8 +40,32 @@ função exatamente como definida, `authenticated` com `GRANT EXECUTE`,
 `PUBLIC`/`anon` sem acesso. Nenhuma linha de material criada — garantido
 estruturalmente (migration sem nenhum DML).
 
-**Pendente**: push de `main`, confirmação de deploy, smoke de produção —
-ver atualização seguinte deste mesmo retorno.
+**Push e deploy**: confirmado interativamente pelo usuário. `git push
+origin main` → `b56e828..62091da main -> main`. Deploy verificado por
+download direto do bundle publicado
+(`assets/index-ksOjcgwi.js`, HTTP 200, 1.228.604 bytes): contém
+`"Importar material"` (2×) e `"import_compendium_draft"` (1×) — confirma
+que o deploy corresponde ao novo `main`; zero ocorrências de
+`__syncDebug`/`__setTestBackoffOverride`.
+
+**Smoke de produção**: não destrutivo, via Chromium headless (Playwright)
+contra a URL real. Tela de login carrega (título "NexusMed",
+`#auth-email-input`/`#auth-password-input` presentes), zero erros de
+console. **Smoke autenticado NÃO executado** — esta sessão não tinha nem
+tentou obter/inventar credenciais de admin de produção; verificação
+visual do botão "Importar material"/modal em produção fica pendente para
+sessão futura com admin disponível (restrição explícita do prompt, não
+falha).
+
+**Confirmação de que nenhum conteúdo foi importado**: nenhum arquivo
+(Meningite, PCSK9 ou outro) foi selecionado/submetido contra o remoto;
+nenhuma disciplina, tema, material, revisão ou atestação criada no
+remoto. Única escrita remota: a migration (função + grants).
+
+**Estado final**: `main` local = `origin/main` = `62091da`. Branch
+candidata `work/42a-import-assistido` enviada ao remoto e já mesclada —
+pode ser removida em entrega futura (local e remota), decisão da
+diretoria.
 
 ---
 
