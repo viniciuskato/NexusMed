@@ -43,7 +43,7 @@ test.describe('Fila offline / reconexão / idempotência', () => {
   });
 
   test.afterEach(async () => {
-    await deleteTestUser(user.id).catch(() => undefined);
+    await deleteTestUser(user.id);
   });
 
   test('resposta enviada offline fica pendente sem travar a UI, e sincroniza sozinha ao reconectar (exatamente 1 tentativa)', async ({ page }) => {

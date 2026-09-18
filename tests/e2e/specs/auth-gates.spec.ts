@@ -4,6 +4,7 @@ import {
   deleteTestUser,
   forceInvalidProfileStatus,
   restoreProfileStatusConstraint,
+  runCleanup,
   type CreatedTestUser,
 } from '../fixtures/localSupabase';
 
@@ -30,10 +31,9 @@ test.describe('Gates de acesso (profiles.status / role)', () => {
     // própria restauração falha (linha existente viola o constraint mais
     // restrito). Bug real encontrado ao rodar esta suíte pela primeira vez
     // (psql devolvia "check constraint ... is violated by some row").
-    for (const fn of cleanup) {
-      await fn().catch(() => undefined);
-    }
+    const fns = cleanup;
     cleanup = [];
+    await runCleanup(fns);
   });
 
   test('status active: acessa a aplicação normal', async ({ page }) => {
