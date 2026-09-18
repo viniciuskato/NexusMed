@@ -6,6 +6,23 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-18 — Mudança entra em `main` só por Pull Request com CI verde
+
+Auditoria de 2026-09-18: o CI do `main` estava vermelho havia vários
+commits (specs de importação dependendo de um arquivo do acervo pessoal)
+e ninguém notou, porque o push direto em `main` já publicava em produção
+antes de o CI terminar. Pelo mesmo caminho entrou o `fe20832` sem revisão.
+
+**Como aplicar**: branch → PR (template em `.github/pull_request_template.md`)
+→ CI `fast` e `full` verdes → preview da Vercel conferido quando muda tela →
+migration aplicada no remoto antes do merge quando o frontend depende dela
+→ merge pelo GitHub. Push direto em `main` não é mais aceito, nem para
+"só documentação". Para garantir isso no GitHub (pendente: exige conta
+admin do repositório), em *Settings → Branches → Add rule* para `main`:
+"Require a pull request before merging" e "Require status checks to pass"
+com os checks `fast (typecheck + lint + unit + build)` e
+`full (pgTAP + Playwright contra Supabase local)`.
+
 ## 2026-09-18 — Tags de material nunca levam rótulo de coleção/curso externo; a plataforma tem que se entender sozinha
 
 Na pré-visualização da importação real de `acidobase.compendium.yaml`, o

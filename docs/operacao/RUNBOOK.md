@@ -51,18 +51,29 @@ git rev-parse origin/main
 **Exige autorização explícita e específica do usuário/diretoria para ESTA
 mudança** — uma autorização anterior não cobre outra.
 
-1. Revisar o diff completo uma última vez linha a linha.
-2. Merge com commit explícito (`--no-ff`, convenção deste repositório —
-   sem PR obrigatório, sem fast-forward silencioso).
-3. `npm run verify` (ou os testes aplicáveis) repetido em `main`
-   pós-merge.
-4. Push de `main` — **isso aciona deploy automático no Vercel**. Não há
-   passo de confirmação adicional do lado do Vercel.
-5. Se a mudança inclui migration nova: aplicar no Supabase remoto faz
+Desde 2026-09-18, **toda mudança entra em `main` por Pull Request** — nunca
+por push direto. O PR dá três coisas que o push direto não dá: o CI roda
+antes (e não depois) de a mudança estar em produção, a Vercel publica um
+*preview* do branch para conferir no navegador, e fica o registro da
+revisão.
+
+1. `git push -u origin <branch>` e abrir o PR (`gh pr create`), usando o
+   template (`.github/pull_request_template.md`): o que muda, como foi
+   validado, se há migration e a ordem de publicação.
+2. Esperar o CI (`fast` e `full`) **verde**. CI vermelho não se mescla —
+   nem "porque a falha já existia": conserte a falha antes ou em PR
+   separado.
+3. Conferir o *preview* da Vercel (link no próprio PR) quando a mudança
+   afeta tela/fluxo de usuário.
+4. Se a mudança inclui migration nova: aplicar no Supabase remoto faz
    parte do merge, não é um passo opcional posterior
-   (`supabase db push --linked --yes`, rodado pelo usuário). Conferir
+   (`supabase db push --linked --yes`, rodado pelo usuário). **Se o
+   frontend novo depende da migration (RPC nova, coluna nova), aplicar a
+   migration ANTES do merge** — o deploy da Vercel é imediato. Conferir
    depois com uma query direta contra o schema remoto — não confiar só na
    mensagem de sucesso do CLI.
+5. Merge do PR (botão do GitHub) — **isso aciona deploy automático no
+   Vercel**. Não há passo de confirmação adicional do lado do Vercel.
 6. Confirmar o deploy: comparar hash/tamanho de bundle publicado com o
    build local, checar ausência de instrumentação de teste
    (`__syncDebug`, `__setTestBackoffOverride`) no bundle de produção.
