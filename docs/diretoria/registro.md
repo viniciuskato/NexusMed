@@ -1,5 +1,52 @@
 # Registro de decisões e acompanhamento da diretoria — NexusMed
 
+## RETORNO: 42-C — Publicação controlada da importação assistida (em andamento)
+
+**Resultado**: em execução — merge local e migration remota concluídos e
+verificados; push de `main` pendente de confirmação interativa do usuário
+(próximo passo desta mesma sessão). Este registro será complementado após
+o push/deploy/smoke.
+
+**Preflight**: `origin/main = b56e828dbcf4615f21e142321a2777f12f5c6ce0`
+(sem drift), candidata `work/42a-import-assistido =
+364678cce442dd09068e8f60166e8f1d86a69d44`, merge-base = `b56e828` (candidata
+é descendente limpa). Árvore `canonical` limpa antes de agir.
+
+**Auditoria**: diff `origin/main...work/42a-import-assistido` = 19 arquivos
+exatos. Migration nova contém só `CREATE OR REPLACE FUNCTION
+public.import_compendium_draft` + `REVOKE`/`GRANT` — sem DML, sem carga de
+conteúdo, sem alteração de taxonomia. Sem segredos. `git diff --check`
+limpo.
+
+**Branch remota**: `work/42a-import-assistido` enviada a
+`origin/work/42a-import-assistido` (push confirmado pelo Git).
+
+**Merge**: `git merge --no-ff work/42a-import-assistido` em `main` local,
+commit `4850429`.
+
+**Gates pós-merge**: `npm ci` reproduzível; typecheck limpo; lint 0
+erros/89 warnings; Vitest 40/40; `supabase db reset` limpo + pgTAP
+249/249; `npm run test:e2e` completo 28/28 pós-reset (uma primeira
+tentativa falhou sistemicamente por `.env.test.local` ausente neste
+checkout — achado da própria sessão, corrigido, não regressão de código);
+build e `check:no-debug-bundle` OK; `git diff --check` limpo; segredos sem
+ocorrências; fixtures locais limpas (exceto 1 usuário residual
+pré-existente do spec 23-B, já rastreado em `TASK-2026-09-17-05`).
+
+**Migration remota**: confirmado por `supabase migration list` que a
+única migration pendente local×remoto era `20260917120000_import_compendium_draft.sql`.
+Aplicada via `supabase db push --linked` após confirmação interativa do
+usuário. Verificada pós-push: `supabase migration list` local=remoto em
+todas as entradas; `supabase db dump --linked` (schema-only) confirma a
+função exatamente como definida, `authenticated` com `GRANT EXECUTE`,
+`PUBLIC`/`anon` sem acesso. Nenhuma linha de material criada — garantido
+estruturalmente (migration sem nenhum DML).
+
+**Pendente**: push de `main`, confirmação de deploy, smoke de produção —
+ver atualização seguinte deste mesmo retorno.
+
+---
+
 ## RETORNO: 41-C — Integração e publicação da governança 40-A e correções fe20832 (2026-09-17, sessão executiva)
 
 **Resultado**: concluído.

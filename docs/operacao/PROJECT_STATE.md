@@ -178,6 +178,58 @@ Ver `docs/diretoria/registro.md` (retorno 41-B) para o relato completo.
 Branch candidata enviada **apenas** a `origin/work/41b-gate-final-fe20832`
 — `main` e produção permanecem inalterados.
 
+## Missão 42-C (2026-09-17/18) — Publicação controlada da importação assistida
+
+Publica a candidata 42-A+42-B (aprovada pela diretoria) — "Importar
+material" na Área Editorial, com gravação atômica via RPC
+`import_compendium_draft`.
+
+- **Preflight**: `origin/main` confirmado em `b56e828` (sem drift),
+  candidata `work/42a-import-assistido` em `364678c`, merge-base = `b56e828`
+  (candidata é descendente limpa, sem divergência).
+- **Auditoria do diff** `origin/main...work/42a-import-assistido`: **19
+  arquivos exatos**, confirmado por `git diff --stat` — valor autoritativo
+  desta entrega (a 42-A isolada tinha 13 arquivos, não 10 como relatado
+  originalmente; a 42-B acrescentou 8, cumulativo 18; o fechamento
+  documental da própria 42-B fecha em 19). Migration nova contém só
+  `CREATE OR REPLACE FUNCTION
+  public.import_compendium_draft` + `REVOKE`/`GRANT` — nenhum DML, nenhuma
+  carga de conteúdo, nenhuma alteração de taxonomia. Sem segredos no diff.
+  `git diff --check` limpo.
+- **Branch remota**: `work/42a-import-assistido` enviada a
+  `origin/work/42a-import-assistido` (push confirmado pelo próprio Git:
+  `* [new branch]`). Não é publicação em produção.
+- **Merge**: `git merge --no-ff work/42a-import-assistido` em `main` local,
+  commit `4850429` (main local ficou 5 commits à frente de `origin/main`
+  antes do push final).
+- **Gates pós-merge, todos verdes**: `npm ci` reproduzível; `tsc --noEmit`
+  limpo; `npm run lint` 0 erros/89 warnings; Vitest 40/40; `supabase db
+  reset` limpo + pgTAP 249/249; `npm run test:e2e` completo **28/28** após
+  reset limpo (uma primeira tentativa falhou sistemicamente por
+  `.env.test.local` ausente neste checkout — achado da própria sessão,
+  corrigido recriando o arquivo git-ignorado, não uma regressão de
+  código); `npm run build` e `check:no-debug-bundle` OK; `git diff --check`
+  limpo; segredos sem ocorrências.
+- **Limpeza de fixtures locais**: confirmada (0 materiais/disciplinas de
+  teste remanescentes) — exceto 1 usuário `e2e-13a-prov-admin-...`
+  residual do spec de proveniência 23-B, achado **pré-existente e já
+  registrado** (ver `TASK-2026-09-17-05`), não introduzido por esta
+  publicação.
+- **Migration remota**: `supabase migration list` confirmou, antes de
+  qualquer escrita, que a ÚNICA migration pendente local×remoto era
+  `20260917120000_import_compendium_draft.sql` — nenhuma outra divergente.
+  Aplicada via `supabase db push --linked` (procedimento canônico) somente
+  após confirmação interativa do usuário. Verificado por
+  `supabase migration list` pós-push (local=remoto em todas as entradas) e
+  por `supabase db dump --linked` (schema-only): a função existe
+  exatamente como definida, `REVOKE ALL ... FROM PUBLIC` +
+  `GRANT ... TO authenticated` — `anon` nunca teve grant próprio, logo sem
+  acesso. Nenhuma linha de material foi criada: garantido estruturalmente,
+  a migration aplicada não contém nenhum `INSERT`/`UPDATE`/`DELETE`.
+- **Restante desta seção** (push de `main`, deploy, smoke de produção):
+  ver a próxima atualização desta mesma entrega logo abaixo, feita depois
+  da confirmação interativa para o push final.
+
 ## Missão 42-B (2026-09-17) — Correção da importação atômica
 
 A diretoria revisou a 42-A e exigiu correção antes de qualquer publicação:
