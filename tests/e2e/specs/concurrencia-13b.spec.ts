@@ -365,7 +365,7 @@ test.describe('Simulado — rascunho local e finalização idempotente', () => {
 
     await page.waitForTimeout(500);
     expect(capturedSimulationId).not.toBeNull();
-    const simId = capturedSimulationId as string;
+    const simId = capturedSimulationId as unknown as string;
     expect(countSimulationRows(simId).simulations).toBe(0); // bloqueado — nada chegou ao servidor ainda
 
     blocking = false;
