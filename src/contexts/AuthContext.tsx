@@ -488,6 +488,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Erro ao encerrar sessão:', err);
       setLoginError(getSupabaseAuthErrorMessage(err));
     }
+    StorageService.clearLocalDataOnLogout(StorageService.getActiveUser());
     StorageService.setActiveUser(null);
     setUser(null);
     setProfile(null);
