@@ -14,6 +14,7 @@ import {
   UserFeedback,
   LastReadingSession,
 } from '../types';
+import { getOps } from './syncQueue';
 import {
   INITIAL_DISCIPLINES,
   INITIAL_THEMES,
@@ -96,6 +97,43 @@ export const StorageService = {
   },
   getActiveUser(): string | null {
     return getStorageUser();
+  },
+
+  /**
+   * Chamado no logout. Remove os caches globais de conteúdo (podem conter
+   * gabarito/rascunho gravados por uma sessão de admin) e a cópia local dos
+   * dados pessoais que o Supabase já guarda — para que a próxima pessoa no
+   * mesmo navegador não os veja pelo devtools. Nunca remove o que só existe
+   * localmente (destaques, última leitura, plano, tema). Se a fila de
+   * sincronização ainda tiver operações pendentes, nada pessoal é removido:
+   * apagar agora perderia progresso não enviado.
+   * Retorna true se os dados pessoais foram removidos.
+   */
+  clearLocalDataOnLogout(uid: string | null): boolean {
+    for (const key of [STORAGE_KEYS.DISCIPLINES, STORAGE_KEYS.THEMES, STORAGE_KEYS.COMPENDIUMS, STORAGE_KEYS.QUESTIONS]) {
+      localStorage.removeItem(key);
+    }
+    if (!uid) return true;
+    if (getOps(uid).length > 0) {
+      console.warn('[storage] logout com operações de sincronização pendentes — dados locais do usuário mantidos.');
+      return false;
+    }
+    const serverBacked = [
+      STORAGE_KEYS.FLASHCARDS,
+      STORAGE_KEYS.ANSWERS,
+      STORAGE_KEYS.ERROR_LOG,
+      STORAGE_KEYS.READING_PROGRESS,
+      STORAGE_KEYS.BOOKMARKS,
+      STORAGE_KEYS.NOTES,
+      STORAGE_KEYS.NOTES_BASE_VERSION,
+      STORAGE_KEYS.FEEDBACK,
+      STORAGE_KEYS.QUESTION_REACTIONS,
+      STORAGE_KEYS.SIMULADOS,
+    ];
+    for (const baseKey of serverBacked) {
+      localStorage.removeItem(`synapse_${uid}_${baseKey.replace(/^synapse_/, '')}`);
+    }
+    return true;
   },
 
   // --- Content Loaders (Globais / Compartilhados) ---
