@@ -1,0 +1,82 @@
+Você é uma sessão EXECUTORA (não decisória) trabalhando dentro de uma worktree git já criada e correta. Sua tarefa é executar literalmente a missão abaixo, sem expandir escopo, sem tomar decisões editoriais/arquiteturais não autorizadas, e reportar evidências objetivas ao final (comandos, resultados, códigos de saída).
+
+CONTEXTO JÁ CONFIRMADO (preflight feito pela sessão anterior, não repita):
+- Repositório: C:\Users\vinic\OneDrive\Projetos\SynapseMed\canonical
+- Worktree de destino já criada: C:\Users\vinic\OneDrive\Projetos\SynapseMed\canonical\.claude\worktrees\as1-b3-2-correcao-visual
+- Branch já criada: work/as1-b3-2-correcao-visual-importador-acidobasico, checked out nessa worktree, HEAD = e6320f229d6938e9caf2dfa347e129fec170b15e (igual ao commit-base exigido)
+- Árvore estava limpa na origem
+- Confirmado existirem: docs/editorial/as1/ACIDOBASE-AUDITORIA-DA-CONVERSAO-2026-09-18.md, docs/editorial/as1/acidobase.compendium.yaml, docs/editorial/as1/evidencias/ACIDOBASE-PREVIEW-AS1-B3-1.png (1400x2324), src/components/navigation/MobileBottomNav.tsx, src/components/admin/ImportMaterialModal.tsx
+
+TRABALHE SOMENTE dentro de: C:\Users\vinic\OneDrive\Projetos\SynapseMed\canonical\.claude\worktrees\as1-b3-2-correcao-visual
+
+=== MISSÃO COMPLETA (siga literalmente) ===
+
+PROPÓSITO: Corrigir duas falhas encontradas pela verificação independente da diretoria:
+1. Uma afirmação antiga sobre o SODa-BIC permaneceu na matriz do relatório.
+2. A barra flutuante de navegação encobre parte do quadro de pendências durante a pré-visualização do importador.
+
+NÃO importar, atestar ou publicar o material. NÃO fazer fetch/pull/prune/limpeza de worktrees. NÃO usar taskkill/Stop-Process globais por nome — se você iniciar um servidor node, registre o PID exato e mate somente esse PID e seus filhos comprovados ao final. NÃO fazer push, merge, alterar main, tocar Vercel/produção/Supabase remoto.
+
+ESCOPO 1 — Corrigir matriz científica residual
+Arquivo: docs/editorial/as1/ACIDOBASE-AUDITORIA-DA-CONVERSAO-2026-09-18.md
+Na linha da matriz referente ao SODa-BIC, substitua a alegação antiga ("quase todos os números conferem", divergência entre 1,2 e 0,7, "achado a esclarecer") por:
+- números integralmente confirmados
+- diferença ajustada de 1,2 ponto percentual
+- IC95% −7,1 a 9,4
+- p=0,78
+- nenhuma divergência remanescente
+- fonte terciária com 0,7 estava incorreta
+Depois, busque no relatório inteiro por: "0,7", "−7,3 a 8,6", "divergência não resolvida", "quase todos os números", "achado a esclarecer". Essas expressões só podem permanecer em passagens históricas EXPLICITAMENTE marcadas como erro já retificado — nenhuma pode ficar como pendência atual. NÃO altere o YAML do SODa-BIC.
+
+ESCOPO 2 — Corrigir descrição do QA anterior
+No mesmo relatório, substitua "sem texto cortado ou sobreposto" / "validação visual concluída com sucesso, sem bloqueio" / "gate fechado" por um registro factual de que a verificação independente da diretoria encontrou sobreposição e abriu a missão AS1-B3.2. Depois de rodar o novo QA (abaixo), atualize essas passagens de novo com o resultado real. NÃO apague o histórico: registre a sequência B3.1 → verificação da diretoria → B3.2.
+
+ESCOPO 3 — Diagnosticar e corrigir o defeito visual
+Fato já verificado pela diretoria: na imagem docs/editorial/as1/evidencias/ACIDOBASE-PREVIEW-AS1-B3-1.png, a barra flutuante inferior ("Início / Temático / Recursos / CMS") sobrepõe a região inferior do quadro amarelo "Campos ausentes ou que não puderam ser importados", encobrindo parcialmente sua segunda linha. O widget "Plantão de foco" também invade discretamente a borda esquerda do painel (não bloqueante).
+Componentes candidatos: src/components/navigation/MobileBottomNav.tsx, src/components/admin/ImportMaterialModal.tsx, e a montagem em src/App.tsx ou AdminCMSView.tsx (procure-os).
+Resultado obrigatório: quando "Importar material" estiver aberto, NENHUM controle flutuante (barra inferior, menu de recursos, pílula de retomada, widget Plantão de foco, etc.) pode encobrir conteúdo/campos/avisos/botões do importador. Preserve a navegação normal fora do fluxo de importação.
+Aplique a MENOR correção robusta: elevar corretamente a camada do importador (z-index) sobre os controles flutuantes, OU ocultar temporariamente os controles flutuantes enquanto o importador estiver aberto, OU espaçamento seguro específico. NÃO faça redesign global, não altere cores/tipografia/navegação fora do necessário. Se a correção exigir refatoração arquitetural ampla, PARE e reporte antes de implementar (não implemente).
+
+ESCOPO 4 — Teste de regressão
+Adicione teste automatizado (amplie teste de componente ou E2E existente da importação, não enfraqueça asserções existentes) demonstrando que: (1) a pré-visualização do importador abre; (2) o quadro de campos ausentes permanece visível; (3) nenhum dock/widget encobre o quadro, seletores ou botões; (4) "Salvar rascunho" permanece desabilitado enquanto a taxonomia está ausente; (5) a navegação flutuante continua disponível normalmente depois que o importador é fechado. Inclua controle negativo se tecnicamente viável (demonstrar que a asserção detectaria o estado anterior/bug).
+
+ESCOPO 5 — Repetir QA visual
+Use Supabase local, servidor local, Chromium real via Playwright, o mesmo YAML corrigido (docs/editorial/as1/acidobase.compendium.yaml). NÃO clique em "Salvar rascunho". Teste em pelo menos duas viewports: desktop 1400×1000 e mobile 390×844. Em cada viewport confira: título/subtítulo, 17 seções, 14 referências, 7 tags, banner de rascunho, seletores de disciplina/tema, duas pendências taxonômicas, botão salvar desabilitado, ausência de cortes, ausência de sobreposição, rolagem completa do conteúdo, console sem erros, nenhuma requisição de rede falha. Use bounding boxes / elementFromPoint (ou equivalente) para comprovar tecnicamente ausência de sobreposição — não dependa só de inspeção visual.
+
+EVIDÊNCIAS
+Substitua docs/editorial/as1/evidencias/ACIDOBASE-PREVIEW-AS1-B3-1.png por uma captura corrigida (desktop). Adicione docs/editorial/as1/evidencias/ACIDOBASE-PREVIEW-AS1-B3-2-MOBILE.png. Inspecione ambas antes do commit para garantir que não contêm credenciais, e-mail de teste, tokens, senhas ou dados remotos.
+
+ESCOPO 6 — Processos e fixtures
+Registre o PID exato de qualquer servidor node iniciado por você; ao final, mate apenas esse PID e filhos comprovados (nunca taskkill/Stop-Process por nome). Pode criar usuário/admin só no Supabase LOCAL se necessário. Ao terminar: remova todas as fixtures criadas pela missão, comprove a remoção, remova arquivos temporários, confirme porta 3000 livre, confirme ausência dos processos que você criou, preserve apenas os artefatos rastreados autorizados (código, docs, evidências).
+
+DOCUMENTAÇÃO
+Atualize: docs/editorial/as1/ACIDOBASE-AUDITORIA-DA-CONVERSAO-2026-09-18.md; docs/operacao/TASKS.md (procure o arquivo, atualize a entrada relevante desta missão).
+Crie: docs/diretoria/prompts/AS1-B3.2.txt (cole o texto integral desta missão recebida, para rastreabilidade) e a evidência mobile especificada.
+NÃO altere o YAML, salvo se o parser revelar corrupção — nesse caso, PARE e reporte sem alterar.
+
+VALIDAÇÕES (rode todas, registre comando + resultado + exit code)
+- Parser real do YAML (script de validação do projeto, se existir; senão parseie com biblioteca YAML e confirme sem erro)
+- typecheck (tsc / next build --check, o que o projeto usar)
+- lint
+- testes unitários/componentes relacionados
+- teste E2E focado da importação
+- build
+- gate "sem código de debug" (procure script do projeto para isso; se não existir, grep por console.log/debugger introduzidos por você)
+- git diff --check (whitespace errors)
+- validação de links markdown alterados
+- varredura de segredos (grep por padrões de chave/token/senha nos arquivos alterados, especialmente nas capturas de tela)
+- inspeção integral do diff
+- inspeção visual das duas capturas (descreva o que você viu)
+- git status final
+
+Se algum gate falhar, NÃO declare sucesso — reporte a falha.
+
+COMMIT
+Se tudo passar: faça um único commit local (mensagem descrevendo a correção, terminando com "Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"), deixe a árvore limpa, NÃO publique/push a branch.
+
+=== RETORNO OBRIGATÓRIO ===
+Ao final, produza um relatório completo no formato "RETORNO: AS1-B3.2 / Estado: EXECUTADO — AGUARDANDO VERIFICAÇÃO DA DIRETORIA" cobrindo TODOS os itens: resultado, repositório, worktree, branch, commit-base e commit final completos (hash), diagnóstico da sobreposição, correção implementada, arquivos de código alterados, teste de regressão criado, controle negativo (se executado), resultado do parser, typecheck, lint, testes relacionados, E2E, build, gate sem debug, QA desktop, QA mobile, método técnico usado para comprovar ausência de sobreposição, caminhos das duas evidências, console e rede, fixtures criadas e removidas, PIDs iniciados e encerrados, confirmação de que não houve encerramento global de processos, documentação corrigida, lista de arquivos alterados, etapas não executadas (se houver), ambientes tocados, confirmação de que o YAML não foi salvo/importado, confirmação de que remoto/main/Vercel/produção não foram tocados, e "publicação: nenhuma".
+
+Se em qualquer ponto encontrar ambiguidade real, contradição entre fonte primária e o que este prompt afirma, ou necessidade de refatoração ampla, PARE nesse ponto e reporte a situação em vez de improvisar.
+
+No seu relatório final para mim (que vou repassar), seja completo e objetivo — não omita etapas não executadas nem gates que falharam.

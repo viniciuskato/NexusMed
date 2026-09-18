@@ -1,0 +1,36 @@
+# Fixture de teste (AS1-B3.2): reproduz o formato do compêndio real de
+# Equilíbrio Ácido-Base (docs/editorial/as1/acidobase.compendium.yaml) com
+# disciplina e tema propositalmente inexistentes no catálogo local, para
+# forçar o quadro amarelo "Campos ausentes ou que não puderam ser
+# importados" a aparecer na pré-visualização — a mesma condição em que a
+# verificação independente da diretoria encontrou a barra flutuante de
+# navegação sobrepondo esse quadro (ver
+# docs/editorial/as1/ACIDOBASE-AUDITORIA-DA-CONVERSAO-2026-09-18.md, seção
+# 10). Não é o material real, é só a forma mínima que reproduz o defeito.
+title: "Fixture de Regressão Visual AS1-B3.2"
+subtitle: "Reproduz sobreposição do dock flutuante sobre campos ausentes"
+disciplineName: "Disciplina Inexistente B32 XYZ"
+themeName: "Tema Inexistente B32 XYZ"
+author: "Equipe Editorial"
+estimatedReadTimeMinutes: 5
+tags:
+  - regressao-visual
+sections:
+  - id: secao-1
+    title: Seção 1
+    content: Conteúdo da seção 1, só para preencher a pré-visualização.
+    keyTakeaways:
+      - Ponto 1
+  - id: secao-2
+    title: Seção 2
+    content: Conteúdo da seção 2, só para preencher a pré-visualização.
+    keyTakeaways:
+      - Ponto 2
+  - id: secao-3
+    title: Seção 3
+    content: Conteúdo da seção 3, só para preencher a pré-visualização.
+    keyTakeaways:
+      - Ponto 3
+references:
+  - "Referência 1"
+  - "Referência 2"

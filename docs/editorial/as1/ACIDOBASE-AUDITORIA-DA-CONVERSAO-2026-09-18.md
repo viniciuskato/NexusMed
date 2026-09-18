@@ -78,7 +78,7 @@ work/as1-b3-auditoria-conversao-acidobasico 4285231cc2e5ef693a92c8dd47e038759f2c
 | 7 | `acidose-metabolica` | BICAR-ICU: AKIN 2-3, não KDIGO; desfecho composto (óbito 28d OU falência orgânica dia 7) | Jaber et al., 2018 (Lancet) | linhas 251, 261 | **Correção obrigatória #1 da AS1-B2 confirmada aplicada** — texto correto, sem menção a KDIGO como escore usado no estudo; desfecho descrito como composto, não mortalidade isolada |
 | 8 | `acidose-metabolica` | BICARICU-2: 640 pacientes (627 analisados; 313 controle, 314 bicarbonato), 43 UTIs francesas; mortalidade 90d 62,1% vs. 61,7%, p=0,91; TRS 35% vs. 50% | Jung et al., 2025 (JAMA) | linhas 253 | **Verificado externamente nesta auditoria** (PubMed/PMC) — números batem exatamente com a publicação real. Nota: a soma "627 analisados" do YAML (313+314) não bate com "195/314 e 193/313 mortes" da fonte, mas os **percentuais de mortalidade citados (62,1%/61,7%) e o N randomizado (640) conferem exatamente** — ver seção 3 |
 | 9 | `acidose-metabolica` | Meta-análise Fosset et al. 2026: 1.016 pacientes, mortalidade 58,3% vs. 60,6% (RR 0,96), TRS 34,8% vs. 50,7% (RR 0,69), subgrupo pH≤7,10 RR 0,80 | Fosset et al., 2026 (Critical Care) | linhas 255 | **Verificado externamente nesta auditoria — todos os números conferem exatamente**, inclusive ICs e p-valores (ver seção 3) |
-| 10 | `acidose-metabolica` | SODa-BIC 2026: 55 UTIs, 7 países, 500 pacientes; desfecho primário 40,2% vs. 39,4% (p=0,78); mortalidade 25,4% vs. 24,0%; TRS 16,8% vs. 20,9% | Serpa Neto et al., 2026 (NEJM) | linhas 257 | **Verificado externamente — quase todos os números conferem**; uma divergência menor encontrada na diferença ajustada do desfecho primário (YAML: 1,2 p.p., IC95% −7,1 a 9,4; fonte terciária consultada: 0,7 p.p., IC95% −7,3 a 8,6) — ver seção 3, achado a esclarecer |
+| 10 | `acidose-metabolica` | SODa-BIC 2026: 55 UTIs, 7 países, 500 pacientes; desfecho primário 40,2% vs. 39,4% (p=0,78); mortalidade 25,4% vs. 24,0%; TRS 16,8% vs. 20,9% | Serpa Neto et al., 2026 (NEJM) | linhas 257 | **Verificado externamente — números integralmente confirmados**, incluindo a diferença ajustada do desfecho primário: 1,2 ponto percentual, IC95% −7,1 a 9,4, p=0,78 — nenhuma divergência remanescente (a fonte terciária consultada originalmente pela AS1-B3, que registrava 0,7 p.p., estava incorreta; retificado na AS1-B3.1 — ver seção 3) |
 | 11 | `acidose-metabolica` | Guia SBN 2025 (Younes-Ibrahim et al.): limiar de bicarbonato pH<7,2 e HCO3⁻<15; hipercalemia como "principal emergência nefrológica" | Younes-Ibrahim et al., 2025 (JBN) | linhas 275, 277 | **Correção obrigatória #3 confirmada aplicada e verificada externamente** — guia real, DOI real, autoria real (ver seção 3 e 4) |
 | 12 | `abordagem-sistematica`/`discussao` | Madias como coautor de "Assessing acid-base disorders" | Adrogué, Gennari, Galla, Madias, 2009 | linhas 204, 528, ref. #13 | **Correção obrigatória #2 confirmada aplicada** — "Madias" aparece corretamente, "Nicolaos" não aparece em lugar nenhum do arquivo (varredura confirmada) |
 | 13 | `gasometria-valores-normais` | Fonte de valores normais de gasometria | Castro et al., 2024 (StatPearls) | linha 183 | **Correção obrigatória #4 confirmada aplicada** — "Wilkins" não aparece em lugar nenhum do arquivo (varredura confirmada); StatPearls é a fonte usada, como o plano de correção recomendava |
@@ -372,9 +372,17 @@ por falta de ferramenta de navegador foi fechado.
   `<select>` funcionais para escolha manual — nenhuma correspondência
   automática incorreta ocorreu.
 - **Legibilidade/rolagem/responsividade**: título, subtítulo, contadores e
-  tags legíveis, sem texto cortado ou sobreposto na viewport testada
-  (1400×1000); o modal é rolável e os botões "Cancelar"/"Salvar rascunho"
-  ficam fixos na base.
+  tags legíveis na viewport testada (1400×1000); o modal é rolável e os
+  botões "Cancelar"/"Salvar rascunho" ficam fixos na base. **RETIFICADO NA
+  AS1-B3.2**: a verificação independente da diretoria sobre a evidência
+  `ACIDOBASE-PREVIEW-AS1-B3-1.png` encontrou que a barra flutuante inferior
+  de navegação ("Início / Temático / Recursos / CMS") sobrepunha a segunda
+  linha do quadro amarelo "Campos ausentes ou que não puderam ser
+  importados", e que o widget "Plantão de foco" invadia discretamente a
+  borda esquerda do painel. A afirmação original desta seção ("sem texto
+  cortado ou sobreposto") estava incorreta para essa condição. Isso abriu a
+  missão AS1-B3.2, que corrigiu o defeito e repetiu o QA — ver resultado
+  atualizado abaixo.
 - **Console do navegador**: apenas mensagens informativas do Vite/React
   DevTools (`[vite] connecting...`, `[vite] connected.`, aviso padrão do
   React DevTools) — nenhum erro ou warning da aplicação.
@@ -414,9 +422,15 @@ teste, não um dado sensível).
 - Nenhum material foi criado no banco Supabase local — o fluxo de
   importação nunca chegou a "Salvar rascunho".
 
-**Conclusão do Escopo 4/5**: validação de parser/estrutura confirmada pelo
-parser real (`parseCompendiumYamlText`); validação **visual** da tela
-React concluída com sucesso, navegador real, sem bloqueio. Gate fechado.
+**Conclusão do Escopo 4/5 (AS1-B3.1)**: validação de parser/estrutura
+confirmada pelo parser real (`parseCompendiumYamlText`); validação
+**visual** da tela React executada com navegador real. **RETIFICADO NA
+AS1-B3.2**: a verificação independente da diretoria sobre a evidência
+capturada encontrou sobreposição real entre a barra de navegação flutuante
+e o quadro de campos ausentes, contrariando a conclusão original de "sem
+bloqueio, gate fechado". A missão AS1-B3.2 corrigiu o defeito visual e
+repetiu o QA — ver seção 13 (adicionada por essa missão) para o resultado
+final.
 
 ## 11. Lista numerada de correções
 

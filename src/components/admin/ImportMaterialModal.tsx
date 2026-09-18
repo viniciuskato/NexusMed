@@ -109,12 +109,23 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
       : [];
 
   return (
+    // AS1-B3.2: o modal precisa da mesma camada de sobreposição usada pelos
+    // demais diálogos do app (ver FeedbackModal.tsx) — sem um wrapper `fixed
+    // inset-0` com z-index próprio, ele renderizava no fluxo normal da
+    // página e ficava atrás de controles flutuantes fixos (dock de
+    // navegação inferior, z-40), que passavam a encobrir parte do conteúdo
+    // (quadro de campos ausentes) durante a pré-visualização de importação.
     <div
-      role="dialog"
-      aria-label="Importar material"
-      data-testid="import-material-modal"
-      className="bg-white dark:bg-[#0F172A] rounded-2xl border-2 border-teal-500/50 dark:border-teal-500/60 p-6 sm:p-8 elev-md space-y-6 text-xs animate-in fade-in"
+      className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto bg-slate-900/60 backdrop-blur-xs animate-in fade-in"
+      aria-hidden="false"
     >
+      <div
+        role="dialog"
+        aria-label="Importar material"
+        aria-modal="true"
+        data-testid="import-material-modal"
+        className="w-full max-w-2xl my-4 sm:my-8 bg-white dark:bg-[#0F172A] rounded-2xl border-2 border-teal-500/50 dark:border-teal-500/60 p-6 sm:p-8 elev-md space-y-6 text-xs animate-in fade-in"
+      >
       <div className="flex items-center justify-between border-b border-stone-200 dark:border-[#243452] pb-3">
         <div className="flex items-center gap-2">
           <FileUp className="w-4 h-4 text-teal-600 dark:text-teal-400" />
@@ -276,7 +287,10 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
           </div>
 
           {state.preview.missingFields.length > 0 && (
-            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
+            <div
+              data-testid="import-missing-fields-panel"
+              className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900"
+            >
               <p className="font-bold text-amber-800 dark:text-amber-300 mb-1">
                 Campos ausentes ou que não puderam ser importados:
               </p>
@@ -376,6 +390,7 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };
