@@ -135,10 +135,17 @@ seção "Armadilhas já descobertas".
 
 ## Convenções de trabalho
 
-- **Commits vão direto pra `main`** hoje (sem PR obrigatório) — mas cada
-  push é um deploy real em produção. Rodar `tsc --noEmit` + `npm run
-  build` antes de commitar, sempre. Detalhe completo em
-  `docs/operacao/RUNBOOK.md`.
+- **Toda mudança entra em `main` por Pull Request com CI verde** (desde
+  2026-09-18) — nunca push direto: cada push em `main` é um deploy real
+  em produção. O PR roda o CI antes da produção e gera um preview na
+  Vercel. Migration da qual o frontend depende é aplicada no remoto
+  **antes** do merge. Detalhe completo em `docs/operacao/RUNBOOK.md`,
+  seção 3.
+- **O diário de cada mudança é o PR** (descrição + discussão + CI), não
+  os documentos de operação. `PROJECT_STATE.md`/`TASKS.md`/`DECISIONS.md`
+  registram estado presente, fila e decisões duráveis em poucas linhas,
+  com link para o PR — sem repetir passo a passo, hashes e contagens que
+  o PR e o `git log` já guardam.
 - **Modelo "sessão de auditoria / sessão diretoria / sessão
   executiva"** (três papéis desde 2026-09-18): mudanças maiores são
   planejadas por uma sessão diretoria que escreve um prompt autocontido,
