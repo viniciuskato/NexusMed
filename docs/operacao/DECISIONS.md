@@ -23,6 +23,28 @@ admin do repositório), em *Settings → Branches → Add rule* para `main`:
 com os checks `fast (typecheck + lint + unit + build)` e
 `full (pgTAP + Playwright contra Supabase local)`.
 
+## 2026-09-18 — Quem revisou/atestou conteúdo não pode ser apagado; tirar acesso é `profiles.status = 'blocked'`
+
+`content_revisions.created_by`, `content_reviews.reviewer_user_id`,
+`claims.decided_by` e `material_section_versions.changed_by` referenciam
+`auth.users` **sem `on delete`** (equivale a `RESTRICT`): o Postgres recusa
+apagar um usuário que tem trilha editorial. Isso veio à tona porque o spec
+e2e 23-B deixava o admin de teste para trás (TASK-2026-09-17-05) — o
+helper `deleteTestUser` ignorava o `{ error }` devolvido pela Admin API, e
+a falha passava em silêncio.
+
+Decisão: **manter o `RESTRICT`, de propósito.** A atestação editorial
+existe para registrar quem atestou o quê; `ON DELETE SET NULL` apagaria a
+autoria (e as colunas `NOT NULL` nem permitem), e `ON DELETE CASCADE`
+apagaria a própria trilha de auditoria junto com o usuário.
+
+**Como aplicar**: para remover o acesso de alguém que já revisou conteúdo,
+usar `profiles.status = 'blocked'` (gate fail-closed, AGENTS.md risco 9),
+nunca excluir o usuário. Não "consertar" uma exclusão de usuário que falha
+adicionando cascade/set null a essas FKs. Em testes, limpar na ordem
+inversa da criação (conteúdo antes do autor) e nunca engolir erro de
+limpeza — usar `runCleanup` de `tests/e2e/fixtures/localSupabase.ts`.
+
 ## 2026-09-18 — Tags de material nunca levam rótulo de coleção/curso externo; a plataforma tem que se entender sozinha
 
 Na pré-visualização da importação real de `acidobase.compendium.yaml`, o

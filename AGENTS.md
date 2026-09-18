@@ -104,17 +104,14 @@ seção "Armadilhas já descobertas".
    deliberada**: só `status === 'active'` entra no app; qualquer outro
    valor (inclusive um futuro valor de enum não tratado) cai em tela de
    bloqueio. Não "corrigir" isso para ser permissivo.
-10. **TypeScript (5.8, este projeto) às vezes não estreita uma union
-    discriminada por `!resultado.ok`/`if (resultado.ok)` quando o tipo vem
-    de um `import` de outro arquivo** (confirmado com repro mínimo isolado,
-    2026-09-17, missão 42-A) — o mesmo padrão funciona perfeitamente
-    quando a interface e o uso estão no mesmo arquivo. Sintoma: erro
-    `Property 'x' does not exist on type 'A | B'` mesmo com `ok: true`/
-    `ok: false` literais corretos nas duas interfaces. Contorno que
-    funciona sempre: comparar explicitamente (`if (resultado.ok === false)`
-    em vez de `if (!resultado.ok)`). Não gastar tempo tentando "consertar"
-    os tipos — o problema é o `!`/truthy check cross-módulo, não a
-    modelagem dos tipos.
+10. **O projeto roda com `strict: true` desde 2026-09-18 — não desligar.**
+    Antes disso não havia `strict` nem `@types/react` instalado: todo o
+    React era `any` e o `tsc --noEmit` do gate não checava a camada de UI
+    (ligar o strict revelou campos inexistentes lidos no painel e um
+    `TypeError` no SRS). A antiga armadilha "TS não estreita `!r.ok`
+    cross-módulo" tinha a causa errada: era a falta de `strictNullChecks`
+    (repro mínimo confirma), não o `import`. Com strict ligado, `if (!r.ok)`
+    funciona; os `=== false` existentes podem ficar.
 11. **`npm run lint` rodado direto na raiz de `canonical` varre também
     outras worktrees aninhadas em `.claude/worktrees/**`** (não
     rastreadas pelo git, mas presentes em disco) — sem uma entrada de
@@ -127,6 +124,14 @@ seção "Armadilhas já descobertas".
     falha de forma parecida (specs `estudo-tematico-22a`/`concurrencia-13b`)
     por fixtures do pgTAP não limpas — sempre resetar antes do e2e se o
     pgTAP rodou primeiro na mesma sessão.
+12. **`supabase.auth.admin.deleteUser()` (e o supabase-js em geral) não
+    rejeita a promise em erro — devolve `{ error }`.** Um `.catch()` em
+    volta não pega nada; é preciso checar o `error` retornado. Ignorar isso
+    escondeu por semanas que o spec 23-B nunca apagava seu admin de teste
+    (FK `RESTRICT` intencional — quem atestou conteúdo não pode ser
+    apagado, ver `docs/operacao/DECISIONS.md` 2026-09-18). Em testes e2e,
+    limpeza vai por `runCleanup` (`tests/e2e/fixtures/localSupabase.ts`),
+    nunca `.catch(() => undefined)`.
 
 ## Convenções de trabalho
 

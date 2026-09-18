@@ -167,11 +167,42 @@ export function restoreProfileStatusConstraint(): void {
   );
 }
 
-/** Remove um usuário de teste (cascade cobre profiles/attempts/etc — mesma garantia usada em sessões anteriores, ver AGENTS.md). */
+/**
+ * Remove um usuário de teste (cascade cobre profiles/attempts/etc — mesma
+ * garantia usada em sessões anteriores, ver AGENTS.md).
+ *
+ * Lança se a exclusão falhar. `auth.admin.deleteUser` não rejeita a promise:
+ * devolve `{ error }` — ignorar esse retorno escondeu por semanas que o admin
+ * do spec 23-B nunca era apagado (FK de `content_reviews`/`content_revisions`
+ * para `auth.users` sem cascade, por decisão — ver DECISIONS.md 2026-09-18).
+ */
 export async function deleteTestUser(userId: string): Promise<void> {
   const admin = getAdminClient();
-  await admin.auth.admin.deleteUser(userId).catch(() => undefined);
+  const { error } = await admin.auth.admin.deleteUser(userId);
+  if (error) {
+    throw new Error(`deleteTestUser(${userId}) falhou: ${error.message}`);
+  }
   createdUserIds.delete(userId);
+}
+
+/**
+ * Executa as funções de limpeza de um teste na ordem dada, SEMPRE todas
+ * (uma falha não impede as seguintes), e lança no fim se qualquer uma
+ * falhou — com a mensagem de cada falha. Limpeza que falha é defeito do
+ * teste ou do schema, nunca ruído a engolir.
+ */
+export async function runCleanup(fns: Array<() => Promise<void> | void>): Promise<void> {
+  const failures: string[] = [];
+  for (const fn of fns) {
+    try {
+      await fn();
+    } catch (err) {
+      failures.push(err instanceof Error ? err.message : String(err));
+    }
+  }
+  if (failures.length > 0) {
+    throw new Error(`Limpeza do teste falhou (${failures.length}):\n- ${failures.join('\n- ')}`);
+  }
 }
 
 /**
@@ -184,6 +215,7 @@ export async function deleteTestUser(userId: string): Promise<void> {
 export async function deleteAllE2EUsers(): Promise<{ deleted: string[] }> {
   const admin = getAdminClient();
   const deleted: string[] = [];
+  const failures: string[] = [];
   let page = 1;
   // paginação simples da Admin API
   for (;;) {
@@ -192,11 +224,18 @@ export async function deleteAllE2EUsers(): Promise<{ deleted: string[] }> {
     const users: Array<{ id: string; email?: string | null }> = data.users;
     const matches = users.filter((u) => (u.email ?? '').startsWith(PREFIX));
     for (const u of matches) {
-      await admin.auth.admin.deleteUser(u.id).catch(() => undefined);
+      const { error: deleteError } = await admin.auth.admin.deleteUser(u.id);
+      if (deleteError) {
+        failures.push(`${u.email ?? u.id}: ${deleteError.message}`);
+        continue;
+      }
       deleted.push(u.email ?? u.id);
     }
     if (users.length < 200) break;
     page += 1;
+  }
+  if (failures.length > 0) {
+    throw new Error(`deleteAllE2EUsers: ${failures.length} usuário(s) não removido(s):\n- ${failures.join('\n- ')}`);
   }
   return { deleted };
 }

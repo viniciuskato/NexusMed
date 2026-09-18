@@ -177,7 +177,7 @@ export const INITIAL_COMPENDIUMS: Compendium[] = [
     subtitle: 'Fisiopatologia neuro-humoral, remodelamento ventricular e o Quarteto Terapêutico Fundamental',
     estimatedReadTimeMinutes: 12,
     lastUpdated: '2026-08-15',
-    author: 'Prof. Dr. Ricardo Mendonça (Cardiologia InCor/USP)',
+    author: 'Conteúdo de demonstração (fictício)',
     references: [
       'Diretriz Brasileira de Insuficiência Cardíaca - SBC (2024)',
       '2023 Focused Update of the 2021 ESC Guidelines for the diagnosis and treatment of acute and chronic heart failure',
@@ -253,7 +253,7 @@ O dano inicial reduz o volume sistólico e o débito cardíaco, desencadeando re
     subtitle: 'Inflamação Th2, hiper-responsividade brônquica e a revolução da terapia MART com CI + Formoterol',
     estimatedReadTimeMinutes: 10,
     lastUpdated: '2026-08-10',
-    author: 'Dra. Camila Vasconcellos (Pneumologia HC-FMUSP)',
+    author: 'Conteúdo de demonstração (fictício)',
     references: [
       'Global Initiative for Asthma (GINA) Global Strategy for Asthma Management and Prevention (2024 Update)',
       'Diretrizes da Sociedade Brasileira de Pneumologia e Tisiologia para o Manejo da Asma (2023)',
@@ -303,7 +303,7 @@ Na maioria dos pacientes (fenótipo inflamatório T2-high):
     subtitle: 'Critérios SOFA, pacote da primeira hora, ressuscitação hemodinâmica e aminas vasoativas',
     estimatedReadTimeMinutes: 14,
     lastUpdated: '2026-08-18',
-    author: 'Dr. Lucas Silveira (Terapia Intensiva & Infectologia EPM/UNIFESP)',
+    author: 'Conteúdo de demonstração (fictício)',
     references: [
       'Surviving Sepsis Campaign: International Guidelines for Management of Sepsis and Septic Shock 2021/2023',
       'The Third International Consensus Definitions for Sepsis and Septic Shock (Sepsis-3) - JAMA',
@@ -363,7 +363,7 @@ Na maioria dos pacientes (fenótipo inflamatório T2-high):
     subtitle: 'Inibidores de parede bacteriana, síntese de proteínas ribossômicas e topoisomerases',
     estimatedReadTimeMinutes: 11,
     lastUpdated: '2026-08-05',
-    author: 'Prof. Dr. Henrique Fontes (Farmacologia Médica USP)',
+    author: 'Conteúdo de demonstração (fictício)',
     references: [
       'Goodman & Gilman: As Bases Farmacológicas da Terapêutica, 14ª Ed.',
       'Sanford Guide to Antimicrobial Therapy 2024',
@@ -415,7 +415,7 @@ Na maioria dos pacientes (fenótipo inflamatório T2-high):
     subtitle: 'Fisiopatologia vascular sinusoidal, gradiente de pressão venosa hepática e manejo de complicações agudas',
     estimatedReadTimeMinutes: 13,
     lastUpdated: '2026-08-12',
-    author: 'Dr. Fernando Albuquerque (Gastroenterologia e Hepatologia FMUSP)',
+    author: 'Conteúdo de demonstração (fictício)',
     references: [
       'Diretrizes da Sociedade Brasileira de Hepatologia (SBH) sobre Hipertensão Portal e Cirrose (2023)',
       'AASLD Practice Guidance: Diagnosis and Management of Ascites and Hepatorenal Syndrome (2024)',

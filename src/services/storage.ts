@@ -14,6 +14,7 @@ import {
   UserFeedback,
   LastReadingSession,
 } from '../types';
+import { getOps } from './syncQueue';
 import {
   INITIAL_DISCIPLINES,
   INITIAL_THEMES,
@@ -24,6 +25,14 @@ import {
 import { calculateNextSRS, createInitialSRS } from './srsAlgorithm';
 import { onActiveUserChanged } from './syncQueue';
 import { recoverLegacyLocalProgress } from './legacyRecovery';
+import { isSupabaseConfigured } from '../lib/supabaseClient';
+
+// Conteúdo de demonstração (mockData) só existe no modo local, sem Supabase.
+// Com Supabase configurado, o cache local começa vazio: nunca mostrar ao
+// estudante material/questão fictícios como se fossem conteúdo real.
+function demoContent<T>(items: T[]): T[] {
+  return isSupabaseConfigured ? [] : items;
+}
 
 export const STORAGE_KEYS = {
   DISCIPLINES: 'synapse_disciplines_v1',
@@ -98,23 +107,60 @@ export const StorageService = {
     return getStorageUser();
   },
 
+  /**
+   * Chamado no logout. Remove os caches globais de conteúdo (podem conter
+   * gabarito/rascunho gravados por uma sessão de admin) e a cópia local dos
+   * dados pessoais que o Supabase já guarda — para que a próxima pessoa no
+   * mesmo navegador não os veja pelo devtools. Nunca remove o que só existe
+   * localmente (destaques, última leitura, plano, tema). Se a fila de
+   * sincronização ainda tiver operações pendentes, nada pessoal é removido:
+   * apagar agora perderia progresso não enviado.
+   * Retorna true se os dados pessoais foram removidos.
+   */
+  clearLocalDataOnLogout(uid: string | null): boolean {
+    for (const key of [STORAGE_KEYS.DISCIPLINES, STORAGE_KEYS.THEMES, STORAGE_KEYS.COMPENDIUMS, STORAGE_KEYS.QUESTIONS]) {
+      localStorage.removeItem(key);
+    }
+    if (!uid) return true;
+    if (getOps(uid).length > 0) {
+      console.warn('[storage] logout com operações de sincronização pendentes — dados locais do usuário mantidos.');
+      return false;
+    }
+    const serverBacked = [
+      STORAGE_KEYS.FLASHCARDS,
+      STORAGE_KEYS.ANSWERS,
+      STORAGE_KEYS.ERROR_LOG,
+      STORAGE_KEYS.READING_PROGRESS,
+      STORAGE_KEYS.BOOKMARKS,
+      STORAGE_KEYS.NOTES,
+      STORAGE_KEYS.NOTES_BASE_VERSION,
+      STORAGE_KEYS.FEEDBACK,
+      STORAGE_KEYS.QUESTION_REACTIONS,
+      STORAGE_KEYS.SIMULADOS,
+    ];
+    for (const baseKey of serverBacked) {
+      localStorage.removeItem(`synapse_${uid}_${baseKey.replace(/^synapse_/, '')}`);
+    }
+    return true;
+  },
+
   // --- Content Loaders (Globais / Compartilhados) ---
   getDisciplines(): Discipline[] {
-    return getItem<Discipline[]>(STORAGE_KEYS.DISCIPLINES, INITIAL_DISCIPLINES);
+    return getItem<Discipline[]>(STORAGE_KEYS.DISCIPLINES, demoContent(INITIAL_DISCIPLINES));
   },
   saveDisciplines(disciplines: Discipline[]): void {
     setItem(STORAGE_KEYS.DISCIPLINES, disciplines);
   },
 
   getThemes(): Theme[] {
-    return getItem<Theme[]>(STORAGE_KEYS.THEMES, INITIAL_THEMES);
+    return getItem<Theme[]>(STORAGE_KEYS.THEMES, demoContent(INITIAL_THEMES));
   },
   saveThemes(themes: Theme[]): void {
     setItem(STORAGE_KEYS.THEMES, themes);
   },
 
   getCompendiums(): Compendium[] {
-    return getItem<Compendium[]>(STORAGE_KEYS.COMPENDIUMS, INITIAL_COMPENDIUMS);
+    return getItem<Compendium[]>(STORAGE_KEYS.COMPENDIUMS, demoContent(INITIAL_COMPENDIUMS));
   },
   saveCompendiums(compendiums: Compendium[]): void {
     setItem(STORAGE_KEYS.COMPENDIUMS, compendiums);
@@ -135,7 +181,7 @@ export const StorageService = {
   },
 
   getQuestions(): Question[] {
-    return getItem<Question[]>(STORAGE_KEYS.QUESTIONS, INITIAL_QUESTIONS);
+    return getItem<Question[]>(STORAGE_KEYS.QUESTIONS, demoContent(INITIAL_QUESTIONS));
   },
   saveQuestions(questions: Question[]): void {
     setItem(STORAGE_KEYS.QUESTIONS, questions);
@@ -155,13 +201,13 @@ export const StorageService = {
     this.saveQuestions(all);
   },
 
-  // --- Flashcards (Isolados por UID, com preservação dos cards padrão para cada novo usuário) ---
+  // --- Flashcards (Isolados por UID; cards de demonstração só no modo local) ---
   getFlashcards(): Flashcard[] {
     const key = getUserKey(STORAGE_KEYS.FLASHCARDS);
-    if (currentUserId && localStorage.getItem(key) === null) {
+    if (!isSupabaseConfigured && currentUserId && localStorage.getItem(key) === null) {
       setItem(key, INITIAL_FLASHCARDS);
     }
-    const cards = getItem<Flashcard[]>(key, INITIAL_FLASHCARDS);
+    const cards = getItem<Flashcard[]>(key, demoContent(INITIAL_FLASHCARDS));
     return cards.map((c) => ({
       ...c,
       srs: c.srs || createInitialSRS(),
