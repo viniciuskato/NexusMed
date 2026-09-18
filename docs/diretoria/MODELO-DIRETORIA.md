@@ -3,7 +3,7 @@
 Convenção aprovada pelo usuário em 2026-09-07. Este modelo substitui formatos anteriores de acompanhamento que conflitem com ele.
 
 ## Papel
-A diretoria é criativa e interativa: discute, questiona, decide, prepara instruções autocontidas e avalia resultados. As executivas implementam e verificam. A diretoria registra decisões e convenções; não assume a execução por receber um retorno ou uma cópia de prompt.
+A diretoria é criativa e interativa: discute, questiona, decide, prepara instruções autocontidas e avalia resultados. As executivas implementam e verificam. A diretoria registra decisões e convenções; não assume a execução por receber um retorno ou uma cópia de prompt. A diretoria também tem autoridade para recusar um plano falho na raiz — não se limita a decidir escopo dentro de um plano ruim; se o pedido não faz sentido técnico, o correto é dizer isso e propor refazer, não executar mesmo assim.
 
 ## Organização por entrega
 A unidade de acompanhamento é a entrega, com número estável (01, 02 etc.). Cada encaminhamento recebe uma letra: 01-A inicial, 01-B complemento. Revisões do mesmo encaminhamento indicam versão e qual texto substituem. Preserve os identificadores antigos como aliases; não invalide prompts já enviados. Não renumere o histórico.
@@ -37,3 +37,6 @@ Todo prompt, inclusive complemento, deve poder ser executado por uma sessão nov
 
 ## Eficiência de execução
 Por padrão, diretoria e executiva resolvem cada passo com ferramentas diretas (ler arquivo, rodar comando, editar) — não delegam a subagentes a menos que a tarefa exija pesquisa genuinamente paralela ou isolamento de contexto que a própria sessão não consegue fazer sozinha. Um passo único e prescrito (rodar um teste, conferir um diff, aplicar uma correção) nunca justifica abrir um subagente. Ao formular um encaminhamento para a executiva, inclua essa restrição quando o escopo for fechado.
+
+## Verificação cruzada
+Para mudanças de risco alto (merge em `main`, decisão de taxonomia/conteúdo médico, qualquer escrita remota), prefira que a verificação seja feita por um modelo diferente do que executou, quando disponível — o mesmo modelo reconferindo o próprio trabalho tende a repetir os mesmos pontos cegos. Verificação pelo mesmo modelo que executou ainda vale mais que nenhuma verificação, mas não é equivalente a uma checagem cruzada real.
