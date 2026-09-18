@@ -213,4 +213,108 @@ test.describe('Importar material (42-A)', () => {
     const count = psqlLocal(`select count(*) from public.materials where title = '${MATERIAL_PREFIX}';`);
     expect(count).toBe('0');
   });
+
+  // AS1-B3.2 — regressão visual: a verificação independente da diretoria
+  // encontrou a barra flutuante de navegação inferior ("Início / Temático /
+  // Recursos / CMS") sobrepondo a segunda linha do quadro amarelo "Campos
+  // ausentes ou que não puderam ser importados" durante a pré-visualização
+  // do importador (ver docs/editorial/as1/ACIDOBASE-AUDITORIA-DA-CONVERSAO-2026-09-18.md,
+  // seção 10). A correção coloca o modal num overlay `fixed inset-0 z-[60]`,
+  // acima do dock (`z-40`). Este teste prova, com bounding boxes reais (não
+  // inspeção visual), que nenhum controle flutuante encobre o quadro, os
+  // seletores ou os botões do importador, em desktop e mobile; e que a
+  // navegação flutuante volta a funcionar normalmente depois que o
+  // importador é fechado.
+  for (const viewport of [
+    { name: 'desktop', width: 1400, height: 1000 },
+    { name: 'mobile', width: 390, height: 844 },
+  ] as const) {
+    test(`dock flutuante não sobrepõe o quadro de campos ausentes (${viewport.name})`, async ({ page }) => {
+      const admin = await createTestUser({
+        emailLocalPart: `import-b32-${viewport.name}-${Date.now()}`,
+        password: 'senha-teste-123',
+        role: 'admin',
+        status: 'active',
+      });
+      cleanup.push(() => deleteTestUser(admin.id));
+
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await login(page, admin);
+      await openEditorialArea(page);
+
+      // Navegação flutuante disponível normalmente antes de abrir o importador.
+      const dock = page.locator('#mobile-floating-dock');
+      await expect(dock).toBeVisible();
+
+      await page.getByRole('button', { name: 'Importar material' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Importar material' });
+      await dialog
+        .locator('#import-material-file-input')
+        .setInputFiles(path.resolve('tests/e2e/fixtures/overlap-regression.compendium.yaml'));
+
+      const missingPanel = dialog.getByTestId('import-missing-fields-panel');
+      await expect(missingPanel).toBeVisible();
+
+      // "Salvar rascunho" permanece desabilitado enquanto a taxonomia está ausente.
+      const saveButton = dialog.getByRole('button', { name: 'Salvar rascunho' });
+      await expect(saveButton).toBeDisabled();
+
+      // Controle negativo técnico: antes da correção (AS1-B3.1), o modal
+      // renderizava sem wrapper `fixed`/z-index próprio, então um elemento
+      // fixo com z-index maior (como o dock, z-40) ficava acima dele no
+      // stacking context. Provamos aqui que o wrapper do diálogo tem
+      // z-index numericamente maior que o do dock — se essa relação for
+      // invertida (reintroduzindo o bug), esta asserção falha.
+      const dialogWrapperZIndex = await page.evaluate(() => {
+        const el = document.querySelector('[data-testid="import-material-modal"]')?.parentElement;
+        return el ? Number(window.getComputedStyle(el).zIndex) : NaN;
+      });
+      // O z-index vive no wrapper `fixed` que envolve o <nav id="mobile-floating-dock">
+      // (ver src/components/navigation/MobileBottomNav.tsx) — o <nav> em si não
+      // declara z-index próprio, então seu computed style seria "auto"/NaN.
+      const dockZIndex = await dock.evaluate((el) =>
+        Number(window.getComputedStyle(el.parentElement ?? el).zIndex)
+      );
+      expect(Number.isNaN(dialogWrapperZIndex)).toBe(false);
+      expect(dialogWrapperZIndex).toBeGreaterThan(dockZIndex);
+
+      // Prova geométrica: para cada canto e o centro do quadro de campos
+      // ausentes, dos dois seletores (Disciplina/Tema) e do botão "Salvar
+      // rascunho", o elemento realmente pintado nesse ponto (via
+      // `elementFromPoint`) pertence ao próprio diálogo do importador, nunca
+      // ao dock de navegação nem a qualquer outro controle flutuante fora
+      // dele.
+      const targets = [missingPanel, dialog.locator('select').first(), dialog.locator('select').nth(1), saveButton];
+      for (const target of targets) {
+        await target.scrollIntoViewIfNeeded();
+        const box = await target.boundingBox();
+        expect(box).not.toBeNull();
+        if (!box) continue;
+        const points = [
+          [box.x + 2, box.y + 2],
+          [box.x + box.width - 2, box.y + 2],
+          [box.x + 2, box.y + box.height - 2],
+          [box.x + box.width - 2, box.y + box.height - 2],
+          [box.x + box.width / 2, box.y + box.height / 2],
+        ];
+        for (const [x, y] of points) {
+          const belongsToDialog = await page.evaluate(
+            ([px, py]) => {
+              const el = document.elementFromPoint(px, py);
+              const dialogEl = document.querySelector('[data-testid="import-material-modal"]');
+              return !!el && !!dialogEl && dialogEl.contains(el);
+            },
+            [x, y]
+          );
+          expect(belongsToDialog).toBe(true);
+        }
+      }
+
+      // Fecha o importador e confirma que a navegação flutuante volta ao normal.
+      await dialog.getByRole('button', { name: 'Cancelar' }).click();
+      await expect(dialog).toHaveCount(0);
+      await expect(dock).toBeVisible();
+      await expect(dock.getByRole('button', { name: 'Início' })).toBeEnabled();
+    });
+  }
 });

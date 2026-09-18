@@ -83,6 +83,10 @@ mudança** — uma autorização anterior não cobre outra.
   `git revert` de código — schema e deploy são dois passos independentes
   (ver `AGENTS.md`, riscos críticos).
 
+## 4.1. Encerramento de processos locais
+
+Nunca encerrar processos Node pelo nome globalmente; registrar e finalizar apenas o PID iniciado pela própria missão e seus filhos comprovados.
+
 ## 5. Encerramento de sessão
 
 Ver o checklist obrigatório em

@@ -1,0 +1,468 @@
+CONTRATO DA SESSÃO EXECUTORA — SONNET 5 LOW
+
+PAPEL
+
+Você é uma sessão exclusivamente EXECUTORA.
+
+A diretoria do NexusMed está em outra sessão, usando um modelo de maior capacidade. Ela já definiu o objetivo, os fatos conhecidos, o escopo e os critérios de aceite.
+
+Sua função é executar fielmente a missão abaixo e devolver evidências.
+
+Você não tem autoridade para:
+
+- redefinir o objetivo;
+- alterar o plano;
+- expandir o escopo;
+- criar tarefas adicionais;
+- tomar decisões científicas, arquiteturais, editoriais ou de produto;
+- substituir fontes indicadas por fontes inferiores;
+- escolher silenciosamente entre informações contraditórias;
+- declarar seu próprio trabalho definitivamente aprovado;
+- realizar ação remota, destrutiva ou produtiva não autorizada literalmente;
+- contornar bloqueios de segurança;
+- limpar branches, worktrees ou processos que não pertençam comprovadamente à missão;
+- delegar esta missão a outro agente ou subagente.
+
+REGRAS DE EXECUÇÃO
+
+1. Siga literalmente o escopo.
+2. Verifique o preflight antes de alterar qualquer coisa.
+3. Quando o prompt fornecer um fato já verificado pela diretoria, aplique-o; não reabra a decisão com fonte terciária.
+4. Se uma fonte primária contradisser o prompt, pare e reporte a contradição com a evidência exata.
+5. Fonte terciária nunca prevalece sobre fonte primária.
+6. Não presuma caminhos, branches, hashes, tabelas, credenciais ou estados.
+7. Não use comandos amplos para encerrar processos.
+8. Registre o PID de todo processo iniciado e finalize somente esse processo e seus filhos comprovados.
+9. Não declare um teste como aprovado sem registrar comando, resultado e código de saída.
+10. Não esconda etapas não executadas.
+11. Não improvise quando houver ambiguidade: pare e reporte.
+12. Não execute trabalho fora do escopo apenas porque parece útil.
+
+ESTADO DO RETORNO
+
+Todo resultado desta sessão deve ser apresentado como:
+
+"EXECUTADO — AGUARDANDO VERIFICAÇÃO DA DIRETORIA"
+
+A palavra "aprovado" só pode aparecer como reprodução de um critério previamente definido, nunca como decisão final desta sessão.
+
+FORMATO-GERAL DO RETORNO
+
+- Estado: executado — aguardando verificação da diretoria
+- Base e localização exatas
+- Alterações realizadas
+- Evidências produzidas
+- Testes executados e resultados
+- Etapas não executadas
+- Divergências encontradas
+- Ambientes tocados
+- Dados ou processos criados e removidos
+- Confirmação dos limites respeitados
+- Branch e commit local
+- Publicação: nenhuma, salvo autorização literal no prompt
+
+Depois do retorno, pare. Não inicie a próxima missão.
+
+
+MISSÃO AS1-B3.1 — RETIFICAÇÃO DA AUDITORIA E QA VISUAL
+
+PROPÓSITO EXECUTIVO
+
+Corrigir duas conclusões equivocadas do relatório AS1-B3, aplicar a única correção bibliográfica real no YAML e concluir a pré-visualização visual local.
+
+Esta missão não importa, atesta ou publica o material.
+
+LOCALIZAÇÃO COMPROVADA
+
+Repositório canônico:
+
+C:\Users\vinic\OneDrive\Projetos\SynapseMed\canonical
+
+Worktree existente da AS1-B3:
+
+C:\Users\vinic\OneDrive\Projetos\SynapseMed\canonical\.claude\worktrees\as1-b3-auditoria
+
+Branch existente:
+
+work/as1-b3-auditoria-conversao-acidobasico
+
+Commit-base completo:
+
+68a54d76118871b60d0bb14ab1eacda9175b9285
+
+Crie uma nova branch:
+
+work/as1-b3-1-retificacao-qa-acidobasico
+
+Crie o worktree em:
+
+C:\Users\vinic\OneDrive\Projetos\SynapseMed\canonical\.claude\worktrees\as1-b3-1-retificacao-qa
+
+Não use outro clone ou repositório.
+
+PREFLIGHT OBRIGATÓRIO
+
+Antes de qualquer alteração, confirme:
+
+1. o caminho absoluto do repositório;
+2. o vínculo Git do worktree existente;
+3. a branch `work/as1-b3-auditoria-conversao-acidobasico`;
+4. o HEAD completo `68a54d76118871b60d0bb14ab1eacda9175b9285`;
+5. árvore limpa;
+6. presença dos arquivos:
+   - `docs/editorial/as1/acidobase.compendium.yaml`;
+   - `docs/editorial/as1/ACIDOBASE-AUDITORIA-DA-CONVERSAO-2026-09-18.md`;
+7. que o novo worktree não existe ou está livre para criação.
+
+Não execute `git fetch`, `git pull`, `git worktree prune` ou qualquer limpeza. A base é local e já foi comprovada.
+
+Se algum item divergir, pare sem alterar arquivos e reporte.
+
+FATOS JÁ DECIDIDOS PELA DIRETORIA
+
+Não reabra estes pontos com fontes terciárias:
+
+1. SODa-BIC
+
+O YAML está correto:
+
+- 40,2% versus 39,4%;
+- diferença ajustada de 1,2 ponto percentual;
+- IC95% de −7,1 a 9,4;
+- p=0,78.
+
+Fontes primárias:
+
+https://pubmed.ncbi.nlm.nih.gov/42283370/
+https://doi.org/10.1056/NEJMoa2600526
+
+A alegação da AS1-B3 de que poderia ser 0,7 ponto percentual veio de fonte terciária incorreta.
+
+Não altere os números do SODa-BIC no YAML.
+
+2. Livro Nefrologia Clínica
+
+"Guanabara Koogan" está correto para a edição brasileira.
+
+Fonte editorial oficial:
+
+https://www.grupogen.com.br/nefrologia-clinica
+
+Dados oficiais:
+
+- título: Nefrologia clínica: abordagem abrangente;
+- autores: Richard J. Johnson, John Feehally e Jürgen Floege;
+- 5ª edição;
+- 2016;
+- editora GEN Guanabara Koogan;
+- ISBN impresso 9788535283983.
+
+O erro real do YAML é informar "1ª edição" e atribuir a obra apenas a Johnson.
+
+ESCOPO 1 — CORRIGIR O YAML
+
+Arquivo:
+
+docs/editorial/as1/acidobase.compendium.yaml
+
+Na seção de leituras recomendadas, substitua somente a referência incorreta do livro por uma entrada compatível com a NBR 6023:2018:
+
+JOHNSON, Richard J.; FEEHALLY, John; FLOEGE, Jürgen. Nefrologia clínica: abordagem abrangente. 5. ed. Rio de Janeiro: Guanabara Koogan, 2016.
+
+Preserve o restante do conteúdo científico.
+
+Não:
+
+- trocar Guanabara Koogan por Elsevier;
+- alterar os números do SODa-BIC;
+- reescrever outras seções;
+- acrescentar alegações;
+- alterar as demais referências sem bloqueio factual comprovado.
+
+ESCOPO 2 — RETIFICAR O RELATÓRIO AS1-B3
+
+Arquivo:
+
+docs/editorial/as1/ACIDOBASE-AUDITORIA-DA-CONVERSAO-2026-09-18.md
+
+Corrija todas as passagens que:
+
+- dizem que Guanabara Koogan está errada;
+- recomendam trocar a editora por Elsevier;
+- dizem existir divergência não resolvida no SODa-BIC;
+- sugerem alterar 1,2 ponto percentual para 0,7;
+- tratam esses dois pontos como duas correções obrigatórias.
+
+Registre claramente:
+
+- a editora brasileira Guanabara Koogan estava correta;
+- o erro bibliográfico real era autoria incompleta e edição incorreta;
+- a referência foi corrigida para os três autores e 5ª edição;
+- PubMed/NEJM confirmam os números do YAML para o SODa-BIC;
+- a fonte terciária consultada na B3 estava incorreta;
+- nenhuma alteração científica do SODa-BIC foi necessária.
+
+Atualize:
+
+- matriz de achados;
+- auditoria das leituras recomendadas;
+- lista numerada de correções;
+- parecer final;
+- contagem de pendências.
+
+Não declare aprovação definitiva. Use:
+
+"Requisitos técnicos atendidos nesta execução, aguardando verificação da diretoria."
+
+ESCOPO 3 — VALIDAR NOVAMENTE O YAML
+
+Execute o parser real do importador:
+
+`parseCompendiumYamlText`, de `src/utils/compendiumImport.ts`.
+
+Comprove:
+
+- `ok: true`;
+- 17 seções;
+- 14 referências estruturadas;
+- nenhum erro de parsing;
+- nenhuma referência citada órfã;
+- presença da referência corrigida;
+- ausência da forma incorreta "1. ed." para Johnson;
+- manutenção do SODa-BIC em 1,2 ponto percentual e IC95% −7,1 a 9,4.
+
+ESCOPO 4 — QA VISUAL REAL
+
+Use exclusivamente:
+
+- aplicação local;
+- Supabase local;
+- navegador Chromium real por Playwright ou automação disponível.
+
+É permitido usar a instalação existente do Playwright/Chromium. Um script temporário de validação deve ficar fora da árvore rastreada ou ser removido antes do commit.
+
+Procedimento:
+
+1. confirme que o Supabase utilizado é local;
+2. inicie somente os serviços locais necessários;
+3. crie um usuário/admin exclusivamente local se necessário;
+4. registre tudo que for criado;
+5. abra a aplicação em navegador real;
+6. autentique-se localmente;
+7. entre na Área Editorial/CMS;
+8. clique em "Importar material";
+9. selecione `acidobase.compendium.yaml`;
+10. chegue à pré-visualização;
+11. não clique em "Salvar rascunho".
+
+Verifique visualmente:
+
+- título;
+- subtítulo;
+- disciplina informada;
+- tema informado;
+- tags;
+- indicação de 17 seções;
+- indicação de 14 referências;
+- aviso explícito de criação apenas como rascunho;
+- campos ausentes;
+- comportamento quando disciplina/tema não existem;
+- dropdowns ou seleção manual;
+- legibilidade;
+- rolagem;
+- textos cortados ou sobrepostos;
+- responsividade mínima da janela;
+- mensagens de erro;
+- console do navegador;
+- requisições de rede falhas.
+
+TAXONOMIA DURANTE O QA
+
+Os nomes editoriais pretendidos são:
+
+- disciplina: Nefrologia;
+- tema: Distúrbio Acidobásico.
+
+Eles não existem no catálogo local auditado.
+
+O resultado esperado é a interface pedir resolução/seleção manual.
+
+Não:
+
+- selecionar Cardiologia;
+- selecionar disciplinas ou temas de teste;
+- criar Nefrologia;
+- criar Distúrbio Acidobásico;
+- modificar o catálogo;
+- fingir que houve correspondência automática.
+
+Se a interface exigir uma seleção incompatível para continuar, registre o bloqueio visual exatamente onde ocorre. Não escolha uma taxonomia errada.
+
+EVIDÊNCIA VISUAL
+
+Capture ao menos uma imagem da pré-visualização sem credenciais, tokens ou segredos visíveis.
+
+Salve em:
+
+docs/editorial/as1/evidencias/ACIDOBASE-PREVIEW-AS1-B3-1.png
+
+Inspecione a imagem antes de commitar.
+
+Se houver dado sensível na imagem, não a versione; refaça a captura sem o dado.
+
+Se nenhum navegador real estiver disponível, não simule o resultado. Pare o Escopo 4 e reporte o gate visual como bloqueado.
+
+ESCOPO 5 — LIMPEZA LOCAL
+
+Ao terminar:
+
+- remova usuário/admin e fixtures criados exclusivamente pela missão;
+- comprove a remoção por consulta local;
+- remova arquivos temporários;
+- preserve a evidência visual autorizada;
+- confirme que nenhum material foi criado no banco;
+- confirme que nenhum processo iniciado pela missão ficou ativo.
+
+SEGURANÇA OBRIGATÓRIA DE PROCESSOS
+
+É proibido executar:
+
+- `taskkill /F /IM node.exe /T`;
+- `taskkill /IM node.exe`;
+- `Stop-Process -Name node`;
+- qualquer encerramento global por nome;
+- qualquer comando que possa atingir processos de outras sessões.
+
+Ao iniciar o servidor:
+
+1. capture o PID exato;
+2. registre o comando associado;
+3. finalize somente esse PID;
+4. só finalize filhos após confirmar a relação pai-filho;
+5. registre o método de encerramento;
+6. confirme que nenhum processo da missão permaneceu ativo.
+
+Não encerre processos preexistentes.
+
+Atualize `docs/operacao/RUNBOOK.md` com uma única regra curta e permanente:
+
+"Nunca encerrar processos Node pelo nome globalmente; registrar e finalizar apenas o PID iniciado pela própria missão e seus filhos comprovados."
+
+Não altere outras regras do runbook.
+
+DOCUMENTAÇÃO
+
+Atualize:
+
+- `docs/editorial/as1/ACIDOBASE-AUDITORIA-DA-CONVERSAO-2026-09-18.md`;
+- `docs/operacao/TASKS.md`;
+- `docs/operacao/RUNBOOK.md`.
+
+Crie:
+
+- `docs/diretoria/prompts/AS1-B3.1.txt`;
+- `docs/editorial/as1/evidencias/ACIDOBASE-PREVIEW-AS1-B3-1.png`, somente se a captura segura for concluída.
+
+O prompt registrado deve incluir integralmente este contrato e esta missão.
+
+VALIDAÇÕES FINAIS
+
+Execute e registre:
+
+1. parser real do YAML;
+2. contagem de 17 seções;
+3. contagem de 14 referências;
+4. busca pela referência antiga incorreta;
+5. busca pelos números do SODa-BIC;
+6. inspeção visual da imagem;
+7. console e rede do navegador;
+8. limpeza das fixtures;
+9. inspeção dos processos iniciados;
+10. `git diff --check`;
+11. verificação de links markdown alterados;
+12. varredura de segredos no diff;
+13. revisão integral do diff;
+14. `git status` final.
+
+LIMITES DE AUTORIZAÇÃO
+
+Não:
+
+- salvar/importar o material;
+- criar disciplina ou tema;
+- alterar migrations;
+- alterar código do produto;
+- tocar Supabase remoto;
+- consultar ou alterar dados de produção;
+- fazer push;
+- fazer merge;
+- alterar main;
+- tocar Vercel;
+- modificar o PDF original;
+- limpar branches ou worktrees;
+- executar prune;
+- remover metadados Git;
+- encerrar processos que não tenham sido iniciados pela missão.
+
+COMMIT
+
+Se todos os trabalhos autorizados forem concluídos:
+
+- faça um único commit local;
+- use mensagem clara relacionada à AS1-B3.1;
+- deixe a árvore limpa;
+- não publique a branch.
+
+CONDIÇÃO DE PARADA
+
+Encerre quando houver:
+
+- referência Johnson corrigida;
+- relatório AS1-B3 retificado;
+- YAML validado;
+- QA visual real concluído ou bloqueio honestamente demonstrado;
+- fixtures locais removidas;
+- regra de segurança registrada;
+- commit local;
+- nenhum push, merge, importação ou publicação.
+
+RETORNO OBRIGATÓRIO
+
+RETORNO: AS1-B3.1
+
+Estado obrigatório:
+
+EXECUTADO — AGUARDANDO VERIFICAÇÃO DA DIRETORIA
+
+Informe:
+
+- resultado;
+- repositório absoluto;
+- worktree absoluto;
+- branch;
+- commit-base completo;
+- commit final completo;
+- arquivos alterados;
+- correção exata da referência Johnson;
+- confirmação de que Guanabara Koogan foi preservada;
+- confirmação primária do SODa-BIC;
+- resultado do parser;
+- contagem de seções e referências;
+- resultado detalhado da pré-visualização;
+- caminho da evidência visual;
+- console e requisições de rede;
+- comportamento da taxonomia ausente;
+- fixtures criadas e removidas;
+- PID de cada processo iniciado;
+- forma exata de encerramento;
+- confirmação de que nenhum encerramento global foi usado;
+- resultado do diff e da varredura de segredos;
+- ambientes tocados;
+- etapas não executadas;
+- divergências encontradas;
+- estado científico, editorial, visual e operacional separados;
+- confirmação de que YAML não foi importado;
+- confirmação de que remoto, main, Vercel e produção não foram tocados;
+- publicação: nenhuma.
+
+Depois do retorno, pare. Não abra a próxima missão.

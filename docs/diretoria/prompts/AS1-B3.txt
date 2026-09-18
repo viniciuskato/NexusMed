@@ -1,0 +1,162 @@
+## MISSÃO AS1-B3 — AUDITORIA INDEPENDENTE DO MATERIAL CONVERTIDO (texto integral, siga à risca)
+
+CONTEXTO EXECUTIVO
+
+Estamos validando o primeiro ciclo editorial completo do NexusMed (projeto também referido como SynapseMed no filesystem local).
+
+Tema: Distúrbio Acidobásico
+Coleção curricular: AS1 — Saúde do Adulto 1
+
+A fonte original já foi auditada na AS1-B1/B1.1 e convertida na AS1-B2. Esta missão deve verificar se a conversão preservou a ciência, aplicou todas as correções e funciona visualmente no importador.
+
+Esta é uma missão de AUDITORIA, não de redação, importação ou publicação.
+
+BASE OBRIGATÓRIA
+
+Branch de origem: work/as1-b2-conversao-acidobasico
+Commit aprovado: 4285231 (completo: 4285231cc2e5ef693a92c8dd47e038759f2c0432)
+Branch isolada a criar: work/as1-b3-auditoria-conversao-acidobasico
+
+Antes de começar, confirme:
+1. que 4285231 é o topo da branch de origem;
+2. que a árvore está limpa;
+3. que o arquivo abaixo existe e passa no parser: docs/editorial/as1/acidobase.compendium.yaml
+4. que o PDF original mantém o SHA-256 registrado: 781757f1...b64b9b8 (localize o PDF original referenciado no YAML/relatórios AS1-B1/B2 e confira o hash completo — o valor acima está truncado na missão original, então procure o hash completo nos relatórios AS1-B1/B1.1/B2 ou no próprio arquivo de proveniência)
+
+Se houver drift ou divergência não explicada, pare e reporte.
+
+PADRÃO OBRIGATÓRIO
+
+Leia integralmente e aplique o padrão editorial NexusMed vigente (procure por documentos de padrão editorial no repo, ex. docs/editorial/, docs/diretoria/, MODELO-DIRETORIA.md).
+
+Preserve a separação entre desenvolvimento e auditoria. Não reescreva o YAML nesta missão. Registre qualquer correção necessária em relatório para uma eventual AS1-B3.1.
+
+FONTES DA AUDITORIA
+- PDF original de Equilíbrio Ácido-Base, somente leitura;
+- acidobase.compendium.yaml;
+- auditoria AS1-B1/B1.1 (procure os commits/documentos correspondentes no histórico do branch de origem: b72adef = AS1-B1, bfa2d93 = AS1-B1.1);
+- plano de correção;
+- relatório AS1-B2 (commit 4285231);
+- referências citadas no YAML;
+- fontes primárias ou oficiais necessárias à conferência.
+
+ESCOPO 1 — AUDITORIA CIENTÍFICA BIDIRECIONAL
+
+Do texto para as fontes:
+1. revisar as 17 seções;
+2. identificar todas as afirmações críticas;
+3. verificar se cada afirmação é sustentada pela fonte citada;
+4. conferir números, fórmulas, pontos de corte, populações e conclusões;
+5. recalcular independentemente os cinco casos clínicos;
+6. verificar separadamente: Henderson–Hasselbalch; relação pH × H+; fórmula de Winter; ânion gap; correção pela albumina; delta ratio; compensações esperadas; identificação de distúrbios mistos.
+
+Das fontes para o texto:
+1. verificar as 14 referências;
+2. confirmar título, autoria, ano, DOI, PMID ou URL oficial;
+3. confirmar que todas são usadas;
+4. procurar duplicatas e referências órfãs;
+5. verificar se alguma fonte foi usada além do que permite;
+6. verificar individualmente as seis leituras recomendadas ainda pendentes.
+
+Nenhuma leitura deve ser declarada verificada apenas por existir ou parecer plausível.
+
+ESCOPO 2 — PENDÊNCIAS OBRIGATÓRIAS
+
+Resolver documentalmente:
+1. conferir, frase a frase na fonte, o intervalo de referência do ânion gap atribuído à StatPearls;
+2. classificar cada uma das seis leituras pendentes como: verificada; parcialmente verificada; não verificada; divergente;
+3. confirmar que BICAR-ICU usa AKIN 2–3;
+4. confirmar que o BICARICU-2 não é apresentado como benefício de mortalidade;
+5. confirmar autoria de Madias;
+6. confirmar guia SBN de 2025;
+7. confirmar ausência da referência incompleta "Wilkins RL et al., 2010".
+
+ESCOPO 3 — AUDITORIA EDITORIAL
+
+Verificar:
+- progressão didática das 17 seções;
+- definições de siglas;
+- coerência terminológica;
+- ausência de contradições e repetições;
+- distinção entre evidência, interpretação e recomendação;
+- qualidade da seção "Discussão";
+- síntese final sem alegações novas;
+- citações autor-data conforme NBR 10520:2023;
+- referências conforme NBR 6023:2018;
+- utilidade para a prova da AS1 sem reduzir a precisão científica.
+
+ESCOPO 4 — TAXONOMIA LOCAL
+
+Em modo somente leitura, consultar o catálogo do Supabase local (procure .env.local / configuração de Supabase local no repo para saber como conectar) e informar:
+- se existe a disciplina "Nefrologia";
+- se existe o tema "Distúrbio Acidobásico";
+- se o tema pertence à disciplina;
+- quais identificadores seriam selecionados pelo importador.
+
+Não criar nem alterar disciplina, tema ou relacionamento. IMPORTANTE: confira que qualquer configuração de banco aponta para AMBIENTE LOCAL antes de rodar qualquer query — nunca rode contra o Supabase remoto/produção. Se não conseguir confirmar com certeza que é local, pare e reporte a limitação em vez de rodar a query.
+
+Se o catálogo não corresponder, registrar a seleção manual necessária. Não corrigir o banco.
+
+ESCOPO 5 — PRÉ-VISUALIZAÇÃO REAL
+
+Usando exclusivamente ambiente local:
+1. iniciar os serviços necessários;
+2. abrir o CMS em navegador real;
+3. selecionar o YAML no fluxo "Importar material";
+4. chegar à pré-visualização;
+5. conferir título, subtítulo, disciplina, tema, tags, 17 seções e 14 referências;
+6. verificar mensagens, campos ausentes, rolagem, legibilidade e erros de console;
+7. capturar evidência suficiente do resultado.
+
+Não clicar em "Salvar rascunho".
+
+Se algum teste automatizado criar dados locais, removê-los e comprovar a limpeza.
+
+ARTEFATOS
+
+Criar (dentro do worktree novo que você criou):
+docs/editorial/as1/ACIDOBASE-AUDITORIA-DA-CONVERSAO-2026-09-18.md
+
+O documento deve conter:
+- matriz seção → afirmação crítica → fonte → local exato → situação;
+- auditoria das 14 referências;
+- resultado individual das seis leituras pendentes;
+- recálculo dos cinco casos;
+- auditoria editorial;
+- resultado da taxonomia local;
+- resultado da pré-visualização visual;
+- lista numerada de correções, se houver;
+- parecer final.
+
+Atualizar: docs/operacao/TASKS.md
+Registrar este prompt em: docs/diretoria/prompts/AS1-B3.txt (copie o texto integral desta missão, seção "MISSÃO AS1-B3" em diante)
+
+Faça commit dessas mudanças na branch work/as1-b3-auditoria-conversao-acidobasico (não faça push nem merge).
+
+VEREDITOS PERMITIDOS (use apenas um)
+1. APROVADO PARA IMPORTAÇÃO COMO RASCUNHO — Não existem correções científicas ou editoriais necessárias.
+2. APROVADO COM CORREÇÕES OBRIGATÓRIAS — O material pode ser aproveitado, mas precisa de AS1-B3.1 antes da importação.
+3. REPROVADO PARA IMPORTAÇÃO — Existe falha estrutural, científica ou de rastreabilidade.
+
+Não confundir "aprovado para importação como rascunho" com "aprovado para publicação".
+
+LIMITES — NÃO:
+- modificar o YAML;
+- importar ou salvar o material;
+- escrever no Supabase remoto;
+- tocar produção ou Vercel;
+- alterar código ou migrations;
+- modificar o PDF;
+- fazer push ou merge;
+- limpar worktrees ou metadados de outras sessões (em especial não toque no worktree agent-aa9101b269001b45e nem em nenhum outro worktree existente).
+
+Se encontrar defeito no importador, registre-o separadamente e pare antes de alterar código.
+
+VALIDAÇÕES
+- parser real do importador;
+- conferência das 17 seções e 14 referências;
+- git diff --check;
+- links documentais válidos;
+- varredura de segredos;
+- árvore limpa após o commit;
+- nenhuma persistência de dados de teste.
