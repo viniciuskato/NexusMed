@@ -32,6 +32,10 @@ origem. Ver texto integral da missão em
 
 ## Resumo executivo
 
+*Auditoria iniciada em 17/09/2026 e complementada em 18/09/2026 (AS1-B1.1),
+com a verificação da publicação primária do BICARICU-2 e o ajuste de
+clareza do parecer final descritos adiante.*
+
 O material é um documento de texto corrido bem estruturado, gerado a
 partir de slides de aula e ampliado com pesquisa bibliográfica ativa
 explicitamente sinalizada. As 18 páginas foram renderizadas e inspecionadas
@@ -112,7 +116,7 @@ localizada com segurança pelas ferramentas desta sessão), **divergente**
 | E04 | Fórmula de Winters (compensação da acidose metabólica) | "pCO2 esperada = 1,5 × HCO3⁻ + 8 (± 2)" | p. 6 | Não citada explicitamente junto à fórmula (aparece na lista de referências como Albert, Dell, Winters 1967) | PubMed PMID 6016545, DOI 10.7326/0003-4819-66-2-312 — artigo existe, é o trabalho original de Winters sobre deslocamento quantitativo do equilíbrio ácido-base na acidose metabólica | Fundamento clássico da fórmula, consistente com a literatura de nefrologia clínica | parcialmente verificado | adicionar `fonte:` explícito junto à fórmula, já que a referência existe na lista mas não está amarrada ao trecho (Gate 6 do PADRAO-TUTORIAL exige citação imediatamente após a afirmação) |
 | E05 | BICAR-ICU (2018) — desenho, população, desfecho primário | "ensaio multicêntrico... pH ≤ 7,2... Não houve diferença significativa na mortalidade em 28 dias... mas uma análise pré-especificada mostrou redução da mortalidade e da necessidade de TRS no subgrupo com IRA **KDIGO** 2 e 3" | p. 7 | Jaber S, et al. Lancet. 2018;392(10141):31-40 | PubMed PMID 29910040, DOI 10.1016/S0140-6736(18)31080-8 — artigo real, abstract obtido | Ensaio francês, UTI, acidemia grave | **divergente** | o ensaio original estratificou por **escore AKIN** (Acute Kidney Injury Network), não por estadiamento KDIGO — são classificações diferentes (ainda que semelhantes em espírito). O desfecho primário do BICAR-ICU também é um **composto** (óbito OU falência orgânica em D7), não "mortalidade" isolada como o texto sugere na primeira frase; a diferença de sobrevida por Kaplan-Meier na população geral teve p=0,09 (não significativa), e o benefício estatisticamente significativo (p=0,0283) aparece só no estrato AKIN 2–3. Corrigir "KDIGO 2 e 3" para "AKIN 2 e 3" e precisar que o desfecho primário é composto |
 | E06 | Meta-análise BICAR-ICU + BICAR-ICU2 (2026) | Números de mortalidade em 90 dias (58,3% vs. 60,6%; RR 0,96; IC95% 0,86–1,07; p=0,51), TRS (34,8% vs. 50,7%; RR 0,69; IC95% 0,60–0,79; p<0,001; NNT=6,3), subgrupo pH≤7,10 (RR 0,80; IC95% 0,68–0,93; p=0,004), subgrupo pH>7,10 (RR 1,05; p=0,47) | p. 7 | Fosset M, et al. Crit Care. 2026;30(1). DOI 10.1186/s13054-026-06206-3 | PubMed PMID 42472834 — abstract obtido na íntegra; **todos** os números acima conferem exatamente com o abstract oficial, inclusive N (1.016 pacientes, 509/507) | Meta-análise de dados individuais dos dois ensaios BICAR | **verificado** — a citação mais precisa e mais bem sustentada de todo o material | nenhuma |
-| E07 | Existência e resultado do BICAR-ICU2 como ensaio independente | Tratado implicitamente como um segundo ensaio já concluído, cujos dados entraram na meta-análise de 2026 | p. 7 | citado apenas via a meta-análise (Fosset et al.) | Confirmado **indiretamente**: o abstract da Fosset et al. descreve "Two randomized trials (BICAR-ICU and BICAR-ICU2)" como fonte dos dados individuais. Busca direta no PubMed por uma publicação primária isolada do BICAR-ICU2 não retornou resultado nesta sessão | Ensaio francês de continuidade do BICAR-ICU | parcialmente verificado | localizar e citar a publicação primária do BICAR-ICU2 (se já publicada) antes da conversão, em vez de depender só da meta-análise para atestar sua existência |
+| E07 | Existência e resultado do BICAR-ICU2 (BICARICU-2) como ensaio independente | Tratado implicitamente como um segundo ensaio já concluído, cujos dados entraram na meta-análise de 2026 | p. 7 | citado apenas via a meta-análise (Fosset et al.) na versão original do material | Jung B, et al.; BICARICU-2 Study Group. Sodium Bicarbonate for Severe Metabolic Acidemia and Acute Kidney Injury: The BICARICU-2 Randomized Clinical Trial. JAMA. 2025;334(22):2000-2010. PMID 41159812, DOI 10.1001/jama.2025.20231 — publicação primária localizada e aberta nesta complementação (AS1-B1.1). Abstract oficial confere exatamente: 640 randomizados, 627 analisados (313 controle/314 bicarbonato), 43 UTIs francesas, acidemia grave (pH ≤7,20) com IRA moderada a grave; mortalidade em 90 dias 62,1% (bicarbonato) vs. 61,7% (controle), diferença 0,4 ponto percentual, IC95% −7,2 a 8,0, p=0,91; terapia renal substitutiva 35% vs. 50%, diferença −15,5 pontos percentuais, IC95% −23,1 a −7,8 | Ensaio francês, ICU, acidemia grave com IRA — a mesma população de continuidade do BICAR-ICU original, cujos dados individuais alimentam a meta-análise de Fosset et al. 2026 | **verificado** | nenhuma — a AS1-B2 deve citar a publicação primária do BICARICU-2 junto da meta-análise (Fosset et al.), preservando a distinção entre ausência de efeito na mortalidade (E07) e a redução expressiva no uso de terapia renal substitutiva |
 | E08 | SODa-BIC (2026) — desenho, população, desfecho primário e resultado | "estudo multinacional (55 UTIs, 7 países, 500 pacientes)... pH < 7,30... Não houve diferença no desfecho primário (40,2% vs. 39,4%; diferença ajustada 1,2 pontos percentuais; IC95% −7,1 a 9,4; p=0,78), nem na mortalidade hospitalar (25,4% vs. 24,0%) nem no uso de TRS (16,8% vs. 20,9%)" | p. 7 | Serpa Neto A, et al. (SODa-BIC investigators). N Engl J Med. 2026. DOI 10.1056/NEJMoa2600526 | PubMed PMID 42283370 — abstract oficial obtido; **todos** os números conferem exatamente, incluindo 55 UTIs/7 países/500 pacientes (245 vs. 255 randomizados), MAKE30 40,2% vs. 39,4% com IC95% −7,1 a 9,4 e p=0,78, mortalidade hospitalar 25,4% vs. 24,0%, TRS 16,8% vs. 20,9% | Pacientes graves com acidose metabólica em vasopressor, 2026, publicação recente na NEJM | **verificado** — a citação mais sensível da missão (estudo "não coberto pela aula", risco de fabricação) é real e citada com exatidão | nenhuma |
 | E09 | Ânion-gap — valor de referência e divergência de fonte | "aula cita 10–12 mEq/L... StatPearls cita tipicamente 8–12 mEq/L" | p. 11 | StatPearls. Anion Gap and Non-Anion Gap Metabolic Acidosis | NCBI Bookshelf, capítulo confirmado em https://www.ncbi.nlm.nih.gov/books/NBK448090/ (localizado por busca) — título bate exatamente com a referência do material | Referência de bolso amplamente usada | verificado (existência do capítulo); intervalo numérico exato "8–12" não conferido linha a linha por falta de acesso ao texto completo do capítulo nesta sessão | opcional: abrir o capítulo completo do StatPearls para citar o intervalo com precisão de frase, se a citação for reaproveitada no material corrigido |
 | E10 | Fisiologia da carga ácida diária / 3 fases de defesa | "fonte: Hopkins E, Sanvictores T, Sharma S. Physiology, Acid Base Balance. StatPearls" | p. 3–4 | StatPearls, "Physiology, Acid Base Balance" | Capítulo confirmado (NCBI Bookshelf NBK507807, também indexado no PubMed sob PMID 29939584) — título e autores conferem | Fisiologia básica, fundamento estável | verificado (existência); conteúdo detalhado do capítulo não comparado frase a frase nesta sessão | nenhuma obrigatória |
@@ -132,7 +136,8 @@ mesmo contando SODa-BIC, Fosset e Jaber como três entradas distintas).
 
 - **Verificadas com abertura efetiva da fonte e conferência de conteúdo**:
   Berend 2014 (E01), Seifter 2014 (E02), Narins & Emmett 1980 (E03),
-  Fosset et al. 2026 (E06), Serpa Neto et al. (SODa-BIC) 2026 (E08),
+  Fosset et al. 2026 (E06), Jung et al. (BICARICU-2) 2025 (E07,
+  verificado em AS1-B1.1), Serpa Neto et al. (SODa-BIC) 2026 (E08),
   Guia SBN — conteúdo (E12), Adrogué et al. 2009 — existência (E15).
 - **Verificadas quanto à existência do capítulo/artigo, sem comparação
   linha a linha do conteúdo**: Albert/Dell/Winters 1967 (E04), StatPearls
@@ -280,9 +285,6 @@ Resumo das que bloqueiam a conversão sem ajuste:
   arquitetura do Gate 4 do PADRAO-TUTORIAL.md.
 - Adicionar a marca `fonte:` junto à fórmula de Winters (E04), amarrando-a
   explicitamente a Albert/Dell/Winters 1967 e/ou Narins & Emmett 1980.
-- Localizar e citar a publicação primária do BICAR-ICU2, se já disponível,
-  em vez de sustentar sua existência apenas pela menção indireta na
-  meta-análise de 2026 (E07).
 - No Caso 3, adicionar uma nota didática sobre a pCO2 medida cair no
   limite inferior da faixa esperada (49 de 49–53), para reforçar que
   "dentro da faixa" não é sinônimo de "centro da faixa".
@@ -310,6 +312,14 @@ fisiopatológica, as fórmulas ou as condutas centrais do material. Nenhuma
 delas exige nova pesquisa de fundo — são correções de redação/citação que
 podem ser resolvidas na AS1-B2 sem reabrir a triagem bibliográfica.
 
+**Nenhum achado impede aproveitar o material como base; quatro correções
+impedem publicá-lo sem ajuste.** As quatro correções obrigatórias listadas
+acima (E05, E12, E15, E16) e detalhadas em
+[`ACIDOBASE-PLANO-DE-CORRECAO-2026-09-17.md`](ACIDOBASE-PLANO-DE-CORRECAO-2026-09-17.md)
+precisam ser executadas na AS1-B2 antes de o material ser considerado
+pronto para publicação no NexusMed — a aprovação para conversão não
+equivale a aprovação para publicação sem esses ajustes.
+
 ## Fontes consultadas nesta auditoria (ferramentas e datas)
 
 - PubMed (via MCP `claude_ai_PubMed`): `search_articles`,
@@ -319,6 +329,11 @@ podem ser resolvidas na AS1-B2 sem reabrir a triagem bibliográfica.
   al. (SODa-BIC) 2026, Adrogué et al. 2009, Younes-Ibrahim et al. (Guia
   SBN) 2025, Hopkins/Sanvictores/Sharma (StatPearls) — todos consultados
   em 2026-09-17.
+- Complementação AS1-B1.1 (2026-09-18): PubMed `get_article_metadata`
+  (PMID 41159812) — Jung B, et al.; BICARICU-2 Study Group. JAMA.
+  2025;334(22):2000-2010, DOI 10.1001/jama.2025.20231 — abstract oficial
+  aberto e conferido número a número (640 randomizados, 627 analisados,
+  43 UTIs francesas, mortalidade 62,1% vs. 61,7%, TRS 35% vs. 50%).
 - WebSearch/WebFetch: confirmação de existência e autoria dos capítulos
   StatPearls "Arterial Blood Gas" e "Anion Gap and Non-Anion Gap Metabolic
   Acidosis" (NCBI Bookshelf), do guideline KDIGO 2012 AKI (Kidney Int
