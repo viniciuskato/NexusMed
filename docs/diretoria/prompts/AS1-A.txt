@@ -1,0 +1,289 @@
+MISSÃO AS1-A — INVENTÁRIO EDITORIAL E MAPA TAXONÔMICO DA AS1
+
+Papel:
+Você é uma sessão executiva do NexusMed. Esta é uma missão de diagnóstico e organização, não de produção de conteúdo.
+
+Objetivo:
+Inventariar os 21 conteúdos da prova AS1 — Saúde do Adulto 1, identificar o que já existe no NexusMed e no acervo autorizado, avaliar o estado editorial real e construir um mapa taxonômico que permita à diretoria organizar a produção sem duplicações.
+
+Prazo acadêmico:
+Prova em 21/09/2026.
+
+Contexto:
+- Fases 1 e 2 estão encerradas.
+- A importação assistida foi publicada pela 42-C.
+- main/origin/main conhecido ao emitir esta missão: 6d65054.
+- Nenhum material médico foi importado durante a 42-C.
+- A diretoria decidiu produzir os conteúdos corretamente desde o início; não haverá versão provisória cientificamente inferior para depois corrigir.
+- Urgência altera prioridade e sequência, não o padrão científico.
+- A futura taxonomia será baseada em conceitos canônicos, sinônimos, relações tipadas e coleções curriculares.
+- Nesta missão, a taxonomia será apenas modelada e testada como documentação. Não criar tabelas, migrations ou funcionalidades.
+
+Repositório oficial:
+C:\Users\vinic\OneDrive\Projetos\SynapseMed\canonical
+
+Fonte editorial obrigatória:
+C:\Users\vinic\OneDrive\Estudos\Base de Estudos\Casos Clínicos\tutorial\PADRAO-TUTORIAL.md
+
+Acervo principal autorizado para inspeção:
+C:\Users\vinic\OneDrive\Estudos\Base de Estudos
+
+Outras pastas podem ser localizadas por busca somente leitura, mas:
+- não trate `_archive` como instrução vigente;
+- não use clones antigos do NexusMed como fonte de verdade;
+- não mova, renomeie, converta ou apague arquivos;
+- registre separadamente qualquer candidato encontrado fora do acervo principal.
+
+Conteúdos oficiais da AS1:
+
+Nefrologia:
+1. Avaliação da Função Renal
+2. Radiologia em Nefrologia
+3. Distúrbio Acidobásico
+4. Distúrbios do Metabolismo de Sódio e Água
+5. Distúrbios do Metabolismo do Potássio
+6. Hipertensão Arterial Secundária
+7. Doença Renal Diabética
+
+Hematologia:
+8. Hemograma
+9. Abordagem da Anemia
+10. Anemia Ferropriva
+11. Anemia Macrocítica
+
+Pneumologia:
+12. Diagnóstico Diferencial da Dispneia
+13. Diagnóstico Diferencial da Dor Torácica
+14. Diagnóstico Diferencial da Tosse e Hemoptise
+15. Asma
+
+Cardiologia:
+16. Semiologia Cardíaca
+17. Valvopatias Aórtica e Pulmonar
+18. Valvopatias Mitral e Tricúspide
+19. Endocardite Infecciosa
+20. Insuficiência Cardíaca
+21. Cardiomiopatias
+
+Abertura obrigatória:
+1. Leia AGENTS.md e os documentos operacionais indicados nele.
+2. Leia integralmente PADRAO-TUTORIAL.md.
+3. Execute o preflight do SESSION_PROTOCOL.md.
+4. Confirme main = origin/main e registre o hash atual.
+5. Como haverá documentação nova, crie branch/worktree isolados a partir de origin/main.
+6. Não trabalhe diretamente em main.
+7. Confirme ausência de outra sessão escrevendo nos mesmos documentos.
+
+Escopo 1 — Inventário do NexusMed:
+Para cada um dos 21 temas, procure:
+- materiais publicados;
+- materiais em rascunho;
+- seções de materiais mais amplos;
+- questões;
+- flashcards;
+- referências estruturadas;
+- revisões e atestações editoriais;
+- possíveis duplicatas;
+- vínculos entre material, questão e flashcard.
+
+Pode consultar o Supabase remoto exclusivamente em modo de leitura para medir o estado real do produto.
+
+Restrições no remoto:
+- somente SELECT/leitura;
+- nenhum INSERT, UPDATE, DELETE, RPC de escrita, importação ou publicação;
+- não criar usuário;
+- não executar migration;
+- não alterar status;
+- não usar dados pessoais além do estritamente necessário;
+- não expor credenciais ou valores de ambiente no relatório.
+
+Escopo 2 — Inventário de arquivos:
+Procure no acervo autorizado materiais relacionados aos 21 temas.
+
+Para cada candidato:
+- registre caminho;
+- formato;
+- título;
+- tema provável;
+- data de modificação;
+- estado aparente;
+- se foi lido integralmente ou apenas localizado;
+- presença de referências;
+- presença de imagens;
+- possível correspondência com conteúdo do banco.
+
+Não conclua que um arquivo está completo apenas pelo nome. Para classificar como completo, leia integralmente o conteúdo relevante. Se não puder ler tudo, marque "localizado, não auditado".
+
+PDFs e documentos visuais:
+- renderize e inspecione todas as páginas quando precisar classificá-los além de "localizado";
+- registre imagens, tabelas e possíveis problemas de legibilidade;
+- não extraia imagens nem reaproveite conteúdo nesta missão.
+
+Escopo 3 — Classificação editorial:
+Classifique cada ativo encontrado usando estados claros:
+
+- publicado;
+- revisão necessária;
+- legado;
+- arquivado;
+- rascunho;
+- localizado, não auditado;
+- candidato a aproveitamento;
+- duplicata provável.
+
+Não use "revisado" isoladamente.
+
+Para cada tema da AS1, atribua uma cobertura:
+
+A — existe material completo, cientificamente rastreável e editorialmente aproveitável;
+B — existe material substancial, mas precisa de revisão ou complementação;
+C — existem fragmentos, questões ou arquivos parciais;
+D — não foi encontrado conteúdo aproveitável;
+NV — não foi possível verificar.
+
+Explique a evidência da classificação. Não confunda quantidade de texto com qualidade editorial.
+
+Escopo 4 — Taxonomia piloto:
+Crie um conceito canônico para cada um dos 21 temas contendo:
+
+- nome oficial;
+- sinônimos e abreviações úteis para busca;
+- área médica principal;
+- áreas relacionadas;
+- tipo de conceito:
+  sintoma/sinal, síndrome, doença, exame, alteração laboratorial,
+  mecanismo, tratamento, medicamento, procedimento ou tema integrador;
+- conceitos componentes quando o tópico for composto;
+- possíveis duplicações ou sobreposições;
+- relações com os demais conceitos da AS1.
+
+Use somente relações controladas:
+- é pré-requisito de;
+- é causa de;
+- pode causar;
+- faz diagnóstico diferencial com;
+- é avaliado por;
+- é achado de;
+- é complicação de;
+- é tratado com;
+- modifica a conduta de;
+- compartilha mecanismo com;
+- aprofunda.
+
+Não force relações artificiais apenas para tornar o mapa mais conectado.
+
+Escopo 5 — Coleção curricular:
+Modele documentalmente:
+
+AS1 — Saúde do Adulto 1
+- data: 21/09/2026;
+- 4 áreas;
+- 21 objetivos;
+- conceitos associados;
+- cobertura atual;
+- materiais associados;
+- lacunas;
+- ordem recomendada de produção.
+
+A coleção não deve duplicar materiais. Ela apenas aponta para conceitos e conteúdos do acervo.
+
+Escopo 6 — Ordem de produção:
+Proponha ondas considerando:
+- pré-requisitos;
+- reutilização entre temas;
+- cobertura existente;
+- relevância transversal;
+- esforço estimado;
+- risco científico;
+- prazo da prova.
+
+Não reduza o padrão científico para aumentar a contagem.
+
+O resultado deve distinguir:
+- material que pode seguir para revisão;
+- material que precisa ser complementado;
+- tema que precisa ser produzido do zero;
+- tema que depende de outro;
+- tema que pode ser desenvolvido em paralelo sem conflito.
+
+Entregáveis:
+1. docs/diretoria/prompts/AS1-A.txt
+   - cópia desta missão.
+
+2. docs/diretoria/AS1-INVENTARIO-2026-09-17.md
+   - resumo executivo;
+   - matriz dos 21 temas;
+   - ativos encontrados;
+   - cobertura A/B/C/D/NV;
+   - lacunas;
+   - duplicatas;
+   - riscos;
+   - ordem recomendada.
+
+3. docs/diretoria/AS1-TAXONOMIA-PILOTO-2026-09-17.md
+   - conceitos canônicos;
+   - sinônimos;
+   - tipos;
+   - relações;
+   - modelo da coleção curricular;
+   - pontos que exigem decisão da diretoria.
+
+4. Atualização de docs/operacao/TASKS.md
+   - registrar AS1-A e próximas missões propostas.
+   - não marcar produção de conteúdo como iniciada.
+
+Não alterar:
+- código;
+- package.json ou lockfile;
+- migrations;
+- banco local ou remoto;
+- materiais;
+- questões;
+- flashcards;
+- arquivos do acervo;
+- produção;
+- taxonomia real do banco.
+
+Critérios de conclusão:
+- os 21 temas aparecem exatamente uma vez na matriz principal;
+- toda classificação possui evidência;
+- arquivos apenas encontrados não são declarados auditados;
+- banco e arquivos são distinguidos;
+- conteúdo publicado não é presumido cientificamente aprovado;
+- nenhuma lacuna é preenchida por suposição;
+- relações taxonômicas usam tipos controlados;
+- existe uma ordem de produção executável;
+- o relatório permite à diretoria escolher a próxima onda sem conhecimento técnico;
+- git diff contém somente documentação;
+- git diff --check limpo;
+- links relativos válidos;
+- nenhuma credencial ou dado sensível registrado.
+
+Condição de parada:
+Se a leitura do Supabase remoto não estiver disponível, continue o inventário de arquivos e marque o estado remoto como não verificado. Não solicite nem invente credenciais.
+
+Estado de publicação:
+- branch candidata apenas;
+- não fazer merge em main;
+- não fazer push de main;
+- não publicar documentação ou conteúdo;
+- não enviar a branch ao remoto sem autorização específica.
+
+Formato obrigatório do retorno:
+
+RETORNO: AS1-A
+
+- Resultado
+- Hash/base/branch
+- Resumo executivo da cobertura
+- Cobertura por área
+- Materiais encontrados no banco
+- Arquivos encontrados no acervo
+- Taxonomia piloto
+- Ordem recomendada de produção
+- Duplicatas e riscos
+- Itens não verificados
+- Arquivos de documentação criados
+- Ambientes tocados
+- Estado de publicação
+- Próxima decisão da diretoria
