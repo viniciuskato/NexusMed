@@ -89,9 +89,10 @@ publicado parado enquanto o código cresce.
       como pedir exclusão da conta e dos dados nem os demais direitos do
       titular; não existe fluxo de exclusão de conta no app. Definir o
       controlador (quem responde pelos dados) e o prazo de retenção.
-- [ ] **Autoria fictícia removida** (PR #3) e nenhum conteúdo de
-      demonstração alcançável em produção.
+- [x] **Autoria fictícia removida** e mocks fora do caminho de produção (PR #3).
+- [ ] **Modo demonstração inalcançável** num deploy sem variáveis de
+      ambiente (AUD-07).
 - [ ] **Conta funcionando de ponta a ponta**: recuperação de senha
       (AUD-01) e configuração de cadastro/confirmação de e-mail (AUD-03).
-- [ ] **Processo**: CI verde obrigatório e proteção do `main` (PR #8,
-      AUD-02), porque cada push é produção.
+- [x] **Processo**: CI verde obrigatório e proteção do `main` (PR #8,
+      ruleset ativo desde 2026-09-18), porque cada push é produção.
