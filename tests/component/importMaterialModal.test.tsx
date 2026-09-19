@@ -68,6 +68,12 @@ function makeYamlFile(contents: string, name = 'compendio.yaml'): File {
   return file;
 }
 
+function makeMarkdownFile(contents: string, name = 'compendio.md'): File {
+  const file = new File([contents], name, { type: 'text/markdown' });
+  Object.defineProperty(file, 'text', { value: () => Promise.resolve(contents) });
+  return file;
+}
+
 async function selectFile(file: File) {
   const input = screen.getByLabelText(/selecionar arquivo/i, { selector: 'input' }) as HTMLInputElement;
   await fireEvent.change(input, { target: { files: [file] } });
@@ -107,6 +113,45 @@ describe('ImportMaterialModal', () => {
     expect(saved.sections).toHaveLength(1);
     expect(onImported).toHaveBeenCalledTimes(1);
     await waitFor(() => screen.getByText(/criado com sucesso/i));
+  });
+
+  it('reconhece .md pela extensão e importa pelo parser de Markdown', async () => {
+    const onImported = vi.fn();
+    render(
+      <ImportMaterialModal
+        disciplines={[discipline]}
+        themes={[theme]}
+        compendiums={[]}
+        onClose={vi.fn()}
+        onImported={onImported}
+      />
+    );
+
+    const validMarkdown = `# Meningite Bacteriana Aguda
+
+**Subtítulo:** Da fisiopatologia ao manejo
+**Disciplina:** Infectologia
+**Tema:** Clínica
+
+### Definição
+Texto da seção.
+
+### Referências Bibliográficas
+1. Referência 1
+`;
+
+    await selectFile(makeMarkdownFile(validMarkdown));
+
+    await waitFor(() => screen.getByText('Meningite Bacteriana Aguda'));
+    fireEvent.click(screen.getByRole('button', { name: /salvar rascunho/i }));
+
+    await waitFor(() => expect(importCompendiumDraftMock).toHaveBeenCalledTimes(1));
+    const saved = importCompendiumDraftMock.mock.calls[0][0] as Compendium;
+    expect(saved.disciplineId).toBe('disc-infecto');
+    expect(saved.themeId).toBe('tema-clinica');
+    expect(saved.sections).toHaveLength(1);
+    expect(saved.sections[0].title).toBe('Definição');
+    expect(onImported).toHaveBeenCalledTimes(1);
   });
 
   it('mostra erro em linguagem simples para arquivo inválido e não grava nada', async () => {

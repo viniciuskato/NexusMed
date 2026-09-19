@@ -10,6 +10,7 @@ import {
   CompendiumImportPreview,
   CompendiumImportSection,
 } from '../../utils/compendiumImport';
+import { parseCompendiumMarkdownText } from '../../utils/compendiumMarkdownImport';
 
 // ============================================================================
 // Missão 42-A — "Importar material": ponte entre o arquivo .compendium.yaml
@@ -60,7 +61,14 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
     if (!file) return;
 
     const text = await file.text();
-    const result = parseCompendiumYamlText(text, disciplines, themes, compendiums);
+    // Duas portas de entrada: `.compendium.yaml` (formato de autoria direta)
+    // e `.md` (convenção descrita em docs/editorial/PADRAO-NEXUSMED-CONTEUDOS.md
+    // — o formato que ferramentas de IA como o NotebookLM produzem
+    // nativamente, sem precisar converter pra YAML à mão antes de importar).
+    const isMarkdown = /\.(md|markdown)$/i.test(file.name);
+    const result = isMarkdown
+      ? parseCompendiumMarkdownText(text, disciplines, themes, compendiums)
+      : parseCompendiumYamlText(text, disciplines, themes, compendiums);
 
     if (result.ok === false) {
       setState({ step: 'error', fileName: file.name, errors: result.errors, technicalDetail: result.technicalDetail });
@@ -148,9 +156,9 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
       {state.step === 'pick' && (
         <div className="space-y-4">
           <p className="text-stone-600 dark:text-slate-400">
-            Selecione o arquivo do compêndio (formato <code>.yaml</code>). O sistema vai conferir o
-            conteúdo e mostrar uma pré-visualização antes de criar qualquer coisa — nada é gravado
-            até você confirmar.
+            Selecione o arquivo do conteúdo (<code>.yaml</code> ou <code>.md</code>). O sistema vai
+            conferir o conteúdo e mostrar uma pré-visualização antes de criar qualquer coisa — nada
+            é gravado até você confirmar.
           </p>
           <label
             htmlFor="import-material-file-input"
@@ -158,13 +166,13 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
           >
             <Upload className="w-6 h-6 text-teal-600 dark:text-teal-400" />
             <span className="font-bold text-stone-700 dark:text-slate-300">Selecionar arquivo</span>
-            <span className="text-stone-400">.yaml ou .yml</span>
+            <span className="text-stone-400">.yaml, .yml, .md ou .markdown</span>
           </label>
           <input
             id="import-material-file-input"
             ref={fileInputRef}
             type="file"
-            accept=".yaml,.yml"
+            accept=".yaml,.yml,.md,.markdown"
             onChange={handleFileChange}
             className="hidden"
           />
@@ -311,7 +319,7 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
               <p className="text-rose-700 dark:text-rose-300">
                 Já existe um material com o título "{state.preview.duplicateOfTitle}". Para evitar
                 duplicar conteúdo, esta importação está bloqueada. Se a intenção é atualizar o
-                material existente, edite-o diretamente na lista de compêndios.
+                material existente, edite-o diretamente na lista de conteúdos.
               </p>
             </div>
           )}
