@@ -51,6 +51,10 @@ export default defineConfig(({mode}) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_');
   return {
     plugins: [react(), tailwindcss(), contentSecurityPolicy(env.VITE_SUPABASE_URL)],
+    define: {
+      // Versão do build nos erros registrados (NOVO-02): commit do deploy na Vercel.
+      __APP_RELEASE__: JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA ?? 'local').slice(0, 12)),
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

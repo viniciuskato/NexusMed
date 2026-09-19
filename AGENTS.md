@@ -132,6 +132,13 @@ seção "Armadilhas já descobertas".
     apagado, ver `docs/operacao/DECISIONS.md` 2026-09-18). Em testes e2e,
     limpeza vai por `runCleanup` (`tests/e2e/fixtures/localSupabase.ts`),
     nunca `.catch(() => undefined)`.
+13. **Tabela nova em `public` ainda recebe grant para `anon`** por default
+    privileges de outro role do Supabase, mesmo depois do
+    `alter default privileges ... revoke ... from anon` de 20260918140000.
+    Toda migration que cria tabela precisa de `revoke all on table
+    public.<tabela> from anon;` explícito — a guarda
+    `security_guards.test.sql` (pgTAP) reprova se esquecer (achado no
+    NOVO-02, 2026-09-18).
 
 ## Convenções de trabalho
 
