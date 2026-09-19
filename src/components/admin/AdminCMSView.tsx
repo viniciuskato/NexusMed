@@ -27,6 +27,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   Link,
+  Eye,
 } from 'lucide-react';
 import { Discipline, Theme, Question, Compendium, Flashcard, CompendiumSection, UserFeedback } from '../../types';
 import { StorageService } from '../../services/storage';
@@ -59,6 +60,11 @@ interface AdminCMSViewProps {
   compendiums: Compendium[];
   flashcards: Flashcard[];
   onRefreshData: () => void;
+  // Abre o compêndio no leitor real (mesmo em rascunho) — usado pelo botão
+  // "Visualizar" da revisão editorial: sem isso, o revisor só tem o form de
+  // edição bruto ou o painel de claims, nunca o material como vai ficar pro
+  // estudante, antes de publicar.
+  onOpenCompendium: (compendiumId: string) => void;
 }
 
 export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
@@ -68,6 +74,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   compendiums,
   flashcards,
   onRefreshData,
+  onOpenCompendium,
 }) => {
   const [activeTab, setActiveTab] = usePersistedState<
     'compendiums' | 'questions' | 'flashcards' | 'users' | 'feedback' | 'database'
@@ -365,7 +372,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
 
   const handleRemoveSection = (idxToRemove: number) => {
     if (compSections.length <= 1) {
-      showToast('O compêndio deve possuir ao menos uma seção.');
+      showToast('O conteúdo deve possuir ao menos uma seção.');
       return;
     }
     setCompSections(compSections.filter((_, idx) => idx !== idxToRemove));
@@ -402,7 +409,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   const handleSaveCompendium = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!compTitle.trim()) {
-      showToast('Por favor, informe o título do compêndio.');
+      showToast('Por favor, informe o título do conteúdo.');
       return;
     }
 
@@ -445,14 +452,14 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     setIsCompendiumFormOpen(false);
     setEditingCompId(null);
     onRefreshData();
-    showToast(editingCompId ? 'Compêndio atualizado com sucesso!' : 'Novo compêndio incluído e indexado com sucesso!');
+    showToast(editingCompId ? 'Conteúdo atualizado com sucesso!' : 'Novo conteúdo incluído e indexado com sucesso!');
   };
 
   const handleDeleteCompendium = async (id: string, title: string) => {
-    if (window.confirm(`Tem certeza de que deseja excluir o compêndio "${title}"? Esta ação não pode ser desfeita.`)) {
+    if (window.confirm(`Tem certeza de que deseja excluir o conteúdo "${title}"? Esta ação não pode ser desfeita.`)) {
       await materialsRepository.deleteCompendium(id);
       onRefreshData();
-      showToast('Compêndio excluído.');
+      showToast('Conteúdo excluído.');
     }
   };
 
@@ -461,10 +468,10 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   const handlePublishAllDraftCompendiums = async () => {
     const drafts = compendiums.filter((c) => c.publicationStatus !== 'published');
     if (drafts.length === 0) {
-      showToast('Nenhum compêndio em rascunho.');
+      showToast('Nenhum conteúdo em rascunho.');
       return;
     }
-    if (!window.confirm(`Publicar os ${drafts.length} compêndios em rascunho? Ficam visíveis para estudantes imediatamente.`)) return;
+    if (!window.confirm(`Publicar os ${drafts.length} conteúdos em rascunho? Ficam visíveis para estudantes imediatamente.`)) return;
     setBulkPublishing(true);
     let ok = 0;
     for (const c of drafts) {
@@ -477,7 +484,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     }
     setBulkPublishing(false);
     onRefreshData();
-    showToast(`${ok}/${drafts.length} compêndios publicados.`);
+    showToast(`${ok}/${drafts.length} conteúdos publicados.`);
   };
 
   const handlePublishAllDraftQuestions = async () => {
@@ -608,7 +615,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   };
 
   const handleResetData = () => {
-    if (window.confirm('Tem certeza de que deseja restaurar a base de dados original? Suas respostas e compêndios customizados serão reiniciados.')) {
+    if (window.confirm('Tem certeza de que deseja restaurar a base de dados original? Suas respostas e conteúdos customizados serão reiniciados.')) {
       StorageService.resetToDefaults();
       onRefreshData();
       showToast('Base de dados restaurada para os padrões!');
@@ -647,7 +654,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
             Gestão de Conteúdo Médico
           </h1>
           <p className="text-stone-600 dark:text-slate-400 text-xs sm:text-sm">
-            Crie e gerencie compêndios de área, mecanismos fisiopatológicos, questões comentadas e flashcards com repetição espaçada.
+            Crie e gerencie conteúdos de área, mecanismos fisiopatológicos, questões comentadas e flashcards com repetição espaçada.
           </p>
         </div>
 
@@ -671,7 +678,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
           }`}
         >
           <BookOpen className="w-4 h-4" />
-          <span>Compêndios & Mecanismos ({compendiums.length})</span>
+          <span>Conteúdos & Mecanismos ({compendiums.length})</span>
         </button>
 
         <button
@@ -771,7 +778,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               onClick={handlePublishAllDraftCompendiums}
               disabled={bulkPublishing}
               className="px-3.5 py-2 rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 hover:dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50 cursor-pointer"
-              title="Publica todos os compêndios que ainda estão em rascunho"
+              title="Publica todos os conteúdos que ainda estão em rascunho"
             >
               <ShieldCheck className="w-4 h-4" />
               <span>Publicar rascunhos ({compendiums.filter((c) => c.publicationStatus !== 'published').length})</span>
@@ -780,7 +787,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
             <button
               onClick={() => setIsImportMaterialOpen(true)}
               className="px-3.5 py-2 rounded-lg border border-teal-200 dark:border-teal-900 bg-teal-50 dark:bg-teal-950/40 hover:bg-teal-100 hover:dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
-              title="Cria um rascunho a partir de um arquivo de compêndio (.yaml) já pronto"
+              title="Cria um rascunho a partir de um arquivo de conteúdo (.yaml) já pronto"
             >
               <FileUp className="w-4 h-4" />
               <span>Importar material</span>
@@ -791,7 +798,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               className="px-4 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white dark:bg-teal-600 dark:hover:bg-teal-500 text-xs font-bold transition-all flex items-center justify-center gap-1.5 elev-xs shrink-0 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>Novo Compêndio / Mecanismo</span>
+              <span>Novo Conteúdo / Mecanismo</span>
             </button>
           </div>
 
@@ -829,7 +836,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                   <h3 className="font-serif-reading text-lg font-bold text-stone-900 dark:text-slate-100">
-                    {editingCompId ? 'Editar Compêndio' : 'Incluir Novo Compêndio ou Mecanismo'}
+                    {editingCompId ? 'Editar Conteúdo' : 'Incluir Novo Conteúdo ou Mecanismo'}
                   </h3>
                 </div>
                 <button
@@ -848,7 +855,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-2">
                   <label className="font-bold text-stone-700 dark:text-slate-300 block mb-1" htmlFor="admincmsview-titulo-principal-do-compendio-1">
-                    Título Principal do Compêndio *
+                    Título Principal do Conteúdo *
                   </label>
                   <input id="admincmsview-titulo-principal-do-compendio-1"
                     type="text"
@@ -870,7 +877,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                     className="w-full p-2.5 rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 font-semibold text-xs"
                   >
                     <option value="mecanismos">Mecanismo Fisiopatológico (Fisio/Farmaco)</option>
-                    <option value="atlas">Compêndio de Área (Atlas / Panorama)</option>
+                    <option value="atlas">Conteúdo de Área (Atlas / Panorama)</option>
                   </select>
                 </div>
               </div>
@@ -1191,7 +1198,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                   className="px-6 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white dark:bg-teal-600 dark:text-white dark:hover:bg-teal-500 font-bold elev-xs flex items-center gap-1.5 transition-all"
                 >
                   <Save className="w-4 h-4" />
-                  <span>{editingCompId ? 'Atualizar Compêndio' : 'Publicar Compêndio'}</span>
+                  <span>{editingCompId ? 'Atualizar Conteúdo' : 'Publicar Conteúdo'}</span>
                 </button>
               </div>
             </form>
@@ -1219,7 +1226,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                             isAtlas ? 'badge-atlas' : 'badge-mec'
                           }`}
                         >
-                          {isAtlas ? 'Compêndio de Área' : 'Mecanismo Fisiopatológico'}
+                          {isAtlas ? 'Conteúdo de Área' : 'Mecanismo Fisiopatológico'}
                         </span>
                         <span className="text-[10px] font-semibold text-stone-500 dark:text-slate-400">
                           {disc?.name || c.disciplineId}
@@ -1272,6 +1279,14 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                     <span className="text-[10px] text-stone-400 font-mono-code">ID: {c.id}</span>
 
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => onOpenCompendium(c.id)}
+                        className="px-3 py-1.5 rounded-lg border border-stone-200 dark:border-[#243452] hover:bg-stone-100 dark:hover:bg-[#1A2845] text-stone-700 dark:text-slate-300 font-semibold text-xs flex items-center gap-1 transition-colors"
+                        title="Visualizar o material como o estudante veria — funciona mesmo em rascunho, antes de publicar"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Visualizar</span>
+                      </button>
                       <button
                         onClick={(e) => openProvenance(e, { kind: 'material', id: c.id, title: c.title })}
                         className="px-3 py-1.5 rounded-lg border border-stone-200 dark:border-[#243452] hover:bg-stone-100 dark:hover:bg-[#1A2845] text-stone-700 dark:text-slate-300 font-semibold text-xs flex items-center gap-1 transition-colors"
@@ -1371,7 +1386,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                       <button
                         onClick={() => handleDeleteCompendium(c.id, c.title)}
                         className="p-1.5 rounded-lg border border-stone-200 dark:border-[#243452] hover:bg-rose-50 hover:dark:bg-rose-950/40 text-stone-400 hover:text-rose-600 transition-colors"
-                        title="Excluir compêndio"
+                        title="Excluir conteúdo"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -1395,7 +1410,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                 Banco de Questões Cadastradas
               </h3>
               <p className="text-[11px] text-stone-500 dark:text-slate-400">
-                {questions.length} questões com explicações por alternativa vinculadas aos compêndios
+                {questions.length} questões com explicações por alternativa vinculadas aos conteúdos
               </p>
             </div>
 
@@ -1985,7 +2000,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                       onClick={() => handleOpenFeedbackTarget(f)}
                       className="text-[11px] text-teal-700 dark:text-teal-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                     >
-                      <span>{f.questionId ? 'Ver questão' : 'Ver compêndio'}</span>
+                      <span>{f.questionId ? 'Ver questão' : 'Ver conteúdo'}</span>
                       <ArrowRight className="w-3 h-3" />
                     </button>
                   )}
