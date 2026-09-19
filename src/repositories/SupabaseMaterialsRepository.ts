@@ -103,6 +103,7 @@ interface MaterialReferenceRow {
 
 interface SourceRow {
   id: string;
+  citation_text: string;
   verificacao: string;
   identificadores: Record<string, string> | null;
 }
@@ -245,8 +246,15 @@ function buildCompendium(
       .map(rowToSection),
     references: materialRefs.map((r) => r.citation_text),
     referenceSources: materialRefs.map((r) => {
-      if (!r.source_id) return { linked: false };
-      return { linked: true, sourceId: r.source_id, url: sourceUrl(sourcesById.get(r.source_id)?.identificadores, r.url), verificacao: sourcesById.get(r.source_id)?.verificacao };
+      if (!r.source_id) return { id: r.id, linked: false };
+      return {
+        id: r.id,
+        linked: true,
+        sourceId: r.source_id,
+        citationText: sourcesById.get(r.source_id)?.citation_text,
+        url: sourceUrl(sourcesById.get(r.source_id)?.identificadores, r.url),
+        verificacao: sourcesById.get(r.source_id)?.verificacao,
+      };
     }),
   };
 }
@@ -296,7 +304,7 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
     if (sourceIds.length > 0) {
       const { data: sources, error: srcErr } = await supabase
         .from('sources')
-        .select('id, identificadores, verificacao')
+        .select('id, citation_text, identificadores, verificacao')
         .in('id', sourceIds);
       if (srcErr) throw srcErr;
       sourcesById = new Map((sources ?? []).map((s) => [s.id as string, s as SourceRow]));
@@ -408,6 +416,20 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
 
   async unpublishCompendium(id: string): Promise<void> {
     const { error } = await supabase.from('materials').update({ status: 'draft' }).eq('id', id);
+    if (error) throw error;
+  }
+
+  // Vincula (ou desvincula, com sourceId=null) uma referência de texto solto
+  // já existente a uma fonte curada do catálogo — UPDATE direcionado só em
+  // material_references.source_id/url, nunca reenvia citation_text/sort_order
+  // nem toca em material_sections (mesmo motivo de updateSectionContent
+  // abaixo: saveCompendium é "substitui tudo", risco alto demais pra uma
+  // associação pontual — 21-D).
+  async updateMaterialReferenceSource(referenceId: string, sourceId: string | null, url: string | null): Promise<void> {
+    const { error } = await supabase
+      .from('material_references')
+      .update({ source_id: sourceId, url: sourceId ? url : null })
+      .eq('id', referenceId);
     if (error) throw error;
   }
 

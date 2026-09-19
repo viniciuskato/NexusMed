@@ -43,6 +43,10 @@ git rev-parse origin/main
   servidor, não comportamento de cliente (dedupe de promises, sessão
   ativa, etc.) — ver `docs/archive/AGENTS-HISTORICO-2026-09-17.md` para o
   histórico de bugs que só apareceram em teste de navegador real.
+- Testes E2E que criam dados persistentes: seguir o standard
+  [`standards/testes-e-fixtures.md`](standards/testes-e-fixtures.md) e o
+  runbook específico
+  [`runbooks/supabase-e2e-local.md`](runbooks/supabase-e2e-local.md).
 - Servidor de desenvolvimento: `npm run dev` escuta só em `127.0.0.1:3000` (abre também por `http://localhost:3000`)
   (desde AUD-10). Para abrir no celular/outro aparelho da rede local, use
   `npm run dev:lan` (`--host=0.0.0.0`) — só em rede confiável.

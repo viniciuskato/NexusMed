@@ -51,4 +51,3 @@ Ambientes tocados
 Dados/fixtures: criados, removidos e contagem residual
 Riscos e pendências
 Próxima decisão da diretoria
-

@@ -1,3 +1,4 @@
+import { sourceUrl } from '../utils/bibliographicSources';
 import { supabase } from '../lib/supabaseClient';
 import {
   Claim,
@@ -12,6 +13,7 @@ import {
   ProvenanceStatus,
   RiskCategory,
   SourceConfidence,
+  SourceSummary,
 } from '../types';
 
 // ============================================================================
@@ -116,6 +118,24 @@ function rowToClaimSource(r: ClaimSourceRow): ClaimSource {
     verified: r.verified,
     confidence: (r.confidence as SourceConfidence | null) ?? null,
     sortOrder: r.sort_order,
+  };
+}
+
+interface SourceSearchRow {
+  id: string;
+  citation_text: string;
+  tipo: string;
+  verificacao: string;
+  identificadores: Record<string, string> | null;
+}
+
+function rowToSourceSummary(r: SourceSearchRow): SourceSummary {
+  return {
+    id: r.id,
+    citationText: r.citation_text,
+    tipo: r.tipo,
+    verificacao: r.verificacao,
+    url: sourceUrl(r.identificadores),
   };
 }
 
@@ -236,6 +256,40 @@ export class ContentProvenanceRepository {
       .single();
     if (error) throw error;
     return rowToClaimSource(data as ClaimSourceRow);
+  }
+
+  // Catálogo de fontes é read-only aqui de propósito (23-D): sem CRUD geral
+  // de fontes nesta tarefa, só busca legível para o seletor do painel de
+  // revisão e da associação de referências de material. Busca por texto da
+  // citação (título/autoria/ano ficam embutidos em citation_text — o
+  // catálogo não tem campos estruturados separados) OU por DOI/URL dentro
+  // de identificadores (jsonb).
+  async searchSources(query: string): Promise<SourceSummary[]> {
+    const q = query.trim();
+    let builder = supabase
+      .from('sources')
+      .select('id, citation_text, tipo, verificacao, identificadores')
+      .order('citation_text')
+      .limit(20);
+    if (q) {
+      const escaped = q.replace(/[%,]/g, '');
+      builder = builder.or(
+        `citation_text.ilike.%${escaped}%,identificadores->>doi.ilike.%${escaped}%,identificadores->>url.ilike.%${escaped}%`
+      );
+    }
+    const { data, error } = await builder;
+    if (error) throw error;
+    return (data ?? []).map(rowToSourceSummary);
+  }
+
+  async getSourcesByIds(ids: string[]): Promise<Map<string, SourceSummary>> {
+    if (ids.length === 0) return new Map();
+    const { data, error } = await supabase
+      .from('sources')
+      .select('id, citation_text, tipo, verificacao, identificadores')
+      .in('id', [...new Set(ids)]);
+    if (error) throw error;
+    return new Map((data ?? []).map((r) => [r.id as string, rowToSourceSummary(r as SourceSearchRow)]));
   }
 
   async attestRevision(
