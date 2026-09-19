@@ -83,31 +83,32 @@ function isNonEmptyString(v: unknown): v is string {
   return typeof v === 'string' && v.trim().length > 0;
 }
 
-export function parseCompendiumYamlText(
-  text: string,
+/**
+ * Dados já extraídos do arquivo de origem (YAML ou Markdown), antes de
+ * validar campos obrigatórios e resolver disciplina/tema. Compartilhado
+ * pelos dois formatos de importação — cada um só precisa produzir este
+ * formato intermediário; a validação (e a mensagem exibida) é uma só.
+ */
+export interface RawCompendiumInput {
+  title?: unknown;
+  subtitle?: unknown;
+  disciplineName?: unknown;
+  themeName?: unknown;
+  author?: unknown;
+  estimatedReadTimeMinutes?: unknown;
+  tags?: unknown;
+  sections?: unknown;
+  references?: unknown;
+}
+
+const LEGACY_CITATION_PATTERN = /\[\d+(?:\s*,\s*\d+)*\](?!\()/;
+
+export function buildCompendiumImportResult(
+  data: RawCompendiumInput,
   disciplines: Discipline[],
   themes: Theme[],
   existingCompendiums: Compendium[]
 ): CompendiumImportSuccess | CompendiumImportFailure {
-  let raw: unknown;
-  try {
-    raw = parseYaml(text);
-  } catch (err) {
-    return {
-      ok: false,
-      errors: ['Não foi possível interpretar este arquivo como um compêndio válido. Confira se é o arquivo correto e se não foi editado de forma incompleta.'],
-      technicalDetail: err instanceof Error ? err.message : String(err),
-    };
-  }
-
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    return {
-      ok: false,
-      errors: ['O arquivo está vazio ou não tem o formato esperado de um compêndio.'],
-    };
-  }
-
-  const data = raw as Record<string, unknown>;
   const errors: string[] = [];
   const missingFields: string[] = [];
 
@@ -164,6 +165,19 @@ export function parseCompendiumYamlText(
     return { ok: false, errors };
   }
 
+  // Marcador tipo "[268]" ou "[84, 265]" sem virar link [N](#ref-N) não é
+  // clicável no CompendiumReader e, na prática, quase sempre é numeração
+  // interna de outra ferramenta (ex.: citação automática do NotebookLM
+  // sobre as fontes carregadas nela) que não bate com a posição real na
+  // lista de referências deste arquivo — nunca corrigido automaticamente
+  // aqui, porque isso seria inventar a que referência cada afirmação
+  // pertence. Só sinaliza para revisão manual antes de publicar.
+  if (sections.some((s) => LEGACY_CITATION_PATTERN.test(s.content))) {
+    missingFields.push(
+      'Citações em formato antigo (ex.: "[12]", sem link) encontradas no texto — troque por "[N](#ref-N)", com N na posição correta da lista de referências, antes de publicar'
+    );
+  }
+
   const discipline = resolveByName(disciplineName, disciplines);
   const theme = resolveByName(
     themeName,
@@ -198,6 +212,33 @@ export function parseCompendiumYamlText(
   };
 
   return { ok: true, errors: [], preview, sections, references, tags };
+}
+
+export function parseCompendiumYamlText(
+  text: string,
+  disciplines: Discipline[],
+  themes: Theme[],
+  existingCompendiums: Compendium[]
+): CompendiumImportSuccess | CompendiumImportFailure {
+  let raw: unknown;
+  try {
+    raw = parseYaml(text);
+  } catch (err) {
+    return {
+      ok: false,
+      errors: ['Não foi possível interpretar este arquivo como um conteúdo válido. Confira se é o arquivo correto e se não foi editado de forma incompleta.'],
+      technicalDetail: err instanceof Error ? err.message : String(err),
+    };
+  }
+
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return {
+      ok: false,
+      errors: ['O arquivo está vazio ou não tem o formato esperado de um conteúdo.'],
+    };
+  }
+
+  return buildCompendiumImportResult(raw as RawCompendiumInput, disciplines, themes, existingCompendiums);
 }
 
 /** Monta o `Compendium` final só quando disciplina/tema já estão resolvidos (auto ou escolha manual). */

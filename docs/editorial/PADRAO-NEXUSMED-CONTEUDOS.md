@@ -62,24 +62,61 @@ no texto — evite deixar referência "órfã", sem citação nenhuma.
 Você pode reabrir e editar esse mesmo formulário quantas vezes quiser
 antes do passo 2, sem custo nenhum.
 
-### Alternativa: escrever num arquivo `.compendium.yaml` e importar
+### Alternativa: importar um arquivo (`.md` ou `.compendium.yaml`)
 
-Só vale a pena se você for gerar o conteúdo com IA (que produz o
-arquivo pronto) ou já tiver um texto estruturado assim. Nesse caso,
-Admin → **Importar material** → escolha o arquivo — a tela mostra um
-preview com campos faltando e pede escolha manual de disciplina/tema
-se o nome não bateu com o catálogo. O formato é o mesmo conteúdo do
-formulário acima, só que em arquivo:
+Vale a pena se você gerar o conteúdo com uma IA de fontes (NotebookLM e
+similares — que produzem Markdown nativamente, não YAML) ou já tiver
+um texto pronto. Admin → **Importar material** → escolha o arquivo — a
+tela mostra um preview com campos faltando e pede escolha manual de
+disciplina/tema se o nome não bateu com o catálogo.
+
+**Formato `.md`** — mesmo conteúdo do formulário, em Markdown simples:
+
+```markdown
+# Título completo
+
+**Subtítulo:** Subtítulo
+**Disciplina:** Nome da Disciplina     (precisa bater com um nome já cadastrado, ou a importação pede escolha manual)
+**Tema:** Nome do Tema
+**Autor:** (opcional)
+**Tempo estimado de leitura:** 18 minutos (opcional)
+
+### Título da Seção
+**Tag de Mecanismo:** Fisiopatologia (opcional)
+
+Texto em Markdown, com [N](#ref-N) em toda afirmação clínica — N é a
+posição da referência na lista de Referências abaixo.
+
+**Pontos-Chave:**
+*   Frase-síntese autossuficiente
+
+> 💡 **Pérola Clínica:** opcional
+> ⚠️ **Alerta de Armadilha:** opcional
+
+### Tags
+`tag1` `tag2`
+
+### Referências Bibliográficas
+1. Referência completa, com [tipo de evidência entre colchetes]
+```
+
+O preview avisa (sem bloquear) se encontrar citação em formato antigo
+`[268]` sem virar link `[N](#ref-N)` — comum quando o texto vem de uma
+ferramenta que usa sua própria numeração interna de fontes, diferente
+da posição real na sua lista de Referências. Corrija manualmente antes
+de publicar; ninguém remapeia isso por você automaticamente, porque
+adivinhar a referência certa seria inventar citação.
+
+**Formato `.yaml`** — o formato de autoria original, mais verboso mas
+igualmente válido:
 
 ```yaml
-id: slug-legivel-do-conteudo
 title: "Título completo"
 subtitle: "Subtítulo"
 disciplineName: Nome da Disciplina     # precisa bater com um nome já cadastrado, ou a importação pede escolha manual
 themeName: Nome do Tema
 sections:
-  - id: slug-da-secao
-    title: Título da Seção
+  - title: Título da Seção
     mechanismTag: Fisiopatologia
     content: |
       Texto em Markdown, com [N](#ref-N) em toda afirmação clínica.
@@ -89,10 +126,11 @@ references:
   - "Referência completa, com [tipo de evidência entre colchetes]"
 ```
 
-Único requisito técnico real (`src/utils/compendiumImport.ts:86-201`):
-`title`, `disciplineName`, `themeName` preenchidos e pelo menos uma
-seção com `title` e `content`. Fora isso é a mesma qualidade editorial
-de sempre — ninguém valida por você.
+Único requisito técnico real, nos dois formatos
+(`src/utils/compendiumImport.ts`): `title`, `disciplineName`,
+`themeName` preenchidos e pelo menos uma seção com `title` e
+`content`. Fora isso é a mesma qualidade editorial de sempre — ninguém
+valida por você.
 
 ## Passo 2 — Revisão e atestação (o passo que trava a publicação)
 
