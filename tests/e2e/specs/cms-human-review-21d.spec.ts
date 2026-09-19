@@ -113,7 +113,11 @@ test.describe('CMS — fluxo humano de revisão (21-D)', () => {
   let cleanup: (() => Promise<void> | void)[] = [];
 
   test.afterEach(async () => {
-    for (const fn of cleanup) {
+    // Desfaz na ordem inversa da criação: primeiro remove as fixtures de
+    // conteúdo (revisões/atestados incluídos), depois o usuário que elas
+    // referenciam. Apagar o usuário primeiro pode falhar por FK e, como cada
+    // cleanup é best-effort para permitir os demais, deixar a conta órfã.
+    for (const fn of cleanup.slice().reverse()) {
       await Promise.resolve(fn()).catch(() => undefined);
     }
     cleanup = [];
