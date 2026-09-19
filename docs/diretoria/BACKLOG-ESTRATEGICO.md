@@ -172,7 +172,7 @@ autocontido (#6), code splitting + botão voltar (#7), processo via PR
 - **Prioridade relativa**: baixa-média; baixar o teto a cada PR que tocar
   o arquivo.
 - **Contexto mínimo pra puxar**: `npm run lint`, `eslint.config.js`.
-- **Estado**: Em andamento — PR #20 (lint 89 → 5 avisos, teto 5, `useDialogA11y` em 12 modais); texto 9–10px e os 5 `exhaustive-deps` ficam para depois
+- **Estado**: Concluído — PR #20 mesclado (lint 89 → 5 avisos, teto 5, `useDialogA11y` em 12 modais); texto 9–10px e os 5 `exhaustive-deps` ficam para depois
 
 ### AUD-10 — Endurecimento do CI e do ambiente de dev
 - **Registrado em**: 2026-09-18 pela sessão de auditoria
@@ -185,7 +185,7 @@ autocontido (#6), code splitting + botão voltar (#7), processo via PR
 - **Prioridade relativa**: baixa.
 - **Contexto mínimo pra puxar**: `.github/workflows/ci.yml`,
   `vite.config.ts`, `metadata.json`.
-- **Estado**: Em andamento — PR #12 (actions por SHA, CLI 2.117.0, Dependabot, dev em 127.0.0.1, `metadata.json` removido)
+- **Estado**: Concluído — PR #12 mesclado (actions por SHA, CLI 2.117.0, Dependabot, dev em 127.0.0.1, `metadata.json` removido)
 
 ### AUD-11 — Tela em branco depois de deploy (code splitting)
 - **Registrado em**: 2026-09-18 pela sessão de diretoria (2ª rodada)
@@ -218,14 +218,16 @@ autocontido (#6), code splitting + botão voltar (#7), processo via PR
 - **Registrado em**: 2026-09-18 pela sessão de diretoria (2ª rodada)
 - **Problema**: Vite 6→8, TypeScript 5.8→7, ESLint 9→10, Vitest 3→5,
   lucide 0.x→1.x; sem atualização automática.
-- **Estado**: Em andamento — Dependabot entra com o PR #12; cada major em
-  PR próprio, um por vez, com CI verde
+- **Estado**: Em andamento — Dependabot ativo desde o #12; majors das actions
+  (#22–#25) e do `lucide-react` (#27) mesclados; majors de
+  ESLint/TypeScript bloqueados para migração planejada (#31,
+  `docs/operacao/standards/atualizacao-dependencias.md`)
 
 ### AUD-15 — Ofensiva e "hoje" calculados em UTC
 - **Registrado em**: 2026-09-18 (achado pelos testes do PR #13)
 - **Problema**: ofensiva, cards de hoje, missões e Passagem de Plantão
   usavam o dia UTC; em Brasília, estudo depois das 21h caía no dia seguinte.
-- **Estado**: Em andamento — PR #19 (`diaLocal`)
+- **Estado**: Concluído — PR #19 mesclado (`diaLocal`)
 
 ### AUD-16 — Pendências que só o dono do projeto executa
 - **Registrado em**: 2026-09-18 pela sessão de diretoria (2ª rodada)
