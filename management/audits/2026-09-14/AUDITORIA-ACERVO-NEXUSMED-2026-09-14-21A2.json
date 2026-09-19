@@ -1,0 +1,116 @@
+{
+  "prompt": "21-A2 v2",
+  "snapshot": {
+    "commit": "2e342bd70521311b9a39a6f8be78586fa1547d4f",
+    "commit_matches_estado_conhecido": true,
+    "schema_migrations_head": "20260914120000_content_provenance_attestation",
+    "collected_at": "2026-09-14T15:55:00Z",
+    "source": "Supabase remoto (jfvhwwvixwvgjfqzlkkb, sa-east-1), supabase db query --linked, somente leitura",
+    "repo": "C:\\Users\\vinic\\dev\\NexusMed\\firebase-auth"
+  },
+  "counts_reconciled": {
+    "disciplines": 15,
+    "themes": 41,
+    "materials_total": 34,
+    "materials_by_status": { "published": 34 },
+    "questions_total": 402,
+    "questions_by_status": { "draft": 9, "published": 393 },
+    "question_options": 2010,
+    "question_option_keys": 2010,
+    "question_answer_keys": 402,
+    "question_references": 675,
+    "flashcards_total": 26,
+    "flashcards_is_custom_true": 26,
+    "flashcards_is_custom_false_editorial": 0,
+    "sources": 84,
+    "profiles": { "admin": 1, "student": 8, "active": 7, "blocked": 2 },
+    "feedback": { "pendente": 14, "em_analise": 1, "resolvido": 1 },
+    "content_revisions": 0,
+    "claims": 0,
+    "content_reviews": 0
+  },
+  "changes_since_2026_09_07_audit": [
+    "question_references passou de 0 (achado #2 daquela auditoria) para 675 linhas povoadas — a lacuna estrutural relatada então parece corrigida, mas não foi confirmado nesta auditoria qual carga/script populou (fora do escopo 'somente leitura').",
+    "migration 20260914120000_content_provenance_attestation aplicada e deploy confirmado (Prompt 23-B/23-C) — introduz content_revisions/claims/claim_sources/content_reviews, mas todas as tabelas estão com 0 linhas: nenhum material ou questão passou pelo fluxo novo ainda.",
+    "achado de 09-07 sobre desalinhamento de taxonomia disciplina material×questão é RECONFIRMADO e caracterizado com mais precisão: não é só nome de disciplina divergente, é ausência quase total de vínculo estrutural via materials.id em questions.material_id (ver P0-1 abaixo)."
+  ],
+  "findings": [
+    {
+      "item_id": "P0-1",
+      "categoria": "vinculo_material_questao",
+      "severidade": "P0",
+      "evidencia": "393/402 questões (100% das published) têm material_id NULL. Dos 34 materiais publicados, 32 têm 0 questões E 0 flashcards vinculados; 1 (\"Antiagregantes, Anticoagulantes e Trombolíticos\") tem 3 flashcards e 0 questões; 1 (\"PCSK9 e a Nova Fronteira da Redução de LDL-c\") tem 9 questões vinculadas mas todas em status draft (0 published) e 2 flashcards. Ou seja: NENHUM material publicado tem hoje questões publicadas vinculadas estruturalmente.",
+      "acao": "Decisão editorial: aceitar acervo de questões e compêndios como trilhas independentes (rótulo explícito na UI, sem prometer vínculo) OU iniciar reconciliação deliberada material_id↔questão por tema (trabalho de conteúdo, não script automático de match por nome).",
+      "responsavel": "diretoria (decisão) + sessão executiva de conteúdo (se decisão for reconciliar)",
+      "dependencias": "nenhuma técnica; depende de decisão editorial sobre o que 'pack completo' deve significar no produto"
+    },
+    {
+      "item_id": "P0-2",
+      "categoria": "proveniencia_claims",
+      "severidade": "P0",
+      "evidencia": "content_revisions=0, claims=0, content_reviews=0 no remoto apesar da migration 20260914120000 aplicada e do smoke test ter provado o fluxo (23-C) com dados efêmeros. get_provenance_status classificaria hoje as 34 materials e 402 questions publicadas como 'legacy_unmapped' (nenhuma reprovada retroativamente por decisão de diretoria, mas nenhuma aprovada sob a política nova).",
+      "acao": "Definir e priorizar o primeiro lote real de criação de content_revision + claims + atestação (ver 'primeiro lote recomendado' abaixo) — hoje 100% do acervo publicado está fora da política 23-A/23-B.",
+      "responsavel": "diretoria (priorização) + sessão executiva (execução do lote)",
+      "dependencias": "nenhuma técnica adicional; RPCs já existem e foram validadas no smoke 23-C"
+    },
+    {
+      "item_id": "P1-1",
+      "categoria": "compendio_incompleto",
+      "severidade": "P1",
+      "evidencia": "12 material_sections com content vazio/whitespace (ex.: 'Leituras recomendadas', 'Discussão', 'Conceitos-chave', 'Fundamentos necessários', 'Active controversies' em 12 materiais distintos). Lista completa de material_id/section_id/title está no artefato de coleta bruta (não reproduzida aqui por não duplicar).",
+      "acao": "Revisão editorial pontual: preencher ou remover a seção vazia.",
+      "responsavel": "autoria de conteúdo humana",
+      "dependencias": "nenhuma"
+    },
+    {
+      "item_id": "P1-2",
+      "categoria": "vinheta_ausente",
+      "severidade": "P1",
+      "evidencia": "100% das 393 questões published têm clinical_vignette vazio, enquanto as 9 draft têm vinheta preenchida (101–1095 caracteres, média 253). Não investigado se a vinheta foi fundida no question_stem durante a carga legado ou se é lacuna real — apenas medido, conforme restrição de não corrigir conteúdo.",
+      "acao": "Confirmar com amostra manual (fora do escopo desta auditoria) se question_stem já contém a vinheta embutida (não seria defeito, seria convenção antiga) ou se é perda de dado; registrar decisão antes de qualquer correção em massa.",
+      "responsavel": "diretoria (decisão) + verificação humana pontual",
+      "dependencias": "nenhuma"
+    },
+    {
+      "item_id": "P2-1",
+      "categoria": "duplicata_secao",
+      "severidade": "P2",
+      "evidencia": "2 materiais têm seções com content textualmente idêntico dentro do mesmo material: 'Tumores do Sistema Nervoso Central' (3 seções com o mesmo texto, amostra de título 'Apresentação clínica') e 'Síndromes Bronco-Pleuro-Pulmonares' (2 seções, amostra 'Fundamentos necessários').",
+      "acao": "Revisão editorial: confirmar se é duplicata real (mesclar/remover) ou reaproveitamento intencional de bloco de texto.",
+      "responsavel": "autoria de conteúdo humana",
+      "dependencias": "nenhuma"
+    },
+    {
+      "item_id": "P3-1",
+      "categoria": "flashcards_editoriais_ausentes",
+      "severidade": "P3",
+      "evidencia": "0 flashcards com is_custom=false (editoriais). Todos os 26 flashcards do banco são pessoais (is_custom=true), 21 vinculados a question_origin_id e 5 a material_id — não é defeito (ver restrição do prompt: não classificar conteúdo pessoal sem pack como defeito), mas confirma que nenhum pack tem flashcards curados oficialmente.",
+      "acao": "Candidato de pauta (não aprovado automaticamente): decidir se flashcards editoriais fazem parte do escopo de algum pack piloto futuro.",
+      "responsavel": "diretoria",
+      "dependencias": "nenhuma"
+    },
+    {
+      "item_id": "IDEA-1",
+      "categoria": "formas_paralelas",
+      "severidade": "idea",
+      "evidencia": "Heurística por institution+year só encontrou 1 cluster (8 questões draft do piloto PCSK9, mesmo tema, autoria própria) — inútil para o acervo published, que tem institution/year NULL em 100% dos casos (questões autorais, não extraídas de prova real). Os temas com mais questões published (candidatos a revisão manual de formas paralelas, não confirmados como duplicata): Antimicrobianos - fundamentos (76), Tumores do SNC (70), Endocardite Infecciosa (52), Insuficiência Cardíaca (40), Hipertensão Arterial e SRAA (38).",
+      "acao": "Pauta futura: revisão qualitativa por amostra desses 5 temas para identificar itens que funcionam como formas paralelas verdadeiras (não inferido automaticamente aqui).",
+      "responsavel": "diretoria",
+      "dependencias": "nenhuma"
+    },
+    {
+      "item_id": "IDEA-2",
+      "categoria": "pack_piloto_longitudinal",
+      "severidade": "idea",
+      "evidencia": "Nenhum material publicado tem hoje questões published vinculadas. O material 'PCSK9 e a Nova Fronteira da Redução de LDL-c' (Cardiologia, Farmacologia Cardiovascular) já tem 9 questões vinculadas via material_id e 2 flashcards — é o único caso onde a infraestrutura de vínculo material↔questão↔flashcard já existe fisicamente, só falta publicar as questões draft.",
+      "acao": "Candidato natural a pack piloto longitudinal: menor esforço técnico (dados já vinculados), mas exige decisão editorial de publicar as 9 questões draft.",
+      "responsavel": "diretoria",
+      "dependencias": "P0-1 (decisão sobre significado de vínculo material↔questão)"
+    }
+  ],
+  "packs_covered": "34/34 materiais e 402/402 questões cobertos por consulta agregada; amostra qualitativa limitada às seções vazias/duplicadas listadas acima (controle, não survey completo linha a linha).",
+  "primeiro_lote_recomendado": "P0-2 (iniciar o fluxo real de content_revision+claims+atestação) combinado com IDEA-2 (usar o material PCSK9 como primeiro caso: já tem vínculo material↔questão↔flashcard pronto, só falta decisão de publicação) — menor esforço técnico, maior valor de prova de conceito ponta a ponta da política 23-A/23-B em conteúdo real.",
+  "pack_piloto_candidato": "PCSK9 e a Nova Fronteira da Redução de LDL-c (material_id 69bfb1ad-3e77-4d85-bc9b-53d7c8ed5a74)",
+  "limites_metodo": "Duplicatas/formas paralelas checadas só por igualdade exata (stems, títulos, seções) e por institution+year; nenhuma comparação semântica/fuzzy foi feita — consistente com a restrição de não inferir equivalência automaticamente. Inspeção humana não foi feita (auditoria 100% agregada via SQL); achados P1/P2 têm ids brutos coletados mas não citados linha a linha aqui para não duplicar dado.",
+  "seguranca": "Todas as consultas foram SELECT puro via 'supabase db query --linked'; nenhuma RPC mutável, INSERT/UPDATE/DELETE, migration, push ou deploy foi executado. Nenhum token, e-mail, nota ou conteúdo pessoal de usuário aparece neste artefato (só ids de material/questão/seção e contagens agregadas)."
+}
