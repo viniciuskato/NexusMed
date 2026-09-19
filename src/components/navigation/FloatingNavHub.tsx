@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   LayoutDashboard,
   BookOpen,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { LastReadingSession, ThemeMode } from '../../types';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 
 interface FloatingNavHubProps {
   activeView: string;
@@ -44,16 +45,9 @@ export const FloatingNavHub: React.FC<FloatingNavHubProps> = ({
   const isAdmin = profile?.role === 'admin';
   const [isOpen, setIsOpen] = useState(false);
 
-  // Close menu on Escape
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsOpen(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  // Escape fecha o menu, Tab fica preso nele e o foco volta ao botão que o
+  // abriu (antes: só um listener de Escape em window).
+  const menuDialogRef = useDialogA11y<HTMLDivElement>({ isOpen, onClose: () => setIsOpen(false) });
 
   const navItems = [
     {
@@ -141,9 +135,10 @@ export const FloatingNavHub: React.FC<FloatingNavHubProps> = ({
       {/* ── Floating Expanded Command Menu ─────────────────────────── */}
       {isOpen && (
         <div
+          ref={menuDialogRef}
           role="dialog"
           aria-modal="true"
-          aria-label="Menu Flutuante de Navegação"
+          aria-labelledby="floating-nav-hub-title"
           className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-lg bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-2xl border border-slate-200/90 dark:border-[#243452] elev-2xl shadow-2xl rounded-3xl p-4 sm:p-5 transition-all animate-in fade-in zoom-in-95 duration-150"
         >
           {/* Header */}
@@ -152,7 +147,7 @@ export const FloatingNavHub: React.FC<FloatingNavHubProps> = ({
               <div className="w-7 h-7 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center">
                 <Compass className="w-4 h-4" />
               </div>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              <span id="floating-nav-hub-title" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                 Navegação Flutuante
               </span>
             </div>

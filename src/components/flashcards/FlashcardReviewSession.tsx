@@ -11,6 +11,7 @@ import confetti from 'canvas-confetti';
 import { Flashcard, Discipline, Theme, Compendium } from '../../types';
 import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { formatToAbntCitation } from '../../utils/bibliographicSources';
+import { onActivationKey } from '../../utils/keyboardActivation';
 
 interface FlashcardReviewSessionProps {
   cards: Flashcard[];
@@ -197,6 +198,12 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
 
           return (
             <div
+              role="button"
+              tabIndex={0}
+              // Enter/Espaço com o cartão focado viram o cartão (como o clique).
+              // onActivationKey para a propagação, então o atalho global de
+              // Espaço (useEffect acima) não vira o cartão uma segunda vez.
+              onKeyDown={onActivationKey(() => setIsFlipped(!isFlipped))}
               onTouchStart={(e) => {
                 setDragStartX(e.touches[0].clientX);
                 setDragCurrentX(e.touches[0].clientX);

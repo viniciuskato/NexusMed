@@ -8,6 +8,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { Question, QuestionAnswerRecord, ErrorLogItem, Discipline } from '../../types';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 
 interface ExportCadernoModalProps {
   isOpen: boolean;
@@ -27,6 +28,8 @@ export const ExportCadernoModal: React.FC<ExportCadernoModalProps> = ({
   const [filterOnlyNotes, setFilterOnlyNotes] = useState(false);
   const [filterOnlyPending, setFilterOnlyPending] = useState(true);
   const [copied, setCopied] = useState(false);
+
+  const dialogRef = useDialogA11y<HTMLDivElement>({ isOpen, onClose });
 
   if (!isOpen) return null;
 
@@ -90,7 +93,12 @@ export const ExportCadernoModal: React.FC<ExportCadernoModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white dark:bg-[#0E1726] rounded-3xl border border-slate-300 dark:border-[#243452] shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="export-caderno-title"
+        className="bg-white dark:bg-[#0E1726] rounded-3xl border border-slate-300 dark:border-[#243452] shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100">
         {/* Header */}
         <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -98,7 +106,7 @@ export const ExportCadernoModal: React.FC<ExportCadernoModalProps> = ({
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold tracking-tight">
+              <h3 id="export-caderno-title" className="text-lg font-bold tracking-tight">
                 Dossiê de Reta Final — Caderno de Erros
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">

@@ -444,7 +444,6 @@ function AuthenticatedApp() {
   const isAdmin = profile?.role === 'admin' && profile?.status === 'active';
 
   // Calculate badges
-  const unansweredCount = questions.filter((q) => !answers[q.id]).length;
   const errorCount = (Object.values(answers) as QuestionAnswerRecord[]).filter((a) => !a.isCorrect).length;
   const dueCardsCount = flashcards.filter((fc) => isCardDueToday(fc)).length;
 

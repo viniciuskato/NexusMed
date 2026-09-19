@@ -131,6 +131,11 @@ seção "Armadilhas já descobertas".
   [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md).
 - **Testar contra Supabase LOCAL** antes de considerar qualquer mudança
   de schema/RPC pronta. Nunca validar escrita direto no remoto.
+- **Acessibilidade (desde AUD-09)**: modal novo usa `useDialogA11y`
+  (`src/hooks/useDialogA11y.ts`) + `role="dialog"`, `aria-modal`,
+  `aria-labelledby`; clicável novo é `<button type="button">` ou, se contiver
+  botões internos, `role="button"` + `tabIndex={0}` + `onActivationKey`
+  (`src/utils/keyboardActivation.ts`). O teto `--max-warnings` do lint só desce.
 - **Ponto de restauração**: tag `v0-beta-amigos`. Rollback de emergência:
   `vercel rollback`. Reverter código: `git revert`.
 

@@ -87,7 +87,8 @@ Scripts separados por finalidade — cada um pode ser rodado isoladamente:
 ```bash
 npm run typecheck   # tsc --noEmit
 npm run lint        # ESLint real: TypeScript + React Hooks + acessibilidade JSX
-                     # (--max-warnings 93: baseline transitório, não sobe)
+                     # (--max-warnings 5: só restam 5 react-hooks/exhaustive-deps;
+                     # o teto só desce, nunca sobe)
 npm run test        # pgTAP (supabase/tests/database) contra o Supabase LOCAL;
                      # OBRIGATÓRIO — falha (exit != 0) se CLI/stack local
                      # não estiverem disponíveis, nunca pula em silêncio

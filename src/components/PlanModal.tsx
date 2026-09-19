@@ -10,6 +10,7 @@ import {
   Users,
 } from 'lucide-react';
 import { UserPlan } from '../types';
+import { useDialogA11y } from '../hooks/useDialogA11y';
 
 interface PlanModalProps {
   isOpen: boolean;
@@ -22,11 +23,18 @@ export const PlanModal: React.FC<PlanModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const dialogRef = useDialogA11y<HTMLDivElement>({ isOpen, onClose });
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl elev-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="plan-modal-title"
+        className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl elev-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-6 sm:p-8 bg-gradient-to-br from-teal-50 via-white to-cyan-50 dark:bg-slate-900 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 text-slate-900 dark:text-white relative">
           <button
@@ -39,7 +47,7 @@ export const PlanModal: React.FC<PlanModalProps> = ({
             <Sparkles className="w-3.5 h-3.5" />
             <span>Acesso Colaborativo NexusMed</span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
+          <h2 id="plan-modal-title" className="text-xl sm:text-2xl font-bold tracking-tight">
             Ambiente Acadêmico de Acesso Livre
           </h2>
           <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm mt-2 leading-relaxed">

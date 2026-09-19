@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Search,
   X,
@@ -8,6 +8,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { Compendium, Question, Flashcard } from '../types';
+import { useDialogA11y } from '../hooks/useDialogA11y';
 
 interface GlobalSearchModalProps {
   isOpen: boolean;
@@ -81,6 +82,11 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
     };
   }, [query, compendiums, questions, flashcards]);
 
+  // Foco inicial no campo de busca (antes era `autoFocus`); Escape, Tab preso
+  // e devolução de foco ficam com o hook.
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useDialogA11y<HTMLDivElement>({ isOpen, onClose, initialFocusRef: searchInputRef });
+
   if (!isOpen) return null;
 
   const totalResults =
@@ -91,15 +97,21 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4 bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="global-search-title"
         className="w-full max-w-2xl bg-white dark:bg-[#0F172A] rounded-2xl elev-2xl border border-slate-200 dark:border-[#243452] overflow-hidden flex flex-col max-h-[80vh] shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
       >
+        <h2 id="global-search-title" className="sr-only">
+          Busca global
+        </h2>
         {/* Search Input Bar */}
         <div className="flex items-center px-4 py-3.5 border-b border-slate-200 dark:border-[#243452] gap-3 bg-white dark:bg-[#0F172A]">
           <Search className="w-5 h-5 text-teal-600 dark:text-teal-400 shrink-0" />
           <input
+            ref={searchInputRef}
             type="text"
-            autoFocus
             placeholder="Pesquisar mecanismo, doença, droga (ex: sepse, ICFEr, noradrenalina, GINA)..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
