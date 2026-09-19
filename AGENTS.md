@@ -160,6 +160,12 @@ seção "Armadilhas já descobertas".
 - **Testar contra Supabase LOCAL** antes de considerar qualquer mudança
   de schema/RPC pronta. Nunca validar mudança de escrita direto no
   remoto.
+- **Acessibilidade (desde AUD-09, 2026-09-18)**: modal novo usa
+  `useDialogA11y` (`src/hooks/useDialogA11y.ts`) + `role="dialog"`,
+  `aria-modal`, `aria-labelledby`; elemento clicável novo é `<button
+  type="button">`, ou — se contiver botões internos — `role="button"` +
+  `tabIndex={0}` + `onActivationKey` (`src/utils/keyboardActivation.ts`).
+  O teto `--max-warnings` do `npm run lint` só desce.
 - **Ponto de restauração**: tag git `v0-beta-amigos`. Rollback de
   emergência do site: `vercel rollback`. Reverter código: `git revert`.
 
