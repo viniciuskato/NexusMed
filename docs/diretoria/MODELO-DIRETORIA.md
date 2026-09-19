@@ -70,7 +70,15 @@ Para mudanças de risco alto (merge em `main`, decisão de taxonomia/conteúdo m
 
 ## Sessão de auditoria (papel estratégico, adicionado 2026-09-18)
 
-**Quando abrir**: só sob pedido explícito do usuário — "faz um raio-x do projeto", pedido de evolução criativa, fechamento de um marco grande. Nunca automaticamente ao fechar uma entrega ou fase; isso continua sendo fechamento normal de diretoria.
+**Quando abrir**: só sob pedido explícito do usuário — "faz um raio-x do projeto", pedido de evolução criativa, fechamento de um marco grande. Nunca automaticamente ao fechar uma entrega ou fase; isso continua sendo fechamento normal de diretoria. **Cadência recomendada** (desde a auditoria de 2026-09-18): a diretoria sugere ao usuário convocar uma auditoria a cada ~2 semanas de desenvolvimento ativo ou antes de qualquer marco que mude o risco (abrir para usuários novos, cobrar, importar conteúdo em lote). Motivo: a verificação por entrega olha bem o diff de cada missão, mas os bugs graves de 2026-09-18 (gabarito vazando por RPC, "Salvar" do CMS apagando anotações por cascata, tipagem desligada, CI vermelho sem ninguém notar) estavam *entre* as entregas — nenhum diff isolado os mostrava.
+
+**Checklist mínimo da auditoria** (além da leitura de estado):
+1. Toda RPC `SECURITY DEFINER`: checagem de usuário ativo/admin **antes** de qualquer caminho que devolva dado (inclusive atalhos de idempotência).
+2. Todo caminho de escrita que faz `DELETE`: o que cai em cascata (`ON DELETE CASCADE`/`SET NULL`) nas tabelas que apontam para a apagada.
+3. CI do `main` verde de verdade (`gh run list --branch main`), não só "passou na minha máquina".
+4. `tsc` com `strict`, dependências (`npm audit --omit=dev`) e segredos no diff do período.
+5. Dados fictícios ou de demonstração alcançáveis em produção.
+6. O que o usuário final vê de fato: fluxos de conta (cadastro, senha), navegação e conteúdo publicado.
 
 **Escopo**: o projeto inteiro, não uma entrega. Ler `AGENTS.md`, `docs/operacao/PROJECT_STATE.md`, `DECISIONS.md`, `TASKS.md`, `docs/diretoria/registro.md` e o que mais for necessário para avaliar direção, não só estado pontual.
 
