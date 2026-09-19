@@ -16,7 +16,7 @@ interface CadernoErrosViewProps {
   disciplines: Discipline[];
   themes: Theme[];
   compendiums?: Compendium[];
-  onOpenCompendium: (compendiumId: string, sectionId?: string) => void;
+  onOpenCompendium: (compendiumId?: string, sectionId?: string, originQuestionId?: string) => void;
   onOpenCreateSimulado: () => void;
 }
 

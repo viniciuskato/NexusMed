@@ -33,16 +33,22 @@ git log --oneline -10 origin/main
 Qualquer hash citado neste documento é **baseline histórica de quando foi
 escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
 
-## Auditoria técnica de 2026-09-18 — PRs abertos
+## Auditoria técnica de 2026-09-18 — publicada
 
-Achados graves corrigidos em PR, **ainda não mesclados** (produção continua com os bugs até o merge):
+PRs #1 a #8 mesclados e no ar em 2026-09-18; migrations `20260918120000`,
+`20260918130000` e `20260918140000` aplicadas no Supabase remoto; `main`
+protegido (PR obrigatório, checks `fast` e `full`, branch atualizado).
 
-- #1 RPC `submit_question_attempt` devolvia gabarito de qualquer questão (inclusive rascunho) reaproveitando `client_op_id` — migration.
-- #2 "Salvar" do formulário de compêndio no CMS apagava anotações de alunos, histórico e imagens das seções (cascata) — migration, aplicar **antes** do merge. Até lá, não editar material publicado pelo formulário.
-- #6 CI do `main` estava vermelho (spec dependente de arquivo pessoal + fixture residual) — mesclar primeiro.
-- Demais: #3 mocks/autoria fictícia, #4 CSP/grants/logout (migration), #5 strict + bugs do painel/SRS, #7 code splitting + botão voltar, #8 processo via PR, #9 backlog da auditoria, #10 produto/negócio.
+- #1 RPCs de gabarito exigem usuário ativo e mesma questão na idempotência.
+- #2 "Salvar" do compêndio no CMS via RPC `save_compendium` — não apaga mais anotações, histórico nem imagens.
+- #3 mocks e autoria fictícia fora de produção. #4 CSP/headers, sem grants para `anon`, limpeza no logout.
+- #5 `strict` + `@types/react`. #6 CI autocontido. #7 code splitting e navegação por `#/tela`. #8 processo via PR.
 
-Ordem de merge e pendências: `TASKS.md`. Achados não resolvidos: `docs/diretoria/BACKLOG-ESTRATEGICO.md` (AUD-01 a AUD-10).
+Lição de publicação: o #2 foi mesclado antes da migration, e o "Salvar" do
+CMS ficou quebrado até ela ser aplicada — migration da qual o frontend
+depende vai **antes** do merge (RUNBOOK, seção 3).
+
+Pendências: `docs/diretoria/BACKLOG-ESTRATEGICO.md` (AUD-01 e AUD-03 a AUD-10).
 
 ## Baseline verificada nesta entrega (Entrega 40-A, 2026-09-17)
 

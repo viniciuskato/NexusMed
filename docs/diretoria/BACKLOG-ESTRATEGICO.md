@@ -70,7 +70,7 @@ autocontido (#6), code splitting + botão voltar (#7), processo via PR
 - **Prioridade relativa**: alta; depende do merge do PR #6 (CI verde).
 - **Contexto mínimo pra puxar**: Settings → Branches → regra para `main`
   com "Require a pull request" e os checks `fast` e `full`.
-- **Estado**: Aberto
+- **Estado**: Concluído (ruleset no `main` ativado em 2026-09-18: PR obrigatório, checks `fast` e `full`, branch atualizado, sem force-push)
 
 ### AUD-03 — Conferir a configuração de Auth do Supabase remoto
 - **Registrado em**: 2026-09-18 pela sessão de auditoria
@@ -156,7 +156,7 @@ autocontido (#6), code splitting + botão voltar (#7), processo via PR
   função (dois `create or replace` concorrentes).
 - **Por que importa**: paridade entre cliente e servidor; na prática o
   teto é inalcançável (décadas de revisões).
-- **Prioridade relativa**: baixa; fazer depois do merge do #1 e do #5.
+- **Prioridade relativa**: baixa; já desbloqueado (#1 e #5 mesclados).
 - **Contexto mínimo pra puxar**: `tests/unit/srsAlgorithm.test.ts`
   (comentário no topo), migration do #1.
 - **Estado**: Aberto
