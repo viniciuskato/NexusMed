@@ -19,8 +19,8 @@
   diretoria e sem passar pelo gate do** [`RUNBOOK.md`](RUNBOOK.md).
 - Chats, memória de qualquer IA e cópias locais soltas **não são fonte de
   verdade** — ver decisão de 2026-09-17 em [`DECISIONS.md`](DECISIONS.md).
-- Cópia de trabalho recomendada (limpa, sem drift na criação):
-  `C:\Users\vinic\OneDrive\Projetos\SynapseMed\canonical`.
+- Cópia de trabalho canônica, fora do OneDrive:
+  `C:\Users\vinic\dev\NexusMed\firebase-auth`.
 
 ## Como reconfirmar o estado antes de qualquer trabalho
 

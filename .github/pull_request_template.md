@@ -19,3 +19,11 @@
 ## Riscos e o que não foi verificado
 
 <!-- Seja explícito sobre o que ficou de fora. -->
+
+## Aprendizado operacional
+
+- [ ] Não houve falha nova com aprendizado generalizável
+- [ ] Falha registrada em `docs/operacao/incidents/`
+- [ ] Regra promovida para `standards/`, runbook ou `DECISIONS.md`
+- [ ] Teste de regressão ou gate de CI adicionado
+- [ ] Impossibilidade de automatizar a prevenção justificada acima

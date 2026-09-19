@@ -20,6 +20,8 @@ mais a porta de entrada abaixo.
 5. [`docs/operacao/SESSION_PROTOCOL.md`](docs/operacao/SESSION_PROTOCOL.md)
    — contrato obrigatório de abertura e fechamento de sessão, com o
    checklist de relatório executivo.
+6. [`docs/operacao/incidents/index.md`](docs/operacao/incidents/index.md)
+   — falhas operacionais relevantes, causas-raiz e prevenções executáveis.
 
 **Histórico completo** (todo o `AGENTS.md` anterior a esta entrega, com o
 diário de "Estado atual" prompt a prompt e as 23 armadilhas na íntegra,
@@ -81,115 +83,69 @@ seção "Armadilhas já descobertas".
    que o ambiente é local sem checar `VITE_SUPABASE_URL` primeiro.
 5. **Código vindo de fora da sessão normal de trabalho (ex.: exportação
    de ferramenta externa com preview ao vivo) precisa de revisão linha a
-   linha antes de ir para produção** — já causou bug de segurança (login
-   de demonstração sempre visível), `package-lock.json` apagado sem
-   necessidade, e `catch {}` vazio engolindo erro de escrita. **Ver
-   `docs/operacao/PROJECT_STATE.md`, risco crítico aberto em 2026-09-17**:
-   há um commit exatamente com esse padrão (`package-lock.json` apagado)
-   em `origin/main` sem revisão registrada.
+   linha antes de ir para produção** — já causou bug de segurança, lockfile
+   apagado e erro de escrita engolido. Ver `PROJECT_STATE.md` para riscos
+   críticos abertos relacionados.
 6. **Merge em `main` ≠ schema aplicado no Supabase remoto.** São dois
    passos independentes; aplicar migration faz parte do merge, não é
    opcional depois — sempre confirmar com query direta no remoto.
 7. **`service_role`/service role key não é o mesmo que o usuário Postgres
    `postgres`.** Alguns triggers só liberam alteração para
-   `current_user = 'postgres'` — para bootstrapping local, conectar via
-   `docker exec -i supabase_db_synapsemed psql -U postgres` (a flag `-i`
-   é obrigatória para heredoc funcionar).
+   `current_user = 'postgres'`; para bootstrapping local, conectar via
+   `docker exec -i supabase_db_synapsemed psql -U postgres`.
 8. **O padrão `Resilient*Repository` (grava local, espelha no Supabase
-   com `catch {}` silencioso) é risco real de duplicação/perda de dado
-   sob falha de rede.** Corrigido para as categorias 1-9 do backlog de
-   sincronização (ver histórico) — ao criar um repositório novo com esse
-   padrão, seguir o modelo já corrigido, não copiar o antigo.
-9. **`profiles.status`/gate de acesso é fail-closed por decisão
-   deliberada**: só `status === 'active'` entra no app; qualquer outro
-   valor (inclusive um futuro valor de enum não tratado) cai em tela de
-   bloqueio. Não "corrigir" isso para ser permissivo.
+   com erro silencioso) é risco real de duplicação/perda de dado.** Ao
+   criar repositório novo, seguir o modelo corrigido, não copiar o antigo.
+9. **`profiles.status`/gate de acesso é fail-closed:** só
+   `status === 'active'` entra no app.
 10. **O projeto roda com `strict: true` desde 2026-09-18 — não desligar.**
-    Antes disso não havia `strict` nem `@types/react` instalado: todo o
-    React era `any` e o `tsc --noEmit` do gate não checava a camada de UI
-    (ligar o strict revelou campos inexistentes lidos no painel e um
-    `TypeError` no SRS). A antiga armadilha "TS não estreita `!r.ok`
-    cross-módulo" tinha a causa errada: era a falta de `strictNullChecks`
-    (repro mínimo confirma), não o `import`. Com strict ligado, `if (!r.ok)`
-    funciona; os `=== false` existentes podem ficar.
-11. **`npm run lint` rodado direto na raiz de `canonical` varre também
-    outras worktrees aninhadas em `.claude/worktrees/**`** (não
-    rastreadas pelo git, mas presentes em disco) — sem uma entrada de
-    `ignores` para esse caminho, isso gera milhares de erros fantasmas de
-    código de outras branches/checkouts. Corrigido em 2026-09-18
-    (`eslint.config.js`), achado só porque foi a primeira vez que um gate
-    completo rodou a partir da raiz canônica em vez de uma worktree isolada
-    fora dela. Rodar `npm run test:e2e` (Playwright completo) logo depois
-    de `npm run test` (pgTAP) sem `supabase db reset` entre os dois também
-    falha de forma parecida (specs `estudo-tematico-22a`/`concurrencia-13b`)
-    por fixtures do pgTAP não limpas — sempre resetar antes do e2e se o
-    pgTAP rodou primeiro na mesma sessão.
-12. **`supabase.auth.admin.deleteUser()` (e o supabase-js em geral) não
-    rejeita a promise em erro — devolve `{ error }`.** Um `.catch()` em
-    volta não pega nada; é preciso checar o `error` retornado. Ignorar isso
-    escondeu por semanas que o spec 23-B nunca apagava seu admin de teste
-    (FK `RESTRICT` intencional — quem atestou conteúdo não pode ser
-    apagado, ver `docs/operacao/DECISIONS.md` 2026-09-18). Em testes e2e,
-    limpeza vai por `runCleanup` (`tests/e2e/fixtures/localSupabase.ts`),
-    nunca `.catch(() => undefined)`.
+11. **`npm run lint` na raiz varre worktrees aninhadas sem o ignore
+    existente; pgTAP deixa fixtures persistentes.** Manter o ignore e
+    executar `supabase db reset` entre pgTAP e E2E.
+12. **`supabase.auth.admin.deleteUser()` não rejeita a promise em erro;
+    devolve `{ error }`.** Limpeza E2E usa `runCleanup`, verifica o retorno
+    e remove dependências antes do usuário — nunca
+    `.catch(() => undefined)`. Ver
+    [`standards/testes-e-fixtures.md`](docs/operacao/standards/testes-e-fixtures.md)
+    e [`INC-2026-001`](docs/operacao/incidents/INC-2026-001-fixtures-e2e-residuais.md).
 
 ## Convenções de trabalho
 
 - **Toda mudança entra em `main` por Pull Request com CI verde** (desde
-  2026-09-18) — nunca push direto: cada push em `main` é um deploy real
-  em produção. O PR roda o CI antes da produção e gera um preview na
-  Vercel. Migration da qual o frontend depende é aplicada no remoto
-  **antes** do merge. Detalhe completo em `docs/operacao/RUNBOOK.md`,
-  seção 3.
-- **O diário de cada mudança é o PR** (descrição + discussão + CI), não
-  os documentos de operação. `PROJECT_STATE.md`/`TASKS.md`/`DECISIONS.md`
-  registram estado presente, fila e decisões duráveis em poucas linhas,
-  com link para o PR — sem repetir passo a passo, hashes e contagens que
-  o PR e o `git log` já guardam.
-- **Modelo "sessão de auditoria / sessão diretoria / sessão
-  executiva"** (três papéis desde 2026-09-18): mudanças maiores são
-  planejadas por uma sessão diretoria que escreve um prompt autocontido,
-  e uma sessão executiva separada implementa, verifica com as próprias
-  ferramentas e reporta objetivamente — sem mesclar em `main` sozinha,
-  sem inventar escopo novo. Acima delas, uma sessão de auditoria
-  esporádica (só sob pedido explícito) pensa o projeto inteiro e a
-  evolução de longo prazo, sem gerar encaminhamento — só registra itens
-  em [`docs/diretoria/BACKLOG-ESTRATEGICO.md`](docs/diretoria/BACKLOG-ESTRATEGICO.md)
-  para a diretoria consultar depois. Modelo completo:
+  2026-09-18) — nunca push direto: cada push em `main` é um deploy real.
+  Migration da qual o frontend depende é aplicada no remoto **antes** do
+  merge. Detalhe em `docs/operacao/RUNBOOK.md`, seção 3.
+- **O diário de cada mudança é o PR**, não os documentos de operação.
+  `PROJECT_STATE.md`/`TASKS.md`/`DECISIONS.md` registram estado presente,
+  fila e decisões duráveis em poucas linhas, com link para o PR.
+- **Incidente documenta falha relevante; standard guarda regra
+  generalizável; runbook guarda procedimento; teste/CI torna a prevenção
+  executável.** Não duplicar a mesma narrativa entre camadas.
+- **Modelo "sessão de auditoria / sessão diretoria / sessão executiva"**:
+  mudanças maiores são planejadas por diretoria, implementadas e
+  verificadas por executiva, sem mesclar em `main` sozinha. Modelo:
   [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md).
 - **Testar contra Supabase LOCAL** antes de considerar qualquer mudança
-  de schema/RPC pronta. Nunca validar mudança de escrita direto no
-  remoto.
-- **Ponto de restauração**: tag git `v0-beta-amigos`. Rollback de
-  emergência do site: `vercel rollback`. Reverter código: `git revert`.
+  de schema/RPC pronta. Nunca validar escrita direto no remoto.
+- **Ponto de restauração**: tag `v0-beta-amigos`. Rollback de emergência:
+  `vercel rollback`. Reverter código: `git revert`.
 
 ## Manter este arquivo atualizado
 
-Isto não é um documento estático, mas também não é mais o lugar para
-diário de estado. **Toda sessão que descobrir uma armadilha nova de alta
-probabilidade de recorrência, ou mudar uma convenção de trabalho, deve
-atualizar a seção correspondente aqui** (curto, condensado) — o
-detalhamento completo vai para
-`docs/archive/AGENTS-HISTORICO-2026-09-17.md` só se for reescrever
-história antiga; uma armadilha nova de hoje em diante pode simplesmente
-ser adicionada à lista acima, sem precisar do arquivo morto.
+Este arquivo é um índice, não um diário. Uma falha nova de alta
+probabilidade de recorrência deve gerar registro em
+`docs/operacao/incidents/`; a regra generalizável vai para
+`docs/operacao/standards/` ou `RUNBOOK.md`; somente um resumo curto e um
+link entram aqui quando todo agente precisar conhecê-los.
 
-**Estado presente, decisões e fila de trabalho não são mais registrados
-aqui** — atualize `docs/operacao/PROJECT_STATE.md`,
-`docs/operacao/DECISIONS.md` e `docs/operacao/TASKS.md`, conforme o
-contrato de fechamento de sessão em
-`docs/operacao/SESSION_PROTOCOL.md`. `docs/diretoria/registro.md`
-continua existindo como painel legado da diretoria (acompanhamento de
-prompts número a número) — sua abertura aponta para a camada operacional
-atual; o conteúdo histórico dele não foi movido nesta entrega.
+Estado presente, decisões e fila vivem em `PROJECT_STATE.md`,
+`DECISIONS.md` e `TASKS.md`, conforme `SESSION_PROTOCOL.md`.
+`docs/diretoria/registro.md` continua como painel legado da diretoria.
 
 ## Comunicação entre diretoria e executivas
 
 Toda sessão de diretoria deve ler e seguir
 [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md)
 e consultar [`docs/diretoria/registro.md`](docs/diretoria/registro.md)
-para o histórico de prompts. O modelo vigente organiza entregas com
-etapas NN-A/NN-B, fila priorizada, histórico, estados baseados em
-confirmação do usuário e verificação separada de dependências e
-conflitos de execução — preserve os identificadores de prompts já
+para o histórico de prompts. Preserve os identificadores de prompts já
 emitidos ao continuar esse histórico.
