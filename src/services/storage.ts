@@ -28,6 +28,7 @@ import { onActiveUserChanged } from './syncQueue';
 import { recoverLegacyLocalProgress } from './legacyRecovery';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { getOptionalErrorMessage } from '../utils/errorMessage';
+import { diaLocal } from '../utils/diaLocal';
 
 // Conteúdo de demonstração (mockData) só existe no modo local, sem Supabase.
 // Com Supabase configurado, o cache local começa vazio: nunca mostrar ao
@@ -537,9 +538,9 @@ export const StorageService = {
     const totalAnswered = answers.length;
     const totalCorrect = answers.filter((a) => a.isCorrect).length;
     const cards = this.getFlashcards();
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = diaLocal(new Date());
     const reviewedToday = cards.reduce((acc, c) => {
-      const todayCount = (c.srs?.reviewHistory || []).filter((h) => h?.date?.startsWith(todayStr)).length;
+      const todayCount = (c.srs?.reviewHistory || []).filter((h) => h?.date && diaLocal(h.date) === todayStr).length;
       return acc + (todayCount > 0 ? 1 : 0);
     }, 0);
 

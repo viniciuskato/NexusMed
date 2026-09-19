@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import {
   ShieldAlert,
 } from 'lucide-react';
@@ -89,18 +89,20 @@ import { DashboardView } from './components/dashboard/DashboardView';
 import { CreateSimuladoModal } from './components/questions/CreateSimuladoModal';
 import { CreateFlashcardModal } from './components/flashcards/CreateFlashcardModal';
 import { ClinicalPomodoroWidget } from './components/common/ClinicalPomodoroWidget';
+import { AppErrorBoundary } from './components/AppErrorBoundary';
+import { lazyWithReload } from './lib/lazyWithReload';
 
 // Telas carregadas sob demanda: o bundle inicial leva só o painel. O CMS
 // (com o parser YAML do importador) nunca é baixado por quem não é admin.
-const CompendiumView = lazy(() => import('./components/compendium/CompendiumView').then((m) => ({ default: m.CompendiumView })));
-const CompendiumReader = lazy(() => import('./components/compendium/CompendiumReader').then((m) => ({ default: m.CompendiumReader })));
-const QuestionsView = lazy(() => import('./components/questions/QuestionsView').then((m) => ({ default: m.QuestionsView })));
-const SimuladoSession = lazy(() => import('./components/questions/SimuladoSession').then((m) => ({ default: m.SimuladoSession })));
-const FlashcardsView = lazy(() => import('./components/flashcards/FlashcardsView').then((m) => ({ default: m.FlashcardsView })));
-const FlashcardReviewSession = lazy(() => import('./components/flashcards/FlashcardReviewSession').then((m) => ({ default: m.FlashcardReviewSession })));
-const SimuladosView = lazy(() => import('./components/simulados/SimuladosView').then((m) => ({ default: m.SimuladosView })));
-const AdminCMSView = lazy(() => import('./components/admin/AdminCMSView').then((m) => ({ default: m.AdminCMSView })));
-const ThematicStudyView = lazy(() => import('./components/thematic/ThematicStudyView').then((m) => ({ default: m.ThematicStudyView })));
+const CompendiumView = lazyWithReload(() => import('./components/compendium/CompendiumView').then((m) => ({ default: m.CompendiumView })));
+const CompendiumReader = lazyWithReload(() => import('./components/compendium/CompendiumReader').then((m) => ({ default: m.CompendiumReader })));
+const QuestionsView = lazyWithReload(() => import('./components/questions/QuestionsView').then((m) => ({ default: m.QuestionsView })));
+const SimuladoSession = lazyWithReload(() => import('./components/questions/SimuladoSession').then((m) => ({ default: m.SimuladoSession })));
+const FlashcardsView = lazyWithReload(() => import('./components/flashcards/FlashcardsView').then((m) => ({ default: m.FlashcardsView })));
+const FlashcardReviewSession = lazyWithReload(() => import('./components/flashcards/FlashcardReviewSession').then((m) => ({ default: m.FlashcardReviewSession })));
+const SimuladosView = lazyWithReload(() => import('./components/simulados/SimuladosView').then((m) => ({ default: m.SimuladosView })));
+const AdminCMSView = lazyWithReload(() => import('./components/admin/AdminCMSView').then((m) => ({ default: m.AdminCMSView })));
+const ThematicStudyView = lazyWithReload(() => import('./components/thematic/ThematicStudyView').then((m) => ({ default: m.ThematicStudyView })));
 
 // Views que podem ser restauradas depois de um reload (Prompt 22-A). É uma
 // lista de PERMISSÃO: qualquer outro valor salvo (inclusive um valor futuro
@@ -642,6 +644,7 @@ function AuthenticatedApp() {
         >
 
           {/* View Router */}
+          <AppErrorBoundary resetKey={activeView}>
           <Suspense
             fallback={
               <div className="flex items-center justify-center py-24 text-sm text-slate-500 dark:text-slate-400" role="status">
@@ -864,6 +867,7 @@ function AuthenticatedApp() {
             )
           )}
           </Suspense>
+          </AppErrorBoundary>
         </main>
       </div>
 

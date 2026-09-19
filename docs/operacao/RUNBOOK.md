@@ -43,6 +43,13 @@ git rev-parse origin/main
   servidor, não comportamento de cliente (dedupe de promises, sessão
   ativa, etc.) — ver `docs/archive/AGENTS-HISTORICO-2026-09-17.md` para o
   histórico de bugs que só apareceram em teste de navegador real.
+- Testes E2E que criam dados persistentes: seguir o standard
+  [`standards/testes-e-fixtures.md`](standards/testes-e-fixtures.md) e o
+  runbook específico
+  [`runbooks/supabase-e2e-local.md`](runbooks/supabase-e2e-local.md).
+- Servidor de desenvolvimento: `npm run dev` escuta só em `127.0.0.1:3000` (abre também por `http://localhost:3000`)
+  (desde AUD-10). Para abrir no celular/outro aparelho da rede local, use
+  `npm run dev:lan` (`--host=0.0.0.0`) — só em rede confiável.
 - Antes de commitar: `git diff --check` (sem marcadores de conflito, sem
   espaço em branco problemático) e revisão do diff completo.
 
@@ -80,6 +87,14 @@ revisão.
 7. Smoke test não destrutivo em produção quando a mudança afeta fluxo de
    usuário — preferir contas descartáveis criadas e removidas na mesma
    sessão, nunca dado real.
+
+## 3.1. Métricas semanais (somente leitura)
+
+Uma vez por semana, o dono do projeto roda
+`supabase db query --linked -f scripts/sql/metricas-semanais.sql` (ou cola o
+arquivo no SQL Editor) e acrescenta uma linha em
+[`docs/produto/METRICAS.md`](../produto/METRICAS.md). O arquivo só lê; nunca
+escreve.
 
 ## 4. Rollback
 

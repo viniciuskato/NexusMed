@@ -124,7 +124,7 @@ export interface Compendium {
    * `url` só aparece quando a fonte tem identificador verificável
    * (doi/pmid/url) — nunca inventada.
    */
-  referenceSources?: { linked: boolean; sourceId?: string; url?: string; verificacao?: string }[];
+  referenceSources?: { id?: string; linked: boolean; sourceId?: string; citationText?: string; url?: string; verificacao?: string }[];
   isPremiumOnly?: boolean;
 }
 
@@ -398,6 +398,20 @@ export interface ClaimSource {
 }
 
 export type ContentReviewDecision = 'aprovado' | 'rejeitado';
+
+/**
+ * Resumo legível de uma fonte do catálogo (`sources`), para o seletor
+ * pesquisável do painel de revisão e da associação de referências de
+ * material — nunca os metadados completos (o catálogo não tem campos
+ * estruturados de autor/título/ano separados, só `citation_text` livre).
+ */
+export interface SourceSummary {
+  id: string;
+  citationText: string;
+  tipo: string;
+  verificacao: string;
+  url?: string;
+}
 
 export interface ContentReview {
   id: string;

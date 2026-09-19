@@ -19,8 +19,8 @@
   diretoria e sem passar pelo gate do** [`RUNBOOK.md`](RUNBOOK.md).
 - Chats, memória de qualquer IA e cópias locais soltas **não são fonte de
   verdade** — ver decisão de 2026-09-17 em [`DECISIONS.md`](DECISIONS.md).
-- Cópia de trabalho recomendada (limpa, sem drift na criação):
-  `C:\Users\vinic\OneDrive\Projetos\SynapseMed\canonical`.
+- Cópia de trabalho canônica, fora do OneDrive:
+  `C:\Users\vinic\dev\NexusMed\firebase-auth`.
 
 ## Como reconfirmar o estado antes de qualquer trabalho
 
@@ -32,6 +32,23 @@ git log --oneline -10 origin/main
 
 Qualquer hash citado neste documento é **baseline histórica de quando foi
 escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
+
+## Auditoria técnica de 2026-09-18 — publicada
+
+PRs #1 a #8 mesclados e no ar em 2026-09-18; migrations `20260918120000`,
+`20260918130000` e `20260918140000` aplicadas no Supabase remoto; `main`
+protegido (PR obrigatório, checks `fast` e `full`, branch atualizado).
+
+- #1 RPCs de gabarito exigem usuário ativo e mesma questão na idempotência.
+- #2 "Salvar" do compêndio no CMS via RPC `save_compendium` — não apaga mais anotações, histórico nem imagens.
+- #3 mocks e autoria fictícia fora de produção. #4 CSP/headers, sem grants para `anon`, limpeza no logout.
+- #5 `strict` + `@types/react`. #6 CI autocontido. #7 code splitting e navegação por `#/tela`. #8 processo via PR.
+
+Lição de publicação: o #2 foi mesclado antes da migration, e o "Salvar" do
+CMS ficou quebrado até ela ser aplicada — migration da qual o frontend
+depende vai **antes** do merge (RUNBOOK, seção 3).
+
+Pendências: `docs/diretoria/BACKLOG-ESTRATEGICO.md` (AUD-01 e AUD-03 a AUD-10).
 
 ## Baseline verificada nesta entrega (Entrega 40-A, 2026-09-17)
 

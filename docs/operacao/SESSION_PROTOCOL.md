@@ -65,6 +65,9 @@ mínimo, todos os itens:
       smoke test. Nunca deixar implícito.
 - [ ] **Próxima decisão**: o que precisa que a diretoria/usuário decida
       agora, se houver algo pendente — ou "nenhuma, entrega fechada".
+- [ ] **Aprendizado operacional**: declarar se houve falha nova com causa
+      generalizável; se houve, vincular incidente, regra e prevenção
+      executável.
 
 Depois de reportar, **atualizar os documentos**, não só a conversa:
 
@@ -75,6 +78,9 @@ Depois de reportar, **atualizar os documentos**, não só a conversa:
   baseline, novo risco descoberto, risco anterior resolvido).
 - `AGENTS.md` (raiz): se foi descoberta uma armadilha técnica nova de alta
   probabilidade de recorrência, ou uma convenção de trabalho mudou.
+- `incidents/`: se a sessão encontrou falha relevante conforme os critérios
+  de [`incidents/index.md`](incidents/index.md); promover a regra para
+  `standards/`, runbook, decisão e teste/CI sem duplicar a narrativa.
 
 ## Regras de segurança sempre válidas, sem exceção implícita
 

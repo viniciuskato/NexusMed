@@ -11,6 +11,7 @@ import {
 import { Question, QuestionAnswerRecord, ErrorLogItem, Discipline, Theme } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { useDialogA11y } from '../../hooks/useDialogA11y';
+import { diaLocal } from '../../utils/diaLocal';
 
 interface DailyHandoffModalProps {
   isOpen: boolean;
@@ -40,7 +41,7 @@ export const DailyHandoffModal: React.FC<DailyHandoffModalProps> = ({
     profile?.displayName || user?.user_metadata?.display_name || 'Colega Médico';
 
   // Cálculos do dia atual (hoje)
-  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const todayStr = useMemo(() => diaLocal(new Date()), []);
 
   const todayStats = useMemo(() => {
     const questionsMap = new Map<string, Question>(questions.map((q) => [q.id, q]));
@@ -50,7 +51,7 @@ export const DailyHandoffModal: React.FC<DailyHandoffModalProps> = ({
     const allAnswers: QuestionAnswerRecord[] = Object.values(answers);
     const todayAnswers = allAnswers.filter((a) => {
       if (!a.timestamp) return false;
-      return a.timestamp.slice(0, 10) === todayStr;
+      return diaLocal(a.timestamp) === todayStr;
     });
 
     const totalToday = todayAnswers.length;
