@@ -102,7 +102,7 @@ autocontido (#6), code splitting + botão voltar (#7), processo via PR
 - **Contexto mínimo pra puxar**: `src/App.tsx`, PR #7; decidir entre
   react-router (ou TanStack Router) e uma camada de dados por tela
   (ex.: TanStack Query) antes de começar.
-- **Estado**: Aberto
+- **Estado**: Em andamento — plano aprovado para execução em PR #14 (`docs/diretoria/PLANO-AUD-04-APP-TSX.md`, 12 PRs pequenos); pré-requisito de testes cumprido (#13 mesclado)
 
 ### AUD-05 — Leitura offline incoerente
 - **Registrado em**: 2026-09-18 pela sessão de auditoria
@@ -172,7 +172,7 @@ autocontido (#6), code splitting + botão voltar (#7), processo via PR
 - **Prioridade relativa**: baixa-média; baixar o teto a cada PR que tocar
   o arquivo.
 - **Contexto mínimo pra puxar**: `npm run lint`, `eslint.config.js`.
-- **Estado**: Aberto
+- **Estado**: Concluído — PR #20 mesclado (lint 89 → 5 avisos, teto 5, `useDialogA11y` em 12 modais); texto 9–10px e os 5 `exhaustive-deps` ficam para depois
 
 ### AUD-10 — Endurecimento do CI e do ambiente de dev
 - **Registrado em**: 2026-09-18 pela sessão de auditoria
@@ -185,4 +185,56 @@ autocontido (#6), code splitting + botão voltar (#7), processo via PR
 - **Prioridade relativa**: baixa.
 - **Contexto mínimo pra puxar**: `.github/workflows/ci.yml`,
   `vite.config.ts`, `metadata.json`.
-- **Estado**: Aberto
+- **Estado**: Concluído — PR #12 mesclado (actions por SHA, CLI 2.117.0, Dependabot, dev em 127.0.0.1, `metadata.json` removido)
+
+### AUD-11 — Tela em branco depois de deploy (code splitting)
+- **Registrado em**: 2026-09-18 pela sessão de diretoria (2ª rodada)
+- **Problema**: com o code splitting do #7, quem estava com o app aberto e
+  trocava de tela depois de um deploy pedia um chunk inexistente e ficava
+  com a tela em branco.
+- **Estado**: Concluído — PR #11 (`lazyWithReload` + `AppErrorBoundary`)
+
+### AUD-12 — Nenhuma visibilidade de erro em produção
+- **Registrado em**: 2026-09-18 pela sessão de diretoria (2ª rodada)
+- **Problema**: sem Sentry nem log de cliente; bug só aparecia quando alguém
+  reclamava.
+- **Estado**: Em andamento — PR #17 (`client_errors` + RPC
+  `log_client_error`, sem serviço externo; migration a aplicar no remoto
+  antes do merge). Consultas em `docs/operacao/OBSERVABILIDADE.md`.
+
+### AUD-13 — Backup e restauração do Supabase
+- **Registrado em**: 2026-09-18 pela sessão de diretoria (2ª rodada)
+- **Problema**: o conteúdo curado/auditado é o ativo principal e não há
+  backup baixável fora do Supabase nem teste de restauração.
+- **Por que importa**: perda do projeto ou erro de escrita em massa não tem
+  volta.
+- **Prioridade relativa**: alta; sem código no primeiro passo.
+- **Contexto mínimo pra puxar**: confirmar o plano do Supabase (free não tem
+  backup baixável); `pg_dump` semanal via GitHub Action com secret, guardado
+  fora do Supabase; restaurar uma vez no local.
+- **Estado**: Aberto — precisa da conta dona do projeto
+
+### AUD-14 — Dependências com majors atrasados
+- **Registrado em**: 2026-09-18 pela sessão de diretoria (2ª rodada)
+- **Problema**: Vite 6→8, TypeScript 5.8→7, ESLint 9→10, Vitest 3→5,
+  lucide 0.x→1.x; sem atualização automática.
+- **Estado**: Em andamento — Dependabot ativo desde o #12; majors das actions
+  (#22–#25) e do `lucide-react` (#27) mesclados; majors de
+  ESLint/TypeScript bloqueados para migração planejada (#31,
+  `docs/operacao/standards/atualizacao-dependencias.md`)
+
+### AUD-15 — Ofensiva e "hoje" calculados em UTC
+- **Registrado em**: 2026-09-18 (achado pelos testes do PR #13)
+- **Problema**: ofensiva, cards de hoje, missões e Passagem de Plantão
+  usavam o dia UTC; em Brasília, estudo depois das 21h caía no dia seguinte.
+- **Estado**: Concluído — PR #19 mesclado (`diaLocal`)
+
+### AUD-16 — Pendências que só o dono do projeto executa
+- **Registrado em**: 2026-09-18 pela sessão de diretoria (2ª rodada)
+- **Problema**: importar o Acidobásico como rascunho + smoke autenticado
+  da Área Editorial (roteiro no PR #15, ensaiado no local: 17 seções, 14
+  referências) e a primeira leitura de métricas (PR #16,
+  `scripts/sql/metricas-semanais.sql`). Nenhuma sessão de IA tem acesso de
+  admin/Supabase ao projeto de produção.
+- **Estado**: Aberto — antes da prova de 21/09
+
