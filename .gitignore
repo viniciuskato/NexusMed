@@ -12,6 +12,8 @@ coverage/
 /playwright-report/
 /test-results/
 /tests/e2e/.auth/
+# Capturas e logs do servidor MCP do Playwright (inspeção manual por agentes)
+/.playwright-mcp/
 
 # OS and system files
 .DS_Store
