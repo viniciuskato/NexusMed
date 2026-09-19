@@ -1241,8 +1241,14 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
 
                         {openEditMenuCompId === c.id && (
                           <>
-                            {/* Overlay transparente para fechar o menu ao clicar fora */}
-                            <div className="fixed inset-0 z-10" onClick={() => setOpenEditMenuCompId(null)} />
+                            {/* Overlay transparente para fechar o menu ao clicar fora
+                                (só atalho de mouse; invisível e fora da árvore de
+                                acessibilidade — as opções do menu são botões reais). */}
+                            <div
+                              className="fixed inset-0 z-10"
+                              aria-hidden="true"
+                              onClick={() => setOpenEditMenuCompId(null)}
+                            />
                             <div className="absolute right-0 mt-1 w-56 rounded-lg border border-stone-200 dark:border-[#243452] bg-white dark:bg-[#0F172A] elev-md z-20 overflow-hidden">
                               <button
                                 onClick={() => {

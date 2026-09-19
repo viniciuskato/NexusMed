@@ -115,79 +115,82 @@ export const SimuladosView: React.FC<SimuladosViewProps> = ({
       {/* Quick Presets Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Preset 1 */}
-        <div
+        <button
+          type="button"
           onClick={() => handleQuickPreset('express')}
-          className="p-5 rounded-3xl bg-white dark:bg-[#0F172A] border border-slate-200/90 dark:border-[#243452] hover:border-teal-400/60 dark:hover:border-teal-500/60 hover:elev-md transition-all cursor-pointer flex flex-col justify-between group"
+          className="w-full text-left p-5 rounded-3xl bg-white dark:bg-[#0F172A] border border-slate-200/90 dark:border-[#243452] hover:border-teal-400/60 dark:hover:border-teal-500/60 hover:elev-md transition-all cursor-pointer flex flex-col justify-between group"
         >
-          <div>
-            <div className="flex items-center justify-between mb-3">
+          <span className="block">
+            <span className="flex items-center justify-between mb-3">
               <span className="p-2 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60 dark:border-teal-800/60">
                 <Zap className="w-5 h-5" />
               </span>
               <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">10 minutos</span>
-            </div>
-            <h3 className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors text-sm">
+            </span>
+            <span className="block font-bold text-slate-900 dark:text-slate-100 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors text-sm">
               Simulado Express Misto
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+            </span>
+            <span className="block text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
               5 questões rápidas de múltiplas especialidades para treinar no intervalo do plantão.
-            </p>
-          </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-teal-600 dark:text-teal-400">
+            </span>
+          </span>
+          <span className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-teal-600 dark:text-teal-400">
             <span>Iniciar Agora</span>
             <Play className="w-3.5 h-3.5 fill-teal-600 dark:fill-teal-400" />
-          </div>
-        </div>
+          </span>
+        </button>
 
         {/* Preset 2 */}
-        <div
+        <button
+          type="button"
           onClick={() => handleQuickPreset('enare')}
-          className="p-5 rounded-3xl bg-white dark:bg-[#0F172A] border border-slate-200/90 dark:border-[#243452] hover:border-blue-400/60 dark:hover:border-blue-500/60 hover:elev-md transition-all cursor-pointer flex flex-col justify-between group"
+          className="w-full text-left p-5 rounded-3xl bg-white dark:bg-[#0F172A] border border-slate-200/90 dark:border-[#243452] hover:border-blue-400/60 dark:hover:border-blue-500/60 hover:elev-md transition-all cursor-pointer flex flex-col justify-between group"
         >
-          <div>
-            <div className="flex items-center justify-between mb-3">
+          <span className="block">
+            <span className="flex items-center justify-between mb-3">
               <span className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
                 <Target className="w-5 h-5" />
               </span>
               <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">16 minutos</span>
-            </div>
-            <h3 className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-sm">
+            </span>
+            <span className="block font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-sm">
               Padrão R1 / ENARE / USP
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+            </span>
+            <span className="block text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
               Questões de média e alta complexidade das principais bancas de residência do país.
-            </p>
-          </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-blue-600 dark:text-blue-400">
+            </span>
+          </span>
+          <span className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-blue-600 dark:text-blue-400">
             <span>Iniciar Agora</span>
             <Play className="w-3.5 h-3.5 fill-blue-600 dark:fill-blue-400" />
-          </div>
-        </div>
+          </span>
+        </button>
 
         {/* Preset 3 */}
-        <div
+        <button
+          type="button"
           onClick={() => handleQuickPreset('mistakes')}
-          className="p-5 rounded-3xl bg-white dark:bg-[#0F172A] border border-slate-200/90 dark:border-[#243452] hover:border-rose-400/60 dark:hover:border-rose-500/60 hover:elev-md transition-all cursor-pointer flex flex-col justify-between group"
+          className="w-full text-left p-5 rounded-3xl bg-white dark:bg-[#0F172A] border border-slate-200/90 dark:border-[#243452] hover:border-rose-400/60 dark:hover:border-rose-500/60 hover:elev-md transition-all cursor-pointer flex flex-col justify-between group"
         >
-          <div>
-            <div className="flex items-center justify-between mb-3">
+          <span className="block">
+            <span className="flex items-center justify-between mb-3">
               <span className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60">
                 <RotateCcw className="w-5 h-5" />
               </span>
               <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">Modo Estudo</span>
-            </div>
-            <h3 className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors text-sm">
+            </span>
+            <span className="block font-bold text-slate-900 dark:text-slate-100 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors text-sm">
               Simulado de Erros Recentes
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+            </span>
+            <span className="block text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
               Foque exclusivamente nos tópicos em que você errou anteriormente para fechar lacunas.
-            </p>
-          </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-rose-600 dark:text-rose-400">
+            </span>
+          </span>
+          <span className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-rose-600 dark:text-rose-400">
             <span>Iniciar Agora</span>
             <Play className="w-3.5 h-3.5 fill-rose-600 dark:fill-rose-400" />
-          </div>
-        </div>
+          </span>
+        </button>
       </div>
 
       {/* History of Completed Exams */}

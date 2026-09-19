@@ -16,6 +16,7 @@ import { SCOPE_CUSTOM, SCOPE_UNLINKED } from '../../services/thematicPacks';
 import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
+import { onActivationKey } from '../../utils/keyboardActivation';
 
 interface FlashcardsViewProps {
   flashcards: Flashcard[];
@@ -208,13 +209,15 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
       {/* Discipline Decks Preview Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {disciplineStats.map(({ discipline, total, due }) => (
-          <div
+          <button
+            type="button"
             key={discipline.id}
+            aria-pressed={selectedDiscipline === discipline.id}
             onClick={() => {
               setSelectedDiscipline(discipline.id);
               setSelectedTheme('all');
             }}
-            className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-2xs ${
+            className={`w-full text-left p-4 rounded-2xl border transition-all cursor-pointer shadow-2xs ${
               selectedDiscipline === discipline.id
                 ? 'bg-teal-50 dark:bg-teal-950/50 border-teal-600 dark:border-teal-400 ring-2 ring-teal-600/20'
                 : 'bg-white dark:bg-[#0E1726] border-slate-300/80 dark:border-[#243652] hover:border-teal-500/60 hover:bg-slate-50 dark:hover:bg-[#142038]'
@@ -223,7 +226,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
             <span className="text-[11px] font-bold text-slate-900 dark:text-slate-100 block truncate">
               {discipline.name}
             </span>
-            <div className="mt-2 flex items-center justify-between text-xs">
+            <span className="mt-2 flex items-center justify-between text-xs">
               <span className="text-slate-600 dark:text-slate-400 font-medium">{total} cards</span>
               {due > 0 ? (
                 <span className="px-1.5 py-0.5 rounded-md bg-teal-100 dark:bg-teal-950/70 text-teal-900 dark:text-teal-300 font-bold text-[10px]">
@@ -232,8 +235,8 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
               ) : (
                 <span className="text-emerald-700 dark:text-emerald-400 text-[10px] font-semibold">Em dia</span>
               )}
-            </div>
-          </div>
+            </span>
+          </button>
         ))}
       </div>
 
@@ -302,7 +305,12 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
             return (
               <div
                 key={card.id}
+                // Não vira <button>: contém botões internos (ver abaixo).
+                role="button"
+                tabIndex={0}
+                aria-pressed={isFlipped}
                 onClick={() => toggleFlip(card.id)}
+                onKeyDown={onActivationKey(() => toggleFlip(card.id))}
                 className={`bg-white dark:bg-[#0E1726] rounded-3xl border transition-all p-5 elev-xs flex flex-col justify-between cursor-pointer group select-none min-h-[220px] ${
                   isFlipped
                     ? 'border-teal-400 dark:border-teal-500 bg-teal-50/40 dark:bg-teal-950/40 ring-2 ring-teal-500/20'

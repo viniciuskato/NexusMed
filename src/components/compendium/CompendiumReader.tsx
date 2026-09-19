@@ -585,6 +585,11 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
       )}
 
       {/* ── Central Editorial Article (max-width between 760 and 820px) ───── */}
+      {/* onClick aqui é só delegação de eventos para os links `a[href^="#ref-"]`
+          do texto (ver handleContentClick). Links já são focáveis e Enter num
+          link dispara `click`, que sobe até aqui — o teclado já funciona; o
+          <main> em si não é um controle e não deve ganhar role/tabIndex. */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
       <main className="max-w-[780px] w-full mx-auto px-4 sm:px-8 py-8 sm:py-12" onClick={handleContentClick}>
         {/* Anotações Pessoais Panel */}
         {showNoteDrawer && (
