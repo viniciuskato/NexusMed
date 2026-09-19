@@ -23,10 +23,8 @@ interface SimuladosViewProps {
 
 export const SimuladosView: React.FC<SimuladosViewProps> = ({
   disciplines,
-  themes,
   onOpenCreateModal,
   onStartCustomSimulado,
-  onUpdate,
 }) => {
   const [history, setHistory] = useState<SimuladoSessionData[]>([]);
 
@@ -212,7 +210,6 @@ export const SimuladosView: React.FC<SimuladosViewProps> = ({
           <div className="space-y-3">
             {history.map((session) => {
               const totalQ = session.questionIds.length;
-              const answeredQ = Object.keys(session.answers).length;
               const score = session.score || 0;
               const minutes = Math.floor(session.totalTimeSeconds / 60);
               const seconds = session.totalTimeSeconds % 60;

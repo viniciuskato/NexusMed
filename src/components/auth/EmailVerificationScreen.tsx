@@ -38,7 +38,7 @@ export const EmailVerificationScreen: React.FC = () => {
           text: 'Seu e-mail ainda consta como pendente de confirmação. Por favor, abra o link enviado para sua caixa de entrada e tente novamente.',
         });
       }
-    } catch (err: any) {
+    } catch {
       setMessage({
         type: 'error',
         text: 'Não foi possível verificar o status no momento. Tente novamente em instantes.',

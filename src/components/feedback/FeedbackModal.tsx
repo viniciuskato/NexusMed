@@ -46,7 +46,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
 
       setIsSubmitting(false);
       setSubmitted(true);
-    } catch (err) {
+    } catch {
       setIsSubmitting(false);
       setError('Ocorreu um erro ao registrar seu feedback. Tente novamente.');
     }

@@ -23,7 +23,7 @@ export const CreateFlashcardModal: React.FC<CreateFlashcardModalProps> = ({
   const [front, setFront] = useState('');
   const [back, setBack] = useState('');
   const [mechanismHighlight, setMechanismHighlight] = useState('');
-  const [difficulty, setDifficulty] = useState<'facil' | 'medio' | 'dificil'>('medio');
+  const [difficulty] = useState<'facil' | 'medio' | 'dificil'>('medio');
 
   if (!isOpen) return null;
 

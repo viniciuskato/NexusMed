@@ -252,10 +252,10 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   // ── Question Form State ─────────────────────────────────────────
   const [isCreatingQuestion, setIsCreatingQuestion] = useState(false);
   const [newQDiscipline, setNewQDiscipline] = useState(disciplines[0]?.id || '');
-  const [newQTheme, setNewQTheme] = useState(themes[0]?.id || '');
+  const [newQTheme] = useState(themes[0]?.id || '');
   const [newQInstitution, setNewQInstitution] = useState('USP-SP / ENARE');
   const [newQYear, setNewQYear] = useState(2025);
-  const [newQDifficulty, setNewQDifficulty] = useState<'facil' | 'medio' | 'dificil'>('medio');
+  const [newQDifficulty] = useState<'facil' | 'medio' | 'dificil'>('medio');
   const [newQStem, setNewQStem] = useState('');
   const [newQVignette, setNewQVignette] = useState('');
   const [newQHighYield, setNewQHighYield] = useState('');
@@ -311,7 +311,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     setCompDependenciesStr(comp.dependencies?.map((d) => d.title).join(', ') || '');
     setCompReferencesStr(comp.references.join('\n'));
     setCompSections(
-      comp.sections.map((s, idx) => ({
+      comp.sections.map((s) => ({
         ...s,
         id: s.id || crypto.randomUUID(),
       }))

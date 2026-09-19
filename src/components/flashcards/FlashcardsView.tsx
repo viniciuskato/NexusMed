@@ -41,7 +41,6 @@ interface FlashcardsViewProps {
 export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
   flashcards,
   disciplines,
-  themes,
   compendiums = [],
   onStartReview,
   onOpenCreateModal,
@@ -294,7 +293,6 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
           {filteredCards.map((card) => {
             const isFlipped = flippedCardIds.includes(card.id);
             const disc = disciplines.find((d) => d.id === card.disciplineId);
-            const th = themes.find((t) => t.id === card.themeId);
             const isDue = isCardDueToday(card);
             const matchingComp = compendiums.find(
               (c) => c.id === card.compendiumRefId || c.themeId === card.themeId || c.disciplineId === card.disciplineId

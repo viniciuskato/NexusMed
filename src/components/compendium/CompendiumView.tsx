@@ -793,7 +793,6 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
             .map((comp) => {
             const disc = disciplines.find((d) => d.id === comp.disciplineId);
             const compProgress = readingProgress[comp.id] || { readSectionIds: [], percent: 0 };
-            const isBookmarked = bookmarks.compendiums.includes(comp.id);
             const compHighlights = highlights[comp.id] || [];
             const hasNote = Boolean(notes[comp.id]);
             const lens = getCompendiumLens(comp);

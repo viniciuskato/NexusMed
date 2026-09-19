@@ -435,7 +435,7 @@ async function runFlush(userId: string, force = false): Promise<void> {
     if (!clientOpId) {
       try {
         clientOpId = uuid();
-      } catch (e) {
+      } catch {
         const attempts = op.attempts + 1;
         const retryable = attempts < currentMaxRetryableAttempts();
         const backoff = Math.min(currentBaseBackoffMs() * 2 ** (attempts - 1), MAX_BACKOFF_MS);

@@ -69,7 +69,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const [isBookmarked, setIsBookmarked] = useState<boolean>(false);
   const [eliminatedOptions, setEliminatedOptions] = useState<string[]>([]);
   const [errorReason, setErrorReason] = useState<QuestionAnswerRecord['errorReason']>('lacuna_teorica');
-  const [showErrorTagger, setShowErrorTagger] = useState(false);
+  const [, setShowErrorTagger] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   // Gabarito (quem está correta, explicação por alternativa) obtido via RPC —
   // question.options[].isCorrect/.explanation vêm sempre vazios para o

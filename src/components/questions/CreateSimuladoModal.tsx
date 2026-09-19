@@ -20,19 +20,18 @@ export const CreateSimuladoModal: React.FC<CreateSimuladoModalProps> = ({
   isOpen,
   onClose,
   disciplines,
-  themes,
   totalAvailableQuestions,
   mistakesCount,
   onStartSimulado,
 }) => {
   const [name, setName] = useState('Simulado Personalizado');
   const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([]);
-  const [selectedDifficulties, setSelectedDifficulties] = useState<DifficultyLevel[]>([
+  const [selectedDifficulties] = useState<DifficultyLevel[]>([
     'facil',
     'medio',
     'dificil',
   ]);
-  const [selectedCycles, setSelectedCycles] = useState<MedicalCycle[]>([
+  const [selectedCycles] = useState<MedicalCycle[]>([
     'basico',
     'clinico',
     'internato_residencia',
