@@ -81,6 +81,14 @@ revisão.
    usuário — preferir contas descartáveis criadas e removidas na mesma
    sessão, nunca dado real.
 
+## 3.1. Métricas semanais (somente leitura)
+
+Uma vez por semana, o dono do projeto roda
+`supabase db query --linked -f scripts/sql/metricas-semanais.sql` (ou cola o
+arquivo no SQL Editor) e acrescenta uma linha em
+[`docs/produto/METRICAS.md`](../produto/METRICAS.md). O arquivo só lê; nunca
+escreve.
+
 ## 4. Rollback
 
 - **Rollback de emergência do site** (instantâneo, não mexe no código):
