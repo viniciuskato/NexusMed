@@ -1,10 +1,11 @@
 import React from 'react';
+import { clientErrorReporter } from '../lib/clientErrorReporter';
 
 // NOVO-01 — sem um error boundary, qualquer erro ao abrir uma tela (inclusive
 // o arquivo da tela não existir mais depois de um deploy) desmonta o app
 // inteiro e deixa a tela em branco. Este boundary envolve só a área das
 // telas: a navegação continua de pé, e trocar de tela (`resetKey`) limpa o
-// aviso.
+// aviso. O erro vai para o registro de erros do cliente (NOVO-02).
 
 interface Props {
   resetKey: string;
@@ -24,6 +25,7 @@ export class AppErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(erro: Error, info: React.ErrorInfo) {
     console.error('[AppErrorBoundary] falha ao exibir a tela', erro, info.componentStack);
+    clientErrorReporter.report('boundary', erro);
   }
 
   componentDidUpdate(prevProps: Props) {
