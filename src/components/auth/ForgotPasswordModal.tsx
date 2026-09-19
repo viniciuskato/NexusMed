@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, X, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { getOptionalErrorMessage } from '../../utils/errorMessage';
 
 interface ForgotPasswordModalProps {
   isOpen: boolean;
@@ -33,8 +34,8 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     try {
       await sendPasswordReset(email.trim());
       setIsSuccess(true);
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Não foi possível enviar o e-mail de recuperação.');
+    } catch (err: unknown) {
+      setErrorMsg(getOptionalErrorMessage(err) || 'Não foi possível enviar o e-mail de recuperação.');
     } finally {
       setIsSubmitting(false);
     }

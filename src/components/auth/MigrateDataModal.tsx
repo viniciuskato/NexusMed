@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Database, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { MigrationSummary } from '../../types';
 import { StorageService } from '../../services/storage';
+import { getOptionalErrorMessage } from '../../utils/errorMessage';
 
 interface MigrateDataModalProps {
   summary: MigrationSummary;
@@ -30,8 +31,8 @@ export const MigrateDataModal: React.FC<MigrateDataModalProps> = ({
       } else {
         setError(result.error || 'Erro durante a migração de dados.');
       }
-    } catch (err: any) {
-      setError(err?.message || 'Erro inesperado.');
+    } catch (err: unknown) {
+      setError(getOptionalErrorMessage(err) || 'Erro inesperado.');
     } finally {
       setIsProcessing(false);
     }

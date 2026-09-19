@@ -48,8 +48,7 @@ import { FlashcardsRepository } from './FlashcardsRepository';
 //    reconstruído a partir de outra fonte) não é reconciliado — é uma
 //    lacuna aceita para não transformar um "save" de estado num diff de
 //    histórico.
-//  - `updateFlashcardSRS(cardId, srs: any)` (assinatura da interface usa
-//    `any` de propósito) atualiza só `flashcard_srs_state`, pelo mesmo
+//  - `updateFlashcardSRS(cardId, srs: FlashcardSRS)` atualiza só `flashcard_srs_state`, pelo mesmo
 //    motivo acima: não grava linhas em flashcard_reviews. Quem quiser um
 //    evento de revisão auditável deve usar `reviewFlashcard`.
 //  - `createFlashcardFromQuestion` usa `crypto.randomUUID()` para o id do

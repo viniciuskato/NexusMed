@@ -19,6 +19,7 @@ import {
   Stethoscope,
   Pill,
   ArrowLeft,
+  type LucideIcon,
 } from 'lucide-react';
 import { Compendium, Discipline, Theme, StudyLens, EditorialStatus, LastReadingSession } from '../../types';
 import { StorageService } from '../../services/storage';
@@ -44,7 +45,7 @@ interface CompendiumViewProps {
   lastReadingSession?: LastReadingSession | null;
 }
 
-export const STUDY_LENSES: { id: StudyLens; label: string; description: string; icon: any }[] = [
+export const STUDY_LENSES: { id: StudyLens; label: string; description: string; icon: LucideIcon }[] = [
   {
     id: 'fisiopatologia',
     label: 'Fisiopatologia & Mecanismos',
@@ -579,7 +580,7 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
             <span className="text-slate-400 text-[11px]">Status:</span>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
               className="text-xs font-medium px-2 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
             >
               <option value="all">Todos os status</option>

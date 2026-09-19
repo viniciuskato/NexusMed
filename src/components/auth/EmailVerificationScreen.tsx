@@ -10,6 +10,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { getOptionalErrorMessage } from '../../utils/errorMessage';
 
 export const EmailVerificationScreen: React.FC = () => {
   const { user, sendVerificationEmail, reloadUser, logout } = useAuth();
@@ -59,10 +60,10 @@ export const EmailVerificationScreen: React.FC = () => {
         text: `Link de confirmação reenviado com sucesso para ${user?.email || 'seu e-mail'}. Verifique sua caixa de entrada e a pasta de spam.`,
       });
       setCooldown(60); // 60 segundos de intervalo para evitar flood
-    } catch (err: any) {
+    } catch (err: unknown) {
       setMessage({
         type: 'error',
-        text: err?.message || 'Ocorreu um erro ao reenviar o e-mail de verificação. Aguarde alguns instantes.',
+        text: getOptionalErrorMessage(err) || 'Ocorreu um erro ao reenviar o e-mail de verificação. Aguarde alguns instantes.',
       });
     } finally {
       setIsSending(false);

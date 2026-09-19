@@ -343,7 +343,11 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     setCompSections(compSections.filter((_, idx) => idx !== idxToRemove));
   };
 
-  const handleUpdateSection = (idx: number, field: keyof CompendiumSection, value: any) => {
+  const handleUpdateSection = <K extends keyof CompendiumSection>(
+    idx: number,
+    field: K,
+    value: CompendiumSection[K]
+  ) => {
     const updated = [...compSections];
     updated[idx] = { ...updated[idx], [field]: value };
     setCompSections(updated);

@@ -269,7 +269,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
           ].map((st) => (
             <button
               key={st.id}
-              onClick={() => setSelectedStatus(st.id as any)}
+              onClick={() => setSelectedStatus(st.id as typeof selectedStatus)}
               className={`px-3 py-1.5 rounded-xl font-semibold shrink-0 transition-all cursor-pointer ${
                 selectedStatus === st.id
                   ? 'bg-slate-900 dark:bg-teal-600 text-white elev-xs font-bold'
