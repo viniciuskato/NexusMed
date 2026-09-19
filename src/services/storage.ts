@@ -13,6 +13,7 @@ import {
   MigrationSummary,
   UserFeedback,
   LastReadingSession,
+  FlashcardSRS,
 } from '../types';
 import { getOps } from './syncQueue';
 import {
@@ -26,6 +27,7 @@ import { calculateNextSRS, createInitialSRS } from './srsAlgorithm';
 import { onActiveUserChanged } from './syncQueue';
 import { recoverLegacyLocalProgress } from './legacyRecovery';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
+import { getOptionalErrorMessage } from '../utils/errorMessage';
 import { diaLocal } from '../utils/diaLocal';
 
 // Conteúdo de demonstração (mockData) só existe no modo local, sem Supabase.
@@ -240,7 +242,7 @@ export const StorageService = {
       return isNaN(dueDate.getTime()) || dueDate <= now || c.srs.state === 'new';
     });
   },
-  updateFlashcardSRS(cardId: string, srs: any): void {
+  updateFlashcardSRS(cardId: string, srs: FlashcardSRS): void {
     const all = this.getFlashcards();
     const idx = all.findIndex((f) => f.id === cardId);
     if (idx >= 0) {
@@ -726,9 +728,9 @@ export const StorageService = {
       localStorage.setItem(`synapse_${uid}_migration_handled`, 'true');
 
       return { success: true };
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro na migração de dados:', err);
-      return { success: false, error: err?.message || 'Erro desconhecido' };
+      return { success: false, error: getOptionalErrorMessage(err) || 'Erro desconhecido' };
     }
   },
 

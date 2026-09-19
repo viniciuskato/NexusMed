@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useId } from 'react';
 import { AlertCircle, X, Send, CheckCircle2 } from 'lucide-react';
 import { feedbackRepository } from '../../repositories/FeedbackRepository';
 import { useAuth } from '../../contexts/AuthContext';
@@ -41,6 +41,7 @@ export const ContextualFeedbackPopover: React.FC<ContextualFeedbackPopoverProps>
   const [submitted, setSubmitted] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const dialogTitleId = useId();
 
   const handleClose = useCallback(() => {
     setIsOpen(false);
@@ -186,7 +187,7 @@ export const ContextualFeedbackPopover: React.FC<ContextualFeedbackPopoverProps>
             ref={dialogRef}
             role="dialog"
             aria-modal="true"
-            aria-label={submitted ? 'Relato enviado' : 'Relatar problema com este conteúdo'}
+            aria-labelledby={dialogTitleId}
             tabIndex={-1}
             className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[101] w-[min(22rem,calc(100vw-2rem))] sm:w-80 bg-white dark:bg-[#0F172A] rounded-2xl border border-slate-200 dark:border-[#243452] elev-2xl p-4 sm:p-5 text-xs animate-in fade-in max-h-[calc(100dvh-2rem)] overflow-y-auto focus:outline-hidden shadow-2xl"
           >
@@ -196,7 +197,7 @@ export const ContextualFeedbackPopover: React.FC<ContextualFeedbackPopoverProps>
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
                 <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  <h4 id={dialogTitleId} className="text-sm font-bold text-slate-900 dark:text-slate-100">
                     Obrigado! Relato registrado.
                   </h4>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -219,7 +220,7 @@ export const ContextualFeedbackPopover: React.FC<ContextualFeedbackPopoverProps>
                       <AlertCircle className="w-4 h-4" />
                     </div>
                     <div>
-                      <span className="font-bold text-xs text-slate-900 dark:text-slate-100 block">
+                      <span id={dialogTitleId} className="font-bold text-xs text-slate-900 dark:text-slate-100 block">
                         {questionId ? 'Reportar Erro na Questão' : 'Reportar Inconsistência'}
                       </span>
                       <span className="text-[10px] text-slate-500 dark:text-slate-400 block">

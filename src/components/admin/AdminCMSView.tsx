@@ -280,10 +280,10 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   // ── Question Form State ─────────────────────────────────────────
   const [isCreatingQuestion, setIsCreatingQuestion] = useState(false);
   const [newQDiscipline, setNewQDiscipline] = useState(disciplines[0]?.id || '');
-  const [newQTheme, setNewQTheme] = useState(themes[0]?.id || '');
+  const [newQTheme] = useState(themes[0]?.id || '');
   const [newQInstitution, setNewQInstitution] = useState('USP-SP / ENARE');
   const [newQYear, setNewQYear] = useState(2025);
-  const [newQDifficulty, setNewQDifficulty] = useState<'facil' | 'medio' | 'dificil'>('medio');
+  const [newQDifficulty] = useState<'facil' | 'medio' | 'dificil'>('medio');
   const [newQStem, setNewQStem] = useState('');
   const [newQVignette, setNewQVignette] = useState('');
   const [newQHighYield, setNewQHighYield] = useState('');
@@ -339,7 +339,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     setCompDependenciesStr(comp.dependencies?.map((d) => d.title).join(', ') || '');
     setCompReferencesStr(comp.references.join('\n'));
     setCompSections(
-      comp.sections.map((s, idx) => ({
+      comp.sections.map((s) => ({
         ...s,
         id: s.id || crypto.randomUUID(),
       }))
@@ -371,7 +371,11 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     setCompSections(compSections.filter((_, idx) => idx !== idxToRemove));
   };
 
-  const handleUpdateSection = (idx: number, field: keyof CompendiumSection, value: any) => {
+  const handleUpdateSection = <K extends keyof CompendiumSection>(
+    idx: number,
+    field: K,
+    value: CompendiumSection[K]
+  ) => {
     const updated = [...compSections];
     updated[idx] = { ...updated[idx], [field]: value };
     setCompSections(updated);
@@ -1311,8 +1315,14 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
 
                         {openEditMenuCompId === c.id && (
                           <>
-                            {/* Overlay transparente para fechar o menu ao clicar fora */}
-                            <div className="fixed inset-0 z-10" onClick={() => setOpenEditMenuCompId(null)} />
+                            {/* Overlay transparente para fechar o menu ao clicar fora
+                                (só atalho de mouse; invisível e fora da árvore de
+                                acessibilidade — as opções do menu são botões reais). */}
+                            <div
+                              className="fixed inset-0 z-10"
+                              aria-hidden="true"
+                              onClick={() => setOpenEditMenuCompId(null)}
+                            />
                             <div className="absolute right-0 mt-1 w-56 rounded-lg border border-stone-200 dark:border-[#243452] bg-white dark:bg-[#0F172A] elev-md z-20 overflow-hidden">
                               <button
                                 onClick={() => {

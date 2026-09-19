@@ -69,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         status: data.status === 'active' || data.status === 'blocked' ? data.status : 'pending',
         createdAt: data.created_at,
       };
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erro ao sincronizar perfil do Supabase:', err);
       return fallbackProfile;
     }
@@ -201,7 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           await applySession(null);
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error('Erro ao processar sessão inicial:', err);
         setLoginError(getSupabaseAuthErrorMessage(err));
       } finally {
@@ -218,7 +218,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else if (!import.meta.env.DEV) {
           await applySession(null);
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error('Erro ao processar alteração de autenticação:', err);
         setLoginError(getSupabaseAuthErrorMessage(err));
       } finally {
@@ -302,7 +302,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       });
       if (error) throw error;
-    } catch (err: any) {
+    } catch (err) {
       console.error('Falha na autenticação com o Google:', err);
       setLoginError(getSupabaseAuthErrorMessage(err));
       throw err;
@@ -352,7 +352,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.user) {
         await applySession(data.user);
       }
-    } catch (err: any) {
+    } catch (err) {
       const ptMsg = getSupabaseAuthErrorMessage(err);
       setLoginError(ptMsg);
       throw new Error(ptMsg);
@@ -407,7 +407,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.user) {
         await applySession(data.user);
       }
-    } catch (err: any) {
+    } catch (err) {
       const ptMsg = getSupabaseAuthErrorMessage(err);
       setLoginError(ptMsg);
       throw new Error(ptMsg);
@@ -424,7 +424,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
       if (error) throw error;
-    } catch (err: any) {
+    } catch (err) {
       const ptMsg = getSupabaseAuthErrorMessage(err);
       setLoginError(ptMsg);
       throw new Error(ptMsg);
@@ -442,7 +442,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { error } = await supabase.auth.resend({ type: 'signup', email: user.email });
       if (error) throw error;
-    } catch (err: any) {
+    } catch (err) {
       const ptMsg = getSupabaseAuthErrorMessage(err);
       throw new Error(ptMsg);
     }
@@ -460,7 +460,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsEmailVerified(verified);
       setUser(data.user);
       return verified;
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erro ao recarregar status do usuário:', err);
       return false;
     }
@@ -478,7 +478,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-    } catch (err: any) {
+    } catch (err) {
       // Falha real ao encerrar sessão no Supabase não deve ficar escondida:
       // registra em loginError (exibido pela LoginView) em vez de um
       // catch {} silencioso. O estado local ainda é limpo abaixo — do ponto

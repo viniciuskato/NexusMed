@@ -3,6 +3,7 @@ import { X, MessageSquarePlus, Lightbulb, AlertTriangle, Heart, CheckCircle2, Se
 import { FeedbackType, UserFeedback } from '../../types';
 import { feedbackRepository } from '../../repositories/FeedbackRepository';
 import { useAuth } from '../../contexts/AuthContext';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -17,6 +18,18 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleResetAndClose = () => {
+    setTitle('');
+    setDescription('');
+    setType('sugestao');
+    setSubmitted(false);
+    setError(null);
+    onClose();
+  };
+
+  // Escape fecha igual ao X (limpando o formulário).
+  const dialogRef = useDialogA11y<HTMLDivElement>({ isOpen, onClose: handleResetAndClose });
 
   if (!isOpen) return null;
 
@@ -46,24 +59,16 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
 
       setIsSubmitting(false);
       setSubmitted(true);
-    } catch (err) {
+    } catch {
       setIsSubmitting(false);
       setError('Ocorreu um erro ao registrar seu feedback. Tente novamente.');
     }
   };
 
-  const handleResetAndClose = () => {
-    setTitle('');
-    setDescription('');
-    setType('sugestao');
-    setSubmitted(false);
-    setError(null);
-    onClose();
-  };
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in"
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-labelledby="feedback-modal-title"

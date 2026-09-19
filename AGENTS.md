@@ -108,6 +108,10 @@ seção "Armadilhas já descobertas".
     `.catch(() => undefined)`. Ver
     [`standards/testes-e-fixtures.md`](docs/operacao/standards/testes-e-fixtures.md)
     e [`INC-2026-001`](docs/operacao/incidents/INC-2026-001-fixtures-e2e-residuais.md).
+13. **Tabela nova em `public` ainda recebe grant para `anon`** por default
+    privileges de outro role do Supabase. Toda migration que cria tabela
+    precisa de `revoke all on table public.<tabela> from anon;` explícito —
+    a guarda `security_guards.test.sql` reprova se esquecer (NOVO-02).
 
 ## Convenções de trabalho
 
@@ -127,6 +131,11 @@ seção "Armadilhas já descobertas".
   [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md).
 - **Testar contra Supabase LOCAL** antes de considerar qualquer mudança
   de schema/RPC pronta. Nunca validar escrita direto no remoto.
+- **Acessibilidade (desde AUD-09)**: modal novo usa `useDialogA11y`
+  (`src/hooks/useDialogA11y.ts`) + `role="dialog"`, `aria-modal`,
+  `aria-labelledby`; clicável novo é `<button type="button">` ou, se contiver
+  botões internos, `role="button"` + `tabIndex={0}` + `onActivationKey`
+  (`src/utils/keyboardActivation.ts`). O teto `--max-warnings` do lint só desce.
 - **Ponto de restauração**: tag `v0-beta-amigos`. Rollback de emergência:
   `vercel rollback`. Reverter código: `git revert`.
 

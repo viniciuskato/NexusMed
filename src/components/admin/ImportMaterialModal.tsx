@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 import { FileUp, X, CheckCircle2, AlertTriangle, Upload } from 'lucide-react';
 import { Compendium, Discipline, Theme } from '../../types';
 import { materialsRepository } from '../../repositories/MaterialsRepository';
@@ -51,6 +52,7 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
 }) => {
   const [state, setState] = useState<WizardState>({ step: 'pick' });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useDialogA11y<HTMLDivElement>({ onClose });
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -120,8 +122,9 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
       aria-hidden="false"
     >
       <div
+        ref={dialogRef}
         role="dialog"
-        aria-label="Importar material"
+        aria-labelledby="import-material-title"
         aria-modal="true"
         data-testid="import-material-modal"
         className="w-full max-w-2xl my-4 sm:my-8 bg-white dark:bg-[#0F172A] rounded-2xl border-2 border-teal-500/50 dark:border-teal-500/60 p-6 sm:p-8 elev-md space-y-6 text-xs animate-in fade-in"
@@ -129,7 +132,7 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
       <div className="flex items-center justify-between border-b border-stone-200 dark:border-[#243452] pb-3">
         <div className="flex items-center gap-2">
           <FileUp className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-          <h3 className="font-serif-reading text-lg font-bold text-stone-900 dark:text-slate-100">
+          <h3 id="import-material-title" className="font-serif-reading text-lg font-bold text-stone-900 dark:text-slate-100">
             Importar material
           </h3>
         </div>

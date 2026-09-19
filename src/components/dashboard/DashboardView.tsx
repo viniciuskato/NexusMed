@@ -34,6 +34,7 @@ import {
 import { answersRepository } from '../../repositories/AnswersRepository';
 import { readingProgressRepository } from '../../repositories/ReadingProgressRepository';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 import { errorNotebookRepository } from '../../repositories/ErrorNotebookRepository';
 import { isCardDueToday } from '../../services/srsAlgorithm';
 import { useAuth } from '../../contexts/AuthContext';
@@ -104,6 +105,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   >({});
   const [errorLogs, setErrorLogs] = useState<ErrorLogItem[]>([]);
   const [showAchievementsModal, setShowAchievementsModal] = useState(false);
+  const achievementsDialogRef = useDialogA11y<HTMLDivElement>({
+    isOpen: showAchievementsModal,
+    onClose: () => setShowAchievementsModal(false),
+  });
   const [showDailyHandoffModal, setShowDailyHandoffModal] = useState(false);
 
   const reloadData = async () => {
@@ -1055,16 +1060,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Preview de Medalhas */}
             <div className="grid grid-cols-2 gap-2.5">
               {achievements.slice(0, 4).map((ach) => (
-                <div
+                <button
+                  type="button"
                   key={ach.id}
                   onClick={() => setShowAchievementsModal(true)}
-                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                  className={`w-full p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                     ach.unlocked
                       ? 'bg-gradient-to-br from-amber-500/10 to-transparent border-amber-400/40 dark:border-amber-500/30'
                       : 'bg-slate-50/60 dark:bg-[#142038]/50 border-slate-200/60 dark:border-[#243452]/70 opacity-70'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1.5">
+                  <span className="flex items-center justify-between mb-1.5">
                     <span className="text-xl">{ach.icon}</span>
                     {ach.unlocked ? (
                       <span className="w-4 h-4 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-[9px] font-black">
@@ -1073,14 +1079,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     ) : (
                       <Lock className="w-3.5 h-3.5 text-slate-400" />
                     )}
-                  </div>
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                  </span>
+                  <span className="block text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
                     {ach.title}
-                  </h4>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                  </span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
                     {ach.description}
-                  </p>
-                </div>
+                  </span>
+                </button>
               ))}
             </div>
           </div>
@@ -1092,14 +1098,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* ── 4. Modal de Conquistas & Medalhas Completo ── */}
       {showAchievementsModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#0F172A] rounded-3xl border border-slate-200 dark:border-[#243452] w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 sm:p-8 elev-2xl space-y-6">
+          <div
+            ref={achievementsDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="achievements-modal-title"
+            className="bg-white dark:bg-[#0F172A] rounded-3xl border border-slate-200 dark:border-[#243452] w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 sm:p-8 elev-2xl space-y-6"
+          >
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center text-xl">
                   🏆
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                  <h2 id="achievements-modal-title" className="text-xl font-bold text-slate-900 dark:text-slate-100">
                     Quadro de Conquistas Nexus
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400">

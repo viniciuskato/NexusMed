@@ -448,7 +448,7 @@ export const LoginView: React.FC = () => {
                   try {
                     setIsSubmitting(true);
                     await loginWithDemo();
-                  } catch (e: any) {
+                  } catch {
                     // handled by context
                   } finally {
                     setIsSubmitting(false);

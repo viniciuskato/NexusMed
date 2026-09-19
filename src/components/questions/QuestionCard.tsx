@@ -1,4 +1,5 @@
 import { formatToAbntCitation } from '../../utils/bibliographicSources';
+import { onActivationKey } from '../../utils/keyboardActivation';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   CheckCircle2,
@@ -69,7 +70,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const [isBookmarked, setIsBookmarked] = useState<boolean>(false);
   const [eliminatedOptions, setEliminatedOptions] = useState<string[]>([]);
   const [errorReason, setErrorReason] = useState<QuestionAnswerRecord['errorReason']>('lacuna_teorica');
-  const [showErrorTagger, setShowErrorTagger] = useState(false);
+  const [, setShowErrorTagger] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   // Gabarito (quem está correta, explicação por alternativa) obtido via RPC —
   // question.options[].isCorrect/.explanation vêm sempre vazios para o
@@ -462,7 +463,12 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           return (
             <div
               key={opt.letter}
+              // Não vira <button>: contém o botão "Riscar alternativa".
+              role="button"
+              tabIndex={0}
+              aria-pressed={isSelected}
               onClick={() => handleSelectOption(opt.letter)}
+              onKeyDown={onActivationKey(() => handleSelectOption(opt.letter))}
               className={`rounded-2xl border p-3.5 sm:p-4 transition-all cursor-pointer relative flex flex-col gap-2 ${optBg} ${
                 isEliminated ? 'opacity-40 line-through' : ''
               }`}
