@@ -278,6 +278,20 @@ export class SupabaseQuestionsRepository implements QuestionsRepository {
     const { error } = await supabase.from('questions').update({ status: 'draft' }).eq('id', id);
     if (error) throw error;
   }
+
+  // UPDATE direcionado só em material_id/material_section_id — nunca chama
+  // saveQuestion (que apaga+reinsere opções e reescreve toda a linha de
+  // questions) pra evitar risco de sobrescrever stem/gabarito/explicações
+  // (21-D). guard_question_content_immutable no banco já rejeita esse UPDATE
+  // com erro descritivo se a questão estiver published/archived — propagado
+  // como está, sem tentar "consertar" mudando status sozinho aqui.
+  async updateQuestionMaterialLink(questionId: string, materialId: string | null, materialSectionId: string | null): Promise<void> {
+    const { error } = await supabase
+      .from('questions')
+      .update({ material_id: materialId, material_section_id: materialSectionId })
+      .eq('id', questionId);
+    if (error) throw error;
+  }
 }
 
 export const supabaseQuestionsRepository = new SupabaseQuestionsRepository();

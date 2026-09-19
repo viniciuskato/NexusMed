@@ -13,6 +13,14 @@ export interface QuestionsRepository {
   getQuestionReview(questionId: string): Promise<QuestionReviewResult>;
   publishQuestion(id: string): Promise<void>;
   unpublishQuestion(id: string): Promise<void>;
+  /**
+   * Altera SÓ o vínculo material_id/material_section_id de uma questão já
+   * existente — nunca reenvia/sobrescreve stem, opções, gabarito,
+   * explicações, referências ou status (21-D: reusar saveQuestion inteiro
+   * pra isso ampliaria o risco). materialId null = "Sem material" (limpa
+   * também materialSectionId, já que uma seção não existe sem material).
+   */
+  updateQuestionMaterialLink(questionId: string, materialId: string | null, materialSectionId: string | null): Promise<void>;
 }
 
 class LocalStorageQuestionsRepository implements QuestionsRepository {
@@ -51,6 +59,15 @@ class LocalStorageQuestionsRepository implements QuestionsRepository {
   }
   async publishQuestion(_id: string): Promise<void> {}
   async unpublishQuestion(_id: string): Promise<void> {}
+  async updateQuestionMaterialLink(questionId: string, materialId: string | null, materialSectionId: string | null): Promise<void> {
+    const question = StorageService.getQuestions().find((q) => q.id === questionId);
+    if (!question) return;
+    StorageService.saveQuestion({
+      ...question,
+      compendiumRefId: materialId ?? '',
+      compendiumSectionId: materialSectionId ?? undefined,
+    });
+  }
 }
 
 class ResilientQuestionsRepository implements QuestionsRepository {
@@ -113,6 +130,18 @@ class ResilientQuestionsRepository implements QuestionsRepository {
   async unpublishQuestion(id: string): Promise<void> {
     if (isSupabaseConfigured) {
       try { await this.supa.unpublishQuestion(id); } catch (err) { console.error(`[QuestionsRepository] falha ao sincronizar unpublishQuestion com Supabase:`, err); throw err; }
+    }
+  }
+
+  async updateQuestionMaterialLink(questionId: string, materialId: string | null, materialSectionId: string | null): Promise<void> {
+    await this.local.updateQuestionMaterialLink(questionId, materialId, materialSectionId);
+    if (isSupabaseConfigured) {
+      try {
+        await this.supa.updateQuestionMaterialLink(questionId, materialId, materialSectionId);
+      } catch (err) {
+        console.error(`[QuestionsRepository] falha ao sincronizar updateQuestionMaterialLink com Supabase:`, err);
+        throw err;
+      }
     }
   }
 }

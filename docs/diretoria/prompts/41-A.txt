@@ -77,4 +77,3 @@ Ambientes tocados: local | Supabase local | remoto | produção
 Riscos e itens não verificados
 Estado de publicação: branch candidata enviada | somente local; confirmar main/produção inalterados
 Próxima decisão da diretoria
-

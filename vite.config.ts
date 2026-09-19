@@ -61,9 +61,13 @@ export default defineConfig(({mode}) => {
       },
     },
     server: {
-      host: '0.0.0.0',
+      // Só na própria máquina por padrão (AUD-10). Para testar no celular/rede
+      // local: `npm run dev:lan` (passa --host=0.0.0.0 na linha de comando).
+      // IPv4 explícito, não 'localhost': o `vite preview` herda este host, e
+      // 'localhost' resolve para ::1 no runner do CI — o Playwright espera em
+      // 127.0.0.1:4183 e dava timeout.
+      host: '127.0.0.1',
       port: 3000,
-      allowedHosts: true as const,
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify - file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
