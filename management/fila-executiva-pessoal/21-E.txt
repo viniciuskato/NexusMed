@@ -1,0 +1,34 @@
+PROMPT 21-E — Revisar e publicar o desbloqueio do CMS humano
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 21-E nesta sessão. Eu, usuário, autorizo explicitamente esta conversa a assumir o papel executivo em `C:\Users\vinic\dev\NexusMed\firebase-auth`, revisar, integrar, enviar e acompanhar o deploy da entrega 21-D. Não revise nem repasse o prompt. Entregue `RETORNO: 21-E` e encerre.
+
+OBJETIVO
+Publicar, somente com gates verdes, as correções de usabilidade que permitem revisão humana de questões, edição segura de vínculo e seleção completa de fontes.
+
+ESTADO CONHECIDO
+- Base: `main = origin/main = 2e342bd`.
+- Candidata: `work/21d-revisao-humana-cms`, após retorno aprovado do 21-D2; `b32ce94` é apenas o checkpoint anterior.
+- Validação informada: pgTAP 228/228, Playwright 29/29, typecheck/lint/build e bundle verdes; zero fixtures.
+- Sem migration. Nenhum dado remoto foi alterado.
+
+EFICIÊNCIA OBRIGATÓRIA
+Não reimplemente o 21-D/21-D2. Revise o diff e os contratos diretamente afetados. Como o 21-D2 altera a candidata, execute `verify:full` uma vez no HEAD final; não repita sem mudança de estado. Smoke remoto deve ser somente leitura/cancelamento.
+
+GATES
+1. Confirmar fetch, branches, HEAD, árvore, worktrees e concorrência. Se `origin/main` avançou, reconciliar apenas sem conflito semântico e invalidar a reutilização dos testes.
+2. Auditar `origin/main...HEAD`, especialmente: painel comum às abas; clique simples sem escrita; retorno de foco; UPDATE limitado a `material_id/material_section_id`; Supabase autoritativo e cache local preservado em rejeição remota; referência limitada a `source_id/url`; RLS; busca de fontes; campos completos de `claim_sources`; ausência de bypass de atestação/publicação.
+3. Confirmar que busca vazia/por DOI/título é limitada e que erros são visíveis. Corrigir apenas defeito bloqueante comprovado.
+4. Executar checks proporcionais, `git diff --check`, build e bundle sem debug. Se alguma mudança ocorrer, rodar testes focados e `verify:full` uma vez no gate final.
+5. Com gates verdes, atualizar somente o registro necessário, criar commit se preciso, integrar em `main` sem force e enviar `main`. Não aplicar migration.
+6. Confirmar deploy byte-idêntico ao build auditado.
+7. Fazer smoke não mutável em produção: abrir CMS; abrir/fechar “Revisão” de material e questão; abrir “Vínculo” e cancelar; pesquisar fonte por DOI/título; abrir referências sem associar. Confirmar que rótulos, estado, próximo passo, cancelamento e retorno de foco são compreensíveis sem UUID, banco ou instrução externa; zero escrita, erros relevantes de console/rede e nenhuma mudança de contagens.
+8. Confirmar `main = origin/main`, árvore limpa e branch candidata preservada.
+
+RESTRIÇÕES
+Sem dados remotos mutáveis, conta descartável, atestação, publicação de conteúdo, alteração do lote PCSK9, migration, force push ou limpeza destrutiva. Parar antes do merge se houver gate crítico vermelho ou mudança concorrente de `origin/main`.
+
+FORMATO DO RETORNO
+RETORNO: 21-E
+Resultado: publicado | não publicado | bloqueado
+Estado inicial/final; auditoria; testes reutilizados/executados e justificativa; commits/merge/push/deploy; smoke não mutável; riscos/pendências.

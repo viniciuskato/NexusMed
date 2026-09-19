@@ -1,0 +1,45 @@
+PROMPT 34-B — Gate local de prontidão comercial das questões
+
+TRILHA: GATE TÉCNICO — CODEX EXECUTIVO
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 34-B em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Eu, usuário, autorizo explicitamente implementar e validar localmente em branch isolada. Não altere produção nem a publicação editorial atual. Entregue `RETORNO: 34-B` e encerre.
+
+PRÉ-CONDIÇÕES
+Execute somente após 21-E liberar os arquivos do CMS e sem outra sessão concorrente. Considere aprovado o 34-A2: 402 questões, direitos `pending` em todas, zero elegíveis, 400 `hold_rights` e duas `hold_rights_and_media` (`82e55bf5-a083-470b-84dd-970a159aaca4` e `aaaccffc-deb9-4476-a059-50ebbed68422`). Os artefatos 34-A2 são diagnóstico, não autorização para alterar dados remotos.
+
+OBJETIVO
+Criar um contrato server-side fail-closed que calcule prontidão comercial separadamente de `questions.status`, permita atestação humana rastreável e invalide a aprovação quando conteúdo ou mídia relevante mudar. Nenhuma questão deve ser aprovada retroativamente.
+
+EFICIÊNCIA
+Reutilize `build_question_snapshot`, hashing, identidade e padrões append-only do 23-B. Faça migration aditiva e o menor fluxo CMS funcional; não crie um segundo sistema de proveniência, motor jurídico ou redesign.
+
+CONTRATO OBRIGATÓRIO
+1. Publicação editorial e prontidão comercial são estados diferentes. Não despublicar nem ocultar as 402 questões existentes nesta execução.
+2. Sem revisão comercial válida, o estado derivado é `hold_rights`/não elegível.
+3. Revisão humana registra server-side: `question_id`, hash canônico da versão, `rights_basis`, evidência/localizador, decisão, necessidade de mídia (`required|not_required`), `reviewer_user_id=auth.uid()`, horário e nota. Cliente não escolhe identidade/horário/hash.
+4. Bases admitidas: `owned_original|licensed|official_use_approved`. Cada uma exige evidência; `licensed` exige titular, licença, escopo comercial e localizador. `official_use_approved` não pode ser inferido apenas por URL pública.
+5. Se mídia for `required`, elegibilidade exige `content_assets.question_id` com arquivo existente e metadados mínimos `author`, `source`, `license`, `alt_text`; licença vazia ou não comercial bloqueia. Não tentar interpretar juridicamente texto livre de licença além de enum/allowlist explicitamente modelada.
+6. Alteração no snapshot da questão ou nos ativos relevantes invalida a prontidão anterior. Calcular server-side; nunca confiar em `commercial_status` enviado pelo cliente.
+7. Revisões são append-only. Correção/revogação cria novo evento, sem UPDATE/DELETE da história.
+8. Apenas admin ativo revisa; estudante, anônimo e admin bloqueado não podem. Service role não representa o revisor.
+
+ESCOPO
+- Migration, RLS/RPC, tipos e repositórios necessários.
+- RPC de criar decisão comercial e RPC/função de consultar prontidão, reutilizando o hash canônico existente.
+- No CMS, fluxo mínimo dentro da revisão da questão: estado atual, base, evidência, necessidade de mídia, confirmar/cancelar e histórico legível. Reutilize componentes/estilos existentes; não redesenhe o CMS.
+- Mostrar “Aprovação editorial” e “Prontidão comercial” separadamente.
+- Não oferecer ação em lote nesta versão.
+- Preparar extensão futura para exportação/canal comercial, mas não criar cobrança, assinatura ou feature flag fictícia.
+
+VALIDAÇÕES
+- pgTAP: padrão bloqueado; identidade/horário/hash server-side; payload forjado; autorização; evidência obrigatória; append-only; questão alterada invalida; mídia obrigatória ausente/incompleta bloqueia; mídia licenciada completa libera; mídia não necessária não exige asset; revogação; cascatas legítimas.
+- E2E local: admin revisa questão autoral sem mídia; questão com mídia ausente continua bloqueada; rótulos distinguem editorial/comercial; clique simples não grava; estudante não acessa.
+- Testes focados antes de `verify:full`; zero fixtures restantes; `git diff --check`; build sem símbolos de teste.
+
+RESTRIÇÕES
+Sem importar o CSV como verdade de produção, sem backfill de aprovação, sem alterar dados remotos, sem despublicar questões, sem parecer jurídico, sem service role em fluxo de produto, sem commit em branch 21-D, push, merge ou deploy. Se a invalidação por mídia não puder ser garantida sem decisão arquitetural nova, pare e reporte em vez de criar falsa segurança.
+
+FORMATO DO RETORNO
+RETORNO: 34-B
+Resultado; estado inicial/final; modelo e estados derivados; migrations/RPC/RLS; invalidação por conteúdo/mídia; fluxo CMS; testes/contagens; arquivos/commit local; riscos; confirmação de zero aprovação retroativa e nenhuma produção/push/merge/deploy.

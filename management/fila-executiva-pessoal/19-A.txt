@@ -1,0 +1,30 @@
+PROMPT 19-A v2 — Barreiras reais de teclado e foco
+
+TRILHA: INTERFACE — GOOGLE AI STUDIO. Usar como critérios de projeto e teste exploratório; qualquer código resultante deve voltar por ZIP e passar pelo gate 28-A. Não enviar como sessão executiva de conteúdo no Claude.
+
+MODO DE EXECUÇÃO
+No Google AI Studio, audite e refine apenas a interface desta tarefa. Não sincronize com GitHub nem altere backend. Entregue checkpoint e ZIP identificados, além de `RETORNO: 19-A`, para auditoria externa.
+
+OBJETIVO
+Corrigir barreiras reproduzíveis de teclado/foco, sem perseguir zero warnings ou limpeza cosmética.
+
+EFICIÊNCIA OBRIGATÓRIA
+Capture o baseline atual; 93 avisos é histórico. Priorize falhas observáveis, teste cada barreira antes do patch, corrija por componente e execute a suíte completa uma vez no final. Só toque hooks/tipos se causarem o defeito ou estiverem no trecho alterado.
+
+DEPENDÊNCIAS
+Após 22-B e sem concorrência com 14-A ou outra mudança nas mesmas telas.
+
+ESCOPO
+1. Confirmar Git, concorrência e baseline atual.
+2. Testar Tab/Shift+Tab, Enter/Espaço, Escape, foco visível e retorno de foco nos menus, Estudo Temático, leitor, questões, SRS, modais e Área Editorial.
+3. Reprovar também controle sem nome compreensível, ação sem feedback, foco imprevisível ou fluxo que exija conhecer código/banco; corrigir apenas o que for reproduzido.
+4. Corrigir somente barreiras reproduzidas, preservando layout e negócio.
+5. Reduzir o teto de lint apenas pelos avisos realmente removidos; zero não é meta.
+6. Validar tarefas completas sem mouse e sem instrução externa, desktop/mobile, lint/typecheck, `git diff --check` e uma suíte final.
+
+RESTRIÇÕES
+Sem schema, migration, RPC, RLS, auth, repositórios, sincronização, regras de conteúdo, novo `eslint-disable`, aumento do teto, merge, push, sync com GitHub ou deploy.
+
+FORMATO DO RETORNO
+RETORNO: 19-A
+Resultado; Git; barreiras; baseline antes/depois; testes; riscos; branch/commits; não publicado.

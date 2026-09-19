@@ -1,0 +1,29 @@
+PROMPT 14-A v2 — Lazy loading mensurável
+
+STATUS: LIBERAR APÓS os gates atuais de interface que alteram `App.tsx`. O build auditado atingiu 1.067,19 kB de JavaScript (270,14 kB gzip), acima do limiar de 500 kB; a condição de retomada foi satisfeita.
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 14-A nesta sessão. Eu, usuário, autorizo esta conversa a assumir o papel executivo para esta tarefa em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Não revise nem repasse o prompt: execute-o. Entregue `RETORNO: 14-A` e encerre.
+
+OBJETIVO
+Reduzir materialmente o JavaScript inicial por lazy loading de áreas raras, sem redesign, mudança de comportamento ou refatoração ampla.
+
+EFICIÊNCIA OBRIGATÓRIA
+Confirme o baseline atual; 1.067,19 kB é a medição de 2026-09-15 e 999 kB é apenas histórico. Inspecione somente grafo de imports, `App.tsx` e candidatos comprovados. Implemente os cortes de maior ganho, rode testes focados durante o trabalho e `npm run verify:full` uma vez no gate final. Não divida arquivos só por tamanho.
+
+DEPENDÊNCIAS
+Após 22-B publicado e sem outra sessão alterando `App.tsx` ou as mesmas telas.
+
+ESCOPO
+1. Confirmar Git, concorrência e tamanho por chunk do `origin/main` vigente.
+2. Priorizar módulos raros presentes no chunk inicial conforme medição.
+3. Aplicar lazy loading com carregamento imediato perceptível, rótulo humano, erro acionável e tentativa segura; não introduzir tela vazia ou salto de navegação.
+4. Preservar navegação, packs, autenticação, admin e estado persistido.
+5. Medir antes/depois e validar rotas alteradas em desktop/mobile, bundle sem debug, `git diff --check` e uma suíte final.
+
+RESTRIÇÕES
+Sem modularização ampla, `manualChunks` artificial, aumento de limite, migration, mudança de dados, merge, push ou deploy.
+
+FORMATO DO RETORNO
+RETORNO: 14-A
+Resultado; Git; baseline; cortes e métricas; testes; riscos; branch/commits; não publicado.

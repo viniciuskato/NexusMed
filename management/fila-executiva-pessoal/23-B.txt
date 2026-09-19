@@ -1,0 +1,56 @@
+PROMPT 23-B — Implementar localmente proveniência e atestação editorial
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 23-B nesta sessão. Eu, usuário, autorizo esta conversa a assumir o papel executivo para implementar e validar localmente esta tarefa em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Não revise nem repasse o prompt: execute-o. Entregue `RETORNO: 23-B` e encerre.
+
+OBJETIVO
+Implementar, somente em ambiente local e branch nova, a fundação mínima de revisões imutáveis, claims, fontes e atestação humana que bloqueie novas publicações sem aprovação da versão exata.
+
+DECISÕES DA DIRETORIA
+- `sources` permanece catálogo canônico.
+- A unidade publicável é `material` inteiro ou `question`; não `material_section` isolada.
+- Autoatestação é permitida na v1, pois há um único administrador. Autor e revisor ficam registrados separadamente; o schema deve permitir exigir pessoas distintas no futuro.
+- A identidade vem de `auth.uid()` server-side, admin ativo, horário do banco, revisão/hash e versão da política. Nome digitado, checkbox ou desenho não comprovam identidade.
+- Conteúdo legado já publicado permanece visível como `legacy_unmapped`; não recebe aprovação retroativa fictícia. Ao ser editado/despublicado para nova publicação, entra no gate novo.
+- Flashcards personalizados ficam fora. Flashcards derivados podem exibir proveniência aprovada da questão de origem, sem criar claims duplicados nesta etapa.
+- Não implementar agora taxonomia de conceitos, mapa longitudinal ou pauta editorial. Apenas evitar nomes/constraints que impeçam futura ligação de revisões aprovadas a `concepts`, `question_concepts` e itens de pauta.
+
+EFICIÊNCIA OBRIGATÓRIA
+Parta do retorno 23-A e dos contratos existentes. Implemente o menor fluxo vertical completo para material e questão; sem refatoração geral do CMS. Testes pgTAP/unitários focados primeiro; Playwright apenas para o fluxo editorial novo; `verify:full` uma vez no gate final. Não produzir relatórios paralelos.
+
+MODELO MÍNIMO OBRIGATÓRIO
+1. `content_revisions`: `material_id` e `question_id` nullable com FKs reais e CHECK de exatamente um preenchido; snapshot canônico completo, hash server-side, número, `created_by := auth.uid()` e horário do banco. Imutável.
+2. O snapshot de material inclui material, seções e referências em ordem; o de questão inclui enunciado, alternativas, gabarito, explicações, comentário, resumo e referências. Funções server-side constroem formato determinístico.
+3. `claims`: FK para revisão; texto; `claim_kind` (`source_claim|synthesized_claim|inference`); `content_locator` estável; categoria de risco ou `requires_source` explícito. Não usar número visual como identidade.
+4. `claim_sources`: FK claim/fonte; `evidence_relation` (`supports|contextualizes|contradicts`); `consultation_basis` (`directly_consulted|indirectly_reported`); `source_locator` (página/seção/tabela/figura/trecho quando disponível); verificação da associação, confiança e ordem. Tipo primário/secundário continua em `sources.tipo`, não nesta relação.
+5. `content_reviews`: append-only; revisão, `reviewer_user_id := auth.uid()`, decisão, checklist, política constante versionada, hash da revisão e horário server-side.
+
+FLUXO E GATES
+1. RPC cria revisão a partir do estado real do banco; cliente não envia snapshot, autor ou hash.
+2. CMS permite inspecionar revisão, claims e fontes; por claim: aprovado, requer correção/fonte ou inferência aceita.
+3. RPC de atestação valida admin ativo, revisão imutável e claims obrigatórios. Registra a conta autenticada.
+4. `publish_question` preserva validações atuais e exige última revisão aprovada cujo snapshot recomputado do conteúdo atual tenha o mesmo hash.
+5. Criar `publish_material` com a mesma garantia. Remover publicação por UPDATE direto do caminho do cliente e bloquear transição direta por trigger.
+6. Publicação em massa chama a mesma RPC por item e mostra sucesso/falha individual.
+7. Qualquer edição faz o estado atual divergir do hash aprovado; publicação falha até nova revisão/atestação.
+8. RLS/grants bloqueiam UPDATE/DELETE de revisões e atestações para clientes. Não afirmar que RLS restringe `service_role`/owner, que pode ignorá-la.
+
+ESCOPO
+1. Confirmar Git, `origin/main`, worktrees e concorrência; criar branch a partir do remoto vigente.
+2. Implementar migration, tipos, repositórios e UI mínima na Área Editorial.
+3. Corrigir a perda de `material_references.source_id` no salvamento; remover fallback genérico de referência.
+4. Exibir “legado não mapeado”, “em revisão”, “aprovado para esta versão” e “aprovação desatualizada”.
+5. Mostrar atestação com nome do perfil apenas para exibição e identidade técnica derivada do UID; texto claro de que é aprovação editorial, não assinatura digital qualificada.
+6. Testar localmente: payload forjado não troca autor/revisor/horário/hash; FK/checks; imutabilidade; claim obrigatório sem fonte bloqueia; fonte indireta não é apresentada como consultada; edição invalida; bulk não contorna; material e questão publicam somente aprovados; legado continua legível; admin bloqueado falha.
+7. Rodar gates focados, migração/reset local, Playwright do fluxo, zero fixtures, `git diff --check`, bundle sem debug e `npm run verify:full` uma vez ao final.
+8. Atualizar documentação e entregar commits locais.
+9. Documentar pontos mínimos de extensão futura para conceitos e pauta editorial, sem criar tabelas ou UI dessas iniciativas.
+
+RESTRIÇÕES
+- Supabase somente local. Sem migration remota, dados reais, push, PR, merge ou deploy.
+- Não migrar/aprovar em lote o legado, não criar claims automaticamente como verificados e não inventar localização/fonte.
+- Não exigir revisor diferente do autor nesta versão.
+
+FORMATO DO RETORNO
+RETORNO: 23-B
+Resultado; Git; schema/RPC/RLS; snapshots/hash; fluxo CMS; identidade/atestação; legado; testes/contagens; arquivos/commits; riscos; não publicado.

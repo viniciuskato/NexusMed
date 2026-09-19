@@ -1,0 +1,28 @@
+PROMPT 16-A v2 — Diagnóstico de privacidade e ciclo de vida
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 16-A nesta sessão. Eu, usuário, autorizo esta conversa a assumir o papel executivo para esta auditoria em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Não revise nem repasse o prompt: execute-o. Entregue `RETORNO: 16-A` e encerre. Somente leitura e desenho.
+
+OBJETIVO
+Mapear o ciclo real dos dados e as decisões necessárias antes de implementar exportação, exclusão ou textos de privacidade.
+
+EFICIÊNCIA OBRIGATÓRIA
+Parta de schema, RLS, repositórios, políticas e inventários existentes; confirme apenas mudanças. Use metadados e contagens, não conteúdo pessoal. Não rode suíte nem navegador salvo para confirmar divergência específica. Entregue um único mapa e backlog curto.
+
+DEPENDÊNCIAS
+Após 23-C publicado, incorporando o schema real de proveniência, revisões e atestações.
+
+ESCOPO
+1. Confirmar snapshot sem criar branch.
+2. Inventariar categorias, finalidade técnica, armazenamento, acesso, sincronização, backups conhecidos e subprocessadores confirmados.
+3. Mapear criação, retenção existente, exportação, exclusão, logout, troca de usuário e restauração.
+4. Comparar comportamento com textos atuais sem presumir obrigação legal.
+5. Definir requisitos e riscos para exportação/exclusão idempotentes.
+6. Separar correção técnica, decisão da diretoria, revisão jurídica e informação ausente.
+
+RESTRIÇÕES
+Nenhuma edição, exclusão/exportação real, migration, acesso a conteúdo pessoal, texto legal final, commit, push ou deploy. Não declarar conformidade.
+
+FORMATO DO RETORNO
+RETORNO: 16-A
+Resultado; snapshot; mapa; divergências; requisitos; decisões; backlog mínimo; sem alterações.

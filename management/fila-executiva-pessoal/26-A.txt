@@ -1,0 +1,31 @@
+PROMPT 26-A — Auditoria prática de intuitividade do NexusMed
+
+TRILHA: INTERFACE — GOOGLE AI STUDIO. Auditoria exploratória e proposta visual; não é aprovação independente. Código ou protótipo resultante só pode seguir pelo gate 28-A.
+
+MODO DE EXECUÇÃO
+No Google AI Studio, audite o preview por tarefas reais. Pode propor ou prototipar interface, mas não sincronize com GitHub e não altere backend. Entregue checkpoint/ZIP e `RETORNO: 26-A`.
+
+OBJETIVO
+Determinar, por tarefas reais, o que um estudante e um administrador não conseguem descobrir, compreender ou concluir sem instrução externa.
+
+EFICIÊNCIA OBRIGATÓRIA
+Não faça inventário de telas nem revisão estética ampla. Reutilize testes e achados existentes, execute uma vez cada jornada crítica e aprofunde somente onde houver falha observável. Reporte apenas reprovações, gravidade, evidência e menor correção possível.
+
+PRÉ-CONDIÇÃO
+Após 21-E publicado. Use conta existente/autorizada no navegador; não peça nem manipule senha ou token. Nenhuma escrita real: cancelar antes de salvar, atestar, publicar, responder ou revisar card.
+
+TAREFAS
+1. Estudante: encontrar um pack, entender se está parcial/completo, abrir leitura, localizar questões, iniciar SRS e voltar ao mesmo pack.
+2. Estudante: reconhecer carregamento, vazio, erro, sincronização pendente e próximo passo; verificar desktop e largura móvel representativa.
+3. Administrador: localizar material/questão, abrir revisão, entender estado e pendências, pesquisar fonte, abrir vínculo e cancelar com segurança.
+4. Auditar o atalho de leitura: não tratá-lo como “voltar”; verificar rótulo, validade, expiração, conclusão, dispensa, material removido/despublicado e presença indevida no CMS. A sessão antiga não pode permanecer indefinidamente nem apagar o progresso ao deixar de ser exibida.
+5. Em cada tarefa avaliar: descoberta; rótulos; feedback; estado; próximo passo; prevenção/recuperação de erro; foco/teclado; ausência de jargão interno.
+   Verificar também colisões: dock, pílulas, widgets, menus, modais e toasts não podem encobrir o primeiro/último item nem ações, inclusive com rolagem final e zoom de 200%.
+6. Classificar `bloqueante|alto|médio|baixo`; não reprovar por preferência estética. Identificar lacunas que exigem teste humano futuro, sem inventar resultado.
+
+RESTRIÇÕES
+Sem schema, migration, RPC, RLS, auth, repositórios, sincronização, proveniência, regra científica, dado real, commit, push, sync com GitHub ou deploy. Não declarar a própria implementação aprovada.
+
+FORMATO DO RETORNO
+RETORNO: 26-A
+Resultado; snapshot; tarefas aprovadas; reprovações por gravidade com evidência; lacunas não testáveis; backlog mínimo ordenado; sem alterações.

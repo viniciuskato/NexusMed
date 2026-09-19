@@ -1,0 +1,33 @@
+PROMPT 29-A — Implementar a taxonomia curricular canônica localmente
+
+TRILHA: GATE TÉCNICO — CODEX EXECUTIVO
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 29-A em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Eu, usuário, autorizo esta sessão a implementar e validar localmente a taxonomia aprovada, em branch isolada. Não publique. Entregue `RETORNO: 29-A` e encerre.
+
+OBJETIVO
+Substituir a organização anárquica por `ciclo → disciplina → tema → material`, preservando IDs, conteúdo, referências e vínculos; disponibilizar metadados transversais sem duplicar materiais.
+
+FONTE DE VERDADE
+Leia `C:\Users\vinic\OneDrive\Organizacao\TAXONOMIA-MATERIAIS-NEXUSMED-2026-09-14.md`. Confirme a fotografia atual antes de agir: 34 materiais, 15 disciplinas, 41 temas e 10 temas órfãos. `Medicine` deve permanecer fora da migração; não arquive nem publique neste prompt.
+
+EFICIÊNCIA
+Leia schema, repositórios, seed e telas que realmente consomem disciplina/tema/ciclo. Faça uma única migração determinística e updates direcionados. Testes focados primeiro; `verify:full` uma vez no gate final. Não redesenhe a interface nem faça revisão científica.
+
+ESCOPO E GATES
+1. Confirmar `origin/main`, HEAD, árvore, worktrees e concorrência; criar branch do `origin/main` vigente.
+2. Auditar impactos em materiais, questões, filtros, busca, packs e RLS. Se a árvore proposta exigir mudança destrutiva ou tornar vínculos ambíguos, parar com mapa exato.
+3. Criar/reutilizar apenas disciplinas e temas canônicos presentes na matriz; nomes em PT-BR e `sort_order` pedagógico explícito.
+4. Reclassificar os 33 materiais pertinentes atualizando somente chaves taxonômicas e ordenação. Uma localização principal por material. Preservar todos os IDs dos materiais.
+5. Tratar packs, sistemas, conceitos, competências, lente e estado editorial como metadados transversais. Não copiar material nem usar tags livres como fonte de verdade.
+6. Não excluir disciplinas/temas antigos na mesma operação. Comprovar quais ficaram órfãos e preparar limpeza separada/reversível.
+7. Adicionar validações contra: tema fora da disciplina, material sem localização, título usado automaticamente como novo tema, `sort_order` todo zero e alteração colateral de conteúdo/status/referências.
+8. Validar contagens antes/depois, rollback local, seed/reset repetível, filtros por ciclo, packs, questões, typecheck, testes focados, pgTAP, Playwright afetado, build, bundle e `git diff --check`.
+9. Criar commit local único ou commits pequenos semanticamente necessários; árvore limpa.
+
+RESTRIÇÕES
+Sem escrita remota, deploy, push, merge, exclusão de taxonomia antiga, alteração de conteúdo médico, tradução, atestação ou publicação. Não implementar redesign; requisitos visuais vão ao AI Studio.
+
+FORMATO DO RETORNO
+RETORNO: 29-A
+Resultado; estado inicial/final; modelo de dados; mapa antes→depois dos 34 materiais; órfãos preservados; arquivos/commits; contagens; testes; riscos; sem publicação.

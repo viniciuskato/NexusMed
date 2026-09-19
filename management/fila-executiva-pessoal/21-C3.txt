@@ -1,0 +1,27 @@
+PROMPT 21-C3 — Retomar pelo CMS o lote humano PCSK9
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 21-C3 no Chrome com a aba NexusMed de produção autenticada como Vinicius Kato. Eu, usuário, autorizo as escritas editoriais delimitadas abaixo. Use somente a interface do CMS; não use terminal, API, `service_role`, banco direto ou outra conta. Entregue `RETORNO: 21-C3` e encerre.
+
+OBJETIVO
+Preparar para minha revisão final o material PCSK9 e as oito questões cientificamente aprovadas, sem atestar nem publicar.
+
+PRÉ-CONDIÇÃO
+Executar somente após o 21-E confirmar em produção painel de revisão, edição de vínculo e seleção de fontes. Se a aba não estiver autenticada como Vinicius Kato ou qualquer controle esperado faltar, parar sem escrita.
+
+EFICIÊNCIA E INTUITIVIDADE
+Reutilize a decisão do 21-B; não refaça pesquisa científica. Trabalhe item a item pela interface e confirme o efeito após cada mudança. Se o fluxo exigir UUID, conhecimento de banco ou clique sem resposta clara, pare e reporte a barreira — não improvise.
+
+ESCOPO
+1. Registrar contagens e estado inicial do material e das nove questões.
+2. Desvincular do material PCSK9 somente a Q9 UFPA/COREME 2021; mantê-la `draft`, sem alterar conteúdo.
+3. Criar ou reconciliar revisões do material e das outras oito questões usando apenas fontes e decisões aprovadas no 21-B; não inventar fonte, localizador ou claim.
+4. Deixar tudo preparado para conferência humana, sem acionar atestação ou publicação.
+5. Confirmar estado final, identidade exibida, ausência de alteração não prevista e ausência de erros relevantes.
+
+RESTRIÇÕES
+Sem atestar, publicar, excluir, editar conteúdo clínico, alterar outras questões ou usar automação externa. Pare na primeira ambiguidade científica ou efeito não confirmável.
+
+FORMATO DO RETORNO
+RETORNO: 21-C3
+Resultado; identidade; antes/depois; Q9; material e oito questões; fontes/claims preparados; barreiras; confirmação de nenhuma atestação/publicação.

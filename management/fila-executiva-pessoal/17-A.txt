@@ -1,0 +1,39 @@
+PROMPT 17-A — Decisão PWA: instalável versus offline real
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 17-A nesta sessão. Eu, usuário, autorizo esta conversa a assumir o papel executivo para este diagnóstico em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Não revise nem repasse o prompt: execute-o. Entregue `RETORNO: 17-A` e encerre. Não implemente.
+
+OBJETIVO
+Determinar qual promessa PWA o NexusMed deve fazer e desenhar estratégia segura de cache compatível com autenticação e fila de sincronização.
+
+EFICIÊNCIA RESULTADO/TOKENS
+Busque sempre a melhor relação resultado/tokens: produza apenas a evidência necessária para a decisão instalável versus offline real. Não desenhe ou implemente arquitetura detalhada para uma opção ainda não aprovada; não omita riscos de cache privado, sessão e sincronização.
+
+PROTOCOLO OBRIGATÓRIO DE EFICIÊNCIA
+Faça uma única leitura dirigida; use índices, buscas e diffs antes de abrir arquivos inteiros; reutilize provas ainda válidas; execute verificações focadas baratas antes de qualquer gate amplo; agrupe verificações seguras; não use esperas fixas nem repita comandos sem mudança de estado; limite-se à menor análise que sustente a decisão; e entregue somente métricas, comandos e excertos relevantes. Entre abordagens igualmente seguras, escolha a de menor tempo e menor consumo de tokens. Nunca economize removendo gates críticos.
+
+DEPENDÊNCIAS
+Executar somente após decisão explícita de produto ou evidência de necessidade offline real. Confirmar o `origin/main` vigente; implementação exige prompt posterior.
+
+CONTEXTO
+Há manifesto e ícones, mas não foi localizado service worker nem estratégia explícita de cache. Fila offline não equivale a aplicação integralmente offline.
+
+ESCOPO
+1. Testar instalabilidade e comportamento sem rede atual.
+2. Classificar ativos/dados em cacheável público, privado temporário e nunca cacheável.
+3. Avaliar versão, expiração, logout, troca de usuário e interação com a fila.
+4. Comparar: “instalável, conexão necessária” versus offline real progressivo.
+5. Entregar recomendação, riscos e critérios de aceite; implementação só após decisão.
+
+RESTRIÇÕES
+- Não adicionar service worker, alterar cache ou prometer offline nesta etapa.
+- Sem merge, push, deploy ou escrita remota.
+
+FORMATO DO RETORNO
+RETORNO: 17-A
+Resultado: diagnóstico concluído | bloqueado
+Comportamento atual comprovado
+Matriz de cache e dados
+Opções e trade-offs
+Recomendação e decisão necessária
+Estado de publicação: nenhuma alteração funcional

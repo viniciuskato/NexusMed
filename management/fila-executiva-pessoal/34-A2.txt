@@ -1,0 +1,21 @@
+CORREÇÃO 34-A2 — Tornar a auditoria comercial fail-closed
+
+Rode você mesmo esta correção na mesma sessão e no mesmo repositório do 34-A. Eu, usuário, autorizo apenas leitura e correção dos dois artefatos documentais já criados. Não repita a coleta das 402 questões nem faça pesquisa ampla.
+
+PROBLEMAS CONFIRMADOS PELA DIRETORIA
+1. `Anki pessoal`, `reforço pós-erro` e `pesquisa em diretriz` indicam provável processo de criação, mas não são prova documental de titularidade da redação. Nem mesmo o rótulo “autoral NexusMed” equivale ainda a uma atestação humana específica de direitos. Portanto, as 68 linhas não podem estar `owned/eligible_authorial` no gate comercial.
+2. A mídia foi auditada individualmente em 19 candidatos fortes, mas apenas por amostra em 12 dos 49 candidatos fracos. Isso não sustenta conclusão completa contra falsos negativos.
+
+FAÇA SOMENTE
+1. Preserve as 402 linhas e todos os IDs.
+2. Reclassifique as 68 linhas atualmente `owned/eligible_authorial` para `pending/hold_rights`, mantendo `origin_kind=authorial` apenas como autoria alegada/candidata e registrando que falta atestação humana específica. Resultado provisório esperado: zero questão comercialmente elegível até atestação ou licença.
+3. No documento, diferencie claramente `autoria provável` de `direito comercial atestado`. Não declare que Anki pessoal, uso de diretriz, texto produzido por IA ou rótulo de origem provam titularidade.
+4. Leia os 37 candidatos fracos ainda não examinados e classifique `requires_media` pelo conteúdo completo. Faça também busca determinística em enunciado, vinheta, alternativas e comentários por Markdown/HTML/URLs/data-URI ou referências a anexos, figuras, tabelas, traçados e imagens. Registre cobertura exata.
+5. Preserve a questão já confirmada com mídia ausente como `hold_rights_and_media`. Se encontrar outras, liste-as; não force a contagem esperada.
+6. Valide IDs únicos, enums, 402=total e consistência: nenhum `eligible_*` sem prova documental explícita; todo `requires_media=true` sem mídia licenciada fica bloqueado.
+
+NÃO FAÇA
+Nenhuma alteração em banco, questão, status editorial, schema, CMS, raw data, commit, push ou deploy. Não reabra discussão jurídica por banca e não escreva o 34-B.
+
+RETORNO: 34-A2
+Contagens corrigidas; distinção autoria provável/direito atestado; cobertura final de mídia; questões dependentes de mídia; arquivos alterados; validações; confirmação de somente leitura e ausência de publicação.

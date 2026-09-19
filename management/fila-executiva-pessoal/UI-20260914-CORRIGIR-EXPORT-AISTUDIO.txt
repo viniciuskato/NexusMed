@@ -1,0 +1,36 @@
+PROMPT UI-20260914 — Corrigir o experimento de interface NexusMed
+
+PAPEL E LIMITE
+Você é o estúdio de interface do NexusMed. Corrija o projeto atual sem sincronizar com GitHub, publicar ou tocar backend. Não alegue conclusão antes dos testes finais. Entregue checkpoint e ZIP completo.
+
+OBJETIVO
+Preservar os ganhos visuais úteis e remover funcionalidades instáveis, enganosas ou incompatíveis com a política editorial.
+
+REMOVER INTEGRALMENTE
+1. `ClinicalCognitiveProfile` e qualquer “Cognition Engine”, arquétipo, percentual de competência, diagnóstico ou “prescrição do preceptor”. Não há modelo validado; zero respostas nunca pode mostrar 50–60%.
+2. `BancaPerformanceRadar` e chips rápidos por banca. O acervo publicado não possui instituição/ano preenchidos; não inventar utilidade com grupo “Outras”.
+3. `DailyHandoffModal` e “Passagem de Plantão”.
+4. `ExportCadernoModal` e exportação/cópia/impressão de anotações pessoais; depende de auditoria de privacidade.
+5. `ClinicalPomodoroWidget`; não substituir por outro widget.
+6. Swipe que chama `handleRate()`; nenhuma avaliação SRS pode ser gravada por gesto lateral nesta versão.
+7. Inferência no `SafeMarkdown` que transforma palavras como Diretriz, Consenso, Pegadinha, Fisiopatologia ou `[!NOTE]` em selo científico. Restaurar blockquote neutro; caixas especiais só poderão existir futuramente por marcação editorial explícita.
+
+PRESERVAR E CORRIGIR
+- Manter apenas melhorias de contraste, canvas/superfície, bordas, estados selecionado/desabilitado e tipografia tabular.
+- Manter o modo de foco se a saída for evidente, acessível e não apagar filtros/estado.
+- Manter “Sugestão para hoje” somente se usar contagens reais já existentes: cards vencidos → caderno com itens → questões. Trocar “Missão”, “métricas cognitivas”, “prescrição” e promessas de retenção por linguagem factual. Não duplicar CTAs já presentes no topo.
+- Atalhos A–E/Enter: ativar somente quando um único card tiver foco real (`focus-within`/elemento focado), nunca por hover nem por listener simultâneo em vários cards. Ignorar input, textarea, select, conteúdo editável, modal e teclas com modificadores. Mostrar dica curta e manter operação por mouse/toque.
+- Não alterar automaticamente conteúdo, flashcards, respostas, gamificação ou persistência como efeito de melhoria visual.
+
+FRONTEIRA
+Não alterar `admin/`, repositórios, tipos de domínio, Supabase, migrations, testes canônicos, auth, sync, SRS, proveniência, claims, fontes, conteúdo médico, `package.json`, configs ou documentação. Se o projeto atual já divergir nesses arquivos, não tente reconciliar; eles serão descartados no gate externo.
+
+VALIDAÇÃO EFICIENTE
+1. Rodar typecheck e corrigir todos os erros reais.
+2. Rodar lint, unitários e build uma vez no gate final.
+3. No preview, testar desktop e mobile: contraste claro/escuro; entrar/sair do modo foco; um único card respondendo a A–E/Enter; nenhum atalho durante digitação/modal; SRS somente pelos quatro botões/atalhos canônicos; dashboard sem métricas inventadas.
+4. Reportar números exatos e qualquer teste indisponível. Não dizer “auditoria completa” sem pgTAP/Playwright, que serão externos.
+
+FORMATO
+RETORNO: UI-20260914
+Resultado; checkpoint; removido; preservado; manifesto arquivo→mudança; typecheck/lint/unit/build; tarefas de preview; capturas desktop/mobile e claro/escuro onde afetado; limitações; higiene do ZIP (sem `.env`, segredo, `node_modules`, build, cache ou dado pessoal); arquivos removidos pelo export; confirmação de nenhum GitHub sync/publicação; nome do ZIP.

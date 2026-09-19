@@ -1,0 +1,31 @@
+PROMPT 29-B — Revisar e publicar a taxonomia curricular
+
+TRILHA: GATE TÉCNICO — CODEX EXECUTIVO
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 29-B em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Eu, usuário, autorizo revisar a candidata 29-A indicada junto deste prompt e, somente com todos os gates verdes, integrar, migrar e publicar. Entregue `RETORNO: 29-B` e encerre.
+
+OBJETIVO
+Publicar a taxonomia `ciclo → disciplina → tema → material` sem perda, duplicação, alteração de conteúdo ou quebra de navegação.
+
+ENTRADA OBRIGATÓRIA
+Retorno aprovado do 29-A, branch/commit e matriz final. Se faltarem, parar. Não reconstruir a implementação neste gate.
+
+EFICIÊNCIA
+Audite o diff e as invariantes afetadas. Reutilize provas apenas se base e hashes relevantes forem idênticos. Rode `verify:full` uma vez após eventual reconciliação; não repetir sem mudança de estado.
+
+GATES
+1. Confirmar base, concorrência, diff completo e reversibilidade da migration.
+2. Provar por teste que IDs, conteúdos, referências, status, revisões, questões, flashcards e packs não mudam; somente taxonomia/ordenação autorizadas.
+3. Confirmar `Medicine` fora da migração e nenhuma exclusão de disciplina/tema legado.
+4. Validar localmente navegação/filtros por ciclo e retorno ao pack.
+5. Integrar sem force, aplicar migration remota somente após push/deploy compatível e verificar contagens reconciliadas.
+6. Smoke de produção somente leitura: Básico → Anatomia → Sistema cardiovascular → Anatomia Cardíaca; Básico → Fisiologia → Ciclo Cardíaco; Clínico → Cardiologia → PCSK9/Semiologia; busca e packs.
+7. Confirmar `main = origin/main`, migration head, árvore limpa e candidata preservada.
+
+RESTRIÇÕES
+Sem editar conteúdo, atestar, publicar/despublicar material, apagar taxonomia antiga, criar conta/dado de teste remoto, force push ou redesign.
+
+FORMATO DO RETORNO
+RETORNO: 29-B
+Resultado; estado inicial/final; auditoria; testes; merge/push/deploy/migration; contagens antes/depois; smoke; riscos e rollback.

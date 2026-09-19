@@ -1,0 +1,56 @@
+PROMPT 36-A — Checklist vivo de qualidade das questões
+
+TRILHA: CONTEÚDO — CLAUDE EXECUTIVO
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 36-A em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Eu, usuário, autorizo explicitamente consultas somente leitura aos feedbacks e questões necessárias e a criação local dos artefatos editoriais. Não altere banco, conteúdo, CMS ou produção. Entregue `RETORNO: 36-A` e encerre.
+
+OBJETIVO
+Transformar problemas reais já relatados no NexusMed em um checklist editorial vivo para prevenir recorrência em novas questões e orientar revisão humana antes da publicação.
+
+PRINCÍPIO
+Cada feedback confirmado deve gerar, quando generalizável, uma regra verificável. Não criar regra a partir de opinião isolada sem validar o problema. Preservar rastreabilidade sem copiar dados pessoais ou texto livre identificável do participante.
+
+EFICIÊNCIA
+Extraia feedbacks e metadados em consultas agregadas, agrupe por padrão causal e abra individualmente apenas casos representativos. Reutilize auditorias 21-A2, 21-B, 23-A/B, 34-A se já concluído e documentação existente. Não faça pesquisa médica ampla: consulte fontes somente quando indispensável para confirmar a natureza de um achado.
+
+ESCOPO
+1. Inventariar feedbacks do tipo problema vinculados a questões e reconciliar status, questão, tema e correção conhecida. Usar somente SELECT; nunca imprimir nome, e-mail, UUID de usuário ou descrição pessoal desnecessária.
+2. Para cada relato, classificar: `confirmed_defect|not_reproducible|content_disagreement|duplicate|out_of_scope|needs_human_decision`. Registrar evidência e confiança, sem marcar feedback como resolvido.
+3. Agrupar defeitos confirmados por causa raiz, não por redação superficial. Categorias iniciais, extensíveis apenas com evidência:
+   - completude do enunciado e mídia indispensável;
+   - coerência enunciado–alternativas–gabarito–comentários;
+   - unicidade da melhor resposta e qualidade dos distratores;
+   - precisão científica, atualidade e contexto clínico;
+   - cobertura pelo material/conceito vinculado;
+   - fonte, proveniência, licença e direito de uso;
+   - idioma, clareza, terminologia e acessibilidade;
+   - taxonomia e metadados;
+   - duplicata ou forma paralela não intencional;
+   - funcionamento técnico da questão.
+4. Criar `docs/editorial/CHECKLIST-QUALIDADE-QUESTOES.md` com itens curtos, objetivos e verificáveis. Para cada item: ID estável (`QG-...`), pergunta de controle, severidade `blocker|warning`, como verificar, evidência mínima e origem (`feedback_confirmado|política_editorial|risco_técnico`).
+5. Criar `docs/editorial/PADROES-FALHAS-QUESTOES.csv` com um registro sanitizado por padrão: ID, categoria, descrição abstrata, quantidade de ocorrências, questões afetadas, regra preventiva, severidade, primeira/última ocorrência e estado. Não transcrever relato pessoal.
+6. Incluir obrigatoriamente, se confirmado no acervo, o padrão “questão exige imagem/tabela/traçado ausente” e distinguir mídia necessária de decorativa.
+7. Definir aplicação em três momentos: autoria, revisão humana e gate de publicação. Indicar quais itens podem futuramente ser automatizados e quais exigem julgamento clínico/editorial.
+8. Definir manutenção: ao resolver um feedback pelo futuro fluxo 35-A, vincular o evento à regra existente ou propor nova regra; nova regra só entra após revisão humana. Nunca alterar retrospectivamente a versão do checklist usada numa revisão anterior.
+
+QUALIDADE DO CHECKLIST
+- Evitar itens vagos como “a questão está boa?”.
+- Um item por risco; resposta observável `sim|não|não se aplica`.
+- `blocker` somente quando a falha invalida resposta, segurança, direito de uso, rastreabilidade essencial ou funcionamento.
+- Não transformar preferências estilísticas em bloqueio.
+- Não declarar ausência de defeito com base apenas em ausência de feedback.
+
+VALIDAÇÕES
+- Cobertura reconciliada: total de feedbacks, vinculados a questões, avaliados e não avaliáveis.
+- IDs das regras únicos; enums válidos; todo padrão confirmado aponta para ao menos uma regra preventiva.
+- Revisão manual de uma amostra por categoria.
+- Nenhum dado pessoal nos artefatos.
+- Registrar versão inicial, data e critérios de mudança.
+
+RESTRIÇÕES
+Sem UPDATE/INSERT/DELETE, RPC mutável, mudança de status, correção de questão, pesquisa indiscriminada, schema, migration, UI, commit, push, deploy ou publicação. Não usar o checklist como substituto da revisão humana nem como declaração de conformidade jurídica.
+
+FORMATO DO RETORNO
+RETORNO: 36-A
+Resultado; snapshot e cobertura; padrões confirmados e contagens; checklist criado; blockers/warnings; casos inconclusivos; automação futura possível; validações de privacidade/estrutura; artefatos; confirmação de somente leitura e ausência de publicação.

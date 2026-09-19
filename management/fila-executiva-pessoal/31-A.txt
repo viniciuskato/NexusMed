@@ -1,0 +1,30 @@
+PROMPT 31-A — Triar as seções vazias do acervo publicado
+
+TRILHA: CONTEÚDO — CLAUDE EXECUTIVO
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 31-A em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Eu, usuário, autorizo auditoria somente leitura e produção de uma matriz local. Não edite conteúdo nem banco. Entregue `RETORNO: 31-A` e encerre.
+
+OBJETIVO
+Determinar se cada seção vazia em material publicado é defeito, cabeçalho estrutural deliberado ou duplicação sem função, e indicar a menor correção editorial segura.
+
+ENTRADA
+Use `C:\Users\vinic\OneDrive\Organizacao\AUDITORIA-MATERIAIS-NEXUSMED-2026-09-14.md`. O histórico diverge entre 11 e 12 seções; derive a contagem atual por SELECT e explique a diferença. Exclua `Medicine`, que está em rascunho e tem decisão editorial separada.
+
+EFICIÊNCIA
+Leia cada seção vazia com suas vizinhas, objetivos e referências. Não revise o material inteiro e não pesquise medicina se a solução for apenas remover/renomear um contêiner. Pesquise somente quando a decisão for preencher uma lacuna substantiva.
+
+ESCOPO
+1. Identificar e avaliar todas as seções publicadas vazias no snapshot atual, reconciliando material e contagem com a auditoria anterior.
+2. Classificar cada uma: `PREENCHER | REMOVER | CONVERTER_EM_CABECALHO | FUNDIR | BLOQUEAR`.
+3. Justificar em até três frases com evidência do contexto vizinho.
+4. Para `PREENCHER`, definir objetivo, escopo, claims críticos e fontes necessárias — sem redigir ainda.
+5. Detectar dependências entre correções para formar o menor número de lotes coerentes.
+6. Entregar matriz acionável e prompts mínimos de desenvolvimento apenas para lacunas substantivas aprováveis.
+
+RESTRIÇÕES
+Somente leitura no produto. Sem preencher por volume, alterar status, atestar, publicar, fazer taxonomia, UI, migration, commit, push ou deploy. Não confundir seção curta com seção defeituosa.
+
+FORMATO DO RETORNO
+RETORNO: 31-A
+Resultado; snapshot e reconciliação da contagem; seções e classificação; evidência contextual; lacunas científicas; lotes mínimos; decisões humanas; sem alterações.

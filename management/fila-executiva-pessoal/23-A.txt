@@ -1,0 +1,40 @@
+PROMPT 23-A v2 — Proveniência científica e revisão humana assinada
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 23-A nesta sessão. Eu, usuário, autorizo esta conversa a assumir o papel executivo para esta auditoria em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Não revise nem repasse o prompt: execute-o. Entregue `RETORNO: 23-A` e encerre. Somente leitura e desenho.
+
+OBJETIVO
+Mapear o fluxo atual e definir a menor arquitetura que ligue claims a fontes efetivamente consultadas e exija aprovação humana auditável de uma versão antes da publicação.
+
+POLÍTICA APROVADA
+- Referenciar claims, não frases por regra mecânica; citação próxima e sem repetição ambígua.
+- Escolher fonte adequada ao claim, admitindo fontes primárias e secundárias; proibir citation laundering.
+- Priorizar citação imediata para números, doses, critérios, recomendações, resultados e claims controversos/recentes.
+- Distinguir `source_claim`, `synthesized_claim` e `inference`.
+- Preservar texto limpo, vínculo interno claim–fonte e bibliografia final.
+- Conteúdo auxiliado por IA só publica após revisão humana da versão exata.
+
+EFICIÊNCIA OBRIGATÓRIA
+Leia uma vez, de forma dirigida: schema, tipos, repositórios, CMS, RPCs de publicação e pipeline. Use buscas e trechos; não rode suíte, navegador ou pesquisa bibliográfica externa. Preserve `sources` salvo necessidade comprovada. Entregue um desenho mínimo, sem logs ou alternativas artificiais.
+
+DEPENDÊNCIA
+22-B publicado em `main = origin/main = c942139`. O registro versionado contém uma imprecisão não bloqueante: diz que o smoke não criou/alterou dado remoto, mas o retorno factual informa conta descartável remota autorizada, promovida, usada e removida, com baseline restaurado. Não interpretar isso como resíduo ou como autorização para nova escrita.
+
+ESCOPO
+1. Confirmar Git/snapshot sem criar branch.
+2. Mapear conteúdo, versões, fontes, citações, edição, revisão e publicação de compêndios, questões e flashcards.
+3. Confirmar perdas de vínculo estruturado e caminhos que publicam sem aprovação.
+4. Comparar brevemente JSONB, relacional e híbrido; recomendar um com base em integridade, migração e complexidade.
+5. Definir modelo mínimo preservando `sources`: revisão imutável; claims ligados à revisão; relação N:N claim–fonte; papel de sustentação; localização; verificação; confiança; revisão humana. Numeração visual não é identidade persistida.
+6. Definir fluxo editorial: rascunho → claims/fontes → decisões por claim → checklist → atestação da revisão → publicação da mesma revisão. Edição posterior invalida aprovação; publicação em massa não contorna o gate.
+7. Definir atestação server-side: `reviewer_user_id=auth.uid()`, admin ativo, horário do banco, `content_revision_id`, hash e versão da política. Nome digitado/checkbox não comprovam identidade.
+8. Especificar RPCs, constraints, RLS append-only, invalidação e testes necessários.
+9. Planejar migração gradual: legado permanece legível; ausência de mapeamento é “não mapeado”, nunca aprovado implicitamente; começar por claims de maior risco.
+10. Indicar impacto em 20-A e 21-A2 e dividir implementação futura em etapas pequenas.
+
+RESTRIÇÕES
+Nenhuma edição, migration, banco, commit, push ou deploy. Não declarar conformidade jurídica nem assinatura digital qualificada. Não inventar fonte/vínculo por similaridade.
+
+FORMATO DO RETORNO
+RETORNO: 23-A
+Resultado; snapshot; mapa atual; lacunas; decisão arquitetural; modelo; fluxo editorial; atestação; RPC/RLS; migração; testes; impacto 20/21; decisões pendentes; sem alterações.

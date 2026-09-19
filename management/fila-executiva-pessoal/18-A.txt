@@ -1,0 +1,28 @@
+PROMPT 18-A v2 — Triagem da estabilização histórica
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 18-A nesta sessão. Eu, usuário, autorizo esta conversa a assumir o papel executivo para esta triagem em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Não revise nem repasse o prompt: execute-o. Entregue `RETORNO: 18-A` e encerre. Não implemente.
+
+OBJETIVO
+Determinar rapidamente se ainda existe impacto real que justifique auditar a branch histórica inteira.
+
+EFICIÊNCIA OBRIGATÓRIA
+Não inventarie todo o histórico. Use registros, diffs dirigidos e consultas agregadas somente leitura. Pare ao obter evidência suficiente para arquivar ou justificar complemento. Não rode suíte, build ou navegador.
+
+DEPENDÊNCIAS
+Após 22-B; pode ser adiado se não houver usuário afetado ou incidente observável.
+
+ESCOPO
+1. Confirmar Git, remoto e branch histórica; não criar branch.
+2. Verificar se ainda existem flashcards locais com IDs inválidos ou usuário afetado, sem expor conteúdo.
+3. Identificar somente patches históricos aparentemente ausentes do `main` atual.
+4. Verificar por metadados se duplicidade SRS ou perda de progresso ainda ocorre.
+5. Recomendar arquivar, corrigir item isolado ou autorizar auditoria completa.
+
+RESTRIÇÕES
+Somente leitura; nenhuma branch, migration, reparo, dado pessoal, escrita remota, push ou deploy.
+
+FORMATO DO RETORNO
+RETORNO: 18-A
+Resultado: arquivar | complemento necessário | bloqueado; snapshot; impacto; evidências; próximo passo mínimo; sem alterações.
+

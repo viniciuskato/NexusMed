@@ -1,0 +1,31 @@
+PROMPT 30-A — Reconstruir Anatomia Cardíaca no padrão NexusMed
+
+TRILHA: CONTEÚDO — CLAUDE EXECUTIVO
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 30-A em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Eu, usuário, autorizo produzir localmente uma candidata editorial completa para Anatomia Cardíaca. Não altere banco, interface nem publique. Entregue `RETORNO: 30-A` e encerre.
+
+OBJETIVO
+Converter `Cardiac Anatomy` em `Anatomia Cardíaca`, integralmente em PT-BR, cientificamente rastreável e adequada a `Básico → Anatomia → Sistema cardiovascular`, preservando correlações clínicas apenas como apoio.
+
+PADRÃO
+Leia integralmente `C:\Users\vinic\OneDrive\Estudos\Base de Estudos\Casos Clínicos\tutorial\PADRAO-TUTORIAL.md` e o material atual. Use Terminologia Anatômica vigente; citações autor-data NBR 10520:2023 e referências NBR 6023:2018.
+
+EFICIÊNCIA
+Não traduza cegamente nem pesquise cada frase estável. Reutilize as fontes válidas do material após verificá-las; concentre busca em nomenclatura, números, variações anatômicas e afirmações clínicas críticas. Uma matriz claim→fonte e uma candidata bastam; não implemente derivados.
+
+ESCOPO
+1. Inventariar 28 seções, figuras/legendas, termos `data-pt`, referências e alegações críticas; detectar mistura de idiomas e conteúdo redundante.
+2. Definir objetivos observáveis de anatomia macroscópica/topográfica: câmaras, valvas, grandes vasos, coronárias, condução, pericárdio, parede e relações torácicas.
+3. Verificar fontes efetivamente consultadas e localização exata das alegações críticas. Não atribuir conduta/diretriz a livro anatômico.
+4. Redigir PT-BR natural e terminologia consistente; definir siglas na primeira ocorrência. Manter termos internacionais apenas quando convencionais e explicados.
+5. Manter o núcleo básico. Correlações com infarto, tamponamento, valvopatias, ECG ou cirurgia devem esclarecer a estrutura, sem converter o material em semiologia/conduta.
+6. Auditar texto↔fontes, referências órfãs, figuras/licenças, objetivos, continuidade e ausência de seção vazia.
+7. Entregar artefato importável/diff editorial, matriz de evidências e checklist para revisão humana. Não atestar em nome do usuário.
+
+RESTRIÇÕES
+Sem escrita remota, tradução automática não revisada, conteúdo inventado, alteração taxonômica técnica, UI, migration, commit no produto, push, deploy ou publicação. Bloquear diante de fonte/figura crítica inacessível ou alegação central não verificada.
+
+FORMATO DO RETORNO
+RETORNO: 30-A
+Resultado; snapshot; objetivos; estrutura antes/depois; fontes consultadas; claims e divergências; artefatos; auditorias; pendências para decisão humana; sem publicação.

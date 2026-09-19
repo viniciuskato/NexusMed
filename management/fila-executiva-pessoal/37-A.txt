@@ -1,0 +1,58 @@
+Rode você mesmo este trabalho nesta sessão executiva. Eu, usuário, autorizo explicitamente a leitura dos arquivos locais citados e a criação dos artefatos de estudo locais descritos abaixo. Não pergunte se deve executar, revisar ou validar premissas.
+
+PROMPT 37-A — Sprint de estudo da AS1 de Saúde do Adulto I
+
+OBJETIVO
+Preparar o estudo para a prova de 21/09/2026. Conteúdo útil agora tem precedência sobre infraestrutura, taxonomia, CMS e publicação.
+
+FONTES DE ESCOPO
+Leia primeiro, sem refazer a auditoria:
+`C:\Users\vinic\OneDrive\Organização\AUDITORIA-COBERTURA-SA1-AS1-2026-09-16.md`
+
+Use também os casos brutos e os materiais já trabalhados:
+`C:\Users\vinic\OneDrive\Dados\Educação\PUC\Periodos\04\Planos de ensino\Arquivos originais\Saude do adulto 1`
+`C:\Users\vinic\OneDrive\Dados\Educação\PUC\Periodos\04\Curriculares\Saude do adulto 1`
+`C:\Users\vinic\OneDrive\Estudos\Base de Estudos\Casos Clínicos\tutorial`
+
+Obedeça ao `PADRAO-TUTORIAL.md` desse último diretório. Ignore `_archive` como fonte normativa.
+
+ESCOPO
+1. Não recrie tutoriais já trabalhados. Faça um índice curto apontando qual arquivo estudar para cada objetivo e extraia apenas a síntese de alto rendimento necessária ao plano.
+2. Desenvolva somente lacunas reais: doença renal policística; doença renal diabética; potássio; síndrome edemigênica/urina I; reforço de asma; e prática de anemia ferropriva/megaloblástica. Revise criticamente, sem reescrever integralmente, os DOCX substanciais ainda sem auditoria final: insuficiência cardíaca, cardiomiopatia hipertrófica, DPOC, hipovolemia/hipernatremia e hipertensão secundária.
+3. Inclua no escopo de revisão os tutoriais confirmados: Cardiologia 1–5; Pneumologia 1–4; Nefrologia 1–5. Inclua hipóxia de altitude, pneumotórax e DPOC. Exclua o caso nefrológico 6 de 23/09.
+4. Trate o Tutorial 5 atual de Pneumologia como `ESCOPO_POSSIVEL_TDE`: há abertura do caso antes da prova, mas resolução/objetivos não demonstrados. Não substitua pelo antigo Problema 5 sobre COVID/TVP/TEP.
+5. Para cada lacuna desenvolvida, inclua somente: objetivos cobrados, algoritmo/raciocínio essencial, critérios e condutas de alto rendimento, armadilhas frequentes e 3–5 questões autorais comentadas. Nas questões, uma única melhor resposta, distratores plausíveis e explicação de todas as alternativas.
+6. Termine com plano até 21/09 que combine os tutoriais do OneDrive com as questões existentes no NexusMed: endocardite, insuficiência cardíaca, tosse/hemoptise, sódio/água, função renal e semiologia cardíaca.
+7. Marque como `LACUNA_DOCUMENTAL` qualquer objetivo não demonstrável. Não invente conteúdo ausente.
+
+FONTES E SEGURANÇA CIENTÍFICA
+- Use fontes médicas primárias ou diretrizes oficiais atuais; registre referência curta e link/DOI por módulo.
+- Não copie questões, figuras ou redação proprietária. Todas as questões devem ser autorais.
+- Radiologia: use descrição textual autossuficiente; não simule que há uma imagem ausente. Se uma competência exigir interpretação visual, descreva qual imagem licenciada será necessária futuramente.
+- Isto é material de estudo, não publicação editorial nem atestação humana.
+
+ARTEFATOS
+Crie somente:
+- `C:\Users\vinic\OneDrive\Organização\NexusMed-Estudo\SA1-AS1-2026\DOSSIÊ-REVISÃO-AS1.md`
+- `C:\Users\vinic\OneDrive\Organização\NexusMed-Estudo\SA1-AS1-2026\QUESTÕES-AUTORAIS-AS1.md`
+- `C:\Users\vinic\OneDrive\Organização\NexusMed-Estudo\SA1-AS1-2026\PLANO-ATÉ-21-09.md`
+
+FRONTEIRAS
+- Não alterar repositório, banco, schema, CMS, interface, prompts, GitHub ou produção.
+- Não trabalhar conteúdos programados depois de 21/09.
+- Não gastar tempo tentando aperfeiçoar infraestrutura.
+- Se o volume exceder a sessão, conclua os temas na ordem de prioridade e reporte exatamente o restante; não reduza a qualidade científica para declarar conclusão.
+
+EFICIÊNCIA
+Reutilize a matriz e os materiais trabalhados; não repita pesquisa já rastreada sem sinal concreto de desatualização ou erro. Pesquise somente lacunas, escreva diretamente nos três artefatos e evite narrativa de processo. Não execute testes de software. Resultado correto e estudável vale mais que documentação extensa.
+
+FORMATO DO RETORNO
+RETORNO: 37-A
+Resultado: concluído ou parcial
+Temas concluídos:
+Questões autorais criadas:
+Fontes verificadas:
+Lacunas documentais:
+Artefatos:
+Pendências:
+Confirmação: nenhuma alteração de produto, banco, repositório ou produção.

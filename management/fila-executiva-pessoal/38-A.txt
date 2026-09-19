@@ -1,0 +1,56 @@
+Rode você mesmo este trabalho nesta sessão executiva. Eu, usuário, autorizo explicitamente a pesquisa em fontes médicas reais e a criação do artefato de autoria local descrito abaixo, no formato editável já usado pelo piloto PCSK9. Não pergunte se deve executar, revisar ou validar premissas.
+
+PROMPT 38-A — Compêndio nativo NexusMed: Meningite Bacteriana Aguda
+
+OBJETIVO
+Produzir um compêndio no padrão nativo do NexusMed — mesmo formato e nível do piloto `pcsk9.compendium.yaml` — sobre Meningite Bacteriana Aguda, organizado por tópicos de abordagem (não amarrado à narrativa de um caso clínico específico). Esta execução cobre APENAS a etapa 1 (pesquisa) e a etapa 2 (material/compêndio) do fluxo de autoria nativa já validado; questões e flashcards ficam para um prompt seguinte, após aprovação deste compêndio.
+
+CONTEXTO — NÃO TRANSCREVER O CASO
+O disparador foi o CASO CLÍNICO 5 do livro de casos de Agressão e Defesa II (`C:\Users\vinic\OneDrive\Dados\Educação\PUC\Periodos\04\Curriculares\Agressão e defesa 2\Casos de tutoriais.pdf`, páginas 13–15: criança de 4 anos, provável otite média complicada por meningite bacteriana, pupila fixa unilateral, rigidez de nuca, Kernig/Brudzinski positivos, LCR com pleocitose neutrofílica de 1490 céls/mm³, glicose baixa, proteína alta). NÃO desenvolva este prompt como resolução do caso nem responda às "questões para discussão" do PDF. Use o caso apenas como referência de nível de profundidade esperado (a doença precisa estar coberta com detalhe suficiente para que esse caso, ou qualquer caso clínico equivalente de meningite bacteriana, seja resolvível a partir do compêndio).
+
+MODELO A SEGUIR
+Leia primeiro, como referência de padrão de qualidade, formato e profundidade (não copiar conteúdo, só estrutura):
+`C:\Users\vinic\OneDrive\Estudos\Base de Estudos\Biblioteca\Medicina\Cardiologia\Farmacologia\_nexusmed-nativo\pcsk9.compendium.yaml`
+
+Reproduza a mesma estrutura de campos: `id` (slug), `title`, `subtitle`, `disciplineName`, `themeName`, `author: ""` (deixar vazio, mesma decisão do PCSK9 — revisão editorial pendente), `estimatedReadTimeMinutes`, `publicationStatus: draft`, `tags`, `dependencies: []`, `sections[]` (cada uma com `id`, `title`, `mechanismTag`, `content` em Markdown, `keyTakeaways`, `clinicalPearl` e `warningAlert` quando pertinente), e `references[]` com marcadores `[N](#ref-N)` numerados no texto, incluindo o tipo de estudo/evidência entre colchetes ao final de cada referência, exatamente como no piloto.
+
+TÓPICOS DE ABORDAGEM (seções mínimas esperadas — 10 tópicos)
+1. Definição, epidemiologia e vias de disseminação (hematogênica vs. contígua — incluir explicitamente a via otogênica/por contiguidade a partir de otite média/mastoidite, já que foi o gatilho do disparador).
+2. Fisiopatologia da inflamação meníngea e da hipertensão intracraniana (mecanismo de edema cerebral, ruptura da barreira hematoencefálica, cascata inflamatória no espaço subaracnóideo).
+3. Principais agentes etiológicos por faixa etária (neonatal, lactente/pré-escolar, criança maior/adulto, idoso/imunossuprimido), com racional de por que a distribuição muda por idade e por status vacinal (PNI vigente).
+4. Quadro clínico e sinais de exame (incluindo sinais de irritação meníngea — Kernig, Brudzinski, rigidez de nuca — e sinais de alerta para hipertensão intracraniana/herniação, como midríase fixa unilateral).
+5. Diagnóstico: indicação e contraindicações de punção lombar, interpretação do perfil liquórico bacteriano típico (celularidade, predomínio neutrofílico, glicorraquia reduzida, proteinorraquia elevada) em comparação a perfil viral/fúngico/tuberculoso, papel de hemocultura e exames de imagem antes da punção.
+6. Tratamento: antibioticoterapia empírica por faixa etária/cenário (incluindo cobertura para pneumococo resistente quando aplicável), ajuste após identificação do agente, tempo de tratamento, papel do corticosteroide adjuvante, e princípios de manejo da hipertensão intracraniana/suporte em terapia intensiva.
+7. Complicações e sequelas: neurológicas (perda auditiva neurossensorial, déficits focais, hidrocefalia, convulsões/epilepsia), cognitivas/desenvolvimento (relevante em pediatria) e sistêmicas, com fatores prognósticos associados a maior risco de sequela (tempo até antibiótico, nível de consciência à admissão, agente etiológico envolvido).
+8. SIADH e distúrbios hidroeletrolíticos secundários à meningite bacteriana: mecanismo (secreção inapropriada de ADH desencadeada pela inflamação do SNC), achado laboratorial típico (hiponatremia, osmolaridade urinária inadequadamente elevada), diferencial com síndrome perdedora de sal cerebral (mecanismo oposto, também descrita em doença do SNC), e implicação prática no manejo hídrico do paciente.
+9. Manejo do foco contíguo primário (otogênico): quando otite média/otomastoidite associada a meningite exige avaliação otorrinolaringológica e/ou drenagem cirúrgica (mastoidectomia, miringotomia), e por que tratar adequadamente o foco reduz risco de recorrência/complicação supurativa persistente.
+10. Prevenção: vacinação específica (pneumocócica, meningocócica, Hib) conforme calendário vigente, quimioprofilaxia de contatos quando indicada, e o racional de tratar adequadamente focos contíguos (ex. otite média) para reduzir complicação supurativa.
+
+FONTES E SEGURANÇA CIENTÍFICA
+- Pesquisa real em fontes médicas primárias/diretrizes oficiais atuais (ex. diretrizes de meningite bacteriana de sociedades de infectologia/pediatria, PNI vigente, revisões sistemáticas relevantes) — usar o MCP do PubMed quando aplicável, nunca só memória de treino.
+- Cada afirmação clínica relevante leva citação numerada `[N](#ref-N)`, com o tipo de estudo/evidência entre colchetes na referência, igual ao piloto PCSK9.
+- Marcar `LACUNA_DOCUMENTAL` qualquer afirmação que a pesquisa não sustente com segurança — nunca preencher por suposição.
+
+ARTEFATO
+Crie apenas:
+`C:\Users\vinic\OneDrive\Estudos\Base de Estudos\Biblioteca\Medicina\Infectologia\Clínica\_nexusmed-nativo\meningite-bacteriana.compendium.yaml`
+
+Se a pasta `_nexusmed-nativo` ainda não existir dentro de `Infectologia\Clínica`, crie-a (mesmo padrão de pasta já usado em Cardiologia/Farmacologia).
+
+FRONTEIRAS
+- Não criar `*.questions.yaml` nem qualquer artefato de questões/flashcards nesta execução — fica para prompt seguinte, após aprovação humana deste compêndio.
+- Não rodar `scripts/load-native-content.ts` nem tocar Supabase/produto/repositório do NexusMed.
+- Não resolver nem transcrever as questões de discussão do Caso Clínico 5 do PDF de Agressão e Defesa II.
+- Não copiar comentário/explicação de cursinho ou banco comercial de terceiros.
+
+EFICIÊNCIA
+Pesquise de forma dirigida aos 10 tópicos listados, escreva direto no YAML final e evite narrativa de processo. Reaproveite o mesmo nível de detalhe do piloto PCSK9 (tabelas quando ajudarem, sem inflar texto por extensão).
+
+FORMATO DO RETORNO
+RETORNO: 38-A
+Resultado: concluído ou parcial
+Seções produzidas (lista):
+Fontes verificadas (contagem e tipos de estudo):
+Lacunas documentais:
+Artefato:
+Confirmação: nenhuma questão/flashcard criado, nenhuma carga no Supabase, nenhuma alteração de produto/repositório/produção.

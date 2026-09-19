@@ -1,0 +1,26 @@
+PROMPT 20-A v2 — Destino da carga YAML sob o novo contrato editorial
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 20-A nesta sessão. Eu, usuário, autorizo esta conversa a assumir o papel executivo para este diagnóstico em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Não revise nem repasse o prompt: execute-o. Entregue `RETORNO: 20-A` e encerre. Não integre.
+
+OBJETIVO
+Decidir se a carga YAML histórica serve ao pipeline aprovado no 23-A/23-B, incluindo proveniência e conceitos revisáveis, ou deve ser adaptada/arquivada.
+
+EFICIÊNCIA OBRIGATÓRIA
+Leia primeiro o contrato do 23-A e o diff de `e273762`/`a5dce95`. Não reconstitua toda a história 04/05. Faça análise estática e, somente se indispensável, dry-run local mínimo. Pare ao decidir com evidência.
+
+DEPENDÊNCIAS
+Somente após o 23-C publicado. Se incompatível por desenho, arquive sem piloto.
+
+ESCOPO
+1. Confirmar Git, commits históricos e estado atual.
+2. Comparar parser/schema com fontes, claims, localização, verificação, revisões e aprovação humana do 23-A/23-B, além de conceitos sugeridos que exijam revisão editorial.
+3. Verificar segurança local-only, validação, idempotência e rollback apenas se continuar candidata.
+4. Recomendar módulos reaproveitáveis, adaptação fechada ou arquivamento.
+
+RESTRIÇÕES
+Sem conteúdo real, carga remota, migration, merge, push ou deploy. Não copiar a branch em bloco.
+
+FORMATO DO RETORNO
+RETORNO: 20-A
+Resultado: reaproveitar | adaptar | arquivar | bloqueado; compatibilidade; evidências; próximo passo mínimo; sem publicação.

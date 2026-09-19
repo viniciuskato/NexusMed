@@ -1,0 +1,38 @@
+PROMPT 21-A2 v2 — Auditoria incremental do acervo sob a política de claims
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 21-A2 nesta sessão. Eu, usuário, autorizo esta conversa a assumir o papel executivo para esta auditoria em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Não revise nem repasse o prompt: execute-o. Entregue `RETORNO: 21-A2` e encerre. Não corrija conteúdo ou dados.
+
+OBJETIVO
+Medir, com verificações reproduzíveis, a integridade dos packs atuais, a distância para a política do 23-A/23-B e a prontidão para conceitos avaliáveis, produzindo um único backlog priorizado.
+
+EFICIÊNCIA OBRIGATÓRIA
+Auditoria incremental: descubra primeiro o que mudou desde relatórios anteriores. Use SQL/verificadores agregados sobre todo o acervo e inspeção humana apenas em P0/P1, exceções e pequena amostra de controle. Não copie conteúdo integral. Gere um único CSV/JSON canônico e resumo curto; não duplique matrizes e relatórios.
+
+DEPENDÊNCIAS
+Após o 23-C publicado e aprovado. Capture commit/schema/fontes exatos; pare se mudarem durante a coleta.
+
+ESTADO CONHECIDO
+`main = origin/main = 2e342bd`; migration `20260914120000_content_provenance_attestation.sql` aplicada e deploy confirmado. O smoke provou legado, revisão/atestação/publicação e invalidação por edição com JWT real; faltou apenas registrar visualmente o clique no botão “Revisão”, lacuna não bloqueante que esta auditoria não precisa repetir.
+
+ESCOPO
+1. Confirmar snapshot, fontes canônicas e regras aprovadas; não inventar critérios.
+2. Reconciliar contagens por tipo, origem, taxonomia, status e propriedade usando apenas metadados necessários.
+3. Detectar deterministicamente IDs/campos inválidos, vínculos quebrados, duplicatas exatas, questões estruturalmente inválidas, flashcards vazios e conteúdo editorial invisível/duplicado nos packs.
+4. Medir por material: questões/cards vinculados, inconsistências e classificação `COMPLETO`, `SOMENTE_LEITURA`, `SEM_QUESTOES`, `SEM_FLASHCARDS` ou `BLOQUEADO_POR_DADOS`.
+5. Aplicar o contrato do 23-A: fontes estruturadas, claims de alto risco, localização, verificação, revisão e aprovação. Legado não mapeado é lacuna, não erro científico automático.
+6. Medir se questões possuem conceitos explícitos suficientes e se existem itens distintos que possam funcionar como formas paralelas; não inferir equivalência automaticamente.
+7. Não classificar conteúdo pessoal sem pack como defeito; usar `MEUS_CARDS`/`SEM_VINCULO_EDITORIAL`.
+8. Inspecionar qualitativamente somente estratos de maior risco e controle; declarar método e limites.
+9. Produzir um backlog canônico com `item_id`, tipo, categoria, severidade, evidência mínima, ação, responsável humano/técnico e dependências. Itens que representem trabalho futuro devem sair também como candidatos de pauta em estado `idea`, nunca aprovados automaticamente.
+10. Recomendar apenas o primeiro lote de maior impacto e indicar um pack candidato ao piloto longitudinal.
+
+RESTRIÇÕES
+Dados locais/remotos somente leitura; nenhuma RPC mutável, migration, importação, correção, feedback resolvido, merge, push ou deploy. Remoto apenas com acesso legítimo e comprovadamente read-only. Nenhum token, e-mail, nota, resposta ou conteúdo pessoal em artefatos.
+
+CRITÉRIOS
+Contagens reconciliadas; verificadores reexecutáveis; cada achado tem evidência e severidade; packs cobertos integralmente; amostra limitada; produto sem alterações.
+
+FORMATO DO RETORNO
+RETORNO: 21-A2
+Resultado; snapshot; mudanças; contagens; achados P0–P3; packs; claims/revisão; conceitos/formas paralelas; candidatos de pauta; pack piloto; artefato canônico; segurança; decisões; sem publicação.

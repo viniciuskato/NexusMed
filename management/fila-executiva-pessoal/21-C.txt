@@ -1,0 +1,38 @@
+PROMPT 21-C — Preparar o primeiro lote humano de revisão PCSK9
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 21-C nesta sessão. Eu, usuário, autorizo explicitamente esta conversa a assumir o papel executivo e preparar no NexusMed o lote PCSK9 aprovado abaixo, usando `C:\Users\vinic\dev\NexusMed\firebase-auth`. A autorização inclui as escritas remotas estritamente descritas, mas não inclui atestar ou publicar. Não revise nem repasse o prompt e não pergunte se deve executá-lo. Entregue `RETORNO: 21-C` e encerre.
+
+OBJETIVO
+Deixar o material PCSK9 e oito questões draft prontos no CMS para minha revisão e atestação pessoal, com fontes canônicas, claims e localizadores, sem atribuir à LLM uma aprovação humana.
+
+DECISÃO HUMANA JÁ TOMADA
+Eu aprovo desvincular do pack PCSK9 a questão UFPA/COREME 2021 `53e22bed...`, preservando-a integralmente como draft e sem vinculá-la automaticamente a outro material. O lote inclui o material `69bfb1ad-3e77-4d85-bc9b-53d7c8ed5a74` e somente as outras oito questões qualificadas no 21-B.
+
+IDENTIDADE E LIMITE DE AUTORIDADE
+- Toda escrita deve ocorrer pelo fluxo do produto/RPC com o JWT da minha conta administrativa real já autenticada; `created_by` deve resultar no meu `auth.uid()`.
+- Nunca usar `service_role`, conexão `postgres`, conta descartável, UID fornecido pelo cliente ou credencial impressa para realizar ou atribuir essas escritas.
+- Não solicitar, registrar ou expor minha senha/token. Se não houver sessão autenticada utilizável, conclua toda preparação local possível e retorne `BLOQUEADO_LOGIN_HUMANO` com passos mínimos no CMS; não contorne o bloqueio.
+- Não criar nenhuma linha em `content_reviews`, não decidir claims em meu nome, não chamar `attest_content_revision`, `publish_material` ou `publish_question`.
+
+EFICIÊNCIA OBRIGATÓRIA
+Use o retorno 21-B como matriz científica aprovada para preparação, sem repetir pesquisa bibliográfica. Trabalhe somente em um material, oito questões e suas fontes. Faça leitura de confirmação, escritas idempotentes e verificações focadas; não rode `verify:full`, não altere código e não produza relatórios duplicados.
+
+GATES
+1. Confirmar `main = origin/main = 2e342bd`, schema remoto esperado, conteúdo/IDs e ausência de concorrência sobre o lote. Registrar contagens antes.
+2. Confirmar que a conta autenticada é meu admin ativo sem revelar dados sensíveis. Registrar apenas UID técnico necessário à auditoria.
+3. Desvincular somente a Q9 do material, mantendo texto, alternativas, gabarito, referências, autoria e status draft. Verificar que as outras oito continuam vinculadas.
+4. Reconciliar as dez referências do material com `sources` por DOI/identificador canônico. Reutilizar registros equivalentes; criar somente os ausentes com metadados verificados no 21-B. Preencher `material_references.source_id`; não fundir por título aproximado nem inventar localizador.
+5. Confirmar/reconciliar da mesma forma as referências das oito questões. Nenhuma fonte indireta pode aparecer como diretamente consultada.
+6. Criar pelo RPC uma revisão do estado final do material e uma de cada uma das oito questões. Não duplicar revisão se uma revisão aberta do mesmo hash já existir.
+7. Inserir os claims e vínculos de fontes/localizadores derivados da matriz 21-B, deixando decisões humanas pendentes. Separar `source_claim`, `synthesized_claim` e `inference`; toda afirmação de alto risco exige fonte.
+8. Verificar: nove revisões abertas no máximo, hashes iguais ao conteúdo corrente, zero atestações, zero novas publicações, Q9 preservada e desvinculada, oito questões ainda draft, identidade `created_by` igual ao UID autenticado e nenhuma alteração fora do lote.
+9. Entregar um checklist curto, na ordem do CMS, para eu inspecionar cada revisão, decidir claims e atestar pessoalmente. Incluir IDs/títulos e qualquer incerteza que impeça aprovação.
+
+RESTRIÇÕES
+Sem alteração de texto clínico, alternativas, gabaritos ou explicações; sem conceitos/tabelas longitudinais; sem migration, código, commit, push ou deploy. Sem aprovação automática, publicação ou alteração em massa do legado. Diante de fonte divergente, hash concorrente, conteúdo diferente do 21-B ou identidade incerta, parar antes da escrita afetada.
+
+FORMATO DO RETORNO
+RETORNO: 21-C
+Resultado: preparado | parcialmente preparado | BLOQUEADO_LOGIN_HUMANO | bloqueado
+Snapshot/identidade; Q9; fontes reconciliadas/criadas; revisões e claims por item; contagens antes/depois; provas de ausência de atestação/publicação; checklist humano; pendências; nenhuma publicação.
