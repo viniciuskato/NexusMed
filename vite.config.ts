@@ -57,9 +57,9 @@ export default defineConfig(({mode}) => {
       },
     },
     server: {
-      host: '0.0.0.0',
+      // Só localhost por padrão (AUD-10). Para testar no celular/rede local:
+      // `npm run dev:lan` (passa --host=0.0.0.0 na linha de comando).
       port: 3000,
-      allowedHosts: true as const,
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify - file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
