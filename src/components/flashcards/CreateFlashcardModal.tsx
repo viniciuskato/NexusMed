@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Layers, X } from 'lucide-react';
 import { Discipline, Theme, Flashcard } from '../../types';
 import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 
 interface CreateFlashcardModalProps {
   isOpen: boolean;
@@ -24,6 +25,8 @@ export const CreateFlashcardModal: React.FC<CreateFlashcardModalProps> = ({
   const [back, setBack] = useState('');
   const [mechanismHighlight, setMechanismHighlight] = useState('');
   const [difficulty] = useState<'facil' | 'medio' | 'dificil'>('medio');
+
+  const dialogRef = useDialogA11y<HTMLDivElement>({ isOpen, onClose });
 
   if (!isOpen) return null;
 
@@ -63,7 +66,12 @@ export const CreateFlashcardModal: React.FC<CreateFlashcardModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="w-full max-w-xl bg-white dark:bg-[#0F172A] rounded-3xl elev-2xl border border-slate-200 dark:border-[#243452] overflow-hidden flex flex-col max-h-[90vh]">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-flashcard-title"
+        className="w-full max-w-xl bg-white dark:bg-[#0F172A] rounded-3xl elev-2xl border border-slate-200 dark:border-[#243452] overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-6 bg-gradient-to-r from-teal-900 to-slate-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -71,7 +79,7 @@ export const CreateFlashcardModal: React.FC<CreateFlashcardModalProps> = ({
               <Layers className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-lg font-bold">Novo Flashcard SRS</h3>
+              <h3 id="create-flashcard-title" className="text-lg font-bold">Novo Flashcard SRS</h3>
               <p className="text-xs text-slate-300">
                 Adicione um cartão com o algoritmo de repetição espaçada SM-2.
               </p>

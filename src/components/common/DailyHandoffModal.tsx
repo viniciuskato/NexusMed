@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Question, QuestionAnswerRecord, ErrorLogItem, Discipline, Theme } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 
 interface DailyHandoffModalProps {
   isOpen: boolean;
@@ -83,6 +84,8 @@ export const DailyHandoffModal: React.FC<DailyHandoffModalProps> = ({
     };
   }, [answers, questions, disciplines, themes, todayStr]);
 
+  const dialogRef = useDialogA11y<HTMLDivElement>({ isOpen, onClose });
+
   if (!isOpen) return null;
 
   const generateReportText = () => {
@@ -148,7 +151,12 @@ export const DailyHandoffModal: React.FC<DailyHandoffModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white dark:bg-[#0E1726] rounded-3xl border border-slate-300 dark:border-[#243452] shadow-2xl max-w-xl w-full overflow-hidden text-slate-900 dark:text-slate-100 flex flex-col max-h-[90vh]">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="daily-handoff-title"
+        className="bg-white dark:bg-[#0E1726] rounded-3xl border border-slate-300 dark:border-[#243452] shadow-2xl max-w-xl w-full overflow-hidden text-slate-900 dark:text-slate-100 flex flex-col max-h-[90vh]">
         {/* Header com identidade de Passagem de Plantão */}
         <div className="p-6 bg-gradient-to-r from-teal-900/40 via-slate-900 to-indigo-950/50 border-b border-teal-500/20 text-white flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -164,7 +172,7 @@ export const DailyHandoffModal: React.FC<DailyHandoffModalProps> = ({
                   {streakDays}d Streak
                 </span>
               </div>
-              <h3 className="text-lg font-bold tracking-tight">Passagem de Plantão</h3>
+              <h3 id="daily-handoff-title" className="text-lg font-bold tracking-tight">Passagem de Plantão</h3>
             </div>
           </div>
 

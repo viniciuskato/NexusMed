@@ -3,6 +3,7 @@ import { Database, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { MigrationSummary } from '../../types';
 import { StorageService } from '../../services/storage';
 import { getOptionalErrorMessage } from '../../utils/errorMessage';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 
 interface MigrateDataModalProps {
   summary: MigrationSummary;
@@ -20,6 +21,9 @@ export const MigrateDataModal: React.FC<MigrateDataModalProps> = ({
   const [keepCopy, setKeepCopy] = useState<boolean>(true);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  // Sem onClose de propósito: dispensar este diálogo grava a dispensa
+  // (handleDismiss) — não deve acontecer por um Escape acidental.
+  const dialogRef = useDialogA11y<HTMLDivElement>();
 
   const handleMigrate = () => {
     setIsProcessing(true);
@@ -50,6 +54,10 @@ export const MigrateDataModal: React.FC<MigrateDataModalProps> = ({
     >
       <div
         id="migrate-data-modal-content"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="migrate-data-title"
         className="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 elev-2xl overflow-hidden transition-colors"
       >
         {/* Header */}
@@ -58,7 +66,7 @@ export const MigrateDataModal: React.FC<MigrateDataModalProps> = ({
             <Database className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-lg font-serif-reading font-bold text-slate-900 dark:text-white">
+            <h3 id="migrate-data-title" className="text-lg font-serif-reading font-bold text-slate-900 dark:text-white">
               Histórico Local Encontrado
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Mail, X, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getOptionalErrorMessage } from '../../utils/errorMessage';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 
 interface ForgotPasswordModalProps {
   isOpen: boolean;
@@ -19,6 +20,14 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleClose = () => {
+    setIsSuccess(false);
+    setErrorMsg(null);
+    onClose();
+  };
+
+  const dialogRef = useDialogA11y<HTMLDivElement>({ isOpen, onClose: handleClose });
 
   if (!isOpen) return null;
 
@@ -41,18 +50,18 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     }
   };
 
-  const handleClose = () => {
-    setIsSuccess(false);
-    setErrorMsg(null);
-    onClose();
-  };
-
   return (
     <div
       id="forgot-password-modal"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in"
     >
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl elev-2xl p-6 relative">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="forgot-password-title"
+        className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl elev-2xl p-6 relative"
+      >
         {/* Close Button */}
         <button
           type="button"
@@ -67,7 +76,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
             <Mail className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-bold font-serif-reading text-slate-900 dark:text-white">
+            <h3 id="forgot-password-title" className="text-base font-bold font-serif-reading text-slate-900 dark:text-white">
               Recuperação de Senha
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
