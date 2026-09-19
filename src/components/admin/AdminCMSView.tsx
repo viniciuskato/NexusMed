@@ -16,6 +16,7 @@ import {
   Clock,
   Lightbulb,
   FileText,
+  FileUp,
   X,
   ChevronDown,
   Users,
@@ -37,6 +38,7 @@ import { supabase } from '../../lib/supabaseClient';
 import SectionEditor from './SectionEditor';
 import ProvenanceReviewPanel from './ProvenanceReviewPanel';
 import MaterialReferencesPanel from './MaterialReferencesPanel';
+import ImportMaterialModal from './ImportMaterialModal';
 import { getErrorMessage } from '../../utils/errorMessage';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
@@ -209,6 +211,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
 
   // ── Compendium State ───────────────────────────────────────────
   const [isCompendiumFormOpen, setIsCompendiumFormOpen] = useState(false);
+  const [isImportMaterialOpen, setIsImportMaterialOpen] = useState(false);
   const [editingCompId, setEditingCompId] = useState<string | null>(null);
   const [compSearch, setCompSearch] = useState('');
   // Editor de seção (piloto CMS) — guarda só o id, não o objeto Compendium,
@@ -426,12 +429,12 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       moduleNumber: compModuleNumber.trim() ? Number(compModuleNumber) : undefined,
       estimatedReadTimeMinutes: Number(compEstimatedTime) || 15,
       lastUpdated: new Date().toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }),
-      author: compAuthor.trim() || 'Equipe Editorial',
+      author: compAuthor.trim(),
       mode: compMode,
-      tags: tags.length > 0 ? tags : ['Geral', 'Medicina'],
+      tags,
       dependencies: dependencies.length > 0 ? dependencies : undefined,
       sections: compSections,
-      references: references.length > 0 ? references : ['Diretrizes Médicas de Referência'],
+      references,
     };
 
     await materialsRepository.saveCompendium(newComp);
@@ -771,6 +774,15 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
             </button>
 
             <button
+              onClick={() => setIsImportMaterialOpen(true)}
+              className="px-3.5 py-2 rounded-lg border border-teal-200 dark:border-teal-900 bg-teal-50 dark:bg-teal-950/40 hover:bg-teal-100 hover:dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+              title="Cria um rascunho a partir de um arquivo de compêndio (.yaml) já pronto"
+            >
+              <FileUp className="w-4 h-4" />
+              <span>Importar material</span>
+            </button>
+
+            <button
               onClick={handleOpenNewCompendium}
               className="px-4 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white dark:bg-teal-600 dark:hover:bg-teal-500 text-xs font-bold transition-all flex items-center justify-center gap-1.5 elev-xs shrink-0 cursor-pointer"
             >
@@ -778,6 +790,16 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               <span>Novo Compêndio / Mecanismo</span>
             </button>
           </div>
+
+          {isImportMaterialOpen && (
+            <ImportMaterialModal
+              disciplines={disciplines}
+              themes={themes}
+              compendiums={compendiums}
+              onClose={() => setIsImportMaterialOpen(false)}
+              onImported={onRefreshData}
+            />
+          )}
 
           {/* ── Section Editor (piloto CMS: histórico + reversão) ──── */}
           {editingSectionsCompId && (() => {
@@ -1225,7 +1247,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                     <div className="flex items-center gap-2 text-[11px] text-stone-500 dark:text-slate-400 pt-1">
                       <span>{c.sections.length} {c.sections.length === 1 ? 'seção' : 'seções'} estruturadas</span>
                       <span>·</span>
-                      <span>Autor: {c.author}</span>
+                      <span>Autor: {c.author || 'não informado'}</span>
                     </div>
 
                     {c.tags && c.tags.length > 0 && (

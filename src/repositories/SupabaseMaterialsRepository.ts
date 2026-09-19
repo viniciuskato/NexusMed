@@ -319,73 +319,84 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
     }
   }
 
-  async saveCompendium(compendium: Compendium): Promise<void> {
-    const materialRow = {
-      id: compendium.id,
-      discipline_id: compendium.disciplineId,
-      theme_id: compendium.themeId,
-      title: compendium.title,
-      subtitle: compendium.subtitle || null,
-      mode: compendium.mode ?? null,
-      study_lens: compendium.studyLens ?? null,
-      module_number: compendium.moduleNumber ?? null,
-      estimated_read_time_minutes: compendium.estimatedReadTimeMinutes ?? null,
-      author: compendium.author || null,
-      tags: compendium.tags ?? [],
+  /**
+   * Missão 42-B: grava material + seções + referências numa ÚNICA chamada
+   * RPC (`import_compendium_draft`), atômica no servidor. Usada só pelo
+   * fluxo de importação assistida (ImportMaterialModal): só cria rascunho
+   * novo e bloqueia título duplicado. O formulário manual de edição/criação
+   * usa `saveCompendium` (RPC `save_compendium`, também atômica).
+   */
+  async importCompendiumDraft(compendium: Compendium): Promise<Compendium> {
+    const sectionsPayload = compendium.sections.map((s) => ({
+      id: s.id,
+      title: s.title,
+      mechanism_tag: s.mechanismTag ?? null,
+      content: s.content,
+      key_takeaways: s.keyTakeaways ?? [],
+      clinical_pearl: s.clinicalPearl ?? null,
+      warning_alert: s.warningAlert ?? null,
+    }));
+
+    const { data, error } = await supabase.rpc('import_compendium_draft', {
+      p_id: compendium.id,
+      p_discipline_id: compendium.disciplineId,
+      p_theme_id: compendium.themeId,
+      p_title: compendium.title,
+      p_subtitle: compendium.subtitle || null,
+      p_author: compendium.author || null,
+      p_estimated_read_time_minutes: compendium.estimatedReadTimeMinutes ?? null,
+      p_tags: compendium.tags ?? [],
+      p_sections: sectionsPayload,
+      p_references: compendium.references ?? [],
+    });
+    if (error) throw error;
+    const materialRow = data as MaterialRow;
+    return {
+      ...compendium,
+      lastUpdated: materialRow.updated_at,
+      publicationStatus: (materialRow.status as Compendium['publicationStatus']) ?? 'draft',
     };
-    const { error: upsertErr } = await supabase.from('materials').upsert(materialRow);
-    if (upsertErr) throw upsertErr;
+  }
 
-    // Substitui seções e referências por completo (o modelo de frontend não
-    // rastreia diffs incrementais — mesma semântica do LocalStorageRepository,
-    // que sobrescreve o compêndio inteiro a cada save).
-    const { error: delSecErr } = await supabase
-      .from('material_sections')
-      .delete()
-      .eq('material_id', compendium.id);
-    if (delSecErr) throw delSecErr;
-
-    const { error: delRefErr } = await supabase
-      .from('material_references')
-      .delete()
-      .eq('material_id', compendium.id);
-    if (delRefErr) throw delRefErr;
-
-    if (compendium.sections.length > 0) {
-      const sectionRows = compendium.sections.map((s, i) => ({
+  async saveCompendium(compendium: Compendium): Promise<void> {
+    // Gravação atômica via RPC save_compendium: seções existentes são
+    // atualizadas por id (não apagadas e reinseridas), então anotações de
+    // alunos, histórico de versões, imagens e vínculos de questões com a
+    // seção sobrevivem ao salvar. Só as seções removidas do formulário são
+    // apagadas. Referências preservam source_id/url quando já vinculadas.
+    const { error } = await supabase.rpc('save_compendium', {
+      p_material: {
+        id: compendium.id,
+        discipline_id: compendium.disciplineId,
+        theme_id: compendium.themeId,
+        title: compendium.title,
+        subtitle: compendium.subtitle || null,
+        mode: compendium.mode ?? null,
+        study_lens: compendium.studyLens ?? null,
+        module_number: compendium.moduleNumber ?? null,
+        estimated_read_time_minutes: compendium.estimatedReadTimeMinutes ?? null,
+        author: compendium.author || null,
+        tags: compendium.tags ?? [],
+      },
+      p_sections: compendium.sections.map((s) => ({
         id: s.id,
-        material_id: compendium.id,
-        sort_order: i,
         title: s.title,
         mechanism_tag: s.mechanismTag ?? null,
         content: s.content,
         key_takeaways: s.keyTakeaways ?? [],
         clinical_pearl: s.clinicalPearl ?? null,
         warning_alert: s.warningAlert ?? null,
-      }));
-      const { error } = await supabase.from('material_sections').insert(sectionRows);
-      if (error) throw error;
-    }
-
-    if (compendium.references.length > 0) {
-      // Preserva o vínculo estruturado (source_id/url) quando o item de
-      // referência já tinha um — antes, saveCompendium sempre reinseria só
-      // citation_text (fallback genérico), apagando source_id/url mesmo
-      // quando o admin nunca tocou naquela referência (23-B, achado do
-      // 23-A: "perda de material_references.source_id no salvamento").
-      const refRows = compendium.references.map((text, i) => {
+      })),
+      p_references: compendium.references.map((text, i) => {
         const linked = compendium.referenceSources?.[i];
         return {
-          material_id: compendium.id,
           citation_text: text,
-          sort_order: i,
           source_id: linked?.linked ? linked.sourceId ?? null : null,
           url: linked?.linked ? linked.url ?? null : null,
         };
-      });
-      const { error } = await supabase.from('material_references').insert(refRows);
-      if (error) throw error;
-    }
+      }),
+    });
+    if (error) throw error;
   }
 
   async deleteCompendium(id: string): Promise<void> {
@@ -423,10 +434,9 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
   }
 
   // ── Edição segura de seção (piloto CMS) ──────────────────────────
-  // Ao contrário de saveCompendium (delete-all + insert de todas as seções e
-  // referências do compêndio), estes métodos fazem UPDATE direcionado só na
-  // seção em questão — não tocam em material_references, preservando
-  // source_id/url estruturados que o form grande de AdminCMSView perderia.
+  // Ao contrário de saveCompendium (que regrava o compêndio inteiro), estes
+  // métodos fazem UPDATE direcionado só na seção em questão e registram a
+  // versão em material_section_versions.
 
   async updateSectionContent(
     sectionId: string,

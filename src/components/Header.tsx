@@ -94,8 +94,8 @@ export const Header: React.FC<HeaderProps> = ({
   const navButtonClass = (active: boolean) =>
     `min-h-11 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border ${
       active
-        ? 'bg-teal-600/10 dark:bg-teal-400/15 text-teal-800 dark:text-teal-200 border-teal-500/30 dark:border-teal-400/40'
-        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#142038] border-transparent'
+        ? 'bg-teal-600/15 dark:bg-teal-400/20 text-teal-900 dark:text-teal-100 border-teal-600/40 dark:border-teal-400/50 shadow-2xs font-bold'
+        : 'text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#142038] border-transparent'
     }`;
 
   const displayName = profile?.displayName || user?.user_metadata?.display_name || 'Estudante';
@@ -106,12 +106,12 @@ export const Header: React.FC<HeaderProps> = ({
   const initials = displayName
     .split(' ')
     .slice(0, 2)
-    .map((w) => w[0])
+    .map((w: string) => w[0])
     .join('')
     .toUpperCase();
 
   return (
-    <header ref={headerRef} className="sticky top-0 z-30 bg-white/80 dark:bg-[#0B1220]/80 backdrop-blur-xl border-b border-slate-200/70 dark:border-white/10 px-3 sm:px-6 lg:px-8 py-2.5 transition-colors max-w-full">
+    <header ref={headerRef} className="sticky top-0 z-30 bg-white/90 dark:bg-[#070B14]/90 backdrop-blur-xl border-b border-slate-300/80 dark:border-white/15 px-3 sm:px-6 lg:px-8 py-2.5 transition-colors max-w-full elev-xs">
       <div className="max-w-[1720px] mx-auto flex items-center justify-between gap-1.5 sm:gap-3">
         {/* Left: Brand Identity */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
@@ -219,14 +219,14 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={onOpenSearch}
             style={{ minWidth: 44, minHeight: 44 }}
-            className="hidden sm:flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100/90 dark:bg-[#142038] hover:bg-slate-200/70 dark:hover:bg-[#1A2845] border border-slate-200/80 dark:border-[#243452] text-xs text-slate-500 dark:text-slate-400 transition-all cursor-pointer shadow-2xs group"
+            className="hidden sm:flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white dark:bg-[#142038] hover:bg-slate-50 dark:hover:bg-[#1A2845] border border-slate-300 dark:border-[#263750] text-xs text-slate-600 dark:text-slate-300 transition-all cursor-pointer shadow-2xs group"
             title="Buscar compêndios, questões ou temas (Ctrl + K)"
           >
-            <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors" />
-            <span className="hidden xl:inline text-slate-600 dark:text-slate-300 font-medium">
+            <Search className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors" />
+            <span className="hidden xl:inline text-slate-700 dark:text-slate-200 font-semibold">
               Buscar
             </span>
-            <kbd className="hidden md:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#243452] rounded-md">
+            <kbd className="hidden md:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-[#0F172A] border border-slate-300/80 dark:border-[#243452] rounded-md">
               Ctrl K
             </kbd>
           </button>

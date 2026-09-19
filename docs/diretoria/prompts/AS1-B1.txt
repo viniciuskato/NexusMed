@@ -1,0 +1,225 @@
+MISSÃO AS1-B1 — AUDITORIA CIENTÍFICA DE DISTÚRBIO ACIDOBÁSICO
+
+Papel:
+Você é uma sessão executiva editorial do NexusMed. Esta missão audita um material existente. Não reescreva, converta, importe ou publique o conteúdo.
+
+Objetivo:
+Determinar, com evidência verificável, se o material "Equilíbrio Ácido-Base.pdf" pode avançar para correção e conversão ao formato NexusMed, identificando exatamente o que está correto, incompleto, desatualizado ou sem sustentação.
+
+Contexto:
+- Prova AS1 — Saúde do Adulto 1: 21/09/2026.
+- Tema 3: Distúrbio Acidobásico.
+- AS1-A classificou o tema como cobertura B.
+- O PDF possui 18 páginas, mais de 20 referências e cinco casos clínicos comentados.
+- Não há duplicata conhecida.
+- O material ainda não está no NexusMed.
+- A importação assistida já está publicada, mas não será usada nesta missão.
+- Urgência altera prioridade, não padrão científico.
+
+Fonte principal:
+C:\Users\vinic\OneDrive\Estudos\Base de Estudos\Biblioteca\Medicina\Nefrologia\Fisiologia\Equilíbrio Ácido-Base.pdf
+
+Repositório oficial:
+C:\Users\vinic\OneDrive\Projetos\SynapseMed\canonical
+
+Fonte editorial obrigatória:
+C:\Users\vinic\OneDrive\Estudos\Base de Estudos\Casos Clínicos\tutorial\PADRAO-TUTORIAL.md
+
+Abertura:
+1. Leia integralmente PADRAO-TUTORIAL.md.
+2. Leia AGENTS.md e os documentos operacionais do repositório.
+3. Execute o preflight do SESSION_PROTOCOL.md.
+4. Confirme main = origin/main e registre o hash.
+5. Crie branch/worktree isolados:
+   work/as1-b1-auditoria-acidobasico
+6. Confirme que nenhuma outra sessão escreve nos mesmos documentos.
+
+Limites:
+- Somente leitura sobre o PDF original.
+- Não modificar, converter ou substituir o PDF.
+- Não redigir a nova versão do material.
+- Não criar YAML ou HTML definitivo.
+- Não importar no NexusMed.
+- Não tocar no Supabase local ou remoto.
+- Não alterar código.
+- Não publicar.
+- Não tratar referências citadas como consultadas sem abrir e verificar a fonte correspondente.
+
+Gate 0 — Ingestão:
+- registre hash, tamanho, data, número de páginas e metadados;
+- renderize e inspecione visualmente todas as 18 páginas;
+- verifique cortes, sobreposições, caracteres defeituosos, tabelas, fluxos e legibilidade;
+- identifique conteúdo textual, casos, tabelas, fórmulas, imagens e referências;
+- confirme se existem notas ou elementos que não aparecem na extração de texto.
+
+Gate 1 — Extração:
+Extraia fielmente:
+- objetivos explícitos ou implícitos;
+- estrutura do material;
+- algoritmos;
+- fórmulas;
+- pontos de corte;
+- regras de compensação;
+- condutas;
+- cinco casos clínicos e suas respostas;
+- afirmações críticas;
+- referências utilizadas.
+
+Não complete lacunas por conhecimento externo nesta etapa.
+
+Gate 2 — Triagem bibliográfica:
+Para cada objetivo e afirmação crítica, determine a necessidade de evidência.
+
+Pesquisar fontes atuais e verificáveis, priorizando:
+1. diretrizes e documentos oficiais;
+2. revisões sistemáticas;
+3. estudos primários fundamentais;
+4. revisões de alta qualidade;
+5. livros-texto reconhecidos para fundamentos estáveis.
+
+Ao pesquisar na internet, use fontes primárias ou oficiais. Confirme:
+- título;
+- autores ou instituição;
+- ano;
+- vigência;
+- população;
+- DOI, PMID ou URL oficial;
+- aplicabilidade ao texto.
+
+O material menciona estudos recentes, incluindo SODa-BIC. Verifique existência, publicação, desenho, população, desfechos e se a conclusão do material corresponde ao estudo. Não presuma correção por ser uma referência recente.
+
+Gate 3 — Matriz de evidências:
+Crie uma matriz com:
+
+| ID | Objetivo/pergunta | Afirmação do material | Local no PDF | Fonte citada | Fonte verificada | Aplicabilidade | Situação | Ação necessária |
+
+Situações permitidas:
+- verificado;
+- parcialmente verificado;
+- não verificado;
+- divergente.
+
+Nenhuma afirmação central pode ser considerada aprovada sem fonte efetivamente consultada.
+
+Auditoria científica:
+Conferir especialmente:
+- conceitos de pH, PaCO₂ e bicarbonato;
+- equação de Henderson-Hasselbalch;
+- ânion gap e correções;
+- delta gap/delta-delta;
+- compensações esperadas;
+- distinção entre distúrbio simples e misto;
+- interpretação de gasometria arterial versus venosa;
+- causas de acidose e alcalose;
+- abordagem terapêutica;
+- indicações e riscos do bicarbonato;
+- doses, limites e pontos de corte;
+- coerência dos cinco casos clínicos.
+
+Para fórmulas e regras:
+- conferir unidades;
+- conferir arredondamentos;
+- explicitar população e limitações;
+- identificar regras mnemônicas apresentadas como universais;
+- testar os cálculos dos casos de forma independente.
+
+Auditoria bidirecional:
+Do texto para as fontes:
+- toda afirmação crítica possui apoio;
+- a fonte sustenta exatamente a redação;
+- números e condutas foram conferidos.
+
+Das fontes para o texto:
+- toda referência listada é utilizada;
+- não há referência órfã ou duplicada;
+- DOI/PMID/URL, ano e autoria estão corretos;
+- fonte atual foi preferida quando a anterior foi superada.
+
+Auditoria editorial e visual:
+- progressão didática;
+- consistência terminológica;
+- clareza dos algoritmos;
+- legibilidade das tabelas;
+- coerência entre teoria e casos;
+- ausência de conteúdo truncado;
+- adequação ao objetivo da AS1;
+- lacunas necessárias para o padrão NexusMed.
+
+Não confunda qualidade aparente com aprovação científica.
+
+Entregáveis:
+1. docs/editorial/as1/ACIDOBASE-AUDITORIA-CIENTIFICA-2026-09-17.md
+   - identificação do material;
+   - resumo executivo;
+   - cobertura;
+   - matriz de evidências;
+   - auditoria das referências;
+   - fórmulas e cálculos;
+   - avaliação dos cinco casos;
+   - divergências;
+   - correções obrigatórias;
+   - melhorias recomendadas;
+   - parecer final.
+
+2. docs/editorial/as1/ACIDOBASE-PLANO-DE-CORRECAO-2026-09-17.md
+   - lista objetiva de alterações para a futura AS1-B2;
+   - separar:
+     - bloqueia publicação;
+     - necessário;
+     - recomendável;
+     - opcional;
+   - arquitetura sugerida para o material futuro;
+   - não escrever o conteúdo corrigido.
+
+3. docs/diretoria/prompts/AS1-B1.txt
+   - cópia desta missão.
+
+4. Atualização de TASKS.md:
+   - estado real da AS1-B1;
+   - AS1-B2 apenas planejada;
+   - não declarar material aprovado ou publicado.
+
+Critério do parecer:
+Escolha exatamente um:
+- aprovado para conversão sem correções científicas;
+- aprovado para conversão com correções obrigatórias;
+- exige nova pesquisa antes da conversão;
+- não aproveitável como base.
+
+Validações:
+- todas as páginas inspecionadas;
+- todas as referências inventariadas;
+- toda fonte declarada "verificada" foi realmente aberta;
+- todas as afirmações críticas aparecem na matriz;
+- cálculos dos casos refeitos independentemente;
+- nenhuma citação fabricada;
+- links e identificadores conferidos;
+- git diff apenas documental;
+- git diff --check limpo;
+- nenhuma credencial registrada.
+
+Estado de publicação:
+- branch local apenas;
+- não enviar ao remoto;
+- não mesclar em main;
+- não importar conteúdo;
+- não tocar produção.
+
+Formato do retorno:
+
+RETORNO: AS1-B1
+
+- Resultado
+- Fonte auditada
+- Páginas e elementos inspecionados
+- Cobertura científica
+- Referências verificadas
+- Fórmulas e casos conferidos
+- Principais divergências
+- Correções que bloqueiam publicação
+- Parecer final
+- Documentos produzidos
+- Ambientes tocados
+- Estado da branch
+- Estado de publicação
+- Próxima decisão da diretoria

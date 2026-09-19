@@ -20,6 +20,7 @@ export default tseslint.config(
       'supabase/.temp/**',
       'playwright-report/**',
       'test-results/**',
+      '.claude/**',
     ],
   },
   js.configs.recommended,

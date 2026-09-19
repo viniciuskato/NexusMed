@@ -1,5 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
-import { createTestUser, deleteTestUser, psqlLocal, getSeedIds, type CreatedTestUser } from '../fixtures/localSupabase';
+import {
+  createTestUser,
+  deleteTestUser,
+  getSeedIds,
+  psqlLocal,
+  runCleanup,
+  type CreatedTestUser,
+} from '../fixtures/localSupabase';
 
 // Prompt 21-D — desbloquear o fluxo humano de revisão no CMS.
 //
@@ -115,11 +122,9 @@ test.describe('CMS — fluxo humano de revisão (21-D)', () => {
   test.afterEach(async () => {
     // Desfaz na ordem inversa da criação: primeiro remove as fixtures de
     // conteúdo (revisões/atestados incluídos), depois o usuário que elas
-    // referenciam. Apagar o usuário primeiro pode falhar por FK e, como cada
-    // cleanup é best-effort para permitir os demais, deixar a conta órfã.
-    for (const fn of cleanup.slice().reverse()) {
-      await Promise.resolve(fn()).catch(() => undefined);
-    }
+    // referenciam. Apagar o usuário primeiro pode falhar por FK. runCleanup
+    // ainda executa as demais rotinas e agrega qualquer erro ao final.
+    await runCleanup(cleanup.slice().reverse());
     cleanup = [];
   });
 

@@ -1,0 +1,77 @@
+ENTREGA 40-A — CONTINUIDADE OPERACIONAL E FONTE ÚNICA DE VERDADE
+
+Papel da sessão
+Você é uma sessão executiva do NexusMed. Implemente e verifique esta entrega; não amplie o escopo. Ao terminar, devolva um bloco "RETORNO: 40-A" conforme o formato abaixo.
+
+Objetivo executivo
+Fazer o contexto operacional do NexusMed sobreviver a trocas de conversa, IA e máquina sem depender da memória do usuário. O repositório GitHub deve permitir que uma sessão nova descubra rapidamente: fonte de verdade, estado atual, decisões vigentes, fila priorizada, riscos, procedimento seguro de operação e próximo gate.
+
+Fonte de verdade e ponto de partida
+- Remoto oficial: https://github.com/viniciuskato/SynapseMed-firebase-auth.git
+- Branch oficial: main.
+- No diagnóstico da diretoria em 2026-09-17, origin/main estava em fe20832791bad02d174461f7cf4bab8d0dcd632e. Esse hash é apenas baseline histórica: faça fetch e reconfirme o HEAD antes de editar.
+- Cópia limpa criada pela diretoria: C:\Users\vinic\OneDrive\Projetos\SynapseMed\canonical.
+- Não trate cópias nexusmed-* do OneDrive, C:\Users\vinic\OneDrive\Projetos\SynapseMed\firebase-auth ou qualquer snapshot como fonte de verdade.
+- Existe um .git órfão conhecido em C:\Users\vinic\OneDrive\nexusmed-aistudio-continuar-leitura-20260915: branch master, sem commits e sem remoto. Não apagar, mover, configurar ou reutilizar nesta entrega.
+
+Contexto confirmado
+- AGENTS.md tem aproximadamente 114 KB e mistura regras permanentes, estado e histórico.
+- docs/diretoria/registro.md também acumula histórico extenso.
+- O modelo vigente está em docs/diretoria/MODELO-DIRETORIA.md.
+- O push em main aciona deploy automático no Vercel. Portanto, não trabalhar diretamente em main e não publicar/mesclar sem gate e autorização específicos.
+- O GitHub avançou além do registro anterior b637e44; a diretoria encontrou fe20832 em 2026-09-17. Não congelar hashes antigos como estado presente.
+
+Escopo obrigatório
+1. Partir de origin/main atualizado, em branch isolada `work/40a-continuidade-operacional`, com árvore limpa. Se houver drift, mudanças locais ou escritor concorrente, parar e relatar; não sobrescrever.
+2. Auditar a topologia documental existente antes de criar arquivos. Reaproveitar documentos equivalentes quando existirem; evitar duas fontes para o mesmo fato.
+3. Instituir uma porta de entrada curta para sessões novas. A solução deve conter, por esses nomes ou equivalentes claramente justificados:
+   - `docs/operacao/PROJECT_STATE.md`: estado presente verificável, ambientes, baseline, riscos abertos, objetivo e próximo gate;
+   - `docs/operacao/DECISIONS.md`: log de decisões duráveis, datado, sem diário narrativo;
+   - `docs/operacao/TASKS.md`: fila única com identificador, prioridade, estado, dependência, impacto em produção e próxima ação;
+   - `docs/operacao/RUNBOOK.md`: procedimentos seguros de início, teste, publicação, rollback e encerramento;
+   - `docs/operacao/SESSION_PROTOCOL.md`: contrato obrigatório de abertura e fechamento de sessão.
+4. Transformar AGENTS.md em um índice operacional curto. Ele deve conter somente regras realmente obrigatórias, riscos críticos e links para os documentos especializados. Preservar integralmente o conteúdo histórico retirado em arquivo versionado de arquivo morto, com aviso de que não representa o estado atual. Não perder informação nem reescrever a história.
+5. Separar painel atual de histórico em `docs/diretoria/registro.md`: manter compatibilidade e rastreabilidade, mas fazer a abertura apontar claramente para o painel operacional atual. Se for seguro, mover o histórico encerrado para arquivo versionado e deixar no registro apenas decisões/fila ativas; se houver dúvida sobre referências existentes, não mover nesta entrega — apenas criar índice e plano de migração explícito.
+6. Registrar a decisão da diretoria de 2026-09-17: chats não são fonte de verdade; GitHub/main é a fonte oficial; produção exige autorização explícita; trabalho local não equivale a publicado; uma sessão trabalha em um objetivo principal por vez; ações remotas/destrutivas precisam de gate próprio.
+7. Criar um checklist verificável para que uma sessão leiga possa receber relatórios em linguagem executiva: objetivo, impacto, ambiente, risco, reversibilidade, evidência, publicação e próxima decisão.
+8. Documentar a situação das cópias antigas e do .git órfão como riscos/quarentena, sem modificá-los.
+
+Restrições
+- Não alterar código de produto, migrations, banco local/remoto, Supabase, Vercel, secrets ou conteúdo médico.
+- Não apagar, mover ou arquivar fisicamente cópias antigas nesta entrega.
+- Não tocar no .git órfão.
+- Não inventar estado técnico. Tudo que não puder ser provado deve aparecer como “não verificado” ou “requer confirmação”.
+- Não expor valores de .env ou credenciais.
+- Não fazer force push, reset destrutivo ou merge em main.
+- Não inflar a nova camada com o histórico completo; o caminho crítico de leitura inicial deve ser curto e mensurável.
+
+Critérios de conclusão
+- Uma sessão nova consegue entender o estado e a próxima ação lendo AGENTS.md + a porta de entrada em no máximo 10 minutos.
+- Existe exatamente uma fonte indicada para estado, decisões, tarefas e procedimentos.
+- AGENTS.md deixa de carregar o diário completo, sem perda do histórico versionado.
+- Links relativos entre os documentos funcionam e não apontam para arquivos inexistentes.
+- O status de produção e do banco é rotulado com data/evidência ou como não verificado.
+- `git diff --check` passa.
+- Uma busca confirma ausência de segredos adicionados e de referências ambíguas que apresentem cópias antigas como oficiais.
+- O diff contém somente documentação/governança desta entrega.
+- Commit único ou série pequena e coerente na branch isolada; push apenas da branch candidata, nunca de main.
+
+Validação mínima
+- Mostrar `git status --short --branch`, HEAD local e origin/main antes e depois.
+- Listar arquivos criados, movidos e alterados.
+- Informar tamanho e contagem aproximada de palavras do caminho obrigatório antes/depois.
+- Verificar links locais dos novos documentos por script ou inspeção reproduzível.
+- Executar `git diff --check`.
+- Revisar o diff completo antes do commit.
+
+Formato obrigatório do retorno
+RETORNO: 40-A
+Resultado: concluído | parcial | bloqueado
+Base e branch: hashes e nome
+Alterações: arquivos e finalidade
+Preservação histórica: onde ficou e como foi comprovada
+Validações: comandos e resultados
+Métricas de redução: antes/depois
+Riscos e itens não verificados
+Estado de publicação: branch candidata enviada | somente local; main e produção inalteradas
+Próxima decisão da diretoria

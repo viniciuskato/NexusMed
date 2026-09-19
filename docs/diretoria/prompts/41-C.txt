@@ -1,0 +1,53 @@
+ENTREGA 41-C — INTEGRAÇÃO E PUBLICAÇÃO DA GOVERNANÇA 40-A E CORREÇÕES FE20832
+
+Papel da sessão
+Você é uma sessão executiva de publicação do NexusMed. Integre exclusivamente a candidata aprovada, execute os gates finais e confirme o deploy. Não amplie o escopo e não faça manutenção de worktrees nesta entrega.
+
+Objetivo executivo
+Publicar em `main` a camada de continuidade operacional 40-A e as correções auditadas nas entregas 41-A/41-B, restaurando lockfile, typecheck, lint, componentes acessíveis e segurança dos atalhos de teclado.
+
+Base aprovada
+- Remoto oficial: https://github.com/viniciuskato/SynapseMed-firebase-auth.git
+- Candidata: `origin/work/41b-gate-final-fe20832` @ `367f75c5a7212fbb7af2df04a63c2827cc50acb9` no momento da aprovação.
+- `origin/main` @ `fe20832791bad02d174461f7cf4bab8d0dcd632e` no momento da aprovação.
+- Reconfirme ambos com `git fetch` antes de agir. Se qualquer hash tiver avançado ou a árvore estiver suja, pare e reporte; não reconcilie silenciosamente.
+
+Escopo obrigatório
+1. Trabalhar em checkout/worktree limpo e confirmar o diff completo `origin/main...origin/work/41b-gate-final-fe20832`.
+2. Confirmar que o diff contém somente 40-A + 41-A + 41-B e nenhuma mudança inesperada.
+3. Executar `npm ci` e os gates canônicos completos com Supabase local: typecheck, lint, unit/componente, pgTAP, Playwright oficial, build e bundle sem debug. Fazer `supabase db reset` antes da suíte quando o procedimento canônico exigir.
+4. Confirmar ausência de segredos e `git diff --check` limpo.
+5. Mesclar a candidata em `main` com commit explícito `--no-ff`; sem squash, rebase de histórico publicado ou force push.
+6. Repetir em `main` pós-merge pelo menos o agregador canônico completo e os checks de build/bundle. Se qualquer gate falhar, não fazer push.
+7. Fazer push de `main`, que acionará deploy automático no Vercel.
+8. Não há migration nova nesta candidata; não executar `supabase db push` nem qualquer escrita no Supabase remoto.
+9. Confirmar deploy comparando assets/bundle com o build local e realizar smoke não destrutivo em produção: login, dashboard, Pomodoro, acesso à Passagem de Plantão, Aproveitamento por Banca, tela de Questões e Modo Foco Zen. Não criar ou alterar dado real; se um fluxo exigir autenticação/dado, limitar-se à conta de teste autorizada e remover qualquer fixture criada.
+10. Atualizar `PROJECT_STATE.md`, `TASKS.md`, `DECISIONS.md` e `registro.md` com hashes, gates e estado real de publicação; commit/push documental final somente se necessário e após repetir os checks aplicáveis.
+
+Restrições
+- Não tocar no Supabase remoto, migrations, RLS ou dados reais.
+- Não corrigir a fixture residual do spec 23-B nesta entrega; registrar tarefa separada.
+- Não remover, mover ou forçar limpeza de `.claude/worktrees/...`; manutenção do worktree órfão é uma entrega separada.
+- Sem mudança funcional nova, atualização oportunista de dependências ou `npm audit fix`.
+- Sem force push, reset destrutivo ou alteração da candidata aprovada.
+
+Critérios de conclusão
+- Merge `--no-ff` em main e push confirmados.
+- Gates completos verdes antes do push e no main pós-merge.
+- Deploy confirmado por evidência do bundle.
+- Smoke de produção não destrutivo sem erro de console.
+- Supabase remoto e dados reais não tocados.
+- Documentação operacional passa a refletir main/produção reais.
+
+Formato obrigatório do retorno
+RETORNO: 41-C
+Resultado: concluído | parcial | bloqueado
+Preflight: hashes de main e candidata
+Merge e commits: hashes
+Gates: comandos, contagens e resultados
+Publicação: push e evidência do deploy
+Smoke de produção: cenários e resultado
+Ambientes tocados
+Dados/fixtures: criados, removidos e contagem residual
+Riscos e pendências
+Próxima decisão da diretoria

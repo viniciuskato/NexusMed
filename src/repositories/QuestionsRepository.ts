@@ -78,7 +78,7 @@ class ResilientQuestionsRepository implements QuestionsRepository {
     if (!isSupabaseConfigured) return this.local.getQuestions();
     try {
       const res = await this.supa.getQuestions();
-      return res && res.length > 0 ? res : this.local.getQuestions();
+      return res;
     } catch {
       return this.local.getQuestions();
     }

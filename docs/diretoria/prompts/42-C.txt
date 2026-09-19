@@ -1,0 +1,181 @@
+MISSÃO 42-C — PUBLICAÇÃO CONTROLADA DA IMPORTAÇÃO ASSISTIDA
+
+Papel:
+Você é uma sessão executiva do NexusMed. Sua missão é publicar, com controle e verificação, a candidata 42-A + 42-B já aprovada pela diretoria.
+
+Objetivo:
+Publicar a funcionalidade "Importar material", incluindo a RPC transacional import_compendium_draft(), sem importar nenhum material real e sem modificar o conteúdo médico existente.
+
+Fonte de verdade:
+- Repositório canônico:
+  C:\Users\vinic\OneDrive\Projetos\SynapseMed\canonical
+- Branch oficial: main
+- origin/main aprovado no momento da emissão:
+  b56e828dbcf4615f21e142321a2777f12f5c6ce0
+- Branch candidata local:
+  work/42a-import-assistido
+- Commit candidato aprovado:
+  364678cce442dd09068e8f60166e8f1d86a69d44
+- Diff acumulado correto: 19 arquivos.
+- A candidata contém as entregas 42-A e 42-B.
+
+Contexto executivo:
+- 42-A criou a experiência de importação:
+  selecionar arquivo → pré-visualizar → confirmar → criar rascunho.
+- 42-B corrigiu a gravação para ser atômica:
+  material + seções + referências são gravados integralmente ou nada é gravado.
+- A diretoria revisou a implementação e aprovou a candidata para publicação.
+- Publicar a ferramenta não autoriza importar Meningite, PCSK9 ou qualquer outro conteúdo real.
+
+Preflight obrigatório:
+1. Leia AGENTS.md e os documentos indicados nele.
+2. Leia docs/operacao/RUNBOOK.md e SESSION_PROTOCOL.md.
+3. Execute:
+   git fetch origin
+   git status --short --branch
+   git rev-parse origin/main
+   git rev-parse work/42a-import-assistido
+4. Confirme:
+   - origin/main = b56e828dbcf4615f21e142321a2777f12f5c6ce0
+   - candidata = 364678cce442dd09068e8f60166e8f1d86a69d44
+   - merge-base coerente;
+   - árvores relevantes limpas.
+5. Se qualquer hash tiver avançado ou houver modificação não explicada, pare e reporte. Não reconcilie silenciosamente.
+
+Auditoria antes da publicação:
+- Confirme que o diff origin/main...work/42a-import-assistido contém exatamente os 19 arquivos esperados.
+- Revise o diff completo.
+- Confirme ausência de segredos.
+- Confirme que a migration cria somente public.import_compendium_draft() e permissões associadas.
+- Confirme que não há carga de conteúdo, seed real, publicação automática ou alteração dos materiais existentes.
+- Execute git diff --check.
+
+Branch remota:
+- A branch candidata ainda é somente local.
+- Envie work/42a-import-assistido ao origin sem alterar seu conteúdo.
+- Confirme que origin/work/42a-import-assistido aponta exatamente para 364678cce442dd09068e8f60166e8f1d86a69d44.
+- Isso não é publicação em produção e não substitui o merge em main.
+
+Integração:
+1. Trabalhe em checkout/worktree seguro de main.
+2. Reconfirme main local = origin/main no hash aprovado.
+3. Faça merge --no-ff da candidata em main.
+4. Não use rebase, squash, force push ou reset --hard.
+5. Registre o prompt 42-C e o fechamento documental sem alterar código funcional adicional.
+6. Antes do push, execute os gates completos pós-merge.
+
+Gates obrigatórios pós-merge:
+- npm ci
+- npm run typecheck
+- npm run lint
+- suíte Vitest completa
+- Supabase local limpo com supabase db reset
+- npm run test / pgTAP
+- npm run test:e2e completo
+- npm run build
+- npm run check:no-debug-bundle
+- git diff --check
+- revisão de segredos
+- confirmar limpeza das fixtures locais
+
+Atenção ao relato da 42-B:
+Uma execução repetida do Playwright sem reset encontrou poluição pré-existente em specs não relacionados. Para o gate oficial, parta de supabase db reset limpo. Se houver falha mesmo após reset limpo, pare e investigue; não declare o gate aprovado.
+
+Migration remota:
+A migration nova precisa ser aplicada ao Supabase remoto como parte desta publicação.
+
+Antes de aplicar:
+1. Confira a lista de migrations local versus remoto.
+2. Confirme que a única migration pendente é:
+   20260917120000_import_compendium_draft.sql
+3. Se houver qualquer outra migration pendente, inesperada ou divergente, pare e reporte.
+4. Não aplique um conjunto desconhecido de migrations.
+
+Com a confirmação interativa do usuário:
+- aplique a migration pelo procedimento canônico do projeto;
+- não execute carga, seed ou reset no remoto;
+- não altere materiais, usuários ou conteúdo;
+- verifique diretamente no remoto que:
+  - a função public.import_compendium_draft existe;
+  - authenticated possui permissão de execução;
+  - anon/public não possui permissão;
+  - nenhuma linha de material foi criada pela publicação da migration.
+
+Se a migration remota falhar:
+- não faça push de main;
+- reporte exatamente o estado;
+- não tente improvisar SQL alternativo ou marcar manualmente a migration.
+
+Push e deploy:
+Somente depois de:
+- merge local concluído;
+- gates pós-merge verdes;
+- migration remota aplicada e verificada;
+
+solicite confirmação interativa e execute:
+- git push origin main
+
+O push em main dispara deploy automático no Vercel.
+
+Verificação de produção:
+- confirme que o deploy corresponde ao novo main;
+- faça smoke não destrutivo da aplicação;
+- confirme que a tela de login carrega sem erros;
+- se houver sessão administrativa autenticada disponível, confirme apenas:
+  - acesso à Área Editorial;
+  - presença do botão "Importar material";
+  - abertura e fechamento do modal;
+  - aviso de que será criado somente um rascunho.
+- Não selecione nem importe arquivo real em produção.
+- Não crie material descartável no Supabase remoto.
+- Não crie usuário remoto sem autorização específica.
+- Se não houver sessão administrativa disponível, declare explicitamente que o smoke autenticado não foi executado; não invente credenciais.
+
+Restrições absolutas:
+- Não importar Meningite bacteriana.
+- Não importar PCSK9.
+- Não importar nenhum conteúdo médico real ou de teste no remoto.
+- Não criar disciplina ou tema.
+- Não publicar material.
+- Não criar revisão ou atestação.
+- Não tocar em taxonomia.
+- Não aproveitar a sessão para outras correções.
+- Não usar force push.
+- Não contornar bloqueios de permissão.
+
+Observação já aceita pela diretoria:
+O formato contém dependencies. Os arquivos-piloto atuais possuem dependencies: [], portanto não há perda nesses casos. Antes de importar futuramente um arquivo com dependências preenchidas, o sistema deverá avisar ou rejeitar até que a taxonomia trate essas relações. Não expanda a 42-C para resolver isso.
+
+Documentação:
+- Salve este prompt em docs/diretoria/prompts/42-C.txt.
+- Atualize TASKS.md, PROJECT_STATE.md e o registro da diretoria com o estado real.
+- Registre separadamente:
+  - commit de merge;
+  - commit documental final;
+  - hash final de main;
+  - migration remota aplicada;
+  - deploy confirmado;
+  - limite do smoke autenticado.
+- Evite gerar múltiplos pushes desnecessários: prepare o fechamento documental antes do único push final, sempre que tecnicamente seguro.
+
+Formato obrigatório do retorno:
+
+RETORNO: 42-C
+
+- Resultado
+- Preflight e hashes
+- Auditoria do diff
+- Merge e commits
+- Gates pós-merge
+- Migration remota e verificação
+- Push e deploy
+- Smoke de produção
+- Confirmação de que nenhum conteúdo foi importado
+- Ambientes tocados
+- Dados ou fixtures
+- Riscos e itens não verificados
+- Estado final de main
+- Próxima decisão da diretoria
+
+Condição de conclusão:
+42-C só está concluída se código, migration remota e deploy estiverem coerentes e verificados. Se qualquer uma dessas três partes não puder ser concluída, reporte resultado parcial ou bloqueado — nunca "concluído" por aproximação.

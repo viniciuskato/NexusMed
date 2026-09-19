@@ -1,0 +1,561 @@
+# Missão AS1-B2 — conversão editorial do material "Equilíbrio Ácido-Base"
+# (Nefrologia, tema curricular "Distúrbio Acidobásico", coleção AS1 — Saúde
+# do Adulto 1).
+#
+# ESTADO EDITORIAL: RASCUNHO / EM DESENVOLVIMENTO. Este arquivo NÃO foi
+# importado, salvo como rascunho no CMS, atestado nem publicado. As quatro
+# correções obrigatórias da auditoria científica (AS1-B1/AS1-B1.1) foram
+# aplicadas no conteúdo abaixo — ver
+# docs/editorial/as1/ACIDOBASE-RELATORIO-DE-CONVERSAO-2026-09-18.md para o
+# detalhamento de cada uma.
+#
+# Fonte original (somente leitura, não alterada por esta missão):
+# C:\Users\vinic\OneDrive\Estudos\Base de Estudos\Biblioteca\Medicina\Nefrologia\Fisiologia\Equilíbrio Ácido-Base.pdf
+# SHA-256: 781757F12DC9ADDF96E0AFF606C4A81E95B724AD5C33196FCD3DFC416B64B9B8
+#
+# disciplineName/themeName usam os nomes da AS1-TAXONOMIA-PILOTO-2026-09-17.
+# Esta missão NÃO cria disciplina/tema/relação nova no banco — se o nome do
+# tema não existir exatamente assim no catálogo vigente, o preview do
+# importador marcará como campo ausente para seleção manual (ver relatório).
+
+id: disturbio-acidobasico
+title: "Equilíbrio Ácido-Base"
+subtitle: "Da fisiologia do pH ao diagnóstico sistemático dos quatro distúrbios primários e dos distúrbios mistos"
+disciplineName: Nefrologia
+themeName: Distúrbio Acidobásico
+author: "Equipe Editorial NexusMed — a partir de aula de Nefrologia, PUCPR (docente Liz Y. Saguti, 21/08/2026), complementada com pesquisa ativa"
+estimatedReadTimeMinutes: 45
+tags:
+  - Nefrologia
+  - Distúrbio Acidobásico
+  - Gasometria
+  - Equilíbrio Ácido-Base
+  - Bicarbonato de Sódio
+
+sections:
+  - id: situacao-problema
+    title: "Situação-problema: acidemia grave na UTI"
+    content: |
+      Paciente idoso, 75 kg, internado na UTI com choque séptico, instabilidade hemodinâmica e em ventilação mecânica. A gasometria arterial e os eletrólitos colhidos na admissão mostram:
+
+      | Parâmetro | Valor |
+      | --- | --- |
+      | pH | 6,85 |
+      | HCO3⁻ | 6 mEq/L |
+      | pCO2 | 36 mmHg |
+      | SBE (excesso de base padrão) | −24 mEq/L |
+      | Na⁺ | 136 mEq/L |
+      | K⁺ | 7,0 mEq/L |
+      | Cl⁻ | 112 mEq/L |
+
+      Antes de qualquer fórmula: este é um distúrbio simples (um único processo primário, com a compensação esperada) ou existe algo escondido atrás desses números? E por que a hipercalemia (K⁺ 7,0 mEq/L) aparece junto com uma acidemia tão grave?
+
+      Guarde esses valores. Eles voltam, resolvidos passo a passo com a abordagem sistemática apresentada nas seções seguintes, na seção "Casos clínicos comentados" — como Caso clínico 1.
+    keyTakeaways:
+      - Uma gasometria isolada não se interpreta por padrões memorizados — precisa de um método sistemático, apresentado adiante.
+      - "A pergunta central de qualquer gasometria é: a resposta compensatória medida está dentro da faixa matematicamente esperada para o distúrbio primário identificado?"
+
+  - id: representacao-clinica-preliminar
+    title: "Representação clínica preliminar: por que o pH importa"
+    content: |
+      Antes de qualquer fórmula, três fatos objetivos sustentam por que um desvio de pH como o do caso acima é uma emergência:
+
+      1. As enzimas do organismo funcionam dentro de uma faixa estreita de pH; mudanças de pH alteram sua conformação, reduzindo a afinidade pelo substrato e comprometendo seu funcionamento.
+      2. O pH plasmático normal gira em torno de 7,40, dentro de uma faixa de sobrevida entre aproximadamente 6,85 (limite inferior, acidose) e 7,95 (limite superior, alcalose) — fora dessa faixa, o risco é de morte celular.
+      3. Pulmões e rins são a primeira linha de defesa contra alterações extremas de pH, regulando pCO2 e HCO3⁻, respectivamente, para manter o pH dentro da normalidade.
+
+      O paciente do caso-problema está com pH 6,85 — no próprio limite inferior de sobrevida descrito acima. Isso já basta para classificar a situação como emergência, mesmo antes de qualquer cálculo de compensação.
+    keyTakeaways:
+      - O pH tem uma faixa de sobrevida estreita (~6,85–7,95); o caso-problema está no limite inferior dessa faixa.
+      - Pulmão (pCO2) e rim (HCO3⁻) são os dois sistemas regulatórios centrais do equilíbrio ácido-base.
+
+  - id: conceitos-fundamentais
+    title: "Conceitos fundamentais"
+    content: |
+      | Termo | Definição |
+      | --- | --- |
+      | Ácidos | Substâncias capazes de doar prótons |
+      | Bases | Substâncias capazes de receber prótons |
+      | Acidose | Processo patológico resultante do acúmulo de ácidos ou perda de base |
+      | Acidemia | pH sanguíneo baixo (< 7,35) |
+      | Alcalose | Processo patológico resultante da perda de ácidos ou acúmulo de bases |
+      | Alcalemia | pH sanguíneo alto (> 7,45) |
+      | Distúrbios metabólicos | Processos patológicos nos quais a alteração primária é na concentração de bicarbonato |
+      | Distúrbios respiratórios | Processos patológicos nos quais a alteração primária é na pCO2 |
+
+      Distinção importante: "acidose"/"alcalose" nomeiam o **processo** fisiopatológico; "acidemia"/"alcalemia" descrevem o **resultado medido** no pH. Um paciente pode ter uma acidose (processo) sem acidemia (pH normal), se um segundo distúrbio compensar ou neutralizar o primeiro — é o que caracteriza um distúrbio misto.
+    keyTakeaways:
+      - O sufixo "-ose" nomeia o processo; o sufixo "-emia" descreve o resultado medido no pH.
+      - Um distúrbio misto pode manter o pH normal, mascarando dois processos opostos em curso.
+    clinicalPearl: "Nunca conclua 'sem distúrbio ácido-básico' só porque o pH está normal — confira sempre HCO3⁻ e pCO2 antes de descartar."
+
+  - id: tamponamento-compensacao
+    title: "Fisiologia do tamponamento e da compensação"
+    content: |
+      ### Carga ácida diária
+
+      O organismo produz, diariamente, uma grande quantidade de ácidos pela dieta e pelas reações metabólicas, divididos em duas categorias:
+
+      | Categoria | Origem | Exemplo | Quantidade | Via de eliminação | Acúmulo causa |
+      | --- | --- | --- | --- | --- | --- |
+      | Carbônicos (voláteis) | Metabolismo celular | H2CO3 ↔ H2O + CO2 | ~15.000 mmol/dia | Pulmão (CO2) | Acidose respiratória |
+      | Não carbônicos (fixos) | Dieta (proteínas) | HCl, H2PO4⁻ | ~50–100 mmol/dia | Rim | Acidose metabólica |
+
+      Essas ordens de grandeza (~15.000 mmol/dia de CO2 contra ~50–100 mEq/dia de ácido fixo) explicam por que a compensação respiratória de um distúrbio metabólico é rápida (minutos) e a compensação renal de um distúrbio respiratório é lenta (horas a dias): o pulmão lida com uma carga cerca de 150 a 300 vezes maior em volume, mas por uma via rápida; a carga fixa é pequena, porém só pode ser eliminada pelo rim, um processo mais lento [Hopkins et al., 2022](#ref-5).
+
+      ### As três fases de defesa contra o excesso de H+
+
+      | Fase | Tempo | Mecanismo | Detalhe |
+      | --- | --- | --- | --- |
+      | 1 — Tamponamento químico | Segundos | Extracelular/intracelular | Ação imediata no líquido extracelular (LEC); principal tampão HCO3⁻. H+ entra nas células trocado por K+ (pode causar hipercalemia) |
+      | 2 — Compensação respiratória | Minutos a horas | Alteração da ventilação alveolar | Eliminação de ácido volátil (H2O + CO2) pelo pulmão |
+      | 3 — Compensação renal | Horas a dias | Excreção de H+ e regeneração de HCO3⁻ | Túbulo contorcido distal (TCD): secreção de H+ (fosfato/amônio); túbulo contorcido proximal (TCP): formação e reabsorção de bicarbonato. Mais lenta, porém definitiva |
+
+      O tamponamento intracelular ocorre por difusão do H+ para dentro das células, onde é tamponado por hemoglobina e fosfato — esse mecanismo é o que gera a troca H+/K+ e a hipercalemia associada à acidemia aguda (é exatamente o que explica o K⁺ 7,0 mEq/L do caso-problema). Nas acidoses metabólicas crônicas, o tamponamento ósseo ganha importância: o osso libera Ca++ para tamponar o excesso de H+, o que ao longo do tempo predispõe a doença mineral óssea, nefrolitíase e nefrocalcinose.
+    keyTakeaways:
+      - A carga ácida volátil (CO2) é ~150–300× maior em volume que a carga fixa, mas a fixa só sai pelo rim — daí a diferença de velocidade entre compensação respiratória e renal.
+      - A troca H+/K+ no tamponamento intracelular agudo explica a hipercalemia da acidemia grave (como no caso-problema).
+    mechanismTag: "Tamponamento H+/K+ e hipercalemia da acidemia aguda"
+
+  - id: henderson-hasselbalch
+    title: "Equação de Henderson-Hasselbalch e a relação pH × [H+]"
+    content: |
+      ### A equação
+
+      **Henderson-Hasselbalch (sistema tampão HCO3⁻/pCO2 do LEC)**
+
+      pH = 6,1 + log₁₀ [HCO3⁻ / (0,03 × pCO2)]
+
+      HCO3⁻ é o componente metabólico (renal); 0,03 × pCO2 é o componente respiratório (pulmonar). Na forma geral, pH = pKa − log₁₀([ácido]/[base]).
+
+      Uma forma bedside amplamente usada, derivada da mesma relação, expressa diretamente a concentração de H+: [H+] (nmol/L) ≈ 24 × pCO2 / HCO3⁻ (equação de Kassirer-Bleich). Ela é útil para estimar rapidamente se o pH calculado é coerente com o pCO2 e o HCO3⁻ medidos, sem precisar de logaritmo à beira do leito.
+
+      ### Por que uma pequena mudança de pH é uma grande mudança de [H+]
+
+      A escala de pH é logarítmica. A tabela abaixo relaciona pH e [H+] pela identidade [H+] (nmol/L) = 10^(9−pH), recalculada de forma independente nesta conversão e conferida ponto a ponto:
+
+      | pH | [H+] (nmol/L) |
+      | --- | --- |
+      | 6,8 | 158 |
+      | 6,9 | 125 |
+      | 7,0 | 100 |
+      | 7,1 | 79 |
+      | 7,2 | 63 |
+      | 7,3 | 50 |
+      | 7,4 | 40 |
+      | 7,5 | 31 |
+      | 7,6 | 25 |
+      | 7,7 | 20 |
+      | 7,8 | 15 |
+
+      (Valores arredondados para o inteiro mais próximo; variações de ±1 nmol/L entre diferentes convenções de arredondamento não têm relevância clínica.)
+
+      Uma variação de pH de 7,4 para 7,1 — que parece pequena olhando só os dois números — representa quase o dobro da concentração de H+ livre no plasma (40 → 79 nmol/L). É por isso que uma queda "modesta" de pH na gasometria pode refletir uma piora substancial da acidemia.
+    keyTakeaways:
+      - pH = 6,1 + log₁₀[HCO3⁻/(0,03×pCO2)] é a equação-mãe de todo o capítulo.
+      - "A escala de pH é logarítmica: de 7,4 para 7,1, a [H+] quase dobra (40 → 79 nmol/L)."
+    clinicalPearl: "Ao comparar duas gasometrias do mesmo paciente, pense em [H+], não só em pH — a diferença real de acidemia costuma ser maior do que a diferença de pH sugere."
+
+  - id: gasometria-valores-normais
+    title: "Gasometria arterial e venosa: coleta e valores normais"
+    content: |
+      A gasometria arterial é o padrão-ouro para o diagnóstico ácido-básico, mas é um exame invasivo (dor e desconforto) e carrega risco de complicações — sangramento, hematoma, trombose. É coletada nas artérias radial, femoral, pediosa ou braquial [Castro et al., 2024](#ref-6). A gasometria venosa pode ser usada como alternativa quando o paciente tem um distúrbio predominantemente metabólico e está hemodinamicamente estável, evitando a punção arterial — ela perde confiabilidade em choque, parada cardiorrespiratória ou distúrbios respiratórios primários, situações em que a diferença arteriovenosa se amplia de forma imprevisível.
+
+      | Tipo de sangue | pH | HCO3⁻ | pCO2 | pO2 |
+      | --- | --- | --- | --- | --- |
+      | Sangue arterial | 7,35 a 7,45 | 22 a 26 mEq/L | 35 a 45 mmHg | 80 a 100 mmHg |
+      | Sangue venoso | ~0,05 unidade menor | igual ao arterial | ~6 mmHg maior | ~50% menor |
+
+      A gasometria arterial informa, numa única coleta, três eixos fisiológicos: oxigenação (pO2), ventilação (pCO2) e equilíbrio ácido-básico (pH, HCO3⁻).
+
+      ### Valores normais e excesso de base
+
+      | Parâmetro | Faixa normal | Abaixo | Acima |
+      | --- | --- | --- | --- |
+      | pH | 7,35 – 7,45 | Acidose | Alcalose |
+      | pCO2 | 35 – 45 mmHg | Hipocapnia | Hipercapnia |
+      | pO2 | 80 – 100 mmHg | Hipoxemia | Hiperoxemia |
+      | HCO3⁻ | 22 – 26 mEq/L | — | — |
+      | BE (Base Excess) | −2 a +2 | Perda de bases | Ganho de bases |
+
+      BE (excesso de base) quantifica a quantidade de base no sangue e ajuda a isolar o componente metabólico do distúrbio, sobretudo útil quando há um componente respiratório sobreposto. Componente básico da gasometria: pH, HCO3⁻, pO2; componente ácido: pCO2 [Castro et al., 2024](#ref-6).
+    keyTakeaways:
+      - A gasometria venosa central é uma alternativa aceitável apenas em distúrbio predominantemente metabólico e paciente estável — não em choque ou distúrbio respiratório primário.
+      - "Faixas normais: pH 7,35–7,45; pCO2 35–45 mmHg; HCO3⁻ 22–26 mEq/L; BE −2 a +2."
+    warningAlert: "Não use gasometria venosa para avaliar o componente respiratório em paciente instável ou com suspeita de distúrbio respiratório primário — a diferença arteriovenosa de pCO2 se amplia de forma imprevisível nesses cenários."
+
+  - id: abordagem-sistematica
+    title: "Abordagem sistemática à gasometria"
+    content: |
+      Toda gasometria pode ser interpretada em três perguntas sucessivas, seguidas do cálculo do ânion-gap:
+
+      | Passo | Pergunta | Como responder |
+      | --- | --- | --- |
+      | 1 | O pH indica acidemia ou alcalemia? | pH < 7,35 → acidemia; pH > 7,45 → alcalemia |
+      | 2 | Qual é a alteração primária (o que explica o pH)? | HCO3⁻ baixo/alto → distúrbio metabólico; pCO2 alta/baixa → distúrbio respiratório |
+      | 3 | A compensação está adequada? | Aplicar a fórmula de resposta esperada para o distúrbio identificado; se a pCO2 (ou HCO3⁻) medida não cair na faixa esperada, há um distúrbio misto |
+
+      Todo distúrbio primário gera uma resposta secundária obrigatória, que busca **proteger** o pH — nunca normalizá-lo por completo: distúrbio metabólico primário gera resposta respiratória secundária (rápida); distúrbio respiratório primário gera resposta metabólica secundária (lenta).
+
+      Essa abordagem em 3 passos corresponde à "abordagem fisiológica" clássica de interpretação ácido-básica, descrita em detalhe por [Berend et al., 2014](#ref-1) — o artigo detalha como cada uma das fórmulas de compensação (seção "Matriz-resumo e fórmulas de compensação") foi derivada empiricamente a partir de séries de pacientes com distúrbio simples confirmado, e reforça a mesma regra prática: uma resposta compensatória fora da faixa esperada define distúrbio misto, nunca um "erro de compensação".
+
+      > **Consenso de Prova**: nem toda abordagem ácido-básica usa esse método fisiológico "clássico" apresentado aqui. [Adrogué et al., 2009](#ref-13) descrevem e comparam três estratégias de avaliação de distúrbios ácido-básicos usadas na prática — a fisiológica (a desta seção), a do excesso de base (base excess) e a físico-química (abordagem de Stewart) — sem que exista consenso de que uma seja superior às outras em todos os cenários. Para a prova e para a beira do leito na maioria dos casos, a abordagem fisiológica em 3 passos é suficiente e é a mais amplamente ensinada.
+    keyTakeaways:
+      - "Os 3 passos: (1) acidemia ou alcalemia; (2) qual alteração primária explica o pH; (3) a compensação está na faixa esperada?"
+      - Existem outras escolas de análise ácido-básica (excesso de base, Stewart) — a abordagem fisiológica em 3 passos é a mais usada na prática e a exigida nesta prova.
+
+  - id: acidose-metabolica
+    title: "Acidose metabólica"
+    content: |
+      Processo patológico que resulta em queda do bicarbonato sérico, com consequente queda do pH. A queda do pH estimula o centro respiratório, gerando hiperventilação — a resposta compensatória respiratória, cujo papel é atenuar a acidemia (nunca normalizar o pH).
+
+      ### Compensação esperada (equação de Winters)
+
+      pCO2 esperada = 1,5 × HCO3⁻ + 8 (± 2)
+
+      Entrada: HCO3⁻ medido do paciente. Se a pCO2 medida cair fora do intervalo calculado, há um distúrbio respiratório sobreposto. A fórmula tem origem no trabalho original de [Albert, Dell e Winters, 1967](#ref-4), reproduzida e consolidada por [Narins e Emmett, 1980](#ref-3) como uma das "regras de bolso" de interpretação ácido-básica.
+
+      ### Consequências da acidemia grave
+
+      | Sistema | Efeitos |
+      | --- | --- |
+      | Cerebrais | Inibição do metabolismo; alteração do volume neuronal; torpor e coma |
+      | Cardiovasculares | Redução do limiar para arritmias (risco de morte súbita); queda da contratilidade miocárdica; menor resposta às catecolaminas; queda do débito cardíaco e da perfusão |
+      | Respiratórias | Hiperventilação compensatória extrema; fadiga da musculatura respiratória; dispneia |
+      | Metabólicas | Resistência à insulina; inibição da 6-fosfofrutoquinase (glicólise); hipercalemia; aumento do catabolismo proteico |
+
+      ### Causas
+
+      | Perda de bicarbonato (AG normal / hiperclorêmica) | Acúmulo de ácidos (AG aumentado / normoclorêmica) |
+      | --- | --- |
+      | Diarreia; fístulas biliares; fístulas pancreáticas; ureterossigmoidostomia; acidose tubular renal proximal; acetazolamida | Redução da excreção renal de ácidos: IRA/DRC. Geração excessiva de ácidos: acidose lática; cetoacidose; intoxicações exógenas (metanol, etilenoglicol, salicilato) |
+
+      A diferenciação usa o ânion-gap (seção seguinte): AG normal aponta para perda direta de bicarbonato, com aumento compensatório de cloreto (hiperclorêmica); AG elevado aponta para acúmulo de ácido orgânico não medido, sem alteração do cloreto (normoclorêmica).
+
+      ### Tratamento
+
+      A prioridade número um é sempre o tratamento da causa de base. A conduta sobre bicarbonato de sódio depende do tipo de acidose:
+
+      | | AG normal (hiperclorêmica) — perda de bicarbonato | AG aumentado (normoclorêmica) — excesso de ácidos orgânicos |
+      | --- | --- | --- |
+      | Mecanismo | Déficit real de bicarbonato | Bicarbonato cai por ser consumido no tamponamento de ácidos orgânicos (H+ + HCO3⁻ ↔ H2CO3 ↔ CO2 + H2O) — não há déficit real de bicarbonato |
+      | Resolução | Exige tempo para os rins regenerarem novo bicarbonato | Tratamento da causa de base (ex.: volume, insulina) converte rapidamente o lactato/acetoacetato de volta em HCO3⁻ |
+      | Uso de bicarbonato? | Sim — há déficit real de base | Controverso — o bicarbonato é apenas "potencial" |
+
+      Para a acidose metabólica com AG aumentado e etiologia de resolução rápida (ex.: cetoacidose bem tratada), o bicarbonato costuma não ser necessário. Quando a etiologia não é rapidamente reversível e a acidose é grave (pH < 7,20, HCO3⁻ < 10, com hipocapnia apropriada), considera-se bicarbonato de sódio 8,4%, 1–2 mEq/kg. O objetivo nunca é normalizar o pH — o alvo costuma ser pH ≈ 7,20 e HCO3⁻ ≈ 10 mEq/L, para evitar os riscos do próprio bicarbonato: hipernatremia, sobrecarga de volume, alcalose de rebote e queda do cálcio iônico (hipocalcemia).
+
+      ### O que diz a evidência sobre bicarbonato de sódio
+
+      **BICAR-ICU (2018)** [Jaber et al., 2018](#ref-8): ensaio multicêntrico que incluiu pacientes graves (SOFA ≥ 4) com pH ≤ 7,2, bicarbonato ≤ 20 mmol/L e PaCO2 ≤ 45 mmHg, excluindo acidose respiratória isolada. O desfecho primário foi **composto** (óbito por qualquer causa até o dia 28 OU presença de ao menos uma falência orgânica no dia 7) — não mortalidade isolada. Não houve diferença significativa na mortalidade em 28 dias entre bicarbonato de sódio 4,2% e placebo na população geral, mas uma análise pré-especificada mostrou redução da mortalidade e da necessidade de terapia renal substitutiva (TRS) no subgrupo com injúria renal aguda (IRA) **AKIN 2 e 3** — o estudo estratificou a gravidade da IRA pelo escore AKIN (Acute Kidney Injury Network), não pelo estadiamento KDIGO [KDIGO AKI Guideline, 2012](#ref-12), que é um sistema de estadiamento de IRA diferente (ainda que com lógica semelhante).
+
+      **BICARICU-2 (2025)** [Jung et al., 2025](#ref-10): ensaio de continuidade do BICAR-ICU, com 640 pacientes randomizados (627 analisados; 313 controle, 314 bicarbonato) em 43 UTIs francesas, mesma população-alvo (acidemia grave, pH ≤ 7,20, com IRA moderada a grave). A mortalidade em 90 dias não diferiu entre os grupos (62,1% bicarbonato vs. 61,7% controle; diferença 0,4 ponto percentual; IC95% −7,2 a 8,0; p=0,91), mas o uso de terapia renal substitutiva foi menor com bicarbonato (35% vs. 50%; diferença −15,5 pontos percentuais; IC95% −23,1 a −7,8). **Importante**: essa redução de TRS não deve ser lida como um benefício de mortalidade — os dois desfechos são independentes, e a mortalidade em 90 dias não mostrou diferença significativa neste ensaio isoladamente.
+
+      **Meta-análise BICAR-ICU + BICARICU-2 (dados individuais, 2026)** [Fosset et al., 2026](#ref-9): reunindo os 1.016 pacientes dos dois ensaios (509 bicarbonato, 507 controle), o bicarbonato não reduziu a mortalidade em 90 dias na população geral (58,3% vs. 60,6%; RR 0,96; IC95% 0,86–1,07; p=0,51), mas reduziu significativamente o início de TRS (34,8% vs. 50,7%; RR 0,69; IC95% 0,60–0,79; p<0,001; NNT = 6,3) e aumentou os dias livres de diálise. Houve interação significativa com a profundidade da acidemia (p=0,006): no subgrupo com pH ≤ 7,10, o bicarbonato reduziu a mortalidade em 90 dias (RR 0,80; IC95% 0,68–0,93; p=0,004); sem benefício no subgrupo pH > 7,10 (RR 1,05; p=0,47).
+
+      **SODa-BIC (2026)** [Serpa Neto et al., 2026](#ref-11), ensaio novo, população mais ampla: estudo multinacional (55 UTIs, 7 países, 500 pacientes) em pacientes graves com acidose metabólica (pH < 7,30) em uso de vasopressor, comparando bicarbonato de sódio a placebo, com desfecho primário composto de "evento renal adverso maior" (morte, uso de TRS ou disfunção renal persistente em 30 dias). Não houve diferença no desfecho primário (40,2% vs. 39,4%; diferença ajustada 1,2 pontos percentuais; IC95% −7,1 a 9,4; p=0,78), nem na mortalidade hospitalar (25,4% vs. 24,0%) nem no uso de TRS (16,8% vs. 20,9%) isoladamente.
+
+      **Leitura conjunta**: a evidência não sustenta bicarbonato de rotina para acidemia grave em geral. O sinal de benefício mais consistente continua restrito a um subgrupo específico — acidemia muito grave (pH ≤ 7,10), frequentemente com IRA concomitante — no qual há redução de TRS de forma reprodutível (BICAR-ICU, BICARICU-2 e a meta-análise conjunta), mas **nenhum** dos quatro estudos mostrou benefício de mortalidade fora desse subgrupo mais grave. O SODa-BIC (população mais ampla, pH < 7,30, sem exigir IRA) reforça que fora desse subgrupo o benefício não está demonstrado.
+
+      > **Armadilha da Banca**: o BICAR-ICU estratificou por escore **AKIN**, não por KDIGO — os dois são sistemas de estadiamento de injúria renal aguda diferentes, e trocar um pelo outro é um erro de citação comum. Além disso, "menor uso de terapia renal substitutiva" **não é o mesmo** que "redução de mortalidade" — no BICARICU-2 isoladamente, a mortalidade em 90 dias não diferiu (p=0,91), apesar da redução de TRS.
+
+      ### Hemodiálise na acidose metabólica
+
+      Indicações de hemodiálise citadas na aula:
+
+      | # | Indicação |
+      | --- | --- |
+      | 1 | Acidose metabólica refratária |
+      | 2 | Hipercalemia refratária |
+      | 3 | Intoxicações (dialisáveis) |
+      | 4 | Hipervolemia/anúria |
+      | 5 | Uremia |
+
+      O Guia de Assistência Nefrológica Hospitalar da Sociedade Brasileira de Nefrologia [Younes-Ibrahim et al., 2025](#ref-14) confirma essa mesma lista sob a forma de indicações "de urgência ou clássicas" para terapia renal substitutiva: acidose, distúrbios eletrolíticos, intoxicações medicamentosas, sobrecarga hídrica e uremia — descrevendo a hipercalemia como a "principal emergência nefrológica", tratada inicialmente com gluconato de cálcio, solução polarizante (glicoinsulinoterapia), beta-2 agonistas e bicarbonato de sódio, reservando a diálise para os casos refratários às medidas clínicas. Para a acidose metabólica isolada, o mesmo guia situa o limiar para considerar bicarbonato de sódio em pH < 7,2, sobretudo com HCO3⁻ < 15 mEq/L e sem evidência de hipervolemia — limiar um pouco mais permissivo que o "pH < 7,20 com HCO3⁻ < 10" apresentado na aula; ambos convergem em tratar apenas a acidemia grave, não a acidemia leve a moderada.
+
+      > **Diretriz Oficial**: Guia de Assistência Nefrológica Hospitalar, Sociedade Brasileira de Nefrologia [Younes-Ibrahim et al., 2025](#ref-14) — hipercalemia é a "principal emergência nefrológica"; limiar de bicarbonato de sódio na acidose isolada: pH < 7,2, sobretudo com HCO3⁻ < 15 mEq/L, sem hipervolemia.
+    keyTakeaways:
+      - "Winters: pCO2 esperada = 1,5×HCO3⁻ + 8 (±2)."
+      - Nenhum dos quatro estudos de bicarbonato (BICAR-ICU, BICARICU-2, meta-análise, SODa-BIC) mostrou benefício de mortalidade fora do subgrupo com acidemia muito grave (pH ≤ 7,10); a redução de TRS é o achado mais reprodutível.
+      - O BICAR-ICU estratificou por AKIN, não por KDIGO — são sistemas diferentes.
+    warningAlert: "Redução de terapia renal substitutiva não é sinônimo de redução de mortalidade — no BICARICU-2, a mortalidade em 90 dias não diferiu (p=0,91) apesar de menos TRS."
+
+  - id: alcalose-metabolica
+    title: "Alcalose metabólica"
+    content: |
+      Caracterizada por uma elevação primária do HCO3⁻ sérico, com consequente elevação do pH. O centro respiratório responde com hipoventilação, elevando a pCO2 — resposta compensatória cujo papel é atenuar a alcalemia.
+
+      ### Compensação esperada
+
+      pCO2 esperada = HCO3⁻ + 15 (± 2)
+
+      ### Causas
+
+      | Perda de H+ | Adição de bicarbonato | Contração do LEC |
+      | --- | --- | --- |
+      | Vômitos; drenagem gástrica; hiperaldosteronismo primário; desvio para o intracelular (hipocalemia) | Transfusão sanguínea maciça (citrato); administração de NaHCO3 | Diuréticos de alça ou tiazídicos; perdas gástricas em pacientes com acloridria; perda de suor em pacientes com fibrose cística |
+
+      Duas síndromes tubulares renais raras cursam com alcalose metabólica e devem ser lembradas no diagnóstico diferencial:
+
+      | Síndrome | Defeito | Achados | Mimetiza o efeito de |
+      | --- | --- | --- | --- |
+      | Bartter | Cotransportador Na-K-2Cl (alça de Henle) | Hipocalemia, alcalose metabólica, hipercalciúria | Furosemida |
+      | Gitelman | Cotransportador Na+/Cl⁻ (túbulo distal) | Hipocalemia, alcalose metabólica, hipomagnesemia, hipocalciúria | Tiazídicos |
+
+      A alcalemia grave também tem consequências clínicas relevantes: hipocalcemia, convulsões, redução do fluxo sanguíneo cerebral e predisposição a arritmias ventriculares.
+    keyTakeaways:
+      - "Compensação esperada: pCO2 = HCO3⁻ + 15 (±2)."
+      - Bartter mimetiza furosemida; Gitelman mimetiza tiazídicos — ambos com hipocalemia e alcalose metabólica.
+
+  - id: acidose-respiratoria
+    title: "Acidose respiratória"
+    content: |
+      Caracterizada por elevação primária da pCO2, com acidemia e retenção compensatória de bicarbonato (resposta metabólica secundária, renal) que visa proteger o pH. A retenção de HCO3⁻ é pequena na acidose respiratória aguda e muito mais importante — e mais lenta — na acidose respiratória crônica.
+
+      | Forma | Para cada ↑ 10 mmHg de pCO2 | Esperamos um ↑ de HCO3⁻ |
+      | --- | --- | --- |
+      | Aguda | 10 mmHg | 1 mEq/L |
+      | Crônica | 10 mmHg | 4 mEq/L |
+
+      ### Causas
+
+      | Categoria | Exemplos |
+      | --- | --- |
+      | Inibição do centro respiratório | Drogas; oxigênio em retentores crônicos de CO2; parada cardiorrespiratória; apneia do sono; síndrome de Pickwick (obesidade-hipoventilação) |
+      | Musculatura respiratória e caixa torácica | Fraqueza muscular (miastenia, Guillain-Barré, ELA, esclerose múltipla, lesão medular); cifoescoliose; obesidade extrema |
+      | Obstrução de vias aéreas superiores | Corpo estranho; apneia obstrutiva do sono; laringoespasmo |
+      | Ventilação mecânica | Parâmetros inadequados |
+      | Trocas gasosas (membrana alvéolo-capilar) | DPOC; SARA; edema agudo de pulmão; asma; pneumonia; pneumotórax |
+    keyTakeaways:
+      - "Acidose respiratória aguda: +1 mEq/L de HCO3⁻ por +10 mmHg de pCO2. Crônica: +4 mEq/L."
+
+  - id: alcalose-respiratoria
+    title: "Alcalose respiratória"
+    content: |
+      Caracterizada por queda primária da pCO2, com alcalemia e redução compensatória do bicarbonato (resposta metabólica secundária, renal) que visa proteger o pH.
+
+      | Forma | Para cada ↓ 10 mmHg de pCO2 | Esperamos um ↓ de HCO3⁻ |
+      | --- | --- | --- |
+      | Aguda | 10 mmHg | 2 mEq/L |
+      | Crônica | 10 mmHg | 5 mEq/L |
+
+      ### Causas
+
+      | Categoria | Exemplos |
+      | --- | --- |
+      | Hipoxemia | Pneumonia; TEP; edema pulmonar; insuficiência cardíaca; doença pulmonar intersticial |
+      | Ventilação mecânica | Parâmetros inadequados (hiperventilação) |
+      | Estímulo do centro respiratório | Ansiedade; intoxicação por salicilato; acidente vascular cerebral; progesterona (gravidez); toxemia |
+    keyTakeaways:
+      - "Alcalose respiratória aguda: −2 mEq/L de HCO3⁻ por −10 mmHg de pCO2. Crônica: −5 mEq/L."
+
+  - id: anion-gap-delta-ratio
+    title: "Ânion-gap, correção pela albumina e delta ratio"
+    content: |
+      ### Ânion-gap
+
+      O ânion-gap usa o princípio da eletroneutralidade (a soma dos cátions plasmáticos é igual à soma dos ânions) para estimar indiretamente os ânions não medidos rotineiramente (principalmente proteínas plasmáticas, mas também fosfato, sulfato e ácidos orgânicos).
+
+      AG = Na⁺ − (Cl⁻ + HCO3⁻)
+
+      Valor de referência: a aula cita 10–12 mEq/L (sem incluir o potássio); a literatura de referência [StatPearls, s.d.](#ref-7) cita tipicamente 8–12 mEq/L. A diferença reflete sobretudo o método laboratorial (analisadores mais modernos, com eletrodos íon-seletivos, tendem a relatar um AG "de referência" mais baixo que os métodos antigos) — ambos os intervalos são usados na prática clínica atual; o importante é comparar o AG calculado com o valor de referência do próprio laboratório sempre que disponível.
+
+      | AG normal (hiperclorêmica) | AG aumentado (normoclorêmica) |
+      | --- | --- |
+      | Perda de bicarbonato | Acúmulo de ácidos |
+
+      ### Ânion-gap corrigido pela albumina
+
+      Como a albumina é o principal ânion não medido do plasma, a hipoalbuminemia (comum em pacientes graves, desnutridos ou com doença hepática) reduz o ânion-gap de forma independente de qualquer acúmulo real de ácido — o que pode mascarar uma acidose metabólica com AG elevado, fazendo-a parecer "normal".
+
+      AG corrigido = AG observado + 2,5 × (4,0 − albumina sérica em g/dL)
+
+      Cada queda de 1 g/dL na albumina abaixo de 4,0 g/dL reduz o AG esperado em cerca de 2,5 mEq/L. Na prática: um paciente crítico com albumina de 2,0 g/dL e AG observado "normal" de 12 mEq/L tem, na verdade, um AG corrigido de 12 + 2,5×(4,0−2,0) = 17 mEq/L — compatível com acidose de AG elevado mascarada pela hipoalbuminemia [Seifter, 2014](#ref-2).
+
+      ### Delta ratio
+
+      Quando o AG está elevado, o delta ratio ajuda a identificar se há um segundo distúrbio metabólico sobreposto (por exemplo, uma alcalose metabólica concomitante mascarando parte da queda esperada do HCO3⁻).
+
+      Delta ratio = (AG − 12) / (24 − HCO3⁻)
+
+      - **< 1**: sugere um componente de acidose hiperclorêmica (AG normal) associado
+      - **1–2**: acidose metabólica com AG elevado "pura"
+      - **> 2**: sugere alcalose metabólica concomitante (o HCO3⁻ caiu menos do que o esperado pelo aumento do AG)
+
+      Fonte: [StatPearls, s.d.](#ref-7).
+    keyTakeaways:
+      - AG = Na⁺ − (Cl⁻ + HCO3⁻); valor de referência 8–12 a 10–12 mEq/L, dependendo do método laboratorial.
+      - Corrija sempre o AG pela albumina em pacientes graves/desnutridos — a hipoalbuminemia pode mascarar um AG elevado.
+      - Delta ratio > 2 sugere alcalose metabólica concomitante; < 1 sugere componente hiperclorêmico associado.
+    clinicalPearl: "Em paciente crítico com albumina baixa, sempre corrija o AG antes de descartar acidose de AG elevado — o AG 'normal' pode estar mascarando o processo real."
+
+  - id: casos-clinicos
+    title: "Casos clínicos comentados (5)"
+    content: |
+      Os cinco casos abaixo são resolvidos passo a passo pela abordagem sistemática de 3 passos apresentada anteriormente. Todos os cálculos foram recalculados de forma independente nesta conversão, partindo apenas dos valores brutos de cada caso.
+
+      ### Caso clínico 1 — retorno ao caso-problema
+
+      Paciente idoso na UTI, 75 kg, com choque séptico, instabilidade hemodinâmica e em ventilação mecânica (os mesmos dados apresentados na situação-problema, no início deste material).
+
+      | pH | HCO3⁻ | pCO2 | SBE | Na⁺ | K⁺ | Cl⁻ |
+      | --- | --- | --- | --- | --- | --- | --- |
+      | 6,85 | 6 mEq/L | 36 mmHg | −24 mEq/L | 136 mEq/L | 7,0 mEq/L | 112 mEq/L |
+
+      - **Passo 1** — Acidemia (pH < 7,35).
+      - **Passo 2** — Distúrbio primário: acidose metabólica (HCO3⁻ baixo).
+      - **Passo 3** — pCO2 esperada = 1,5 × 6 + 8 (±2) = 17 (15–19). pCO2 medida = 36 mmHg → **fora** da faixa esperada.
+
+      **Não compensado — distúrbio misto: acidose metabólica + acidose respiratória.** AG = 136 − (112 + 6) = 18 → ânion-gap aumentado (normoclorêmica), compatível com acidose lática por hipoperfusão do choque séptico, com componente respiratório sobreposto (a pCO2 está mais alta do que a hiperventilação compensatória conseguiria produzir, sugerindo limitação ventilatória apesar da ventilação mecânica). A hipercalemia (K⁺ 7,0) é explicada pela troca H+/K+ do tamponamento intracelular agudo, descrita na seção de fisiologia do tamponamento.
+
+      ### Caso clínico 2
+
+      Paciente jovem, na Emergência, com diarreia infecciosa há 24 horas e quadro de hipotensão arterial.
+
+      | pH | HCO3⁻ | pCO2 | SBE | Na⁺ | K⁺ | Cl⁻ |
+      | --- | --- | --- | --- | --- | --- | --- |
+      | 7,29 | 14 mEq/L | 30 mmHg | −11 mEq/L | 140 mEq/L | 2,8 mEq/L | 116 mEq/L |
+
+      - **Passo 1** — Acidemia (pH < 7,35).
+      - **Passo 2** — Acidose metabólica (HCO3⁻ baixo).
+      - **Passo 3** — pCO2 esperada = 1,5 × 14 + 8 (±2) = 29 (27–31). pCO2 medida = 30 mmHg → **dentro** da faixa esperada.
+
+      **Compensado — distúrbio simples: acidose metabólica.** AG = 140 − (116 + 14) = 10 → ânion-gap normal (hiperclorêmica), compatível com perda de bicarbonato pela diarreia. A hipocalemia (K⁺ 2,8) é esperada na perda entérica.
+
+      ### Caso clínico 3
+
+      Paciente pediátrico na enfermaria, com vômitos de repetição por estenose pilórica.
+
+      | pH | HCO3⁻ | pCO2 | SBE | Na⁺ | K⁺ | Cl⁻ |
+      | --- | --- | --- | --- | --- | --- | --- |
+      | 7,50 | 36 mEq/L | 49 mmHg | +12 mEq/L | 135 mEq/L | 2,4 mEq/L | 80 mEq/L |
+
+      - **Passo 1** — Alcalemia (pH > 7,45).
+      - **Passo 2** — Alcalose metabólica (HCO3⁻ alto).
+      - **Passo 3** — pCO2 esperada = 36 + 15 (±2) = 51 (49–53). pCO2 medida = 49 mmHg → **dentro** da faixa esperada.
+
+      **Compensado — distúrbio simples: alcalose metabólica**, pela perda de H+ (ácido clorídrico gástrico) nos vômitos — consistente com o cloro muito baixo (80 mEq/L) e a hipocalemia (2,4 mEq/L, por desvio intracelular e perda urinária associada à contração de volume).
+
+      > Nota didática: a pCO2 medida (49 mmHg) cai exatamente no limite **inferior** do intervalo esperado (49–53 mmHg). Matematicamente o caso está correto e a classificação como "compensado" é defensável, mas este é o caso com menor folga entre os cinco — "dentro da faixa" nem sempre significa "no centro da faixa". Se a pCO2 medida fosse 1 mmHg menor (48 mmHg), o caso passaria a sugerir um distúrbio misto.
+
+      ### Caso clínico 4
+
+      Paciente idoso no ambulatório, portador de DPOC aos moderados esforços.
+
+      | pH | HCO3⁻ | pCO2 | SBE | Na⁺ | K⁺ | Cl⁻ |
+      | --- | --- | --- | --- | --- | --- | --- |
+      | 7,30 | 40 mEq/L | 80 mmHg | +11 mEq/L | 142 mEq/L | 4,0 mEq/L | 90 mEq/L |
+
+      - **Passo 1** — Acidemia (pH < 7,35).
+      - **Passo 2** — Acidose respiratória (pCO2 elevada). O quadro ambulatorial/crônico (DPOC) e o grande aumento do HCO3⁻ apontam para a forma **crônica**.
+      - **Passo 3** — pCO2 subindo de 40 para 80 (↑40 mmHg = 4 × ↑10 mmHg); na forma crônica, esperamos ↑4 mEq/L de HCO3⁻ por cada ↑10 mmHg: HCO3⁻ esperado = 24 + (4×4) = 40 mEq/L. HCO3⁻ medido = 40 mEq/L → **dentro** do esperado.
+
+      **Compensado — distúrbio simples: acidose respiratória crônica**, compatível com retenção crônica de CO2 pela DPOC.
+
+      ### Caso clínico 5
+
+      Paciente de 32 anos, com queixa de formigamento nas mãos e na boca há meia hora. Ao exame físico, sinais vitais normais, exceto por taquipneia; apresenta contratura de membros superiores. Familiar relata diagnóstico prévio de transtorno do pânico.
+
+      | pH | HCO3⁻ | pCO2 | pO2 | Na⁺ | K⁺ | Cl⁻ |
+      | --- | --- | --- | --- | --- | --- | --- |
+      | 7,65 | 26 mEq/L | 20 mmHg | 80 mmHg | 145 mEq/L | 4,5 mEq/L | 95 mEq/L |
+
+      - **Passo 1** — Alcalemia (pH > 7,45).
+      - **Passo 2** — Alcalose respiratória, aguda pelo contexto de crise de ansiedade de início súbito (pCO2 baixa).
+      - **Passo 3** — pCO2 caindo de 40 para 20 (↓20 mmHg = 2 × ↓10 mmHg); na forma aguda, esperamos ↓2 mEq/L de HCO3⁻ por cada ↓10 mmHg: HCO3⁻ esperado = 24 − (2×2) = 20 mEq/L. HCO3⁻ medido = 26 mEq/L → **diferente** do esperado (26 ≠ 20).
+
+      **Não compensado — distúrbio misto: alcalose respiratória aguda (hiperventilação da crise de ansiedade) + alcalose metabólica** (HCO3⁻ mais alto do que a compensação renal aguda explicaria sozinha). As parestesias e a contratura muscular (tetania) são consequência da alcalemia grave: a alcalemia reduz o cálcio ionizado (por maior ligação do cálcio à albumina), gerando os sintomas de hipocalcemia funcional típicos da síndrome de hiperventilação.
+    keyTakeaways:
+      - Os 5 casos cobrem os 4 distúrbios simples possíveis e 2 distúrbios mistos (Casos 1 e 5).
+      - A folga de tolerância da fórmula (±2) importa: no Caso 3, a pCO2 medida está no limite inferior da faixa esperada.
+
+  - id: matriz-resumo
+    title: "Matriz-resumo e fórmulas de compensação"
+    content: |
+      Todo distúrbio primário gera uma resposta secundária obrigatória para proteger o pH; a ausência dessa resposta, ou uma resposta inadequada, caracteriza um distúrbio misto.
+
+      | Distúrbio | Alteração primária | Resposta compensatória |
+      | --- | --- | --- |
+      | Acidose metabólica | ↓ pH · ↓ HCO3⁻ (rim) | ↓ pCO2 (pulmão: hiperventilação) |
+      | Alcalose metabólica | ↑ pH · ↑ HCO3⁻ (rim) | ↑ pCO2 (pulmão: hipoventilação) |
+      | Acidose respiratória | ↓ pH · ↑ pCO2 (pulmão) | ↑ HCO3⁻ (rim: retenção) |
+      | Alcalose respiratória | ↑ pH · ↓ pCO2 (pulmão) | ↓ HCO3⁻ (rim: excreção) |
+
+      | Distúrbio | Fórmula de compensação esperada |
+      | --- | --- |
+      | Acidose metabólica | pCO2 esperada = 1,5 × HCO3⁻ + 8 (± 2) |
+      | Alcalose metabólica | pCO2 esperada = HCO3⁻ + 15 (± 2) |
+      | Acidose respiratória — aguda | ↑ 10 mmHg de pCO2 → ↑ 1 mEq/L de HCO3⁻ |
+      | Acidose respiratória — crônica | ↑ 10 mmHg de pCO2 → ↑ 4 mEq/L de HCO3⁻ |
+      | Alcalose respiratória — aguda | ↓ 10 mmHg de pCO2 → ↓ 2 mEq/L de HCO3⁻ |
+      | Alcalose respiratória — crônica | ↓ 10 mmHg de pCO2 → ↓ 5 mEq/L de HCO3⁻ |
+
+      Todas as seis regras acima seguem a tradição das "regras de bolso" descritas originalmente por [Narins e Emmett, 1980](#ref-3), num dos artigos mais citados da nefro-fisiologia clínica.
+
+      | | AG normal (ex.: diarreia, ATR) | AG elevado (ex.: acidose lática, cetoacidose) |
+      | --- | --- | --- |
+      | Mecanismo | Perda de base (HCO3⁻); aumento compensatório de Cl⁻ | Produção excessiva de ácidos orgânicos que consomem o HCO3⁻ no tamponamento |
+      | Resolução | Exige tempo para os rins regenerarem novo bicarbonato | Tratamento da causa de base (ex.: volume, insulina) converte rapidamente o lactato/acetoacetato de volta em HCO3⁻ |
+      | Uso de bicarbonato? | Sim — há déficit real de base | Controverso — o bicarbonato é apenas "potencial" |
+    keyTakeaways:
+      - Esta matriz resume as 6 fórmulas de compensação e a lógica de AG normal vs. elevado — use como referência rápida de revisão de véspera.
+
+  - id: sintese
+    title: "Síntese"
+    content: |
+      O diagnóstico de qualquer distúrbio ácido-básico segue sempre a mesma lógica de três passos: identificar acidemia ou alcalemia pelo pH; identificar a alteração primária (HCO3⁻ ou pCO2) que explica esse pH; e checar se a resposta compensatória está dentro da faixa matematicamente esperada — se não estiver, há um segundo distúrbio sobreposto. Essa lógica resolveu igualmente bem os cinco casos clínicos apresentados, dois deles simples e três com algum grau de sobreposição ou de margem estreita de compensação.
+
+      O ânion-gap — idealmente corrigido pela albumina em pacientes graves, desnutridos ou hepatopatas — refina o diagnóstico etiológico da acidose metabólica, separando perda direta de bicarbonato (AG normal, hiperclorêmica) de acúmulo de ácido orgânico não medido (AG elevado, normoclorêmica). O delta ratio, por sua vez, ajuda a flagrar um distúrbio metabólico adicional escondido atrás de um AG elevado, quando a queda do HCO3⁻ é menor ou maior do que o aumento do AG sozinho explicaria.
+
+      Na prática clínica, a acidose metabólica é o distúrbio mais estudado em termos de tratamento específico. A prioridade é sempre a causa de base — volume, insulina, suporte hemodinâmico, conforme a etiologia — e o bicarbonato de sódio, apesar de fisiologicamente intuitivo, só tem evidência consistente de redução de terapia renal substitutiva num subgrupo estreito (acidemia com pH ≤ 7,10, tipicamente com injúria renal aguda associada). Fora desse subgrupo, nenhum benefício de mortalidade foi demonstrado, inclusive em ensaios grandes e recentes que testaram populações mais amplas ou diferentes desse estrato mais grave — o que reforça que a decisão de usar bicarbonato deve ser individualizada pela gravidade da acidemia e pela função renal, não aplicada de forma rotineira.
+
+    keyTakeaways:
+      - Os 3 passos (acidemia/alcalemia → alteração primária → compensação adequada?) resolvem qualquer gasometria isolada.
+      - "Bicarbonato de sódio: benefício reprodutível apenas em redução de TRS no subgrupo pH ≤ 7,10; nenhum benefício de mortalidade demonstrado fora dele."
+
+  - id: discussao
+    title: "Discussão: o que quatro ensaios sobre bicarbonato de sódio, juntos, realmente mostram"
+    content: |
+      Colocando os quatro estudos lado a lado, emerge uma convergência clara e uma tensão que vale a pena explicitar.
+
+      **Convergência**: nenhum dos quatro estudos — BICAR-ICU [Jaber et al., 2018](#ref-8), BICARICU-2 [Jung et al., 2025](#ref-10), a meta-análise conjunta dos dois [Fosset et al., 2026](#ref-9), e o SODa-BIC [Serpa Neto et al., 2026](#ref-11) — demonstrou redução de mortalidade com bicarbonato de sódio na população geral de acidemia grave. Isso é um padrão consistente ao longo de quase uma década de pesquisa (2018–2026), com desenhos e populações diferentes, o que fortalece a conclusão de que bicarbonato "de rotina" não deve ser esperado para reduzir óbitos.
+
+      **Tensão**: apesar dessa convergência sobre mortalidade, BICAR-ICU e BICARICU-2 — e a meta-análise dos dois — mostram, de forma reprodutível, uma redução expressiva no uso de terapia renal substitutiva, concentrada no subgrupo com acidemia mais grave (pH ≤ 7,10) e frequentemente com injúria renal aguda concomitante. Já o SODa-BIC, testando uma população mais ampla (pH < 7,30, sem exigência de IRA), não reproduziu esse efeito nem para TRS nem para o desfecho renal composto. A leitura mais honesta não é "bicarbonato funciona" nem "bicarbonato não funciona" — é que o efeito, quando existe, parece **restrito a um estrato específico de gravidade e função renal**, e desaparece quando a população se amplia.
+
+      **Implicação derivada**: para a prova e para a prática, isso sustenta a conduta já descrita na aula original e nos guias — reservar o bicarbonato de sódio para os casos mais graves (pH < 7,20, HCO3⁻ muito baixo) e reavaliar caso a caso, sem extrapolar esse racional para acidemias leves a moderadas, onde a evidência mais recente e mais ampla (SODa-BIC) não mostra benefício algum, nem mesmo em TRS.
+
+      Um segundo ponto de tensão, menos discutido na aula original, é metodológico: nem toda avaliação ácido-básica segue a abordagem fisiológica dos 3 passos usada neste material. [Adrogué et al., 2009](#ref-13) descrevem alternativas (excesso de base, abordagem físico-química de Stewart) que podem chegar a conclusões diagnósticas diferentes em cenários complexos (por exemplo, grandes distúrbios eletrolíticos ou hipoalbuminemia extrema) — a abordagem fisiológica é a mais ensinada e a mais aplicável à maioria dos casos de prova e de plantão, mas não é a única existente, nem necessariamente a mais precisa em todo cenário.
+    keyTakeaways:
+      - "Convergência: nenhum dos 4 estudos (2018–2026) mostrou benefício de mortalidade com bicarbonato de sódio na população geral."
+      - "Tensão: a redução de TRS aparece em BICAR-ICU/BICARICU-2 (subgrupo pH ≤ 7,10 / IRA), mas não no SODa-BIC (população mais ampla) — o efeito parece restrito a um estrato específico, não generalizável."
+
+  - id: leituras-recomendadas
+    title: "Leituras recomendadas"
+    content: |
+      As obras abaixo foram indicadas como leitura de base na aula original de Nefrologia (PUCPR). Diferente das referências citadas seção a seção neste material, elas cobrem o tema de forma mais ampla e não estão amarradas a uma afirmação pontual específica do texto — por isso ficam aqui como leitura complementar, e não na lista de referências citadas.
+
+      - JOHNSON, Richard J.; FEEHALLY, John; FLOEGE, Jürgen. Nefrologia clínica: abordagem abrangente. 5. ed. Rio de Janeiro: Guanabara Koogan, 2016.
+      - MOURA, Lúcio R. Requião; ALVES, Maria Almerinda Ribeiro (eds.). Tratado de Nefrologia. 1. ed. Rio de Janeiro: Atheneu, 2017. 2 v.
+      - RIELLA, Miguel Carlos. Princípios de nefrologia e distúrbios hidreletrolíticos. 6. ed. Rio de Janeiro: Guanabara Koogan, 2018. 1136 p.
+      - GOMES, Carlos P. Distúrbios do equilíbrio hidroeletrolítico e ácido-base: diagnóstico e tratamento. Manole Bibliotech: Editora Manole, 2020. (Sociedade Brasileira de Nefrologia)
+      - BADR, A.; NIGHTINGALE, P. Alternative approach to acid-base abnormalities. Critical Care & Pain, v. 7, n. 4, 2007.
+      - ROCCO, J. R. Diagnosis of the Acid-Base Metabolism Disturbances. Revista Brasileira de Terapia Intensiva, v. 15, n. 4, out./dez. 2003.
+
+      Nenhuma dessas seis obras foi verificada individualmente nesta conversão (não foram localizadas com segurança nas ferramentas disponíveis nas sessões AS1-B1/AS1-B2) — permanecem como leitura de base indicada pela aula original, não como citações verificadas.
+    keyTakeaways:
+      - Estas seis obras são leitura de base da aula original, não citações verificadas ponto a ponto nesta conversão.
+
+references:
+  - "BEREND, K.; DE VRIES, A. P. J.; GANS, R. O. B. Physiological approach to assessment of acid-base disturbances. New England Journal of Medicine, v. 371, n. 15, p. 1434-1445, 2014. DOI: 10.1056/NEJMra1003327."
+  - "SEIFTER, J. L. Integration of acid-base and electrolyte disorders. New England Journal of Medicine, v. 371, n. 19, p. 1821-1831, 2014. DOI: 10.1056/NEJMra1215672."
+  - "NARINS, R. G.; EMMETT, M. Simple and mixed acid-base disorders: a practical approach. Medicine (Baltimore), v. 59, n. 3, p. 161-187, 1980. DOI: 10.1097/00005792-198005000-00001."
+  - "ALBERT, M. S.; DELL, R. B.; WINTERS, R. W. Quantitative displacement of acid-base equilibrium in metabolic acidosis. Annals of Internal Medicine, v. 66, n. 2, p. 312-322, 1967. DOI: 10.7326/0003-4819-66-2-312."
+  - "HOPKINS, E.; SANVICTORES, T.; SHARMA, S. Physiology, Acid Base Balance. In: StatPearls [Internet]. Treasure Island (FL): StatPearls Publishing, 2022. Disponível em: https://www.ncbi.nlm.nih.gov/books/NBK507807/. Acesso em: 17 set. 2026."
+  - "CASTRO, D.; PATIL, S. M.; ZUBAIR, M.; KEENAGHAN, M. Arterial Blood Gas. In: StatPearls [Internet]. Treasure Island (FL): StatPearls Publishing, 2024. Disponível em: https://www.ncbi.nlm.nih.gov/books/NBK536919/. Acesso em: 17 set. 2026."
+  - "STATPEARLS. Anion Gap and Non-Anion Gap Metabolic Acidosis. In: StatPearls [Internet]. Treasure Island (FL): StatPearls Publishing. Disponível em: https://www.ncbi.nlm.nih.gov/books/NBK448090/. Acesso em: 17 set. 2026."
+  - "JABER, S. et al. Sodium bicarbonate therapy for patients with severe metabolic acidaemia in the intensive care unit (BICAR-ICU): a multicentre, open-label, randomised controlled, phase 3 trial. The Lancet, v. 392, n. 10141, p. 31-40, 2018. DOI: 10.1016/S0140-6736(18)31080-8."
+  - "FOSSET, M. et al. Sodium bicarbonate therapy in severe metabolic acidemia: an individual patient data meta-analysis of the BICAR-ICU and BICAR-ICU2 trials. Critical Care, v. 30, n. 1, 2026. DOI: 10.1186/s13054-026-06206-3."
+  - "JUNG, B. et al. Sodium Bicarbonate for Severe Metabolic Acidemia and Acute Kidney Injury: The BICARICU-2 Randomized Clinical Trial. JAMA, v. 334, n. 22, p. 2000-2010, 2025. DOI: 10.1001/jama.2025.20231. PMID: 41159812."
+  - "SERPA NETO, A. et al. Sodium Bicarbonate for Critically Ill Adults with Metabolic Acidosis and Shock. New England Journal of Medicine, 2026. DOI: 10.1056/NEJMoa2600526."
+  - "KDIGO Clinical Practice Guideline for Acute Kidney Injury. Kidney International Supplements, v. 2, n. 1, p. 1-138, 2012."
+  - "ADROGUÉ, H. J.; GENNARI, F. J.; GALLA, J. H.; MADIAS, N. E. Assessing acid-base disorders. Kidney International, v. 76, n. 12, p. 1239-1247, 2009. DOI: 10.1038/ki.2009.359."
+  - "YOUNES-IBRAHIM, M. et al. Guia de Assistência Nefrológica Hospitalar. Jornal Brasileiro de Nefrologia, v. 47, n. 3, e20240239, 2025. DOI: 10.1590/2175-8239-JBN-2024-0239en."

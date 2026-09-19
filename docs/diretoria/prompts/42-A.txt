@@ -1,0 +1,118 @@
+MISSÃO 42-A — ENTRADA ASSISTIDA DE MATERIAIS
+
+Papel:
+Você é uma sessão executiva do NexusMed. Implemente e verifique esta missão, mas não publique, não faça merge em main e não toque no Supabase remoto.
+
+Objetivo de produto:
+Uma pessoa sem conhecimento de programação deve conseguir selecionar o arquivo estruturado de um compêndio, conferir seu conteúdo e criar um rascunho no NexusMed usando apenas a interface.
+
+Contexto executivo:
+- Fases 1 e 2 estão encerradas.
+- Estamos na Fase 3: tornar a Área Editorial operacional sem programação.
+- O diagnóstico da diretoria confirmou que o CMS edita, revisa, atesta e publica materiais já existentes.
+- O bloqueio atual é a ausência de uma ponte entre o arquivo produzido com IA e o rascunho no CMS.
+- Não estamos tentando provar que um programador consegue executar uma carga; estamos tornando essa operação utilizável pelo proprietário leigo.
+
+Fonte de verdade:
+- Repositório: C:\Users\vinic\OneDrive\Projetos\SynapseMed\canonical
+- Branch oficial: origin/main
+- Caso de prova:
+  C:\Users\vinic\OneDrive\Estudos\Base de Estudos\Biblioteca\Medicina\Infectologia\Clínica\_nexusmed-nativo\meningite-bacteriana.compendium.yaml
+
+Abertura obrigatória:
+1. Leia AGENTS.md e, na ordem indicada por ele, os documentos operacionais.
+2. Leia docs/diretoria/MODELO-DIRETORIA.md.
+3. Execute o preflight do SESSION_PROTOCOL.md.
+4. Confirme que origin/main não avançou de forma inesperada.
+5. Crie branch e worktree isolados a partir de origin/main.
+6. Registre qualquer divergência antes de editar.
+
+Resultado esperado:
+Na aba de compêndios da Área Editorial deve existir uma ação compreensível como "Importar material".
+
+O fluxo deve permitir:
+1. escolher o arquivo;
+2. interpretar o formato estruturado do compêndio;
+3. validar o conteúdo antes de gravar;
+4. mostrar uma pré-visualização com título, disciplina, tema, número de seções, referências, tags e campos ausentes;
+5. informar claramente que será criado apenas um rascunho;
+6. permitir confirmar ou cancelar;
+7. criar o rascunho somente após confirmação;
+8. mostrar sucesso ou erros em linguagem compreensível;
+9. impedir duplicação acidental do mesmo material.
+
+O arquivo de Meningite bacteriana é o teste de aceitação real. Preserve seu conteúdo original e não o edite nesta missão.
+
+Princípios de experiência:
+- Nenhuma exigência de terminal, comando, UUID, ID interno ou conhecimento de YAML.
+- Não mostrar detalhes técnicos como mensagem principal de erro.
+- Não publicar automaticamente.
+- Não pressupor que todo arquivo recebido é válido.
+- Não esconder perda de campos: tudo que não puder ser importado deve aparecer na pré-visualização.
+- A ação que apenas cria ou atualiza conteúdo deve usar "Salvar rascunho", nunca "Publicar".
+- O usuário precisa distinguir claramente:
+  Arquivo selecionado → Conferência → Rascunho criado → Revisão pendente → Publicação futura.
+
+Liberdade de execução:
+Você pode adaptar componentes, parser, validação e arquitetura depois de inspecionar o sistema real. Não siga uma solução técnica predeterminada se encontrar uma alternativa mais simples e segura.
+
+Classifique descobertas durante a execução:
+- bloqueante para esta missão;
+- necessária para alcançar o objetivo;
+- separável para missão posterior;
+- opcional.
+
+Implemente somente as duas primeiras categorias. Não expanda para reforma geral do CMS.
+
+Proteções obrigatórias:
+- Trabalhar somente em branch/worktree isolados.
+- Usar apenas Supabase local para testes de escrita.
+- Não acessar nem escrever no Supabase remoto.
+- Não fazer merge em main.
+- Não fazer push de main.
+- Não acionar deploy.
+- Não modificar o arquivo original de Meningite.
+- Não criar publicação, atestação ou revisão automática.
+- Não importar questões ou flashcards nesta missão.
+- Não executar scripts legados de carga contra o remoto.
+
+Validação mínima:
+- teste do parser/validador com arquivo válido;
+- teste com arquivo inválido;
+- teste de material duplicado;
+- teste de cancelamento antes da gravação;
+- teste de que o resultado nasce em draft;
+- teste de que nenhuma publicação é acionada;
+- ensaio em navegador real contra Supabase local;
+- confirmação visual de que o material de Meningite aparece como rascunho com 11 seções e 13 referências;
+- typecheck, lint, testes aplicáveis e build;
+- git diff --check;
+- revisão do diff e varredura de segredos.
+
+Se a arquitetura atual impedir gravação segura ou atômica:
+Não improvise carga parcial silenciosa. Pare, descreva o impedimento e proponha a menor correção necessária.
+
+Documentação:
+- Guarde este prompt em docs/diretoria/prompts/42-A.txt.
+- Atualize TASKS.md com o estado real.
+- Atualize PROJECT_STATE.md somente se o estado verificável mudar.
+- Atualize DECISIONS.md apenas se surgir uma decisão durável nova.
+- Não registre como publicado algo que existe apenas localmente.
+
+Formato obrigatório do retorno:
+RETORNO: 42-A
+
+- Resultado: concluído, parcial ou bloqueado
+- Propósito da missão
+- Experiência obtida pelo usuário
+- Alterações realizadas
+- Caso de prova de Meningite
+- Validações e resultados reais
+- Descobertas separadas da missão
+- Ambientes tocados
+- Dados ou fixtures criados e removidos
+- Estado da branch e publicação
+- Riscos restantes
+- Próxima decisão da diretoria
+
+Não faça merge ou publicação. Entregue uma branch candidata para análise da diretoria.

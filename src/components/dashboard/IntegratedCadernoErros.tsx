@@ -15,6 +15,7 @@ import {
   ArrowRight,
   ExternalLink,
   ArrowLeft,
+  FileDown,
 } from 'lucide-react';
 import {
   Question,
@@ -29,6 +30,7 @@ import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { answersRepository } from '../../repositories/AnswersRepository';
 import { questionsRepository } from '../../repositories/QuestionsRepository';
 import { errorNotebookRepository } from '../../repositories/ErrorNotebookRepository';
+import { ExportCadernoModal } from './ExportCadernoModal';
 
 interface IntegratedCadernoErrosProps {
   questions: Question[];
@@ -60,6 +62,7 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const [answers, setAnswers] = useState<Record<string, QuestionAnswerRecord>>({});
   const [reviews, setReviews] = useState<Record<string, QuestionReviewResult>>({});
@@ -291,6 +294,16 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
           )}
           <button
             type="button"
+            onClick={() => setIsExportModalOpen(true)}
+            disabled={allMistakes.length === 0}
+            className="px-4 py-3 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/30 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            title="Exportar dossiê para impressão ou Notion / Obsidian"
+          >
+            <FileDown className="w-4 h-4" />
+            <span>Exportar Dossiê</span>
+          </button>
+          <button
+            type="button"
             onClick={onStartErrorSimulado}
             disabled={allMistakes.length === 0}
             className={`px-5 py-3 rounded-2xl text-xs font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer elev-md ${
@@ -425,6 +438,75 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
             );
           })}
         </div>
+
+        {/* Raio-X Prescritivo Baseado no Padrão Predominante */}
+        {metrics.total > 0 && (() => {
+          const sortedReasons = (Object.entries(metrics.reasonCounts) as [string, number][]).sort((a, b) => Number(b[1]) - Number(a[1]));
+          const topReason = sortedReasons[0];
+          if (!topReason || topReason[1] === 0) return null;
+
+          const topKey = topReason[0];
+          const topCount = Number(topReason[1]);
+          const topPercent = Math.round((topCount / metrics.total) * 100);
+
+          let prescription = {
+            title: 'Prescrição de Estudo: Reforço Teórico Imediato',
+            text: 'Mais de 40% das suas incorreções decorrem de conceitos ou diretrizes não consolidados. Antes de fazer novas baterias de questões, priorize os Compêndios Teóricos e revisite a fisiopatologia básica.',
+            badge: 'Foco: Biblioteca & Diretrizes',
+            color: 'border-amber-400/40 bg-amber-500/10 text-amber-900 dark:text-amber-200',
+          };
+
+          if (topKey === 'pegadinha') {
+            prescription = {
+              title: 'Prescrição de Estudo: Calibração contra Distratores',
+              text: 'Seu padrão de erro aponta excelente base teórica, mas vulnerabilidade a distratores capciosos formulados pelas bancas. Adote a eliminação ativa obrigatória antes de assinalar a alternativa.',
+              badge: 'Foco: Análise de Distratores',
+              color: 'border-rose-400/40 bg-rose-500/10 text-rose-900 dark:text-rose-200',
+            };
+          } else if (topKey === 'falta_atencao') {
+            prescription = {
+              title: 'Prescrição de Estudo: Rastreio de Comandos Críticos',
+              text: 'Erros por leitura apressada do enunciado ("exceto", "incorreta", valores limítrofes). Diminua o ritmo em 15 segundos por questão e sublinhe o comando antes das alternativas.',
+              badge: 'Foco: Atenção ao Comando',
+              color: 'border-sky-400/40 bg-sky-500/10 text-sky-900 dark:text-sky-200',
+            };
+          } else if (topKey === 'raciocinio_clinico') {
+            prescription = {
+              title: 'Prescrição de Estudo: Fluxogramas de Decisão Clínica',
+              text: 'Dificuldade concentrada no encadeamento conduta vs diagnóstico ou no timing de exames complementares. Priorize fluxogramas e guidelines das especialidades envolvidas.',
+              badge: 'Foco: Fluxogramas Clínicos',
+              color: 'border-purple-400/40 bg-purple-500/10 text-purple-900 dark:text-purple-200',
+            };
+          } else if (topKey === 'tempo_esgotado') {
+            prescription = {
+              title: 'Prescrição de Estudo: Gestão de Ritmo de Prova',
+              text: 'O tempo limite está comprometendo a precisão na escolha final. Treine no modo Simulado com limite cronometrado de 2 a 3 minutos por questão.',
+              badge: 'Foco: Gestão de Cronômetro',
+              color: 'border-slate-400/40 bg-slate-500/10 text-slate-900 dark:text-slate-200',
+            };
+          }
+
+          return (
+            <div className={`p-4 rounded-2xl border ${prescription.color} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-4`}>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-md bg-white/60 dark:bg-black/30 font-bold text-[10px] uppercase tracking-wider">
+                    {prescription.badge}
+                  </span>
+                  <span className="text-xs font-bold">{prescription.title} ({topPercent}% dos seus erros)</span>
+                </div>
+                <p className="text-xs leading-relaxed max-w-3xl opacity-90">{prescription.text}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedReason(topKey)}
+                className="px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold transition-all shrink-0 cursor-pointer self-end sm:self-auto"
+              >
+                Filtrar apenas {reasonConfig[topKey]?.label}
+              </button>
+            </div>
+          );
+        })()}
       </div>
 
       {/* ── Barra de Busca e Filtros Avançados ── */}
@@ -713,6 +795,15 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
           })}
         </div>
       )}
+
+      {/* Modal de Exportação do Dossiê de Reta Final */}
+      <ExportCadernoModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        mistakes={allMistakes}
+        errorLogs={errorLogsByQuestion}
+        disciplines={disciplines}
+      />
     </div>
   );
 };

@@ -1,0 +1,83 @@
+# Fixture de teste e2e (import-material.spec.ts). Substitui a dependência de
+# um arquivo fora do repositório (acervo pessoal em C:/Users/...), que não
+# existe no runner de CI. Mesma forma do caso de prova real: título,
+# disciplina/tema e contagem de seções (11) e referências (13). O conteúdo é
+# sintético — não é material médico revisado.
+title: "Meningite Bacteriana Aguda"
+subtitle: "Fixture sintética para testes de importação"
+disciplineName: "Infectologia"
+themeName: "Clínica"
+author: "Fixture de teste"
+estimatedReadTimeMinutes: 20
+tags:
+  - fixture-e2e
+sections:
+  - id: secao-1
+    title: "Seção 1"
+    content: "Conteúdo sintético da seção 1, apenas para o teste de importação."
+    keyTakeaways:
+      - "Ponto 1"
+  - id: secao-2
+    title: "Seção 2"
+    content: "Conteúdo sintético da seção 2, apenas para o teste de importação."
+    keyTakeaways:
+      - "Ponto 2"
+  - id: secao-3
+    title: "Seção 3"
+    content: "Conteúdo sintético da seção 3, apenas para o teste de importação."
+    keyTakeaways:
+      - "Ponto 3"
+  - id: secao-4
+    title: "Seção 4"
+    content: "Conteúdo sintético da seção 4, apenas para o teste de importação."
+    keyTakeaways:
+      - "Ponto 4"
+  - id: secao-5
+    title: "Seção 5"
+    content: "Conteúdo sintético da seção 5, apenas para o teste de importação."
+    keyTakeaways:
+      - "Ponto 5"
+  - id: secao-6
+    title: "Seção 6"
+    content: "Conteúdo sintético da seção 6, apenas para o teste de importação."
+    keyTakeaways:
+      - "Ponto 6"
+  - id: secao-7
+    title: "Seção 7"
+    content: "Conteúdo sintético da seção 7, apenas para o teste de importação."
+    keyTakeaways:
+      - "Ponto 7"
+  - id: secao-8
+    title: "Seção 8"
+    content: "Conteúdo sintético da seção 8, apenas para o teste de importação."
+    keyTakeaways:
+      - "Ponto 8"
+  - id: secao-9
+    title: "Seção 9"
+    content: "Conteúdo sintético da seção 9, apenas para o teste de importação."
+    keyTakeaways:
+      - "Ponto 9"
+  - id: secao-10
+    title: "Seção 10"
+    content: "Conteúdo sintético da seção 10, apenas para o teste de importação."
+    keyTakeaways:
+      - "Ponto 10"
+  - id: secao-11
+    title: "Seção 11"
+    content: "Conteúdo sintético da seção 11, apenas para o teste de importação."
+    keyTakeaways:
+      - "Ponto 11"
+references:
+  - "Referência sintética 1"
+  - "Referência sintética 2"
+  - "Referência sintética 3"
+  - "Referência sintética 4"
+  - "Referência sintética 5"
+  - "Referência sintética 6"
+  - "Referência sintética 7"
+  - "Referência sintética 8"
+  - "Referência sintética 9"
+  - "Referência sintética 10"
+  - "Referência sintética 11"
+  - "Referência sintética 12"
+  - "Referência sintética 13"
