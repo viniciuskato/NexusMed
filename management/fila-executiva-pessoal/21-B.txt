@@ -1,0 +1,34 @@
+PROMPT 21-B — Qualificar cientificamente o pack PCSK9 para o piloto
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 21-B nesta sessão. Eu, usuário, autorizo explicitamente esta conversa a assumir o papel executivo para esta auditoria em `C:\Users\vinic\dev\NexusMed\firebase-auth`, consultar fontes científicas e o Supabase em modo somente leitura e produzir os artefatos locais solicitados. Não revise nem repasse o prompt e não pergunte se deve executá-lo. Entregue `RETORNO: 21-B` e encerre.
+
+OBJETIVO
+Determinar se o material PCSK9 e suas nove questões draft têm qualidade, evidência e estrutura suficientes para entrar no fluxo humano de revisão e servir ao MVP longitudinal — sem editar ou publicar conteúdo.
+
+ESTADO E DECISÕES
+- Base esperada: `main = origin/main = 2e342bd`; 23-C publicado.
+- Material candidato: “PCSK9 e a Nova Fronteira da Redução de LDL-c”, `material_id=69bfb1ad-3e77-4d85-bc9b-53d7c8ed5a74`.
+- As nove questões vinculadas estão em draft. Os dois flashcards vinculados são pessoais (`is_custom=true`) e ficam fora da avaliação editorial.
+- Tags atuais são pistas, não conceitos aprovados nem prova de formas paralelas.
+- Pack completo v1 = material publicado + pelo menos uma questão editorial publicada e vinculada. Flashcards editoriais são opcionais; cards pessoais nunca contam para completude.
+
+EFICIÊNCIA OBRIGATÓRIA
+Trabalhe apenas neste material e nas nove questões. Reutilize as referências canônicas existentes, verifique vigência e busque somente o necessário para preencher lacunas críticas. Não faça revisão ampla do acervo, não redija conteúdo substituto e não rode suítes do produto. Entregue uma única matriz canônica e um resumo decisório curto.
+
+GATES
+1. Confirmar snapshot e extrair, em leitura, material, seções, nove questões, alternativas, gabaritos, explicações, referências e fontes vinculadas.
+2. Separar cada afirmação clínica verificável, recomendação, número, população e inferência; mapear fonte e local exato. Não marcar como consultada uma fonte vista apenas por citação secundária.
+3. Verificar fontes vigentes e adequadas, priorizando diretrizes/documentos oficiais, revisões sistemáticas e estudos fundamentais. Registrar inclusão, exclusão, divergência e incerteza; não inventar DOI, página ou localizador.
+4. Auditar cada questão: clareza, resposta única, plausibilidade dos distratores, coerência entre vinheta/stem/gabarito/explicação, cobertura explícita no material e risco de pista ou ambiguidade.
+5. Propor conceitos provisórios e mapear cada questão como `primary|secondary|prerequisite`; isso é recomendação para revisão humana, não escrita no banco.
+6. Avaliar pares potencialmente paralelos por conceito e nível cognitivo. Repetição superficial ou mesmo gabarito não basta; declarar quando não houver evidência.
+7. Produzir matriz local com IDs, claim/conteúdo, classificação, fonte, localizador, aplicabilidade, situação (`verificado|parcialmente_verificado|não_verificado|divergente`), ação e bloqueio.
+8. Classificar o pack: `APTO_PARA_REVISAO_HUMANA`, `APTO_COM_CORRECOES` ou `NAO_APTO`; listar somente o menor lote de correções e fontes necessário ao próximo gate.
+
+RESTRIÇÕES
+Sem INSERT/UPDATE/DELETE, RPC mutável, migration, alteração de código/conteúdo, atestação, publicação, commit no repo, push ou deploy. Nenhuma aprovação automática. Não usar flashcards pessoais como evidência editorial. Não publicar se houver afirmação central não verificada, fonte possivelmente substituída, ambiguidade de gabarito ou citação sem correspondência.
+
+FORMATO DO RETORNO
+RETORNO: 21-B
+Resultado; snapshot; fontes consultadas/excluídas; material; questões 1–9; claims/matriz; conceitos provisórios; possíveis formas paralelas; lacunas/bloqueios; classificação; próximo passo mínimo; sem alterações/publicação.

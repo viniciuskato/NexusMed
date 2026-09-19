@@ -1,0 +1,24 @@
+CORREÇÃO OBRIGATÓRIA DO CHECKPOINT UI-2026-09-15-BOOTSTRAP
+
+O retorno anterior está REPROVADO. Corrija agora no mesmo projeto, sem reiniciar nem explicar o plano.
+
+FALHAS OBJETIVAS
+1. Reverta `package.json`: não aumente `--max-warnings` de 93 para 110. O gate deve revelar regressão; tolerar 103 avisos mascara dez avisos novos. Não reduza avisos fora dos arquivos tocados e não use `eslint-disable` novo.
+2. Remova integralmente `DailyHandoffModal` e todas as importações, estados, handlers, botões e referências à “Passagem de Plantão”. Não corrija sua tipagem: a funcionalidade foi explicitamente rejeitada.
+3. Remova integralmente `BancaPerformanceRadar` e todas as importações/renderizações/chips associados. O acervo publicado não sustenta essa métrica. Não corrija sua tipagem.
+4. Cumpra os demais itens já ordenados no prompt `UI-20260914-CORRIGIR-EXPORT-AISTUDIO`: remover `ClinicalCognitiveProfile`/Cognition Engine, `ExportCadernoModal`, `ClinicalPomodoroWidget`, swipe que avalia SRS e inferência de selos científicos no `SafeMarkdown`.
+5. Preserve somente os ganhos autorizados naquele prompt. Não crie substitutos.
+
+GATE
+- `npm run typecheck`: zero erros.
+- `npm run lint`: deve passar com o teto canônico 93; informe erros e avisos exatos. Se houver mais de 93, corrija somente avisos novos introduzidos pelo experimento até voltar ao baseline — não altere o teto.
+- `npm run test:unit`, `npm run build` e verificação completa de símbolos de debug disponíveis.
+- Pesquise nomes/importações/textos das funcionalidades removidas e reporte zero ocorrências executáveis; comentários históricos só podem permanecer se necessários.
+- Teste preview desktop/mobile e claro/escuro, sem métricas inventadas e sem controles órfãos.
+
+ENTREGA
+Crie novo checkpoint e novo ZIP completo. Não reutilize `nexusmed-ui-20260915-bootstrap.zip`.
+
+FORMATO
+RETORNO: UI-2026-09-15-01-CORRIGIDO
+Resultado; checkpoint; cada item removido; `package.json` restaurado; contagens de busca; typecheck/lint/unit/build; preview; manifesto; higiene real do ZIP; nome do novo ZIP; confirmação de nenhum GitHub sync/deploy.

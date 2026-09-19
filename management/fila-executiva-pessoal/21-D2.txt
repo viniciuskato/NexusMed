@@ -1,0 +1,32 @@
+PROMPT 21-D2 — Fechar consistência do vínculo antes do release do CMS humano
+
+TRILHA: GATE TÉCNICO — CODEX EXECUTIVO
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 21-D2 em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Eu, usuário, autorizo corrigir e validar localmente a candidata `work/21d-revisao-humana-cms`. Não publique. Entregue `RETORNO: 21-D2` e encerre.
+
+OBJETIVO
+Impedir que uma falha do Supabase deixe o vínculo questão→material alterado apenas no cache local, preservando todo o restante do 21-D.
+
+ESTADO CONHECIDO
+- Base publicada: `main = origin/main = 2e342bd`.
+- Candidata: `work/21d-revisao-humana-cms`, commit `b32ce94`.
+- Em `QuestionsRepository.ts`, `updateQuestionMaterialLink()` altera o repositório local antes da confirmação remota e relança o erro remoto. Isso pode exibir vínculo que não existe no servidor até recarga.
+
+EFICIÊNCIA
+Leia somente o fluxo de vínculo, seus consumidores e testes 21-D. Faça o menor patch que torne o Supabase autoritativo quando configurado. Rode teste focado durante o ajuste e `verify:full` uma vez ao final.
+
+GATES
+1. Confirmar branch, HEAD, árvore, worktrees e ausência de escritor concorrente.
+2. Reproduzir em teste: sucesso remoto atualiza servidor e cache; rejeição remota preserva o cache anterior; modo sem Supabase continua local.
+3. Corrigir sem fila genérica, escrita otimista enganosa ou reenvio de stem, opções, gabarito, status ou conteúdo.
+4. Garantir erro humano/acionável na UI e estado visual coerente após falha, sem depender de recarregar a página.
+5. Reexecutar os cinco cenários E2E do 21-D, testes focados, `verify:full`, bundle sem debug, `git diff --check` e zero fixtures.
+6. Atualizar apenas documentação operacional necessária; commit local e árvore limpa.
+
+RESTRIÇÕES
+Sem migration, escrita remota, mudança editorial, atestação, publicação de conteúdo, push, merge, deploy, redesign ou refatoração de outros repositórios.
+
+FORMATO DO RETORNO
+RETORNO: 21-D2
+Resultado; estado inicial/final; reprodução; contrato antes/depois; testes e contagens; commit; riscos; não publicado.

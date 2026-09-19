@@ -1,0 +1,32 @@
+PROMPT 25-A — Banco editorial de temas futuros
+
+TRILHA: CONTEÚDO — CLAUDE EXECUTIVO
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 25-A em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Eu, usuário, autorizo criar e validar localmente apenas o banco editorial documental. Não implemente CMS, schema ou interface. Entregue `RETORNO: 25-A` e encerre.
+
+OBJETIVO
+Criar uma fonte canônica, simples e versionável para capturar, triar, priorizar e acompanhar temas futuros sem confundi-los com conteúdo publicado, `themes` ou `concepts`.
+
+EFICIÊNCIA
+Reutilize os candidatos e lacunas já encontrados em 21-A2 e auditorias anteriores. Uma tabela estruturada e um schema leve bastam. Não pesquise cada tema, crie automação ou replique histórico.
+
+ESCOPO
+1. Definir campos mínimos: id estável; título; localização curricular proposta (`ciclo|disciplina|tema`); tipo (`material|questions|flashcards|complete_pack`); conceitos/sistemas transversais; justificativa; objetivos preliminares; prioridade; estado; origem; esforço; dependências; decisão e datas.
+2. Estados: `idea|triage|approved|in_production|blocked|completed|archived`, com significado e transições permitidas documentados.
+3. Importar como `idea` os candidatos confirmados das auditorias, com origem rastreável e sem duplicação.
+   Incluir explicitamente `IDEA-3 — Asma` e `IDEA-4 — DPOC`, ambas em `Clínico → Pneumologia → Doenças obstrutivas`, como `complete_pack`. Manter itens separados. Registrar que o material atual de síndromes oferece cobertura parcial e que `Farmacologia e farmacoterapia da asma.docx` é entrada legada a auditar, não fonte aprovada.
+   Importar também os candidatos `IDEA-P4-001` a `IDEA-P4-117` de `C:\Users\vinic\OneDrive\Organizacao\PAUTA-CANDIDATOS-PLANOS-ENSINO-4P-2026-09-15.md`, todos como `idea`. Consolidar IDEA-P4-038/039 com IDEA-3/4 sem duplicá-las nem perder a proveniência do plano de ensino.
+4. Separar lacuna comprovada, hipótese e oportunidade; não promover item automaticamente.
+5. Definir critérios editoriais curtos de priorização: necessidade curricular, impacto, cobertura existente, qualidade de fontes, esforço e dependências.
+6. Validar unicidade, campos obrigatórios, referências internas e leitura humana. Registrar requisitos futuros de interface para o AI Studio, sem prototipar.
+
+TAXONOMIA
+Usar `ciclo → disciplina → tema → material`, uma localização principal por material. Packs, conceitos, sistemas, competências, lente e estado são metadados transversais. Não criar disciplina/tema produtivo a partir de uma ideia ainda não aprovada e não repetir automaticamente o título da pauta como tema.
+
+RESTRIÇÕES
+Sem conteúdo médico novo, pesquisa ampla, schema Supabase, CMS, UI, migration, dado remoto, automação, IA, commit, push ou deploy. Não transformar pauta em aprovação ou publicação.
+
+FORMATO DO RETORNO
+RETORNO: 25-A
+Resultado; estrutura; itens importados; critérios; validações; ambiguidades/decisões; artefatos; requisitos futuros de interface; sem implementação no produto.

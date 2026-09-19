@@ -1,0 +1,32 @@
+Rode você mesmo este trabalho nesta sessão executiva. Eu, usuário, autorizo explicitamente a pesquisa em fontes oficiais brasileiras e a edição do artefato local abaixo. Não pergunte se deve executar, revisar ou validar premissas.
+
+PROMPT 38-A2 — Complemento: calendário PNI na seção de Prevenção do compêndio de Meningite Bacteriana
+
+CONTEXTO
+O compêndio `meningite-bacteriana.compendium.yaml` (38-A) foi produzido e revisado. Uma lacuna real foi identificada na seção `prevencao`: ela detalha o calendário americano (ACIP, 2024) para pneumocócica em adultos, mas não detalha o calendário brasileiro (PNI — Programa Nacional de Imunizações) para meningocócica e pneumocócica, que é o relevante para um estudante de medicina no Brasil.
+
+ARQUIVO A EDITAR (não recriar do zero, não tocar nas outras 10 seções)
+`C:\Users\vinic\OneDrive\Estudos\Base de Estudos\Biblioteca\Medicina\Infectologia\Clínica\_nexusmed-nativo\meningite-bacteriana.compendium.yaml`
+
+ESCOPO
+1. Pesquise o calendário vacinal vigente do PNI (Ministério da Saúde) para: vacina pneumocócica conjugada (esquema infantil de rotina — doses e idades) e vacina meningocócica conjugada (ACWY e/ou C, conforme o que estiver vigente no PNI hoje — doses, idades, reforços), incluindo se há diferença entre o calendário público (PNI/SUS) e o que está disponível na rede privada (ex. MenB, cobertura ACWY mais ampla), deixando essa diferença explícita se existir.
+2. Edite apenas a seção `id: prevencao` do YAML, acrescentando esse conteúdo de forma integrada ao texto já existente (não duplicar o que já está lá sobre Hib/ACIP/quimioprofilaxia — complementar com a realidade brasileira ao lado da americana já presente).
+3. Adicione a(s) referência(s) oficial(is) do PNI/Ministério da Saúde à lista `references[]` ao final do arquivo, com o próximo número sequencial disponível, e o marcador `[N](#ref-N)` correspondente no texto novo — sem renumerar as referências existentes.
+4. Atualize `keyTakeaways` da seção `prevencao` para refletir o calendário brasileiro, mantendo os itens já corretos sobre ACIP/quimioprofilaxia.
+5. Se o calendário do PNI mudou recentemente ou houver dúvida sobre a vigência exata (ex. mudança de MenC para MenACWY no calendário infantil), declare isso no texto e marque `LACUNA_DOCUMENTAL` em vez de presumir.
+
+FRONTEIRAS
+- Não alterar nenhuma outra seção do YAML.
+- Não criar questões/flashcards nesta execução.
+- Não tocar Supabase/produto/repositório do NexusMed.
+
+EFICIÊNCIA
+Pesquisa dirigida só ao calendário PNI de pneumocócica e meningocócica; edição cirúrgica no arquivo existente, sem reescrever o restante.
+
+FORMATO DO RETORNO
+RETORNO: 38-A2
+Resultado: concluído ou parcial
+O que foi adicionado à seção de prevenção:
+Fonte(s) oficial(is) usada(s):
+Lacunas documentais (se houver):
+Confirmação: nenhuma outra seção do YAML alterada, nenhuma questão/flashcard criado, nenhuma alteração de produto/repositório/produção.

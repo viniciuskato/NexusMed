@@ -1,0 +1,37 @@
+PROMPT UI — Navegação curricular organizada do NexusMed
+
+TRILHA: INTERFACE — GOOGLE AI STUDIO
+
+MODO DE EXECUÇÃO
+Trabalhe somente no preview do NexusMed. Proponha e prototipe a navegação descrita abaixo com dados locais representativos. Não sincronize com GitHub, não altere backend/conteúdo e não publique. Entregue checkpoint, manifesto e ZIP.
+
+OBJETIVO
+Permitir que o estudante encontre materiais sem conhecer a estrutura interna, usando uma hierarquia previsível e sem duplicação visual.
+
+MODELO APROVADO PARA O PROTÓTIPO
+- Catálogo principal: `ciclo → disciplina → tema → material`.
+- Um material tem uma única localização principal.
+- Entradas derivadas: “Por ciclo”, “Por especialidade/sistema” e “Packs de estudo”. Não representar essas visões como cópias do material.
+- Conceitos, sistemas, competências, lente e estado editorial são filtros/metadados transversais.
+- Anatomia Cardíaca: `Básico → Anatomia → Sistema cardiovascular`.
+- Ciclo Cardíaco: `Básico → Fisiologia → Fisiologia cardiovascular`.
+- Semiologia Cardíaca: `Clínico → Cardiologia → Semiologia cardiovascular`.
+- PCSK9: `Clínico → Cardiologia → Dislipidemias e prevenção cardiovascular`.
+- `Medicine` não participa do catálogo.
+
+TAREFAS
+1. Criar uma única proposta para descoberta, expansão/recolhimento, busca e breadcrumb da árvore.
+2. Mostrar contagens honestas e estados vazio/carregando/erro; não criar áreas vazias apenas para completar currículo.
+3. Manter packs claramente distintos da localização curricular.
+4. Provar: localizar Anatomia Cardíaca; voltar ao nível anterior; localizar PCSK9; abrir um pack sem perder contexto; usar busca e limpar filtro.
+5. Validar desktop/mobile, claro/escuro, teclado, foco e leitor de tela.
+
+EFICIÊNCIA
+Não redesenhe dashboard, leitor, CMS ou conteúdo. Reutilize componentes/tokens existentes; uma solução recomendada, sem variantes decorativas. Se faltar contrato de dados, use fixture mínima e registre a dependência, sem inventar backend.
+
+RESTRIÇÕES
+Sem schema, migration, Supabase, RPC, RLS, auth, repositórios, conteúdo médico, taxonomia persistida, métrica inventada, dependência nova, GitHub ou deploy. O ZIP seguirá pelo gate 28-A.
+
+FORMATO DO RETORNO
+RETORNO: UI-NAVEGACAO-TAXONOMIA
+Resultado; checkpoint; jornada; manifesto; estados; acessibilidade; testes de preview; dependências técnicas; higiene do ZIP; nome do ZIP.

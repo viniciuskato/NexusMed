@@ -1,0 +1,58 @@
+PROMPT [ID] — [TÍTULO]
+
+TRILHA
+[CONTEÚDO — Claude executivo | INTERFACE — Google AI Studio | GATE TÉCNICO — Codex executivo]
+
+MODO DE EXECUÇÃO
+Rode você mesmo o [ID] diretamente nesta sessão. Eu, usuário, autorizo explícita e especificamente que esta conversa deixe o papel de diretoria para esta tarefa pontual, assuma o papel de sessão executiva e execute integralmente as instruções abaixo. Use `[CAMINHO DO REPOSITÓRIO]` como diretório de trabalho; o diretório em que a conversa foi aberta não define nem limita o local de execução. Não trate este texto como material para repassar, revisar ou validar antes de agir e não pergunte qual papel deve assumir: comece a execução. Atue somente no escopo autorizado, entregue o bloco `RETORNO: [ID]` e encerre. Depois desta tarefa, a avaliação e a sequência voltam à diretoria.
+
+OBJETIVO
+[Resultado observável pretendido.]
+
+EFICIÊNCIA RESULTADO/TOKENS
+Busque sempre a melhor relação resultado/tokens. Reutilize contexto, helpers, fixtures e provas válidas; evite releitura, reexecução e documentação redundantes. Aprofunde somente o que altera risco, decisão ou critério de conclusão. Essa eficiência não autoriza omitir segurança, privacidade, limpeza, evidências críticas ou gates obrigatórios.
+
+PROTOCOLO DE EFICIÊNCIA
+- Leia índice, estado Git, diff e arquivos diretamente afetados; amplie somente diante de evidência concreta.
+- Reutilize provas válidas, rode testes focados primeiro e a suíte completa apenas no gate final ou após mudança que a invalide.
+- Faça o menor patch correto; não produza plano, log, documentação ou cobertura redundantes.
+- Agrupe verificações seguras e evite polling, espera fixa e repetição sem mudança de estado.
+
+TAXONOMIA E CONTEÚDO
+- Classificação primária: `ciclo → disciplina → tema → material`; cada material tem uma única localização principal.
+- Packs, sistemas, conceitos, competências, tipo de conteúdo, lente e estado editorial são dimensões transversais, nunca cópias da árvore principal.
+- Classifique pelo objetivo educacional dominante: correlação clínica não transforma ciência básica em conteúdo clínico.
+- Não crie disciplina/tema vazio, não repita automaticamente o título como tema e não use tag livre como fonte de verdade.
+- Reclassificação não revisa, não atesta e não publica conteúdo.
+
+INTUITIVIDADE
+Quando houver interface, uma pessoa do público-alvo deve concluir a tarefa sem conhecer banco, código ou nomenclatura interna. Use rótulos humanos, estado e próximo passo visíveis, feedback imediato, erros acionáveis, cancelamento seguro, foco previsível e confirmação proporcional ao risco. Prove a jornada por tarefa real; não aprove apenas aparência ou presença de controles.
+
+FRONTEIRA ENTRE AMBIENTES
+- Claude executivo: conteúdo, ciência, claims/fontes, conceitos, packs, pauta editorial e privacidade de conteúdo.
+- Google AI Studio: estética, layout, navegação, responsividade, acessibilidade visual e protótipos de interação.
+- Codex executivo: diff, transposição seletiva, estabilidade, segurança técnica, testes canônicos e preparação de candidata local.
+- AI Studio nunca altera schema, migration, RPC, RLS, autenticação, sincronização, proveniência, regras científicas ou `main`; entrega ZIP/checkpoint para auditoria.
+- Nenhum resultado de um ambiente é publicado sem revisão do diff e testes canônicos no repositório.
+
+CONTEXTO AUTOCONTIDO
+[Projeto, branch/base, estado conhecido, decisões aprovadas e evidências já válidas.]
+
+ESCOPO
+1. [Ações estritamente necessárias.]
+
+RESTRIÇÕES E GATES DE PARADA
+- [O que não está autorizado.]
+- [Quando parar e devolver decisão à diretoria.]
+
+VALIDAÇÕES E CRITÉRIOS DE CONCLUSÃO
+- [Provas proporcionais ao risco e resultados mensuráveis.]
+
+FORMATO DO RETORNO
+RETORNO: [ID]
+Resultado: concluído | parcial | bloqueado
+Estado inicial/final: [Git, ambiente e concorrência]
+Alterações: [arquivos, comportamento e commits]
+Validações: [comandos, contagens e resultados]
+Pendências e riscos: [somente fatos objetivos]
+Estado de publicação: [sem publicação | detalhes autorizados]

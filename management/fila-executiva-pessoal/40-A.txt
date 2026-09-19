@@ -1,0 +1,51 @@
+Rode você mesmo este trabalho nesta sessão executiva. Eu, usuário, autorizo explicitamente a leitura dos arquivos e pastas locais citados e a criação do artefato descrito abaixo. Não pergunte se deve executar, revisar ou validar premissas.
+
+PROMPT 40-A — Mapa do projeto NexusMed para o usuário (não-desenvolvedor)
+
+QUEM VAI LER ISTO
+O usuário é leigo em desenvolvimento de software. Ele acompanha o projeto através de sessões de IA (diretoria e executivas), mas está perdido sobre onde cada coisa fica e o que já existe — isso já causou confusão real (ex.: não encontrar um material que só existia como arquivo local ainda não carregado no banco; achar que o projeto estava organizado no GitHub quando o repositório real estava travado em 2 commits antigos). Este documento é a porta de entrada para ele entender o projeto sem precisar ler código, `AGENTS.md`, `docs/diretoria/registro.md` ou histórico de git.
+
+OBJETIVO
+Produzir um único documento, curto e em linguagem simples, que dê ao usuário uma visão completa e atualizada de: o que é cada peça do projeto, onde cada coisa fica fisicamente, o que está pronto/publicado/rascunho/pendente, e um glossário mínimo dos termos que aparecem nas conversas com a IA. Não é uma auditoria técnica nem um plano de próximos passos — isso já existe em outros documentos (auditorias, `00-INDICE.md`). É um mapa de orientação.
+
+FONTES A CONFERIR (não presumir nada sem checar)
+- `C:\Users\vinic\OneDrive\nexusmed-aistudio-continuar-leitura-20260915\AGENTS.md` e `docs\diretoria\registro.md` (estado técnico real).
+- `C:\Users\vinic\OneDrive\Organização\NexusMed-Prompts-Executivos\00-INDICE.md` (fila de trabalho e o que já foi concluído).
+- O repositório GitHub `https://github.com/viniciuskato/SynapseMed` (nome antigo do projeto, mantido no GitHub — confirmar estado atual do `main`).
+- A estrutura de pastas do OneDrive relacionadas ao projeto: a pasta canônica do repositório, as cópias antigas/descontinuadas (se ainda existirem, mencionar que são lixo/histórico, não fonte de verdade), e `Estudos\Base de Estudos\Biblioteca\Medicina\` (onde ficam os compêndios/questões em formato de autoria, antes de entrarem no banco).
+- Se houver dúvida sobre algo que não dá para confirmar sem rodar comando/consultar banco, marcar como pendente de confirmação em vez de inventar.
+
+ESCOPO DO DOCUMENTO
+1. **As peças do projeto, em linguagem simples**: o que é o NexusMed (o aplicativo que os estudantes usariam); o que é o repositório GitHub (o código-fonte, versionado); o que é o Supabase (o banco de dados — explicar a diferença entre o banco local, usado só para testar, e o banco remoto/produção, que é o de verdade); o que é a pasta "Biblioteca" no OneDrive (onde o conteúdo médico nasce como arquivo antes de entrar no banco); o que são os "Prompts Executivos" (a fila de tarefas que o usuário manda para sessões de IA executarem); e a diferença entre uma sessão de diretoria (que planeja e verifica) e uma sessão executiva (que só executa uma tarefa e volta).
+2. **Estado atual em linguagem simples**: o que está publicado de verdade (visível se alguém abrisse o app hoje); o que está gravado no banco mas como rascunho (não visível a estudantes); o que existe só como arquivo local, ainda não carregado em lugar nenhum; e o que ainda nem foi começado. Usar exemplos concretos já existentes no projeto (ex.: o compêndio de meningite bacteriana) para ilustrar em que estágio cada tipo de conteúdo pode estar.
+3. **Glossário curto**: só os termos que realmente aparecem nas conversas do projeto (ex.: compêndio, seção, questão, atestação, publicação, draft, rascunho, migration, RLS, branch, merge, push) — explicados em uma frase cada, sem virar manual técnico. Não incluir termo que não é usado na prática deste projeto.
+4. **"Onde eu olho quando eu quero X"**: uma lista curta de perguntas frequentes do próprio usuário com a resposta de "vá em tal lugar" — por exemplo "quero ver que materiais já existem", "quero saber o que falta antes da prova/entrega", "quero mandar um prompt novo", "quero saber se algo já foi publicado de verdade". Usar perguntas que já surgiram nas conversas reais deste projeto, não genéricas.
+5. Não incluir recomendação de próximos passos de produto, nem repetir conteúdo de auditoria já existente — apenas referenciar onde essas coisas estão, se relevante.
+
+FORMATO E TAMANHO
+- Markdown, um documento só.
+- Curto de propósito — o objetivo é ser a porta de entrada, não competir em tamanho com `AGENTS.md`/`registro.md`. Se ultrapassar duas ou três telas de leitura normal, está indo contra o próprio objetivo do pedido ("está disperso, preciso entender").
+- Linguagem direta, sem jargão não explicado, sem tom de manual corporativo.
+
+ARTEFATO
+Crie apenas:
+`C:\Users\vinic\OneDrive\Organização\NEXUSMED-MAPA-DO-PROJETO.md`
+
+MANUTENÇÃO (registrar no próprio documento)
+Deixar explícito, no topo do documento, que ele é um mapa vivo: deve ser atualizado pela sessão de diretoria quando a estrutura do projeto mudar de forma relevante (não a cada prompt executivo concluído), com uma linha de "última atualização" (data).
+
+FRONTEIRAS
+- Não alterar código, banco, repositório ou qualquer artefato de conteúdo.
+- Não duplicar o conteúdo de `00-INDICE.md`, `AGENTS.md` ou `registro.md` — referenciar, não copiar.
+- Não presumir estado do banco (publicado/rascunho) sem indicação clara nas fontes já registradas; marcar como "não confirmado nesta sessão" quando aplicável.
+
+EFICIÊNCIA
+Leia as fontes listadas uma vez, escreva direto no documento final, evite narrativa de processo.
+
+FORMATO DO RETORNO
+RETORNO: 40-A
+Resultado: concluído ou parcial
+Artefato:
+Peças do projeto cobertas:
+Itens marcados como "não confirmado nesta sessão" (se houver):
+Confirmação: nenhuma alteração de código, banco, repositório ou conteúdo — só o documento de orientação criado.

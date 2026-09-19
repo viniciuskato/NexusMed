@@ -1,0 +1,35 @@
+PROMPT 28-A — Gate técnico de integração do export Google AI Studio
+
+TRILHA: GATE TÉCNICO — CODEX EXECUTIVO
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 28-A como sessão Codex executiva em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Eu, usuário, autorizo auditar o ZIP do AI Studio indicado junto deste prompt, corrigir instabilidades técnicas e preparar uma branch local. Não desenvolva conteúdo nem nova interface e não publique. Entregue `RETORNO: 28-A` e encerre.
+
+OBJETIVO
+Extrair somente melhorias de interface comprovadamente úteis, remover invenções/instabilidades e produzir candidata compatível com o NexusMed canônico.
+
+ENTRADA OBRIGATÓRIA
+ZIP do AI Studio no OneDrive, checkpoint, manifesto arquivo→funcionalidade e evidências visuais. Se ZIP/checkpoint faltarem, parar sem editar; ausência de manifesto/captura deve ser registrada e suprida apenas por inspeção proporcional, sem presumir aprovação. Nunca usar o projeto do AI Studio como nova base.
+
+EFICIÊNCIA
+Compare inventários e diffs antes de ler arquivos inteiros. Classifique mudanças por bloco funcional; rejeite em lote o que viola fronteiras. Reutilize provas da base somente enquanto hashes relevantes não mudarem. Testes focados primeiro e `verify:full` uma vez no gate final.
+
+GATES
+1. Confirmar `origin/main`, branch/worktree, concorrência e base do export; criar branch isolada do `origin/main` vigente.
+2. Inventariar o ZIP antes de executar código: rejeitar/ignorar `.env`, segredo, `node_modules`, build, cache e dado pessoal; detectar lockfile/config/migration/teste ausente, novo ou alterado. Não transmitir conteúdo do ZIP a terceiros.
+3. Auditar cada mudança contra contratos de auth, dados, SRS, sync, proveniência, conteúdo e navegação. Não transportar `package.json`, configs, migrations, testes ou documentação do AI Studio sem necessidade comprovada.
+4. Classificar cada bloco funcional: `ACEITAR | ACEITAR_COM_CORREÇÃO | DEVOLVER_AO_AI_STUDIO | REJEITAR | ESTACIONAR`, sempre com evidência e motivo.
+5. Reprovar métrica fabricada, semântica científica automática, prescrição não validada, ação destrutiva/irreversível, escrita oculta, gesto acidental, jargão interno, estado vazio enganoso ou sobrecarga sem ganho de tarefa.
+   Reprovar também qualquer elemento fixo/flutuante que encubra conteúdo ou ação. Exigir área segura responsiva e prova no primeiro/último item, fim da rolagem, desktop/mobile e zoom de 200%; não aceitar `padding-bottom` arbitrário válido apenas para uma viewport.
+   Para “Continuar leitura”, exigir sessão por UID, material existente/disponível, leitura incompleta, validade temporal explícita, ocultação no CMS/sessões efêmeras, dispensa sem apagar progresso e fallback seguro; testar relógio/expiração sem espera real.
+6. Transpor manualmente apenas blocos `ACEITAR`/`ACEITAR_COM_CORREÇÃO`; preservar correções canônicas mais recentes, inclusive 21-D/21-E se já publicadas.
+7. Corrigir somente instabilidades técnicas reproduzidas e adicionar os testes correspondentes. Mudança visual/UX que exija redesign volta ao AI Studio; dúvida científica/editorial volta à diretoria/Claude.
+8. Validar tarefas reais em desktop/mobile e claro/escuro quando afetado, teclado/foco, typecheck, lint sem aumentar o teto de 93 nem a contagem de warnings da base, unitários, pgTAP, Playwright, bundle sem debug, `git diff --check` e zero fixtures por todas as famílias atuais.
+9. Comparar evidência visual do export com a candidata transposta; medir bundle e complexidade antes/depois. Se o JavaScript inicial não cair materialmente abaixo do baseline auditado de 1.067,19 kB, registrar dependência do 14-A sem ampliar este gate.
+
+RESTRIÇÕES
+Sem migration, dado remoto, atestação, publicação de conteúdo, push, merge ou deploy. Não sincronizar de volta ao AI Studio. Parar diante de conflito semântico ou origem indeterminável.
+
+FORMATO DO RETORNO
+RETORNO: 28-A
+Resultado; ZIP/checkpoint/base; higiene/inventário; classificação de cada bloco; transposição e instabilidades corrigidas; evidência visual; métricas; testes; branch/commits; devoluções ao AI Studio; decisões de conteúdo; não publicado.

@@ -1,0 +1,42 @@
+PROMPT 21-C2 — Preparar pelo CMS o lote PCSK9 para atestação humana
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 21-C2 neste painel Claude in Chrome, usando exclusivamente a aba NexusMed de produção atualmente aberta e autenticada como Vinicius Kato. Eu, usuário, autorizo explicitamente as alterações editoriais delimitadas abaixo. Não use terminal, scripts, DevTools, API externa, `service_role`, conexão direta ao banco ou outra conta. Não ateste nem publique. Entregue `RETORNO: 21-C2` e encerre.
+
+OBJETIVO
+Pelo CMS visual, desvincular a Q9 e preparar fontes, revisões e claims do material PCSK9 e das oito questões aprovadas, deixando todas as decisões humanas pendentes para minha conferência.
+
+ESCOPO APROVADO
+- Material: “PCSK9 e a Nova Fronteira da Redução de LDL-c”, ID `69bfb1ad-3e77-4d85-bc9b-53d7c8ed5a74`.
+- Excluir do lote e apenas desvincular: questão UFPA/COREME 2021, ID iniciado por `53e22bed`; manter integralmente em draft e sem novo material.
+- Manter no lote as oito questões cujos IDs começam por: `7a974dd1`, `fd405deb`, `6b71012d`, `ea7b8ced`, `47d351e6`, `0fe198cd`, `d8534c66`, `d6b26e6b`.
+- Os dois flashcards associados são pessoais e ficam completamente fora.
+- Fontes já qualificadas no 21-B: Cohen 2005; Cohen 2006; FOURIER 2017; ODYSSEY OUTCOMES 2018; ORION-10/11 2020; CTT 2010; Gencer et al. 2020, DOI `10.1016/j.jacc.2020.03.039`; Vafai/Täubel et al. 2026, DOI `10.1056/NEJMoa2601283`; ESC/EAS 2025; ACC/AHA 2026. Use os metadados exibidos no próprio material/CMS; não refaça pesquisa nem invente campos ausentes.
+
+IDENTIDADE E LIMITES
+- A sessão já está autenticada com minha conta. Toda escrita deve ocorrer por cliques e formulários normais do NexusMed, para que o servidor derive `auth.uid()`.
+- Nunca clicar em “Atestar”, “Aprovar”, “Publicar”, publicação em massa ou controles equivalentes.
+- Não marcar nenhum claim como aprovado, correção resolvida ou inferência aceita. Deixá-los pendentes para mim.
+- Não alterar texto clínico, alternativas, gabaritos, explicações, status ou qualquer item fora do lote.
+
+EFICIÊNCIA
+Não reaudite o conteúdo. Trabalhe em ordem e reporte por exceção, sem narrar cada clique. Aguarde carregamentos normais, mas não repita a mesma navegação mais de duas vezes. Se o CMS não oferecer uma operação necessária, pare esse item e registre `CAPACIDADE_AUSENTE`; não improvise outro caminho.
+
+PASSOS
+1. Confirme visualmente que está no NexusMed, autenticado como Vinicius Kato, e abra CMS/Área Editorial.
+2. Localize a Q9 pelo ID/título UFPA, remova somente o vínculo com o material PCSK9 e salve. Reabra e confirme: draft, conteúdo intacto e sem material vinculado.
+3. Abra o material PCSK9. Nas referências, associe cada entrada ao registro equivalente de `sources`; reutilize por DOI/identificador exato. Se não houver equivalente e o CMS permitir criação normal, crie apenas com os metadados já exibidos e verificados. Diante de duplicidade ou dúvida, não escolha por aproximação.
+4. Faça o mesmo para as referências das oito questões, sem mexer na Q9.
+5. Pelo botão “Revisão”, crie uma revisão do material somente após terminar as referências. Se já existir revisão aberta com o mesmo hash, reutilize-a.
+6. Cadastre claims objetivos correspondentes às afirmações verificáveis do material, classifique como `source_claim`, `synthesized_claim` ou `inference` e vincule fonte/localizador quando já estiver explicitamente disponível. Claims de recomendação, número ou segurança exigem fonte. Deixe todas as decisões pendentes.
+7. Repita revisão e claims para cada uma das oito questões. Para cada questão, cubra no mínimo o fundamento do gabarito e qualquer número/recomendação necessária à resposta; não transforme todas as alternativas em claims redundantes.
+8. Verifique visualmente: Q9 fora do pack e intacta; oito questões ainda draft e vinculadas; material ainda publicado; uma revisão aberta por item no máximo; nenhuma atestação e nenhuma nova publicação.
+9. Pare na tela de revisão do material, sem selecionar decisões. Entregue checklist conciso com material, oito questões, fontes/claims preparados, itens não concluídos e telas que eu devo revisar pessoalmente.
+
+CONDIÇÕES DE PARADA
+Pare imediatamente antes de qualquer atestação/publicação; diante de identidade diferente, conteúdo divergente do descrito, confirmação que inclua publicação, fonte ambígua, erro persistente ou falta de recurso no CMS. Não contorne limitações da interface.
+
+FORMATO DO RETORNO
+RETORNO: 21-C2
+Resultado: preparado | parcialmente preparado | bloqueado
+Identidade; Q9; fontes; revisões/claims por item; verificações; capacidades ausentes/erros; checklist para atestação humana; nenhuma atestação/publicação.

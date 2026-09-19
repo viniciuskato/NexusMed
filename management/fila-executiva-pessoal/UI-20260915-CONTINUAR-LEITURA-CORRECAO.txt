@@ -1,0 +1,31 @@
+CONTINUAÇÃO DO CHECKPOINT PARCIAL — “CONTINUAR LEITURA”
+
+Retome o mesmo projeto quando a cota permitir. Não refaça o visual nem amplie escopo. Corrija apenas os gates abaixo e gere novo checkpoint/ZIP.
+
+ESTADO JÁ APROVEITÁVEL
+- Rótulo “Continuar leitura”, título/seção e controles acessíveis foram implementados.
+- Cinco arquivos foram alterados: `storage.ts`, `CompendiumReader.tsx`, `CompendiumView.tsx`, `FloatingNavHub.tsx` e `MobileBottomNav.tsx`.
+
+LACUNAS OBJETIVAS
+1. `App.tsx` não foi conectado: `onDismissReading`, `readingWarningMessage` e `onClearReadingWarning` estão opcionais, mas nenhum chamador os fornece. Implemente o estado/handlers mínimos e passe as props a desktop, mobile e biblioteca.
+2. Aplicar validade de 30 dias por `updatedAt`, com constante nomeada e teste por relógio simulado — sem espera real.
+3. Exibir somente se o material ainda existir, estiver disponível/publicado e tiver progresso inferior a 100%.
+4. Ocultar no CMS/admin, questões, simulados, SRS e demais sessões efêmeras; permitir somente em Início, Estudo Temático e Biblioteca fora do leitor.
+5. Dispensar deve esconder imediatamente e remover apenas o atalho, nunca progresso, respostas, notas ou marcações. Ao abrir novamente o mesmo material, uma nova sessão pode voltar a aparecer.
+6. Ao concluir 100%, limpar armazenamento e estado React. Material expirado, inexistente, arquivado ou despublicado também deve invalidar o atalho.
+7. Clique com alvo que se tornou inválido deve abrir a Biblioteca e mostrar aviso acionável; nunca abrir leitor vazio.
+8. Não trate `readSectionIds.length >= sections.length` como conclusão sem garantir IDs válidos/únicos; use o percentual/contrato canônico ou interseção válida.
+9. Corrigir a colisão comprovada na tela de Cards: o dock inferior fixo e a pílula de retomada encobrem o rodapé/ação “Virar para ver resposta” dos flashcards. Como a pílula já deve ficar restrita a Início, Estudo Temático e Biblioteca, ela não pode aparecer em Cards. Além disso, toda tela rolável com dock fixo deve reservar uma área segura inferior suficiente para que o último card e todos os seus controles possam ser rolados completamente acima do dock — sem margem fixa frágil dependente de um único tamanho de tela.
+
+HIGIENE
+Antes do próximo export, retire da raiz do workspace os artefatos ZIP anteriores (`nexusmed-ui-clean.zip` e `nexusmed-ui-2026-09-15-01-corrigido.zip`). Eles já foram baixados e não podem ficar aninhados no novo ZIP. Não altere `.env.example`, CI, lockfile, backend ou conteúdo.
+
+VALIDAÇÃO
+- Testes focados: recente/incompleta; exatamente 30 dias; expirada; concluída; dispensada; reaberta; inexistente; draft/archived; CMS; questões; simulado; SRS; isolamento entre UIDs.
+- Reproduzir a tela de Cards da captura em desktop e mobile: primeiro, último e card de coluna direita; provar que título, intervalo, excluir e “Virar para ver resposta” ficam totalmente visíveis e clicáveis após rolar ao fim. Repetir com 200% de zoom ou largura equivalente e sem pílula de retomada nessa tela.
+- Typecheck, lint com teto 93, unitários e build uma vez no final.
+- Preview desktop/mobile e claro/escuro; teclado/foco no continuar, dispensar e aviso.
+
+FORMATO
+RETORNO: UI-CONTINUAR-LEITURA-CORRIGIDO
+Resultado; checkpoint; lacunas 1–9; testes e contagens; manifesto; preview; higiene; nome do novo ZIP; nenhum GitHub sync/deploy.

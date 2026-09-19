@@ -1,0 +1,49 @@
+PROMPT 34-A — Auditoria de direitos e mídia das questões
+
+TRILHA: CONTEÚDO — CLAUDE EXECUTIVO
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 34-A em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Eu, usuário, autorizo explicitamente esta sessão a executar a auditoria documental e consultas somente leitura necessárias. Não altere produto, banco, schema, CMS ou conteúdo. Entregue `RETORNO: 34-A` e encerre.
+
+OBJETIVO
+Inventariar todas as questões do NexusMed quanto a origem, possível restrição comercial e dependência de mídia, criando a base factual para uma política de publicação comercial sem apagar nem reescrever o acervo.
+
+DECISÃO DA DIRETORIA
+- Questões reais podem permanecer para estudo e auditoria.
+- Conteúdo comercial será liberado somente quando for autoral, licenciado ou posteriormente aprovado com base jurídica documentada.
+- Disponibilidade pública na internet, citação ou comentário não equivalem automaticamente a licença.
+- Imagem indispensável ausente ou sem direito documentado bloqueia publicação comercial.
+- Não emitir parecer jurídico definitivo: registrar evidência, incerteza e necessidade de validação.
+
+EFICIÊNCIA
+Leia o schema/repositórios e obtenha o inventário em consultas agregadas. Agrupe por instituição, banca, ano e padrão de origem; investigue regras por grupo, não questão a questão. Examine individualmente apenas exceções, mídia e amostras necessárias para validar a classificação. Reutilize 21-A2 e outros artefatos canônicos ainda válidos.
+
+ESCOPO
+1. Registrar snapshot Git e fonte dos dados. Consultar produção somente com `SELECT`, pelo caminho já autorizado; nunca imprimir credenciais. Se a leitura remota for bloqueada, usar os artefatos canônicos disponíveis, declarar a data do snapshot e não inventar estado atual.
+2. Cobrir 100% das questões disponíveis e produzir CSV versionável com: `question_id`, título/resumo não sensível, status editorial, instituição, banca, ano, URL/origem conhecida, `origin_kind`, `rights_status`, evidência da classificação, `requires_media`, `media_present`, `media_rights_status`, `commercial_status`, motivo e próximo passo.
+3. Usar enums documentados:
+   - `origin_kind`: `authorial|public_exam|private_exam|licensed_source|unknown`;
+   - `rights_status`: `owned|licensed|official_candidate|pending|restricted`;
+   - `media_rights_status`: `not_applicable|owned|licensed|pending|missing`;
+   - `commercial_status`: `eligible_authorial|eligible_licensed|hold_rights|hold_media|hold_rights_and_media`.
+4. Detectar questões cujo enunciado depende de imagem, tabela, traçado, fotografia ou exame. Não considerar mídia meramente decorativa como necessária. Marcar bloqueio de mídia quando o recurso indispensável estiver ausente, quebrado ou sem direito documentado.
+5. Agrupar questões reais por instituição/banca e registrar, quando disponível, URL oficial, aviso de direitos ou termo relevante. Não concluir que toda prova pública é ato oficial nem que toda banca privada proíbe reutilização; ausência de restrição encontrada permanece `pending`.
+6. Separar claramente: uso como referência de competência; reprodução literal; adaptação próxima; questão genuinamente autoral. Sugerir reautoria quando não houver licença, preservando tema, competência e metadados da prova, mas exigindo novo caso, redação, alternativas, comentário e mídia.
+7. Criar `docs/editorial/POLITICA-QUESTOES-DIREITOS-E-MIDIA.md` e `docs/editorial/auditoria-questoes-direitos-midia.csv`. Incluir política provisória, matriz de decisão, contagens e requisitos do futuro gate. Não duplicar texto jurídico extenso.
+
+VALIDAÇÕES
+- Total auditado reconciliado com o inventário-fonte; IDs únicos.
+- Enums e campos obrigatórios válidos.
+- Contagens por origem, direitos, mídia e elegibilidade comercial.
+- Lista explícita de questões dependentes de mídia ausente, incluindo a questão radiológica do sinal do menisco se presente.
+- Amostra manual de cada grupo relevante e zero classificação `eligible_*` baseada apenas em disponibilidade na internet.
+
+RESTRIÇÕES
+Sem UPDATE/INSERT/DELETE/RPC mutável, download ou incorporação de imagens, reautoria, atestação, publicação, migration, UI, commit, push ou deploy. Não remover questões. Não apresentar esta auditoria como parecer jurídico. Não pesquisar cada item isoladamente quando uma regra de banca/origem resolver o grupo.
+
+GATE DE PARADA
+Se não for possível reconciliar o inventário completo, entregue resultado parcial com cobertura exata. Divergência de titularidade ou interpretação jurídica vira `pending`, nunca suposição. O futuro gate técnico 34-B só será escrito/liberado pela diretoria após aprovação deste retorno.
+
+FORMATO DO RETORNO
+RETORNO: 34-A
+Resultado; snapshot e cobertura; contagens por enum; questões com mídia obrigatória ausente; grupos de origem/banca; elegíveis provisórios; bloqueados e motivos; artefatos; ambiguidades jurídicas; validações; confirmação de somente leitura e ausência de publicação.

@@ -1,0 +1,66 @@
+PROMPT 12-C — Validação complementar da Área Editorial após o 12-B
+
+MODO DE EXECUÇÃO
+Ao receber este texto, assuma imediatamente o papel de sessão executiva e execute-o neste próprio contexto. Não pergunte se deve executar, revisar o prompt, validar premissas ou assumir outro papel: comece a validação. Esta ordem já foi liberada pela diretoria. Entregue o `RETORNO: 12-C` e encerre.
+
+OBJETIVO
+Fechar a única lacuna de validação do 12-B: comprovar em navegador real que as 22 alterações de associação `label`/`id` em `AdminCMSView` preservam foco, teclado e operação dos formulários da Área Editorial. Esta é uma verificação complementar; não reabrir o escopo técnico já publicado.
+
+DEPENDÊNCIAS E ESTADO CONHECIDO
+- Clone canônico: `C:\Users\vinic\dev\NexusMed\firebase-auth`.
+- Publicação 12-B confirmada de forma independente.
+- `main` e `origin/main` confirmados em `0c7834a`.
+- Merge técnico: `e90fcee`, com pais `b67a77c` e `0a33b20`.
+- Produção confirmada em `https://synapse-med-firebase-auth.vercel.app`, servindo `index-C6B6pPEV.js` e `index-C2LuE45k.css`.
+- A tentativa anterior de promover uma fixture local via `docker exec`/`psql` foi bloqueada pelo ambiente. Não contornar controles de segurança.
+- O escopo pendente é `AdminCMSView`: 22 das 40 correções de `label`/`id` foram revisadas por diff, mas não exercitadas ao vivo.
+
+ESCOPO
+1. Confirmar caminho, branch/HEAD, `main`, `origin/main`, working tree, worktrees e eventual avanço remoto. Não editar diretamente `main`.
+2. Ler `AGENTS.md`, `docs/diretoria/MODELO-DIRETORIA.md`, o fechamento do 12-B em `docs/diretoria/registro.md` e o diff publicado que afetou `AdminCMSView`.
+3. Obter acesso administrativo apenas por mecanismo local permitido e auditável. Preferir fixture/API/helper já versionado ou fluxo administrativo suportado. Se o ambiente bloquear a preparação, parar e reportar; não usar bypass, credencial remota ou conta pessoal.
+4. Executar o app local com build equivalente ao publicado e Playwright/Chromium real.
+5. Na Área Editorial, cobrir todos os grupos distintos de controles alterados pelas 22 associações, incluindo no mínimo:
+   - clique no texto do label levando foco ao controle correto;
+   - IDs únicos no DOM e correspondência exata `htmlFor`/`id`;
+   - navegação por Tab/Shift+Tab;
+   - ativação por teclado dos controles aplicáveis;
+   - abertura/fechamento de modais, retorno de foco e cancelamento;
+   - preenchimento e validação dos formulários sem salvar conteúdo editorial real.
+6. Amostrar desktop e viewport móvel. Registrar quais controles foram exercitados e mapear cada um às linhas/componentes publicados.
+7. Verificar console e rede para erros recorrentes durante os fluxos.
+8. Se uma regressão for reproduzida, criar branch de correção a partir do `origin/main`, implementar somente a correção mínima, adicionar teste de regressão e validar. Não publicar nesta sessão.
+9. Se não houver regressão, não criar commit vazio nem alterar produto; registrar somente o retorno e atualizar a documentação da diretoria em branch própria, se permitido.
+10. Remover todas as fixtures em `finally` e comprovar zero resíduos. Não tocar no Supabase remoto.
+
+RESTRIÇÕES E GATES DE PARADA
+- Supabase remoto e produção: somente smoke não destrutivo; nenhuma escrita.
+- Não promover usuário por SQL direto se isso estiver bloqueado ou não for um mecanismo aprovado.
+- Não alterar os 93 avisos de lint, componentes fora da Área Editorial, dependências, migrations ou conteúdo médico.
+- Sem merge em `main`, push, deploy ou force.
+- Parar se não houver meio permitido de obter fixture admin, se `origin/main` avançar de forma conflitante ou se houver trabalho concorrente nos mesmos arquivos.
+
+VALIDAÇÕES OBRIGATÓRIAS
+- Playwright real nos controles editoriais afetados, desktop e mobile.
+- Evidência de IDs únicos e vínculos `label`/controle corretos.
+- Typecheck, lint dentro do teto publicado, testes aplicáveis e build.
+- Se a stack Supabase estiver indisponível, `npm run verify` deve falhar; não usar `test:optional` como evidência de gate completo.
+- Zero fixtures próprias restantes e nenhuma escrita remota.
+
+CRITÉRIO DE LIBERAÇÃO DO 13-A
+- Liberar somente se todos os grupos de controles afetados forem exercitados sem regressão, ou se eventual correção mínima tiver sido revisada e publicada por uma etapa posterior própria.
+- Se o teste não puder ser executado por bloqueio de fixture, o 13-A pode ser preparado, mas não deve alegar que a pendência de acessibilidade do 12-B foi fechada.
+
+FORMATO DO RETORNO
+RETORNO: 12-C
+Resultado: validado | regressão encontrada | bloqueado
+Estado inicial/final: caminho, branches, HEADs, remoto, working tree e worktrees
+Preparação da fixture admin: mecanismo permitido, resultado e limpeza
+Cobertura da Área Editorial: controles/grupos, desktop/mobile e resultados
+Acessibilidade: label/foco, IDs únicos, teclado, modais e retorno de foco
+Console/rede: erros observados
+Validações técnicas: comandos, contagens e resultados
+Alterações: nenhuma | branch/commits de correção, sem publicação
+Dados de teste e limpeza: evidências
+Pendências e riscos: itens objetivos
+Liberação do 13-A: sim | não, com motivo

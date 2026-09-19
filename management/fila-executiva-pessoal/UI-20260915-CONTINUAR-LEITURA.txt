@@ -1,0 +1,31 @@
+PROMPT UI — Corrigir o atalho “Continuar leitura”
+
+TRILHA: INTERFACE — GOOGLE AI STUDIO
+
+MODO DE EXECUÇÃO
+Trabalhe no preview do NexusMed fornecido nesta conversa. Proponha e prototipe somente esta jornada. Não sincronize com GitHub, não altere backend e não publique. Ao final, entregue checkpoint, manifesto curto e ZIP.
+
+PROBLEMA OBSERVADO
+O pill flutuante mostra `Retomar: PCSK9...` inclusive no CMS, muito tempo após o acesso. No código canônico, `LastReadingSession` é salvo no `localStorage` por usuário ao abrir/trocar seção; não expira, não é limpo ao concluir/sair e é exibido sempre que existe e a tela não é o leitor.
+
+OBJETIVO
+Transformar o controle em um atalho contextual, compreensível e dispensável de **continuar uma leitura recente e incompleta**, sem parecer botão Voltar nem ocupar áreas administrativas.
+
+CONTRATO DE COMPORTAMENTO
+- Rótulo humano: “Continuar leitura”; título e, quando útil, última seção.
+- Mostrar somente para material existente, disponível, incompleto e sessão recente. Prototipar 30 dias como limite; deixar a constante explícita para decisão no gate técnico.
+- Ocultar no CMS/admin, autenticação, sessões de questões/simulado/SRS e no próprio leitor.
+- Oferecer dispensar/fechar acessível; dispensar remove somente o atalho, nunca progresso, respostas, notas ou marcações.
+- Concluir 100%, arquivar/despublicar/remover material ou invalidar o ID elimina o atalho com segurança.
+- Clicar abre exatamente material/seção válidos. Falha deve cair na biblioteca com mensagem acionável, nunca tela vazia.
+- Desktop/mobile, claro/escuro, teclado, foco e leitor de tela.
+
+EFICIÊNCIA
+Não redesenhe o dock nem outras telas. Reutilize componentes e tokens atuais. Faça uma única variante recomendada e somente os estados necessários: disponível, ausente, expirado/inválido e dispensado.
+
+RESTRIÇÕES
+Sem banco, schema, RPC, RLS, autenticação, conteúdo, taxonomia, métricas inventadas, dependência nova, GitHub ou deploy. O protótipo não é aprovação; seguirá pelo gate 28-A.
+
+FORMATO DO RETORNO
+RETORNO: UI-CONTINUAR-LEITURA
+Resultado; comportamento proposto; telas/estados alterados; jornada desktop/mobile; acessibilidade; arquivos; checkpoint/ZIP; decisões para o gate técnico.

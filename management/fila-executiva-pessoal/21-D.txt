@@ -1,0 +1,33 @@
+PROMPT 21-D — Desbloquear o fluxo humano de revisão no CMS
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 21-D nesta sessão. Eu, usuário, autorizo explicitamente esta conversa a assumir o papel executivo para implementar e validar localmente em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Não revise nem repasse o prompt. Entregue `RETORNO: 21-D` e encerre.
+
+OBJETIVO
+Corrigir as três barreiras comprovadas que impedem a preparação humana do lote PCSK9: painel de revisão invisível para questões, ausência de edição do vínculo questão↔material e vinculação de fonte por UUID bruto/incompleto.
+
+CAUSAS JÁ CONFIRMADAS
+- O botão “Revisão” da questão apenas chama `setProvenanceTarget`; não cria revisão. `ProvenanceReviewPanel` está renderizado dentro do bloco da aba de compêndios, portanto fica invisível na aba de questões.
+- O CMS só cria e exclui questões; não oferece edição de existentes. O repositório já salva `material_id` a partir de `compendiumRefId`, mas reutilizar `saveQuestion` inteiro para mudar apenas o vínculo ampliaria o risco.
+- `ProvenanceReviewPanel` exige digitar `sources.id` e grava relação/base padrão, sem busca legível, `source_locator` ou escolha explícita dos campos evidenciais.
+
+EFICIÊNCIA OBRIGATÓRIA
+Faça o menor fluxo vertical, sem redesenhar o CMS ou criar editor completo de questões/fontes. Testes focados primeiro; `verify:full` uma vez no gate final. Não reaudite PCSK9 nem toque dados remotos.
+
+ESCOPO
+1. Confirmar `main = origin/main = 2e342bd`, árvore/worktrees/concorrência e criar branch nova.
+2. Renderizar o painel de revisão em posição comum às abas. Ao clicar “Revisão” em material ou questão, o painel deve aparecer, receber foco/ser trazido à vista e fechar retornando o foco ao botão acionador.
+3. Adicionar à questão existente um controle explícito “Vínculo” que altere somente `material_id`/`material_section_id`, permitindo “Sem material”. Criar método de repositório dedicado; não reenviar nem sobrescrever stem, opções, gabarito, explicações, referências ou status.
+4. No painel de revisão, trocar UUID bruto por seletor pesquisável de `sources`, exibindo título/autoria/ano e DOI/URL quando presentes. Permitir escolher `evidence_relation`, `consultation_basis` e informar `source_locator`; mostrar vínculos já adicionados.
+5. Se o catálogo não tiver a fonte, apenas informar “fonte não cadastrada”. Não implementar nesta tarefa CRUD geral de fontes nem inventar metadados.
+6. Para referências de material ainda sem `source_id`, oferecer associação explícita de cada referência textual a uma fonte existente, preservando texto, ordem e URL. Não fazer matching automático; sugestões podem ser exibidas, mas exigem escolha humana.
+7. Preservar identidade server-side, imutabilidade pós-atestação, hashes, gates de publicação, legado e RLS existentes.
+8. Testar: clique de revisão em ambas as abas; nenhum clique simples cria revisão; troca e remoção de vínculo alteram somente as duas FKs; cancelamento não escreve; seletor por DOI/título; todos os campos de `claim_sources`; referência de material associada sem perda; teclado/foco; erro visível.
+9. Rodar specs focados, `git diff --check`, typecheck/lint/build, bundle sem debug, zero fixtures e uma única `verify:full` final. Atualizar documentação estritamente necessária e entregar commits locais.
+
+RESTRIÇÕES
+Supabase somente local. Sem alteração de conteúdo clínico real, migration remota, dado remoto, atestação, publicação, merge, push ou deploy. Sem editor completo de questões, CRUD geral de fontes, busca fuzzy automática ou refatoração ampla do CMS.
+
+FORMATO DO RETORNO
+RETORNO: 21-D
+Resultado; Git; correções por barreira; UX/foco; persistência segura; testes/contagens/duração; arquivos/commits; riscos; não publicado.

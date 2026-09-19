@@ -1,0 +1,26 @@
+PROMPT 27-A — Compactar a governança executiva sem perder histórico
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 27-A nesta sessão em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Eu, usuário, autorizo uma reorganização documental local e reversível. Não altere produto nem publique. Entregue `RETORNO: 27-A` e encerre.
+
+OBJETIVO
+Reduzir drasticamente o contexto obrigatório de cada sessão e tornar inequívoca a fonte de verdade da diretoria, preservando histórico verificável.
+
+EFICIÊNCIA OBRIGATÓRIA
+Não reescreva nem resuma linha a linha 38 mil palavras. Use títulos, estados e referências Git para separar estado ativo de arquivo histórico. Produza somente os documentos necessários à retomada eficiente.
+
+ESCOPO
+1. Medir baseline de palavras de `AGENTS.md`, `docs/diretoria/registro.md`, modelo e índice externo.
+2. Definir uma única fonte canônica versionada para estado atual, fila, dependências e decisões vigentes; o índice do OneDrive deve apontar para ela, não divergir.
+3. Mover narrativa encerrada para arquivo histórico pesquisável, preservando IDs, datas, commits e retornos; não apagar evidência.
+4. Deixar `AGENTS.md` apenas com invariantes técnicas atuais e armadilhas ainda vigentes; remover duplicação histórica.
+5. Corrigir a afirmação imprecisa do 22-B sobre o smoke remoto, preservando que a conta foi descartável e integralmente removida.
+6. Atualizar instruções de retomada para leitura dirigida: estado atual primeiro; histórico somente quando a tarefa exigir.
+7. Validar links, IDs, busca dos prompts 21–27, `git diff --check` e redução antes/depois.
+
+RESTRIÇÕES
+Sem alterar código, testes, dependências, banco, conteúdo médico ou significado de decisões. Sem excluir histórico, merge, push ou deploy.
+
+FORMATO DO RETORNO
+RETORNO: 27-A
+Resultado; baseline antes/depois; fonte canônica; arquivos movidos/alterados; verificações; riscos; branch/commit local; não publicado.

@@ -1,0 +1,31 @@
+PROMPT 24-A — Matriz editorial longitudinal do pack piloto
+
+TRILHA: CONTEÚDO — CLAUDE EXECUTIVO
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 24-A em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Eu, usuário, autorizo esta sessão a produzir somente os artefatos editoriais locais abaixo. Não implemente interface, algoritmo ou banco. Entregue `RETORNO: 24-A` e encerre.
+
+OBJETIVO
+Transformar o pack PCSK9 em uma matriz humana revisável de objetivos, conceitos, cobertura e formas paralelas, pronta para orientar futuramente a experiência longitudinal.
+
+ESTADO E DECISÕES
+Use 21-A2 e 21-B: material e oito questões aptos; Q9 UFPA é externa ao pack e deve permanecer fora. Retenção exige evidência tardia; acerto isolado não significa domínio; equivalência entre itens nunca é inferida automaticamente.
+Taxonomia primária e pack são independentes: o material fica em `Clínico → Cardiologia → Dislipidemias e prevenção cardiovascular`; conceitos, farmacologia e vínculos longitudinais são metadados transversais. Não duplique nem mova conteúdo para representar o pack.
+
+EFICIÊNCIA
+Não refaça revisão bibliográfica já aprovada. Leia somente o material, as oito questões, referências/claims existentes e o padrão editorial. Produza uma matriz única; registre dúvida em vez de expandir escopo.
+
+ESCOPO
+1. Definir objetivos de aprendizagem observáveis do pack.
+2. Mapear conceitos `primary|secondary|prerequisite` por seção e questão, com justificativa curta e cobertura explícita.
+3. Identificar lacuna, redundância e candidato a forma paralela; exigir decisão humana para equivalência.
+4. Propor micropré-teste, pós-teste e recuperação tardia usando apenas itens adequados, distinguindo repetição do mesmo item.
+5. Definir evidências editoriais mínimas para `insufficient_evidence|emerging|needs_reinforcement|retained`, sem implementar cálculo.
+6. Entregar artefato versionável e checklist de revisão humana; registrar dependências de interface separadamente para o AI Studio.
+
+RESTRIÇÕES
+Sem nova pesquisa salvo inconsistência objetiva; sem editar conteúdo, schema, código, UX, migration, dado remoto, commit, push ou deploy. Não inventar item, conceito, equivalência ou evidência.
+
+FORMATO DO RETORNO
+RETORNO: 24-A
+Resultado; snapshot; objetivos; matriz conceito×seção×questão; lacunas/redundâncias; formas paralelas; sequência longitudinal; decisões humanas; artefato; sem implementação.

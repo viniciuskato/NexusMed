@@ -1,0 +1,27 @@
+PROMPT 32-A — Fechar alertas comportamentais e a limpeza real do CI
+
+TRILHA: ESTABILIDADE TÉCNICA — CODEX EXECUTIVO
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 32-A em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Eu, usuário, autorizo diagnosticar, corrigir e validar localmente os riscos delimitados abaixo em branch isolada de `origin/main`. Não publique. Entregue `RETORNO: 32-A` e encerre.
+
+OBJETIVO
+Eliminar closures potencialmente antigas nos fluxos de simulado/caderno de erros e fazer o CI detectar qualquer fixture E2E residual, sem limpeza cosmética dos demais warnings.
+
+EFICIÊNCIA
+Comece por testes que reproduzam comportamento, não por alterações mecânicas de dependências de hooks. Leia apenas os componentes, helpers E2E e workflow afetados. Testes focados primeiro; `verify:full` uma vez no final.
+
+ESCOPO
+1. Confirmar Git, concorrência e baseline de warnings.
+2. Auditar e testar `IntegratedCadernoErros` (`reviews`) e `SimuladoSession` (`handleFinishExam`/`handleSelectAnswer`). Corrigir somente risco reproduzido ou closure objetivamente incorreta, estabilizando callbacks quando necessário.
+3. Provar: revisão carregada não é solicitada novamente por estado antigo; cronômetro encerra exatamente uma vez com respostas/tempo atuais; atalhos usam questão e configuração atuais; campos editáveis e diálogos não recebem atalhos globais.
+4. Substituir no CI a checagem exclusiva `e2e-13a-%` por verificação centralizada de todas as famílias de fixtures criadas pelas suítes atuais, cobrindo `auth.users` e `profiles`. Não mascarar resíduos com limpeza destrutiva no gate.
+5. Executar teste negativo do verificador de resíduos e confirmar falha; depois restaurar/limpar a fixture local.
+6. Rodar typecheck, lint sem aumentar teto nem warnings, testes focados, pgTAP/Playwright afetados, `verify:full`, bundle e `git diff --check`.
+
+RESTRIÇÕES
+Sem migration, dado remoto, redesign, conteúdo, alteração ampla de hooks, busca artificial por zero warnings, push, merge ou deploy. Não tocar na fila multiaba — pertence ao 33-A.
+
+FORMATO DO RETORNO
+RETORNO: 32-A
+Resultado; estado; reproduções; correções; CI antes/depois e prova negativa; warnings; testes; commit; riscos; não publicado.

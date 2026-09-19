@@ -1,0 +1,37 @@
+PROMPT 23-C — Revisar, integrar e publicar proveniência e atestação editorial
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 23-C nesta sessão. Eu, usuário, autorizo explicitamente esta conversa a assumir o papel de sessão executiva, trabalhar em `C:\Users\vinic\dev\NexusMed\firebase-auth` e executar revisão, integração, migration remota, push e deploy descritos abaixo. Não revise nem repasse este prompt e não pergunte se deve executá-lo. Entregue `RETORNO: 23-C` e encerre.
+
+OBJETIVO
+Auditar a entrega 23-B e, somente com gates verdes, publicar a fundação de proveniência, revisão imutável e atestação editorial.
+
+ESTADO APROVADO
+- Base esperada: `main = origin/main = c942139`.
+- Candidata: `work/23b-proveniencia-atestacao`, commits `724fb5d`, `cd87336` e `c8dd48d`, árvore limpa, sem publicação.
+- O 23-B informou `verify:full` verde duas vezes: pgTAP 228/228, Playwright 24/24, typecheck/lint/build sem erros.
+- `cd87336` tornou o teste pgTAP reexecutável sem reset; `c8dd48d` documentou extensões futuras para conceitos e pauta editorial.
+
+EFICIÊNCIA OBRIGATÓRIA
+Não reimplemente o 23-B. Leia o diff e os contratos diretamente afetados. Reutilize as duas provas completas enquanto HEAD e base não mudarem. Rode testes focados somente se houver dúvida objetiva; rode `verify:full` uma vez apenas se código/migration mudar, houver reconciliação com `origin/main` ou alguma prova ficar inválida. Agrupe checks seguros e reporte somente evidências decisórias.
+
+GATES
+1. Confirmar fetch, branches, HEAD, árvore, worktrees e concorrência. Se `origin/main` avançou, revisar a diferença e reconciliar apenas sem conflito semântico; qualquer mudança invalida a reutilização dos testes.
+2. Auditar integralmente `origin/main...HEAD`, sobretudo privilégios/SECURITY DEFINER/search_path, identidade por `auth.uid()`, imutabilidade, hash server-side, bloqueio de publicação direta, legado e preservação das validações anteriores de questões.
+3. Confirmar que migration e app são compatíveis com o estado remoto atual. Fazer dry-run/inspeção de migrations quando suportado. Parar diante de drift, migration desconhecida, perda de dados, conflito de objetos ou necessidade de aprovação retroativa.
+4. Executar os checks proporcionais definidos acima, além de `git diff --check`, build/bundle sem artefatos de debug e prova de ausência de fixtures locais.
+5. Se tudo estiver verde, atualizar somente o registro executivo necessário, criar commit se houver mudança legítima, integrar em `main` sem force e enviar `main`.
+6. Aplicar a migration remota pelo fluxo versionado do projeto e confirmar que somente a migration esperada entrou. Não alterar conteúdo clínico existente nem fabricar atestações para o legado.
+7. Confirmar o deploy. Fazer smoke de produção com conta administrativa descartável autorizada, criada apenas se indispensável e removida ao final: login; legado visível como `legacy_unmapped`; criar revisão de um item descartável; decidir claim/vincular fonte real já existente quando aplicável; atestar; publicar; editar e provar que a aprovação fica desatualizada. Limpar integralmente os dados criados e confirmar o baseline. Se um teste destrutivo seguro não puder ser isolado, omiti-lo e explicar — não tocar conteúdo real.
+8. Verificar ausência de erros de console/rede relevantes e confirmar `main = origin/main`, árvore limpa e nenhuma fixture remanescente.
+
+RESTRIÇÕES
+- Sem force push, reset destrutivo, aprovação em massa, fonte/localizador inventado ou alteração de conteúdo real.
+- Não exigir revisor distinto do autor nesta versão.
+- Não implementar conceitos, aprendizagem longitudinal ou pauta editorial.
+- Parar antes da publicação se qualquer gate crítico falhar ou se `origin/main` mudar durante o gate final.
+
+FORMATO DO RETORNO
+RETORNO: 23-C
+Resultado: publicado | não publicado | bloqueado
+Estado inicial/final; auditoria objetiva; migration remota; testes reutilizados/executados com justificativa, contagens e duração; commits/merge/push/deploy; smoke e limpeza; riscos/pendências.

@@ -1,0 +1,53 @@
+PROMPT 22-B — Fechar a prova de retorno do SRS e publicar o Estudo Temático
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 22-B diretamente nesta sessão. Eu, usuário, autorizo explícita e especificamente que esta conversa deixe o papel de diretoria para esta tarefa pontual, assuma o papel de sessão executiva e execute integralmente as instruções abaixo. Use `C:\Users\vinic\dev\NexusMed\firebase-auth` como diretório de trabalho; o diretório em que a conversa foi aberta não define nem limita o local de execução. Não trate este texto como material para repassar, revisar ou validar antes de agir e não pergunte qual papel deve assumir: comece a execução. Entregue `RETORNO: 22-B` e encerre; depois desta tarefa, a avaliação volta à diretoria.
+
+OBJETIVO
+Revisar a entrega 22-A, fechar sua única lacuna de prova e, somente com todos os gates verdes, integrar e publicar o Estudo Temático por packs.
+
+EFICIÊNCIA OBRIGATÓRIA
+Continue do estado existente; não refaça o 22-A. Leia primeiro este prompt, o diff e os trechos diretamente relacionados ao SRS. Reutilize todas as provas válidas. Faça o menor ajuste de teste/código necessário, rode primeiro o spec focado e execute a suíte completa uma única vez no gate final. Agrupe verificações seguras, não use sleeps fixos ou polling desnecessário e reporte apenas métricas e excertos decisórios. Entre opções igualmente seguras, escolha a de menor tempo e menor consumo de tokens; não remova gates críticos.
+
+ESTADO CONHECIDO
+- Repositório: `C:\Users\vinic\dev\NexusMed\firebase-auth`.
+- `main = origin/main = eb37a91` no retorno recebido.
+- Branch candidata: `work/22a-estudo-tematico`, commit `bf88bc7`, árvore limpa e ainda não publicada.
+- `verify:full` informado verde: Vitest 24/24, pgTAP 183/183 e Playwright 23/23.
+- A diretoria aceita a regra de precedência: todo card `isCustom`, mesmo com `compendiumRefId` válido, aparece somente em “Meus Cards Personalizados”, evitando duplicação.
+- A implementação abre a sessão canônica de SRS e preserva `reviewFlashcard()` → `submit_flashcard_review`.
+- Lacuna: `estudo-tematico-22a.spec.ts` abre o card pelo pack, mas não conclui uma revisão nem confirma visualmente o retorno ao mesmo pack.
+
+ESCOPO
+1. Confirmar branch, HEAD, working tree, worktrees, concorrência e `origin/main`; fazer fetch seguro.
+2. Se `origin/main` avançou, reconciliar somente se não houver conflito semântico. Parar diante de conflito, autoria incerta ou sobreposição concorrente.
+3. Revisar o diff integral de `origin/main...work/22a-estudo-tematico`, com atenção a navegação, isolamento por usuário, escopos especiais, preservação de SRS e alterações nos testes antigos.
+4. Completar o teste de navegador existente para: abrir um pack; iniciar o SRS; revelar a resposta; enviar uma avaliação real pelo caminho canônico; concluir a fila; confirmar retorno a `thematic-study`; e confirmar o mesmo `data-pack-id` selecionado. Provar ausência de erro recorrente e limpeza da fixture.
+5. Alterar código de produto somente se o teste reproduzir defeito real. Não ampliar cobertura ou refatorar fora dessa lacuna.
+6. Rodar o spec focado. Depois, no gate final, executar uma única vez `npm run verify:full`, `git diff --check`, verificação de bundle sem debug e prova de zero fixtures.
+7. Se todos os gates estiverem verdes, atualizar `AGENTS.md` e `docs/diretoria/registro.md`, criar commit final, revisar novamente o diff, integrar em `main` sem force e enviar `main`.
+8. Acompanhar o deploy automático e executar smoke não destrutivo de produção cobrindo login, abertura do Estudo Temático, abertura de um pack e navegação para Recursos. Não criar nem alterar dados remotos.
+
+RESTRIÇÕES
+- Nenhuma migration, alteração de RPC/RLS/auth/CI ou escrita no Supabase remoto.
+- Não modificar a regra de vínculo `compendiumRefId === compendium.id`.
+- Não associar conteúdo por nome, tema ou similaridade.
+- Não alterar a precedência aceita para cards personalizados.
+- Sem force push, reset destrutivo ou descarte de trabalho concorrente.
+- Parar antes do merge se qualquer gate estiver vermelho ou se `origin/main` avançar durante o gate final.
+
+CRITÉRIOS DE CONCLUSÃO
+- Retorno real do SRS ao mesmo pack provado em navegador após avaliação persistida pelo caminho canônico.
+- Diff integral aprovado sem regressão do 13-B.
+- Suíte completa, limpeza e bundle verdes.
+- `main` publicado sem force e deploy confirmado por smoke não destrutivo.
+
+FORMATO DO RETORNO
+RETORNO: 22-B
+Resultado: publicado | não publicado | bloqueado
+Estado inicial/final: branch, HEAD, origin/main, working tree e worktrees
+Revisão do 22-A: achados objetivos
+Prova complementar do SRS: passos, assertivas e resultado
+Validações: contagens, duração e limpeza
+Integração/publicação: commits, merge, push, deploy e smoke
+Pendências/riscos

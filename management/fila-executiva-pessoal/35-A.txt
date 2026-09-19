@@ -1,0 +1,46 @@
+PROMPT 35-A — Resolução auditável e delegável de feedback
+
+TRILHA: GATE TÉCNICO — CODEX EXECUTIVO
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 35-A em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Eu, usuário, autorizo explicitamente criar, implementar e validar localmente este fluxo em branch isolada. Não publique, não toque produção e não use credencial administrativa fora dos testes locais. Entregue `RETORNO: 35-A` e encerre.
+
+OBJETIVO
+Permitir que uma sessão executiva autorizada marque feedback como resolvido pelo CMS usando a sessão humana autenticada, com justificativa, evidência, autoria e histórico verificáveis. Nunca fechar automaticamente apenas porque um agente afirmou que corrigiu.
+
+CONTEXTO CONFIRMADO
+- O CMS já lista feedbacks e oferece resolver/reabrir.
+- `set_feedback_status` exige `app.is_admin_active(auth.uid())` e hoje altera somente o status.
+- Faltam nota de resolução, evidência, `resolved_by`, `resolved_at` e registro explícito de atuação delegada.
+- A identidade do banco deve continuar sendo `auth.uid()`; service role não pode simular o usuário.
+
+CONTRATO
+1. `resolvido` exige nota curta e ao menos uma evidência verificável: question/material id, revisão/hash, commit/deploy ou validação reproduzível. Texto livre isolado como “corrigido” não basta.
+2. Registrar append-only cada transição administrativa com: feedback, estado anterior/novo, nota, evidência estruturada, `acted_by=auth.uid()`, `actor_mode=human|delegated_agent`, horário server-side e `client_op_id` idempotente.
+3. O cliente nunca envia identidade ou horário confiável. Payload forjado deve ser ignorado/rejeitado.
+4. Resolução delegada significa: agente operou a UI dentro da sessão autenticada após autorização explícita do usuário. Exibir essa condição; não apresentar como clique humano direto nem como assinatura digital.
+5. `pendente→em_analise→resolvido` é o caminho normal. Permitir resolução direta somente com justificativa explícita registrada. Reabrir também gera evento append-only e exige motivo.
+6. Repetição do mesmo `client_op_id` e payload é idempotente; colisão divergente falha. Concorrência deve bloquear/serializar a linha e devolver o estado real.
+
+ESCOPO
+- Auditar migration, RLS/RPC, tipos, repositório e testes atuais antes do patch.
+- Criar a menor migration aditiva segura para o histórico e a RPC de transição. Preservar feedbacks existentes e o contrato de leitura.
+- Impedir que a RPC antiga marque `resolvido` sem evidência; manter compatibilidade estritamente necessária para estados não finais ou migrar chamadas de forma atômica.
+- Implementar no repositório cliente o comando auditável, sem fallback local para ação administrativa.
+- No CMS, substituir “Marcar como resolvido” por um fluxo explícito com nota, evidência, modo de atuação e confirmação. Mostrar quem/quando/como resolveu e permitir reabertura motivada.
+- Permitir que automação de navegador use os mesmos controles humanos; não criar endpoint secreto, token de agente, bypass de RLS ou acesso por service role.
+
+INTUITIVIDADE
+Use linguagem humana: “Em análise”, “Resolver com evidência”, “Reabrir”. O formulário deve explicar o que falta, preservar o texto do usuário, permitir cancelar sem escrita, focar o primeiro campo inválido e confirmar o resultado. Não exibir UUID bruto como única identificação quando houver título/contexto.
+
+VALIDAÇÕES
+- pgTAP: admin ativo; estudante/admin bloqueado; identidade e horário server-side; evidência obrigatória; evento append-only; idempotência; colisão; concorrência; reabertura; preservação do feedback original.
+- E2E local: abrir feedback vinculado, resolver como `delegated_agent`, conferir histórico/UI e banco; reabrir; falha acionável sem evidência; nenhum clique simples escreve.
+- Testes focados primeiro; `verify:full` apenas após os focados verdes. Confirmar zero fixtures remanescentes e `git diff --check`.
+
+RESTRIÇÕES
+Sem leitura/escrita remota, service role em produto, alteração automática de conteúdo médico, resolução em lote, mensagem automática ao participante, push, merge, deploy ou publicação. Não misturar com 21-D/21-D2, 28-A ou redesign geral. Se houver branch/worktree concorrente nos mesmos arquivos, parar e reportar.
+
+FORMATO DO RETORNO
+RETORNO: 35-A
+Resultado; estado inicial/final; modelo de auditoria; migrations/RPC/RLS; fluxo CMS; arquivos/commit local; testes e contagens; prova de identidade/idempotência; riscos; confirmação de ausência de produção/push/merge/deploy.

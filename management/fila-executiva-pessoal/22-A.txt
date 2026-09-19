@@ -1,0 +1,77 @@
+PROMPT 22-A — Reconciliar e implementar Estudo Temático por packs de material
+
+MODO DE EXECUÇÃO
+Ao receber este texto, assuma imediatamente o papel de sessão executiva e execute-o neste próprio contexto. Não pergunte se deve executar aqui, revisar o prompt, validar premissas ou assumir outro papel: comece a implementação. A localização inicial da conversa não define o papel da sessão; o repositório de trabalho está indicado em `ESTADO E FONTES`. Esta ordem de implementação e validação local já foi liberada pela diretoria. Entregue `RETORNO: 22-A` e encerre. A sessão de diretoria fará a revisão independente e decidirá a publicação.
+
+OBJETIVO
+Transpor seletivamente a interface de Estudo Temático do snapshot do Google AI Studio para o `main` atual, preservando integralmente as correções, testes e CI publicados no 13-B. Cada tema deve conter um pack por material/compêndio real, com questões e flashcards ligados por referência explícita. Conteúdo avulso deve permanecer acessível sem ser duplicado entre packs.
+
+EFICIÊNCIA RESULTADO/TOKENS
+Use o snapshot como fonte de código, não como projeto-base. Compare somente os arquivos relevantes e reutilize componentes/repositórios existentes. Evite reescrever telas completas quando uma integração pequena resolve. Execute testes proporcionais aos arquivos tocados e, ao final, a suíte completa obrigatória.
+
+PROTOCOLO OBRIGATÓRIO DE EFICIÊNCIA
+Faça uma única leitura dirigida; use a auditoria, buscas e diffs dos seis arquivos autorizados antes de abrir contexto adicional; reutilize componentes, fixtures e provas ainda válidas; execute testes focados baratos antes de `verify:full`; agrupe verificações seguras; não use esperas fixas nem repita comandos sem mudança de estado; implemente o menor patch suficiente; e entregue somente métricas, comandos e excertos relevantes. Entre abordagens igualmente seguras, escolha a de menor tempo e menor consumo de tokens. Nunca economize removendo gates críticos.
+
+ESTADO E FONTES
+- Repositório canônico: `C:\Users\vinic\dev\NexusMed\firebase-auth`.
+- Base verificada: `main = origin/main = 42252b9`, com 13-B publicado.
+- Snapshot: `C:\Users\vinic\OneDrive\Organização\NexusMed-AIStudio-Snapshot-20260912-122223`.
+- SHA-256: `6E3AE971C5BA68EEBCD72509F20C91F17358FCBDEA7E9EDACA32F0DF019EE2F2`.
+- Auditoria: `C:\Users\vinic\OneDrive\Organização\AUDITORIA-SNAPSHOT-AI-STUDIO-ESTUDO-TEMATICO-2026-09-12.md`.
+- O snapshot é anterior ao 13-B e reverte CI/testes/SRS se copiado em bloco.
+
+ESCOPO
+1. Ler `AGENTS.md`, registro da diretoria e a auditoria acima.
+2. Confirmar Git, working tree, worktrees e concorrência; fazer fetch e criar branch nova a partir do `origin/main` vigente.
+3. Revisar apenas `ThematicStudyView.tsx`, `App.tsx`, `Header.tsx`, `MobileBottomNav.tsx`, `QuestionsView.tsx` e `FlashcardsView.tsx` do snapshot.
+4. Implementar Início, Estudo Temático e Recursos com acesso direto a Biblioteca, Questões e Cards.
+5. Construir um pack por `compendium.id`, agrupado sob tema/disciplina.
+6. Associar questão/card ao pack somente quando `compendiumRefId === compendium.id`.
+7. Conteúdo editorial com tema, mas sem referência de compêndio, aparece uma única vez em “Conteúdo do tema sem material associado”.
+8. Cards personalizados permanecem em “Meus Cards Personalizados”. Referências inválidas ficam em seção avulsa factual.
+9. Usar componentes/repositórios canônicos para leitura, questões e flashcards; preservar progresso, respostas, caderno de erros, notas e retorno ao pack.
+10. Preservar `reviewFlashcard()` → `submit_flashcard_review`; não restaurar o SRS cliente + `updateFlashcardSRS`.
+11. Persistir view/pack com whitelist e validar o ID salvo contra dados atuais.
+12. Exibir estados de carregamento, erro, vazio e recurso parcial com texto factual.
+13. Preservar admin somente com role admin e status ativo, autenticação e Área Editorial.
+
+NÃO TRANSPLANTAR
+- `package.json`, configurações, lockfile, scripts, migrations, testes, documentação histórica ou CI do snapshot.
+- `FlashcardReviewSession.tsx` e `FlashcardReviewer.tsx` do snapshot.
+- Arquivo não revisado expressamente no diff.
+
+TESTES OBRIGATÓRIOS
+1. Estudo Temático renderiza ao clicar.
+2. Dois compêndios do mesmo tema geram dois packs.
+3. Conteúdo com referência explícita aparece apenas no pack correto.
+4. Conteúdo sem referência aparece uma única vez na seção avulsa.
+5. Card personalizado permanece em Meus Cards.
+6. Reload preserva view/pack válido e recupera de ID inválido.
+7. Leitura, questão e SRS retornam ao pack correto.
+8. SRS iniciado pelo pack mantém o caminho atômico e testes concorrentes do 13-B.
+9. Desktop/mobile e teclado: Início, Estudo Temático e Recursos.
+10. Gates de conta e admin permanecem corretos.
+
+VALIDAÇÕES
+- Testes focados durante o desenvolvimento.
+- `npm run verify:full` ao final com Supabase local.
+- `git diff --check`, bundle sem debug, zero fixtures e console sem erro recorrente.
+- Registrar bundle antes/depois apenas como métrica.
+
+RESTRIÇÕES
+- Nenhuma migration ou escrita remota. Se faltarem referências explícitas, parar e relatar; não associar por nome/similaridade.
+- Sem merge em `main`, push, PR, deploy ou publicação.
+- Não alterar RPC/RLS, SRS, autenticação ou CI.
+- Parar em conflito concorrente ou avanço remoto relevante.
+
+FORMATO DO RETORNO
+RETORNO: 22-A
+Resultado: concluído | parcial | bloqueado
+Estado inicial/final: Git, working tree e worktrees
+Transposição: aproveitado, reescrito e descartado
+Arquitetura: temas, packs, vínculos e conteúdo avulso
+Preservação do 13-B: CI, testes e SRS
+Testes e validações: cenários, contagens e resultados
+Arquivos alterados e commits
+Pendências/riscos
+Estado de publicação: não publicado; sem push/merge/deploy

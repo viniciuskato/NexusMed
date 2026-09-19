@@ -1,0 +1,35 @@
+PROMPT 21-A — Consolidação do backlog editorial e científico
+
+MODO DE EXECUÇÃO
+Ao receber este texto, assuma imediatamente o papel de sessão executiva e execute a ordem documental neste próprio contexto. Não pergunte se deve executar, revisar o prompt, validar premissas ou assumir outro papel: comece a execução. Esta ordem já foi liberada pela diretoria, mas não autoriza alterar conteúdo. Entregue o `RETORNO: 21-A` e encerre; a sessão de diretoria define prioridades e próximos lotes.
+
+OBJETIVO
+Converter auditorias editoriais anteriores, referências inline e feedbacks reais em backlog único, priorizado e mensurável, sem editar conteúdo científico nesta etapa.
+
+EFICIÊNCIA RESULTADO/TOKENS
+Busque sempre a melhor relação resultado/tokens: reutilize auditorias existentes, elimine duplicatas cedo e aprofunde somente itens prioritários ou incertos. Não refaça pesquisa científica já válida nem produza documentação redundante; preserve rastreabilidade e rigor médico.
+
+DEPENDÊNCIAS
+Pode iniciar após 13-A; pode ocorrer em paralelo com 14-A/15-A se for estritamente leitura/documentação.
+
+ESCOPO
+1. Ler relatórios 02/02-C, matriz de cobertura, registros de referências e feedbacks da Área Editorial.
+2. Confirmar quais achados seguem abertos no estado atual.
+3. Separar bug factual, referência ausente/fraca, lacuna, melhoria didática, duplicata e feedback já atendido mas não encerrado.
+4. Priorizar por risco ao aprendizado/segurança, uso, esforço e dependência técnica.
+5. Definir unidades pequenas, critérios científicos, fontes mínimas e revisão humana.
+6. Não marcar feedback como resolvido automaticamente; entregar lista para decisão editorial.
+
+RESTRIÇÕES
+- Sem alterar compêndios, questões, feedbacks ou banco.
+- Não produzir afirmação médica nova sem fonte confiável e revisão apropriada.
+
+FORMATO DO RETORNO
+RETORNO: 21-A
+Resultado: concluído | parcial | bloqueado
+Fontes internas consultadas
+Backlog: ID, categoria, evidência, prioridade e dependências
+Itens superados/duplicados
+Primeiro lote recomendado
+Decisões editoriais necessárias
+Estado de publicação: somente documentação

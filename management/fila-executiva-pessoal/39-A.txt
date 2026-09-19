@@ -1,0 +1,49 @@
+Rode você mesmo este trabalho nesta sessão executiva. Eu, usuário, autorizo explicitamente a criação do script local descrito abaixo e sua execução contra o Supabase LOCAL (nunca remoto) para carregar o compêndio de meningite bacteriana já aprovado. Não pergunte se deve executar, revisar ou validar premissas.
+
+PROMPT 39-A — Recriar o script de carga de conteúdo nativo e carregar o compêndio de meningite (Supabase LOCAL)
+
+CONTEXTO
+O fluxo de autoria nativa do NexusMed (pesquisa → material → questões → flashcards → carga) tinha um script `scripts/load-native-content.ts`, criado no piloto PCSK9 (branch `work/carga-conteudo-nativo-yaml`, commits `e273762`/`a5dce95`), que lia `<slug>.compendium.yaml`/`<slug>.questions.yaml` de qualquer `_nexusmed-nativo/` dentro de `Biblioteca/Medicina/` e gravava no Supabase replicando os mesmos shapes de insert usados por `SupabaseMaterialsRepository`/`SupabaseQuestionsRepository`. Essa branch não existe mais em nenhuma cópia local nem no repositório GitHub atual (`https://github.com/viniciuskato/SynapseMed.git`, reconciliado em 2026-09-16) — foi perdida na descontinuação das cópias antigas do projeto. O script precisa ser recriado do zero nesta execução, seguindo a mesma especificação.
+
+REPOSITÓRIO DE TRABALHO
+`C:\Users\vinic\OneDrive\nexusmed-aistudio-continuar-leitura-20260915` — é o checkout local do repositório canônico (`main` = `origin/main` do GitHub acima). Trabalhar direto nele; branch nova, não commitar em `main` sem aprovação da diretoria.
+
+RISCO DE SEGURANÇA — LEIA ANTES DE QUALQUER COMANDO
+O `.env.local` deste repositório aponta por padrão para o Supabase **REMOTO** (produção): `VITE_SUPABASE_URL=https://jfvhwwvixwvgjfqzlkkb.supabase.co`. Isto é intencional para outros usos do repo, mas é perigoso para este script. Siga exatamente o mesmo padrão de segurança já usado em `scripts/load-questoes.ts` e `scripts/load-compendios.ts` (leia esses dois arquivos primeiro, se existirem no repo, para copiar o padrão exato):
+- O script SÓ pode escrever (`--execute`) quando `VITE_SUPABASE_URL` apontar para `127.0.0.1`/`localhost`. Qualquer outra URL em modo `--execute` deve abortar imediatamente com erro claro, a menos que uma flag explícita `--allow-remote` seja passada (e mesmo assim, esta execução NÃO deve usar essa flag — carga é só local).
+- Nunca ler `VITE_SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` do `.env.local` do repo para a execução real — sobrescrever essas variáveis explicitamente na linha de comando apontando para o Supabase local (`http://127.0.0.1:54321` e a service role key local, obtida via `supabase status` se necessário).
+- Antes de rodar `--execute`, confirme que o Supabase local está de pé (`supabase status` ou equivalente); se não estiver, suba com `supabase start` (só localmente, isso não afeta produção).
+
+ESCOPO
+1. Recrie `scripts/load-native-content.ts` com a especificação abaixo:
+   - Lê recursivamente `Biblioteca/Medicina/**/_nexusmed-nativo/*.compendium.yaml` (caminho absoluto: `C:\Users\vinic\OneDrive\Estudos\Base de Estudos\Biblioteca\Medicina\`). Aceita um argumento de slug para carregar um compêndio específico (ex.: `meningite-bacteriana`), e também um modo "todos" se nenhum slug for passado.
+   - Parseia o YAML (usar `js-yaml`; adicionar como dependência se ainda não estiver em `package.json`).
+   - Resolve `disciplineName`/`themeName` por nome contra as tabelas `disciplines`/`themes`, criando se não existir — mesma lógica `ensureDiscipline`/`ensureTheme` de `scripts/load-pilot-cardiologia.ts` (leia esse arquivo para replicar o padrão exato de busca por `ilike`/criação).
+   - Gera IDs determinísticos para compêndio e seções via sha256 do slug (compêndio) e do `<slug-compêndio>/<slug-seção>` (seções), para que rodar de novo com o mesmo slug faça UPDATE em vez de duplicar.
+   - Insere/atualiza em `materials` (mapear `title`, `subtitle`, `estimatedReadTimeMinutes`→coluna equivalente, `tags`, `status`←`publicationStatus` do YAML, que deve permanecer `draft`) e em `material_sections` (cada seção do YAML: `title`, conteúdo markdown, `key_takeaways`, `clinical_pearl`, `warning_alert` — usar os nomes de coluna reais do schema, conferindo em `supabase/migrations/` antes de escrever o insert).
+   - Se o YAML tiver `references[]`, gravar em `sources`/`material_references` (ou equivalente do schema atual) — se não houver tabela clara para isso no schema, registrar como `LACUNA_DOCUMENTAL` no relatório e não inventar uma coluna.
+   - Modo padrão: dry-run (só imprime o que faria, nenhuma escrita). Só grava com `--execute`.
+   - Relatório final: contagem de materiais/seções/referências que seriam ou foram gravados, e quaisquer GAPs (disciplina/tema criado vs. reaproveitado, referências sem tabela de destino, etc.) — mesmo padrão de relatório de `load-pilot-cardiologia.ts`.
+2. Rode o script em modo dry-run contra o Supabase LOCAL para o slug `meningite-bacteriana` e reporte a saída.
+3. Se o dry-run estiver correto (sem erro, contagens batendo com o YAML: 11 seções, 13 referências ou o que for aplicável ao schema real), rode com `--execute` contra o Supabase LOCAL.
+4. Após a carga, verifique por consulta direta (via `supabase-js` ou `psql`) que o material foi gravado com `status`/`publicationStatus` = `draft` (não publicado, não visível a estudantes) e que o número de seções gravadas bate com o YAML.
+
+FRONTEIRAS
+- Não usar `--allow-remote` nem qualquer variação que grave no Supabase remoto/produção nesta execução.
+- Não publicar o material (permanece `draft`).
+- Não criar questões nem flashcards.
+- Não commitar em `main`; se quiser preservar o script, commitar numa branch nova e reportar o nome, sem merge nem push além da branch.
+- Não alterar o schema (nenhuma migration nova) — se o schema atual não tiver coluna/tabela para algo do YAML (ex. `clinicalPearl`, `warningAlert`, referências), reporte como `LACUNA_DOCUMENTAL` em vez de tentar migrar.
+
+EFICIÊNCIA
+Reaproveite ao máximo o padrão já existente em `load-pilot-cardiologia.ts`/`load-questoes.ts` (ensureDiscipline/ensureTheme, proteção de env, formato de relatório) em vez de desenhar do zero. Rode dry-run uma vez, corrija se necessário, execute uma vez — não repetir ciclos sem mudança de estado.
+
+FORMATO DO RETORNO
+RETORNO: 39-A
+Resultado: concluído ou parcial
+Script recriado em: (caminho + branch/commit)
+Dry-run: (resultado resumido)
+Execução real: (contagens gravadas, local confirmado por URL)
+Verificação pós-carga: (consulta que confirma status draft e contagem de seções)
+Lacunas documentais (ex. campos do YAML sem coluna correspondente no schema):
+Confirmação: Supabase remoto/produção não tocado; nenhuma questão/flashcard criado; nenhuma publicação.

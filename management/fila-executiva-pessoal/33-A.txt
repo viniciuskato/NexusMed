@@ -1,0 +1,27 @@
+PROMPT 33-A — Sincronização segura entre abas do mesmo navegador
+
+TRILHA: CONFIABILIDADE — CODEX EXECUTIVO
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 33-A em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Eu, usuário, autorizo implementar e validar localmente coordenação da fila entre abas do mesmo `BrowserContext`, em branch isolada. Não publique. Entregue `RETORNO: 33-A` e encerre.
+
+OBJETIVO
+Impedir que duas abas da mesma conta sobrescrevam operações da fila persistida no `localStorage`, preservando idempotência, isolamento por UID e funcionamento offline.
+
+EFICIÊNCIA
+Reproduza primeiro com duas páginas no mesmo `BrowserContext`. Escolha uma única estratégia mínima após verificar suporte e fallback; não reescreva RPCs já idempotentes. Testes focados primeiro e `verify:full` uma vez ao final.
+
+GATES
+1. Confirmar Git, concorrência e reproduzir perda/competição no estado atual.
+2. Definir invariantes: uma seção crítica por UID; nenhuma fila de outro UID; nenhum deadlock permanente; retomada após fechamento/crash; fallback seguro quando a API escolhida não existir.
+3. Preferir Web Locks para exclusão mútua e `BroadcastChannel` apenas para notificação/atualização, se compatível; justificar alternativa com evidência.
+4. Cobrir enqueue simultâneo, flush simultâneo, logout/login de outro usuário, aba fechada durante operação, offline→online e ausência das APIs.
+5. Provar no Supabase local ausência de perda/duplicação em tentativa, SRS, nota, progresso, simulado e reação conforme seus contratos atuais.
+6. Validar desktop real, duas abas do mesmo contexto, dois contextos independentes, typecheck, lint sem regressão, unitários, pgTAP, Playwright, bundle e zero fixtures.
+
+RESTRIÇÕES
+Sem escrita remota, mudança de semântica médica, migration salvo bloqueio técnico comprovado e retorno à diretoria, dependência nova sem necessidade, push, merge ou deploy.
+
+FORMATO DO RETORNO
+RETORNO: 33-A
+Resultado; reprodução; arquitetura e fallback; invariantes; testes/contagens; arquivos/commit; riscos; não publicado.

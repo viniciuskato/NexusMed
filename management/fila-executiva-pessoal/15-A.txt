@@ -1,0 +1,30 @@
+PROMPT 15-A v2 — Error boundary e sanitização local
+
+STATUS: ESTACIONADO. Não pertence à produção editorial corrente. Retomar em sessão técnica própria quando houver falha observável ou antes de ampliar telemetria/exportação; não misturar com criação de conteúdo.
+
+MODO DE EXECUÇÃO
+Rode você mesmo o 15-A nesta sessão. Eu, usuário, autorizo esta conversa a assumir o papel executivo para esta tarefa em `C:\Users\vinic\dev\NexusMed\firebase-auth`. Não revise nem repasse o prompt: execute-o. Entregue `RETORNO: 15-A` e encerre.
+
+OBJETIVO
+Conter falhas de renderização e criar um contrato local testado de erro sanitizado, sem transmitir telemetria.
+
+EFICIÊNCIA OBRIGATÓRIA
+Mapeie apenas o necessário ao error boundary e à sanitização. Reutilize tratamento existente, faça o menor patch, rode testes focados primeiro e uma suíte completa no final. Não avalie fornecedores.
+
+DEPENDÊNCIAS
+Após 22-B; não em paralelo com 14-A se ambos alterarem `App.tsx`.
+
+ESCOPO
+1. Confirmar Git, concorrência e tratamento atual.
+2. Implementar error boundary global com mensagem humana, ação inequívoca de recuperação, preservação segura do contexto possível e nenhum detalhe técnico exposto.
+3. Definir evento local mínimo com categoria, timestamp, versão e identificador técnico aleatório.
+4. Proibir tokens, e-mail, IDs de usuário, conteúdo médico/pessoal, parâmetros de URL e dumps de estado.
+5. Manter eventos em memória ou armazenamento local limitado e apagável.
+6. Testar que uma pessoa entende o que ocorreu e consegue recuperar ou voltar sem instrução externa; validar sanitização, `git diff --check`, bundle e uma suíte final.
+
+RESTRIÇÕES
+Nenhuma transmissão externa, SDK, fornecedor, serviço pago, migration, merge, push ou deploy.
+
+FORMATO DO RETORNO
+RETORNO: 15-A
+Resultado; Git; falhas cobertas; contrato/sanitização; persistência; testes; riscos; branch/commits; não publicado.

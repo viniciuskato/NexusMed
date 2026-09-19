@@ -466,7 +466,8 @@ function AuthenticatedApp() {
       activeView === 'questions' ||
       activeView === 'errors' ||
       activeView === 'simulado-session' ||
-      activeView === 'thematic-study'
+      activeView === 'thematic-study' ||
+      activeView === 'admin'
     ) {
       setLibraryOrigin({
         view: activeView,
@@ -478,6 +479,8 @@ function AuthenticatedApp() {
             ? 'Retornar ao Caderno de Erros'
             : activeView === 'simulado-session'
             ? 'Retornar ao Simulado'
+            : activeView === 'admin'
+            ? 'Retornar à Área Editorial'
             : 'Retornar às Questões',
       });
     }
@@ -841,6 +844,7 @@ function AuthenticatedApp() {
                 compendiums={compendiums}
                 flashcards={flashcards}
                 onRefreshData={refreshData}
+                onOpenCompendium={(compendiumId) => handleOpenCompendium(compendiumId)}
               />
             ) : (
               <div
