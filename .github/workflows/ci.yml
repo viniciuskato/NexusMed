@@ -13,6 +13,10 @@ name: CI
 # usado aqui; tudo local/efêmero: Supabase local, chaves demo do próprio CLI).
 # `permissions` no nível do workflow é o mínimo (`contents: read`) — nenhum
 # job escreve no repositório, comenta em PR ou publica nada.
+#
+# Actions fixadas por SHA de commit completo (comentário `# vX.Y.Z` ao lado)
+# e Supabase CLI em versão fixa — nada de tag móvel/`latest` (AUD-10). O
+# Dependabot (`.github/dependabot.yml`) propõe as atualizações por PR.
 on:
   push:
     branches: ['**']
@@ -43,9 +47,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -70,7 +74,7 @@ jobs:
 
       - name: Publicar build de produção (para inspeção manual se necessário)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dist-production
           path: dist/
@@ -82,9 +86,9 @@ jobs:
     timeout-minutes: 30
     needs: fast
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -93,9 +97,9 @@ jobs:
         run: npm ci
 
       - name: Instalar Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
         with:
-          version: latest
+          version: 2.117.0
 
       - name: Instalar navegadores do Playwright (Chromium)
         run: npx playwright install --with-deps chromium
@@ -148,7 +152,7 @@ jobs:
 
       - name: Publicar relatório/artefatos de falha do Playwright (sanitizados)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-report
           path: |

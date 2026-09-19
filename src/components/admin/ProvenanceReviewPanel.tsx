@@ -1,8 +1,30 @@
-import React, { useEffect, useState } from 'react';
-import { ShieldCheck, X, FileCheck2, Plus } from 'lucide-react';
-import { Claim, ClaimDecision, ClaimKind, ProvenanceStatus, RiskCategory } from '../../types';
+import React, { useEffect, useRef, useState } from 'react';
+import { ShieldCheck, X, FileCheck2, Plus, Link2 } from 'lucide-react';
+import {
+  Claim,
+  ClaimDecision,
+  ClaimKind,
+  ClaimSource,
+  ConsultationBasis,
+  EvidenceRelation,
+  ProvenanceStatus,
+  RiskCategory,
+  SourceSummary,
+} from '../../types';
 import { contentProvenanceRepository } from '../../repositories/ContentProvenanceRepository';
 import { getErrorMessage } from '../../utils/errorMessage';
+import SourceSelector from './SourceSelector';
+
+const EVIDENCE_RELATION_LABEL: Record<EvidenceRelation, string> = {
+  supports: 'Sustenta',
+  contextualizes: 'Contextualiza',
+  contradicts: 'Contradiz',
+};
+
+const CONSULTATION_BASIS_LABEL: Record<ConsultationBasis, string> = {
+  directly_consulted: 'Consultada diretamente',
+  indirectly_reported: 'Reportada indiretamente',
+};
 
 // ============================================================================
 // ProvenanceReviewPanel (Prompt 23-B)
@@ -47,6 +69,20 @@ interface ProvenanceReviewPanelProps {
   onChanged?: () => void;
 }
 
+interface ClaimSourceLinkForm {
+  source: SourceSummary | null;
+  evidenceRelation: EvidenceRelation;
+  consultationBasis: ConsultationBasis;
+  sourceLocator: string;
+}
+
+const emptyLinkForm = (): ClaimSourceLinkForm => ({
+  source: null,
+  evidenceRelation: 'supports',
+  consultationBasis: 'directly_consulted',
+  sourceLocator: '',
+});
+
 export default function ProvenanceReviewPanel({ target, title, onClose, onChanged }: ProvenanceReviewPanelProps) {
   const [status, setStatus] = useState<ProvenanceStatus | null>(null);
   const [revisionId, setRevisionId] = useState<string | null>(null);
@@ -62,7 +98,19 @@ export default function ProvenanceReviewPanel({ target, title, onClose, onChange
   const [claimRisk, setClaimRisk] = useState<RiskCategory | ''>('');
   const [claimRequiresSource, setClaimRequiresSource] = useState(false);
 
-  const [sourceIdByClaim, setSourceIdByClaim] = useState<Record<string, string>>({});
+  const [claimSourcesByClaim, setClaimSourcesByClaim] = useState<Record<string, ClaimSource[]>>({});
+  const [sourcesById, setSourcesById] = useState<Map<string, SourceSummary>>(new Map());
+  const [linkFormByClaim, setLinkFormByClaim] = useState<Record<string, ClaimSourceLinkForm>>({});
+
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Traz o painel pra vista e move o foco pra ele assim que é aberto —
+    // antes disso, um botão "Revisão" clicado na aba de questões abria o
+    // painel renderizado só na aba de compêndios, invisível (21-D).
+    panelRef.current?.focus();
+    panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -86,10 +134,21 @@ export default function ProvenanceReviewPanel({ target, title, onClose, onChange
         // aproximado; o estado real (aprovado_para_esta_versao/desatualizada)
         // já veio de get_provenance_status acima.
         setRevisionAttested(s === 'aprovado_para_esta_versao' || s === 'aprovacao_desatualizada');
+
+        const claimSourcesLists = await Promise.all(cs.map((c) => contentProvenanceRepository.listClaimSources(c.id)));
+        const byClaim: Record<string, ClaimSource[]> = {};
+        const allSourceIds: string[] = [];
+        cs.forEach((c, i) => {
+          byClaim[c.id] = claimSourcesLists[i];
+          allSourceIds.push(...claimSourcesLists[i].map((cSrc) => cSrc.sourceId));
+        });
+        setClaimSourcesByClaim(byClaim);
+        setSourcesById(await contentProvenanceRepository.getSourcesByIds(allSourceIds));
       } else {
         setRevisionId(null);
         setClaims([]);
         setRevisionAttested(null);
+        setClaimSourcesByClaim({});
       }
     } catch (err) {
       showToast(`Erro ao carregar proveniência: ${getErrorMessage(err)}`);
@@ -154,18 +213,25 @@ export default function ProvenanceReviewPanel({ target, title, onClose, onChange
     }
   };
 
+  const getLinkForm = (claimId: string): ClaimSourceLinkForm => linkFormByClaim[claimId] ?? emptyLinkForm();
+
+  const setLinkForm = (claimId: string, patch: Partial<ClaimSourceLinkForm>) => {
+    setLinkFormByClaim((prev) => ({ ...prev, [claimId]: { ...getLinkForm(claimId), ...patch } }));
+  };
+
   const handleAddSource = async (claimId: string) => {
-    const sourceId = (sourceIdByClaim[claimId] ?? '').trim();
-    if (!sourceId) return;
+    const form = getLinkForm(claimId);
+    if (!form.source) return;
     setBusy(true);
     try {
       await contentProvenanceRepository.addClaimSource({
         claimId,
-        sourceId,
-        evidenceRelation: 'supports',
-        consultationBasis: 'directly_consulted',
+        sourceId: form.source.id,
+        evidenceRelation: form.evidenceRelation,
+        consultationBasis: form.consultationBasis,
+        sourceLocator: form.sourceLocator.trim() || null,
       });
-      setSourceIdByClaim((prev) => ({ ...prev, [claimId]: '' }));
+      setLinkFormByClaim((prev) => ({ ...prev, [claimId]: emptyLinkForm() }));
       await load();
     } catch (err) {
       showToast(`Erro ao vincular fonte: ${getErrorMessage(err)}`);
@@ -192,8 +258,10 @@ export default function ProvenanceReviewPanel({ target, title, onClose, onChange
   return (
     <div
       id="provenance-review-panel"
+      ref={panelRef}
+      tabIndex={-1}
       data-provenance-status={status ?? undefined}
-      className="bg-white dark:bg-[#0F172A] rounded-2xl border-2 border-teal-500/50 dark:border-teal-500/60 p-6 sm:p-8 elev-md space-y-5 text-xs animate-in fade-in"
+      className="bg-white dark:bg-[#0F172A] rounded-2xl border-2 border-teal-500/50 dark:border-teal-500/60 p-6 sm:p-8 elev-md space-y-5 text-xs animate-in fade-in focus:outline-none"
     >
       <div className="flex items-center justify-between border-b border-stone-200 dark:border-[#243452] pb-3">
         <div className="flex items-center gap-2">
@@ -293,23 +361,81 @@ export default function ProvenanceReviewPanel({ target, title, onClose, onChange
                             Inferência aceita
                           </button>
                         </div>
-                        {c.requiresSource && (
-                          <div className="flex items-center gap-1.5 pt-1">
-                            <input
-                              type="text"
-                              value={sourceIdByClaim[c.id] ?? ''}
-                              onChange={(e) => setSourceIdByClaim((prev) => ({ ...prev, [c.id]: e.target.value }))}
-                              placeholder="id da fonte (sources.id)"
-                              className="flex-1 px-2 py-1 rounded border border-stone-200 dark:border-[#243452] bg-white dark:bg-[#0B1424] text-stone-900 dark:text-slate-100"
-                            />
-                            <button
-                              type="button"
+                        {(claimSourcesByClaim[c.id]?.length ?? 0) > 0 && (
+                          <ul className="space-y-1 pt-1">
+                            {claimSourcesByClaim[c.id].map((cs) => {
+                              const src = sourcesById.get(cs.sourceId);
+                              return (
+                                <li
+                                  key={cs.id}
+                                  className="flex items-center gap-1.5 flex-wrap px-2 py-1 rounded bg-stone-50 dark:bg-[#0B1424] border border-stone-200 dark:border-[#243452]"
+                                >
+                                  <Link2 className="w-3 h-3 text-teal-600 dark:text-teal-400 shrink-0" />
+                                  <span className="font-semibold text-stone-700 dark:text-slate-300 truncate">
+                                    {src?.citationText ?? cs.sourceId}
+                                  </span>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 dark:bg-[#142038] text-stone-500 dark:text-slate-400">
+                                    {EVIDENCE_RELATION_LABEL[cs.evidenceRelation]}
+                                  </span>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 dark:bg-[#142038] text-stone-500 dark:text-slate-400">
+                                    {CONSULTATION_BASIS_LABEL[cs.consultationBasis]}
+                                  </span>
+                                  {cs.sourceLocator && (
+                                    <span className="text-[10px] text-stone-400 font-mono-code">{cs.sourceLocator}</span>
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+
+                        {!revisionAttested && (
+                          <div className="space-y-1.5 pt-1 border-t border-stone-100 dark:border-[#243452]">
+                            <SourceSelector
+                              id={`source-selector-${c.id}`}
+                              selected={getLinkForm(c.id).source}
+                              onSelect={(s) => setLinkForm(c.id, { source: s })}
+                              onClear={() => setLinkForm(c.id, { source: null })}
                               disabled={busy}
-                              onClick={() => handleAddSource(c.id)}
-                              className="px-2 py-1 rounded bg-teal-700 hover:bg-teal-800 text-white font-semibold cursor-pointer disabled:opacity-50"
-                            >
-                              Vincular fonte
-                            </button>
+                            />
+                            <div className="grid grid-cols-2 gap-1.5">
+                              <select
+                                id={`evidence-relation-${c.id}`}
+                                value={getLinkForm(c.id).evidenceRelation}
+                                onChange={(e) => setLinkForm(c.id, { evidenceRelation: e.target.value as EvidenceRelation })}
+                                className="px-2 py-1 rounded border border-stone-200 dark:border-[#243452] bg-white dark:bg-[#0B1424] text-stone-900 dark:text-slate-100"
+                              >
+                                <option value="supports">Sustenta</option>
+                                <option value="contextualizes">Contextualiza</option>
+                                <option value="contradicts">Contradiz</option>
+                              </select>
+                              <select
+                                id={`consultation-basis-${c.id}`}
+                                value={getLinkForm(c.id).consultationBasis}
+                                onChange={(e) => setLinkForm(c.id, { consultationBasis: e.target.value as ConsultationBasis })}
+                                className="px-2 py-1 rounded border border-stone-200 dark:border-[#243452] bg-white dark:bg-[#0B1424] text-stone-900 dark:text-slate-100"
+                              >
+                                <option value="directly_consulted">Consultada diretamente</option>
+                                <option value="indirectly_reported">Reportada indiretamente</option>
+                              </select>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="text"
+                                value={getLinkForm(c.id).sourceLocator}
+                                onChange={(e) => setLinkForm(c.id, { sourceLocator: e.target.value })}
+                                placeholder="Localização dentro da fonte (opcional, ex.: p. 12, tabela 3)"
+                                className="flex-1 px-2 py-1 rounded border border-stone-200 dark:border-[#243452] bg-white dark:bg-[#0B1424] text-stone-900 dark:text-slate-100"
+                              />
+                              <button
+                                type="button"
+                                disabled={busy || !getLinkForm(c.id).source}
+                                onClick={() => handleAddSource(c.id)}
+                                className="px-2 py-1 rounded bg-teal-700 hover:bg-teal-800 text-white font-semibold cursor-pointer disabled:opacity-50 shrink-0"
+                              >
+                                Vincular fonte
+                              </button>
+                            </div>
                           </div>
                         )}
                       </li>

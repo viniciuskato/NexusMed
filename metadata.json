@@ -1,6 +1,0 @@
-{
-  "name": "NexusMed",
-  "description": "Plataforma médica de compêndios fisiopatológicos, questões comentadas e repetição espaçada.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

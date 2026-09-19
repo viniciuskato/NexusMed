@@ -1,0 +1,38 @@
+# Atualizações de dependências por PR (AUD-10). Cada PR passa pelo CI
+# (`fast`/`full`) como qualquer outro — nada é mesclado automaticamente.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
+    # Majors do toolchain exigem migração coordenada e são tratados em uma
+    # branch planejada. PRs isolados quebram os peer dependencies antes mesmo
+    # dos testes (ex.: ESLint + @eslint/js + plugins; TypeScript + typescript-eslint).
+    ignore:
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+    groups:
+      # minor/patch agrupados por tipo; majors não ignoradas ficam fora dos
+      # grupos e chegam em PRs individuais.
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+      production-dependencies:
+        dependency-type: production
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci
