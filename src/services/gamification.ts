@@ -1,5 +1,6 @@
 import confetti from 'canvas-confetti';
 import { QuestionAnswerRecord, UserStats, Flashcard, Question, DifficultyLevel } from '../types';
+import { diaLocal } from '../utils/diaLocal';
 
 // XP por questão respondida, ponderado por dificuldade (fácil < médio <
 // difícil). Valores de referência escolhidos para manter o total próximo
@@ -159,10 +160,10 @@ export class GamificationService {
     stats: UserStats,
     readingProgress: Record<string, { readSectionIds: string[]; percent: number }>
   ): DailyQuest[] {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = diaLocal(new Date());
     const answersArray = Object.values(answers);
 
-    const questionsToday = answersArray.filter((a) => a.timestamp?.startsWith(todayStr)).length;
+    const questionsToday = answersArray.filter((a) => a.timestamp && diaLocal(a.timestamp) === todayStr).length;
     const cardsToday = stats.cardsReviewedToday || 0;
     const sectionsRead = Object.values(readingProgress).reduce(
       (sum, p) => sum + (p.readSectionIds?.length || 0),
@@ -314,9 +315,9 @@ export class GamificationService {
     const totalAnswered = answersArray.length;
     const totalCorrect = answersArray.filter((a) => a.isCorrect).length;
 
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = diaLocal(new Date());
     const cardsReviewedToday = flashcards.reduce((acc, c) => {
-      const reviewedToday = (c.srs?.reviewHistory || []).some((h) => h?.date?.startsWith(todayStr));
+      const reviewedToday = (c.srs?.reviewHistory || []).some((h) => h?.date && diaLocal(h.date) === todayStr);
       return acc + (reviewedToday ? 1 : 0);
     }, 0);
 
@@ -326,21 +327,21 @@ export class GamificationService {
 
     const activityDates = new Set<string>();
     for (const a of answersArray) {
-      if (a.timestamp) activityDates.add(a.timestamp.slice(0, 10));
+      if (a.timestamp) activityDates.add(diaLocal(a.timestamp));
     }
     for (const c of flashcards) {
       for (const h of c.srs?.reviewHistory || []) {
-        if (h?.date) activityDates.add(h.date.slice(0, 10));
+        if (h?.date) activityDates.add(diaLocal(h.date));
       }
     }
 
     let streakDays = 0;
     const cursor = new Date();
     cursor.setHours(0, 0, 0, 0);
-    if (!activityDates.has(cursor.toISOString().slice(0, 10))) {
+    if (!activityDates.has(diaLocal(cursor))) {
       cursor.setDate(cursor.getDate() - 1);
     }
-    while (activityDates.has(cursor.toISOString().slice(0, 10))) {
+    while (activityDates.has(diaLocal(cursor))) {
       streakDays++;
       cursor.setDate(cursor.getDate() - 1);
     }

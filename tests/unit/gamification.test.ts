@@ -281,17 +281,12 @@ describe('GamificationService.computeRealStats — ofensiva', () => {
   });
 
   // -------------------------------------------------------------------------
-  // BUG REAL (não corrigido aqui — ver relatório da sessão): a ofensiva mistura
-  // dia UTC (a data das atividades é `timestamp.slice(0, 10)`, sempre UTC) com
-  // meia-noite LOCAL (`cursor.setHours(0,0,0,0)` seguido de
-  // `toISOString().slice(0, 10)`). Em America/Sao_Paulo (UTC-3), qualquer
-  // estudo entre 21h e 23h59 local cai no "dia UTC seguinte". Cenário: o
-  // estudante estudou ontem de manhã e hoje às 22h (hora local) — dois dias
-  // de calendário consecutivos, ofensiva esperada 2. O cálculo procura a
-  // chave "hoje" (dia local), não a encontra (a atividade das 22h foi
-  // registrada como amanhã em UTC), recua para ontem e devolve 1.
+  // "Hoje" é o dia do calendário LOCAL do estudante. Antes da correção, a data
+  // das atividades era o dia UTC (`timestamp.slice(0, 10)`): em
+  // America/Sao_Paulo (UTC-3), estudo entre 21h e 23h59 caía no dia seguinte
+  // e a ofensiva/missões/cards de hoje não contavam o estudo da noite.
   // -------------------------------------------------------------------------
-  it.fails('BUG: em America/Sao_Paulo, estudo às 22h local de hoje não conta para a ofensiva de hoje', () => {
+  it('em America/Sao_Paulo, estudo às 22h local de hoje conta para a ofensiva de hoje', () => {
     useTimeZone('America/Sao_Paulo');
     // Agora: 18/09 22:30 em São Paulo = 19/09 01:30 UTC.
     vi.setSystemTime(new Date('2026-09-19T01:30:00.000Z'));
@@ -309,14 +304,29 @@ describe('GamificationService.computeRealStats — ofensiva', () => {
     expect(d.getHours()).toBe(22);
   });
 
-  it('documenta o valor atual do bug acima (ofensiva 1 em vez de 2) — muda quando o bug for corrigido', () => {
+  it('em America/Sao_Paulo, às 22h30 local o card revisado de manhã ainda conta como revisado hoje', () => {
     useTimeZone('America/Sao_Paulo');
-    vi.setSystemTime(new Date('2026-09-19T01:30:00.000Z'));
-    const answers = answersOf(
-      answer('ontem-manha', '2026-09-17T13:00:00.000Z'),
-      answer('hoje-noite', '2026-09-19T01:00:00.000Z')
+    vi.setSystemTime(new Date('2026-09-19T01:30:00.000Z')); // 18/09 22:30 local
+    const cards = [
+      cardReviewedAt('manha', '2026-09-18T13:00:00.000Z'), // 18/09 10:00 local
+      cardReviewedAt('ontem-noite', '2026-09-18T01:00:00.000Z'), // 17/09 22:00 local
+    ];
+    expect(GamificationService.computeRealStats({}, cards).cardsReviewedToday).toBe(1);
+  });
+
+  it('em America/Sao_Paulo, às 22h30 local as questões de hoje contam na missão e as das 22h de ontem não', () => {
+    useTimeZone('America/Sao_Paulo');
+    vi.setSystemTime(new Date('2026-09-19T01:30:00.000Z')); // 18/09 22:30 local
+    const quests = GamificationService.getDailyQuests(
+      answersOf(
+        answer('hoje-manha', '2026-09-18T13:00:00.000Z'), // 18/09 10:00 local
+        answer('hoje-noite', '2026-09-19T01:00:00.000Z'), // 18/09 22:00 local
+        answer('ontem-noite', '2026-09-18T01:00:00.000Z') // 17/09 22:00 local
+      ),
+      EMPTY_STATS,
+      {}
     );
-    expect(GamificationService.computeRealStats(answers, []).streakDays).toBe(1);
+    expect(quests[0]).toMatchObject({ id: 'quest-questions', current: 2 });
   });
 
   it('em America/Sao_Paulo, estudo em horário diurno (sem cruzar a meia-noite UTC) conta a ofensiva corretamente', () => {
