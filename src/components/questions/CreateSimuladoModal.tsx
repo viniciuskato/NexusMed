@@ -5,6 +5,7 @@ import {
   Check,
 } from 'lucide-react';
 import { Discipline, Theme, DifficultyLevel, MedicalCycle, SimuladoConfig } from '../../types';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 
 interface CreateSimuladoModalProps {
   isOpen: boolean;
@@ -20,19 +21,18 @@ export const CreateSimuladoModal: React.FC<CreateSimuladoModalProps> = ({
   isOpen,
   onClose,
   disciplines,
-  themes,
   totalAvailableQuestions,
   mistakesCount,
   onStartSimulado,
 }) => {
   const [name, setName] = useState('Simulado Personalizado');
   const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([]);
-  const [selectedDifficulties, setSelectedDifficulties] = useState<DifficultyLevel[]>([
+  const [selectedDifficulties] = useState<DifficultyLevel[]>([
     'facil',
     'medio',
     'dificil',
   ]);
-  const [selectedCycles, setSelectedCycles] = useState<MedicalCycle[]>([
+  const [selectedCycles] = useState<MedicalCycle[]>([
     'basico',
     'clinico',
     'internato_residencia',
@@ -41,6 +41,8 @@ export const CreateSimuladoModal: React.FC<CreateSimuladoModalProps> = ({
   const [questionCount, setQuestionCount] = useState(5);
   const [timeLimitMinutes, setTimeLimitMinutes] = useState(15);
   const [isExamMode, setIsExamMode] = useState(true);
+
+  const dialogRef = useDialogA11y<HTMLDivElement>({ isOpen, onClose });
 
   if (!isOpen) return null;
 
@@ -71,7 +73,12 @@ export const CreateSimuladoModal: React.FC<CreateSimuladoModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="w-full max-w-2xl bg-white dark:bg-[#0F172A] rounded-3xl elev-2xl border border-slate-200 dark:border-[#243452] overflow-hidden flex flex-col max-h-[90vh]">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-simulado-title"
+        className="w-full max-w-2xl bg-white dark:bg-[#0F172A] rounded-3xl elev-2xl border border-slate-200 dark:border-[#243452] overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-6 bg-gradient-to-r from-teal-900 via-slate-900 to-teal-950 text-white flex items-center justify-between border-b border-teal-800/30">
           <div className="flex items-center gap-3">
@@ -79,7 +86,7 @@ export const CreateSimuladoModal: React.FC<CreateSimuladoModalProps> = ({
               <Timer className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-lg font-bold">Criador de Simulados & Listas</h3>
+              <h3 id="create-simulado-title" className="text-lg font-bold">Criador de Simulados & Listas</h3>
               <p className="text-xs text-slate-300">
                 Monte provas cronometradas ou listas de estudo sem pressão de tempo.
               </p>

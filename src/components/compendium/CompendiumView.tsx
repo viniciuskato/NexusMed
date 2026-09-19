@@ -19,6 +19,7 @@ import {
   Stethoscope,
   Pill,
   ArrowLeft,
+  type LucideIcon,
 } from 'lucide-react';
 import { Compendium, Discipline, Theme, StudyLens, EditorialStatus, LastReadingSession } from '../../types';
 import { StorageService } from '../../services/storage';
@@ -44,7 +45,7 @@ interface CompendiumViewProps {
   lastReadingSession?: LastReadingSession | null;
 }
 
-export const STUDY_LENSES: { id: StudyLens; label: string; description: string; icon: any }[] = [
+export const STUDY_LENSES: { id: StudyLens; label: string; description: string; icon: LucideIcon }[] = [
   {
     id: 'fisiopatologia',
     label: 'Fisiopatologia & Mecanismos',
@@ -392,11 +393,14 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
                       </span>
                     </div>
 
-                    <h4
-                      onClick={() => onOpenCompendium(comp.id, nextSectionId)}
-                      className="font-serif-reading text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-teal-600 dark:group-hover:text-teal-400 cursor-pointer transition-colors line-clamp-1"
-                    >
-                      {comp.title}
+                    <h4 className="font-serif-reading text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors line-clamp-1">
+                      <button
+                        type="button"
+                        onClick={() => onOpenCompendium(comp.id, nextSectionId)}
+                        className="block w-full text-left truncate cursor-pointer"
+                      >
+                        {comp.title}
+                      </button>
                     </h4>
 
                     {/* Progress Bar */}
@@ -579,7 +583,7 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
             <span className="text-slate-400 text-[11px]">Status:</span>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
               className="text-xs font-medium px-2 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
             >
               <option value="all">Todos os status</option>
@@ -673,16 +677,19 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
 
                           {/* Title & Subtitle */}
                           <div>
-                            <h4
-                              onClick={() => onOpenCompendium(comp.id)}
-                              className="font-serif-reading text-base font-bold text-slate-900 dark:text-slate-100 group-hover:text-teal-700 dark:group-hover:text-teal-400 cursor-pointer transition-colors leading-snug"
-                            >
-                              {comp.moduleNumber && (
-                                <span className="inline-block align-middle mr-1.5 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                                  M{comp.moduleNumber}
-                                </span>
-                              )}
-                              {comp.title}
+                            <h4 className="font-serif-reading text-base font-bold text-slate-900 dark:text-slate-100 group-hover:text-teal-700 dark:group-hover:text-teal-400 transition-colors leading-snug">
+                              <button
+                                type="button"
+                                onClick={() => onOpenCompendium(comp.id)}
+                                className="block w-full text-left cursor-pointer"
+                              >
+                                {comp.moduleNumber && (
+                                  <span className="inline-block align-middle mr-1.5 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                                    M{comp.moduleNumber}
+                                  </span>
+                                )}
+                                {comp.title}
+                              </button>
                             </h4>
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
                               {comp.subtitle}
@@ -793,7 +800,6 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
             .map((comp) => {
             const disc = disciplines.find((d) => d.id === comp.disciplineId);
             const compProgress = readingProgress[comp.id] || { readSectionIds: [], percent: 0 };
-            const isBookmarked = bookmarks.compendiums.includes(comp.id);
             const compHighlights = highlights[comp.id] || [];
             const hasNote = Boolean(notes[comp.id]);
             const lens = getCompendiumLens(comp);
@@ -831,16 +837,19 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
                     </span>
                   </div>
 
-                  <h4
-                    onClick={() => onOpenCompendium(comp.id)}
-                    className="font-serif-reading text-base font-bold text-slate-900 dark:text-slate-100 hover:text-teal-600 dark:hover:text-teal-400 cursor-pointer transition-colors leading-tight"
-                  >
-                    {comp.moduleNumber && (
-                      <span className="inline-block align-middle mr-1.5 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                        M{comp.moduleNumber}
-                      </span>
-                    )}
-                    {comp.title}
+                  <h4 className="font-serif-reading text-base font-bold text-slate-900 dark:text-slate-100 hover:text-teal-600 dark:hover:text-teal-400 transition-colors leading-tight">
+                    <button
+                      type="button"
+                      onClick={() => onOpenCompendium(comp.id)}
+                      className="block w-full text-left cursor-pointer"
+                    >
+                      {comp.moduleNumber && (
+                        <span className="inline-block align-middle mr-1.5 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                          M{comp.moduleNumber}
+                        </span>
+                      )}
+                      {comp.title}
+                    </button>
                   </h4>
                   <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
                     {comp.subtitle}

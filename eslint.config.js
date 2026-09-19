@@ -88,12 +88,19 @@ export default tseslint.config(
       //   instrução explícita do prompt). Mantido como aviso visível
       //   (não quebra `npm run verify`) até uma entrega dedicada de
       //   acessibilidade de teclado com validação real em navegador.
-      // - no-autofocus: o único uso (`GlobalSearchModal.tsx`) é
+      //   Atualização AUD-09 (2026-09-18): as ocorrências foram zeradas —
+      //   `<button>` onde possível, `role="button"` + `tabIndex` +
+      //   `onActivationKey` (src/utils/keyboardActivation.ts) onde o
+      //   elemento contém botões internos. Continuam 'warn', mas o teto
+      //   `--max-warnings` do package.json impede qualquer regressão.
+      // - no-autofocus: o único uso (`GlobalSearchModal.tsx`) era
       //   `autoFocus` no campo de busca ao abrir o modal — UX intencional,
       //   não um acidente; a regra por padrão marca qualquer autofocus
       //   como erro. Remover mudaria comportamento do produto, proibido
       //   nesta entrega. Mantido como aviso para reavaliação futura
       //   (ex.: só focar depois da animação de abertura do modal).
+      //   AUD-09: substituído por `initialFocusRef` do hook useDialogA11y
+      //   (mesmo foco no campo ao abrir); nenhum uso restante.
       'jsx-a11y/click-events-have-key-events': 'warn',
       'jsx-a11y/no-static-element-interactions': 'warn',
       'jsx-a11y/no-noninteractive-element-interactions': 'warn',

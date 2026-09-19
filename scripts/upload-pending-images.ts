@@ -38,7 +38,8 @@ async function main() {
 
   let uploaded = 0, failed = 0;
   for (const row of rows!) {
-    const section = (row as any).material_sections;
+    const section = (row as unknown as { material_sections?: { materials?: { id: string; title: string } | null } | null })
+      .material_sections;
     const material = section?.materials;
     if (!material) { console.log('SEM material resolvido para asset', row.id, row.external_url); failed++; continue; }
 

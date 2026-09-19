@@ -69,7 +69,9 @@ export interface SyncQueueSummary {
   status: 'synced' | 'pending' | 'syncing' | 'error';
 }
 
-type Handler = (payload: any, clientOpId: string) => Promise<unknown>;
+// O payload vem da fila persistida (JSON), sem tipo em tempo de execução;
+// cada handler declara o próprio formato via `registerHandler<P>`.
+type Handler = (payload: unknown, clientOpId: string) => Promise<unknown>;
 
 const MAX_RETRYABLE_ATTEMPTS_DEFAULT = 8;
 const SYNCED_RETENTION = 30; // mantém só as últimas N ops sincronizadas, para não crescer sem limite
@@ -132,8 +134,11 @@ function notify(userId: string): void {
   listeners.get(userId)?.forEach((fn) => fn());
 }
 
-export function registerHandler(category: string, handler: Handler): void {
-  handlers.set(category, handler);
+export function registerHandler<P>(
+  category: string,
+  handler: (payload: P, clientOpId: string) => Promise<unknown>
+): void {
+  handlers.set(category, handler as Handler);
 }
 
 /**
@@ -184,10 +189,11 @@ const CRYPTO_UNAVAILABLE_MESSAGE =
  * Classifica o erro para decidir a política de retentativa. Não usar a
  * mensagem bruta na interface — só a categoria.
  */
-export function classifySyncError(err: any): SyncErrorKind {
+export function classifySyncError(err: unknown): SyncErrorKind {
   if (!err) return 'unknown';
-  const msg = String(err?.message || err);
-  const code = err?.code || err?.status;
+  const fields = err as { message?: unknown; code?: unknown; status?: unknown; name?: unknown };
+  const msg = String(fields.message || err);
+  const code = fields.code || fields.status;
 
   // Conflito de mesclagem esgotado (Prompt 07-E3, bloqueio 3): o cliente
   // tentou fundir edições concorrentes até o limite explícito de tentativas
@@ -199,7 +205,7 @@ export function classifySyncError(err: any): SyncErrorKind {
   // de novo, nunca um laço infinito).
   if (code === 'SYNC_CONFLICT') return 'conflict';
   if (
-    err?.name === 'AuthApiError' ||
+    fields.name === 'AuthApiError' ||
     code === 401 ||
     code === 'PGRST301' ||
     /jwt|token expirado|not authenticated|refresh_token|invalid_grant/i.test(msg)
@@ -435,7 +441,7 @@ async function runFlush(userId: string, force = false): Promise<void> {
     if (!clientOpId) {
       try {
         clientOpId = uuid();
-      } catch (e) {
+      } catch {
         const attempts = op.attempts + 1;
         const retryable = attempts < currentMaxRetryableAttempts();
         const backoff = Math.min(currentBaseBackoffMs() * 2 ** (attempts - 1), MAX_BACKOFF_MS);
@@ -513,7 +519,7 @@ async function runFlush(userId: string, force = false): Promise<void> {
           state: retryable ? 'pending' : 'failed',
           attempts,
           nextRetryAt: retryable ? new Date(Date.now() + backoff).toISOString() : undefined,
-          lastError: { kind, message: String((err as any)?.message || err) },
+          lastError: { kind, message: String((err as { message?: unknown } | null | undefined)?.message || err) },
           updatedAt: new Date().toISOString(),
         };
       }

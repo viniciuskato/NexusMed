@@ -38,8 +38,6 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   onOpenSearch,
   stats,
-  dueCardsCount = 0,
-  errorLogCount = 0,
   activeView,
   onSelectView,
   theme,
