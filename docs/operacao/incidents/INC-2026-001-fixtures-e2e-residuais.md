@@ -1,6 +1,6 @@
 ---
 id: INC-2026-001
-status: verifying
+status: resolved
 severity: medium
 area: e2e-ci
 detected_at: 2026-09-18
@@ -8,6 +8,8 @@ owner: nexusmed
 pr: 18
 commits:
   - 17af650
+  - cacc940
+  - 94ba148
 prevention:
   test: true
   ci: true
@@ -69,8 +71,11 @@ permanecia. Isso explica a contagem exata de três resíduos.
 - Typecheck local após a primeira correção: aprovado.
 - Teste E2E local: bloqueado porque o Supabase CLI não estava no `PATH`;
   a suíte falhou antes dos cenários, sem invalidar a causa-raiz.
+- CI após integrar a `main`: os dois jobs `full` passaram em 5m57s e
+  5m58s, incluindo pgTAP, Playwright e a consulta independente de zero
+  fixtures `e2e-13a-*` remanescentes.
 
 ## Pendências e critério de encerramento
 
-Mudar para `resolved` quando o PR #18 executar o job `full` com Playwright
-verde e contagem final igual a zero.
+Encerrado em 2026-09-19: o PR #18 executou os dois jobs `full` com
+Playwright verde e contagem final igual a zero.

@@ -27,7 +27,7 @@ Use `resolved` somente quando a prevenção executável estiver validada.
 
 | ID | Data | Severidade | Área | Estado | Resumo |
 |---|---|---|---|---|---|
-| [INC-2026-001](INC-2026-001-fixtures-e2e-residuais.md) | 2026-09-18 | média | E2E/CI | verifying | Teardown deixou três usuários `e2e-13a-*` no Supabase local |
+| [INC-2026-001](INC-2026-001-fixtures-e2e-residuais.md) | 2026-09-18 | média | E2E/CI | resolved | Teardown deixou três usuários `e2e-13a-*` no Supabase local |
 
 ## Regra de consolidação
 
