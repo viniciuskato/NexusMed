@@ -38,6 +38,9 @@ comentadas, flashcards com SRS, simulados, caderno de erros. Produção
 real, em uso por um grupo fechado de amigos do dono do projeto (não é
 protótipo).
 
+- **Produzir conteúdo (compêndio) do zero até publicado** — formulário
+  do Admin vs. YAML, e o gate de revisão/atestação obrigatório antes de
+  publicar: [`docs/editorial/PADRAO-NEXUSMED-CONTEUDOS.md`](docs/editorial/PADRAO-NEXUSMED-CONTEUDOS.md).
 - **URL de produção**: `https://synapse-med-firebase-auth.vercel.app`
 - **Deploy**: automático a cada push em `main` (Vercel + GitHub). **Por
   isso: nunca trabalhar direto em `main`, nunca publicar sem autorização
