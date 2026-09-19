@@ -1,0 +1,556 @@
+# Compêndio nativo do NexusMed — Meningite Bacteriana Aguda
+# (Infectologia, tema curricular "Clínica").
+#
+# ESTADO EDITORIAL: APROVADO PELO USUÁRIO EM 2026-09-19 para continuidade.
+# Este arquivo é um formato de AUTORIA pensado para edição humana (mesmas
+# convenções do piloto de Distúrbio Acidobásico em docs/editorial/as1/):
+#   - `disciplineName`/`themeName` (texto) em vez de `disciplineId`/`themeId`
+#     (UUID) — resolvidos por nome no momento da carga.
+#   - `id` do compêndio e das seções são slugs legíveis, não UUID.
+#   - Sem campo de imagem: mecanismos descritos em texto/tabela.
+#
+# Ainda NÃO importado, salvo como rascunho no CMS, atestado nem publicado —
+# `publicationStatus: draft` no corpo reflete isso. Próxima etapa: autoria
+# de questões (vinculadas por compendiumSectionId) e flashcards cobrindo os
+# 10 tópicos abaixo, em prompt separado.
+#
+# ORIGEM: disparado pelo Caso Clínico 5 do livro de casos de Agressão e
+# Defesa II (não transcrito, não resolvido aqui). Organizado por tópicos de
+# abordagem, não pela narrativa daquele caso.
+
+id: meningite-bacteriana-aguda
+title: "Meningite Bacteriana Aguda"
+subtitle: "Da fisiopatologia da invasão meníngea ao manejo do foco otogênico e à prevenção"
+disciplineName: Infectologia
+themeName: Clínica
+author: ""
+estimatedReadTimeMinutes: 22
+publicationStatus: draft
+tags:
+  - meningite
+  - infecção do sistema nervoso central
+  - emergência infecciosa
+  - líquor
+  - antibioticoterapia empírica
+
+dependencies: []
+
+sections:
+  - id: definicao-epidemiologia-vias-disseminacao
+    title: Definição, Epidemiologia e Vias de Disseminação
+    mechanismTag: Fisiopatologia
+    content: |
+      Meningite bacteriana aguda é a inflamação das leptomeninges (pia-máter
+      e aracnoide) e do espaço subaracnóideo causada por invasão bacteriana,
+      de instalação em horas a poucos dias — em contraste com quadros
+      subagudos/crônicos (tuberculose, fungos).
+
+      **Vias de disseminação até o espaço subaracnóideo:**
+
+      1. **Hematogênica** (a mais comum): colonização de nasofaringe →
+         invasão da corrente sanguínea (bacteremia) → translocação através
+         do plexo coroide ou dos capilares cerebrais, atravessando a
+         barreira hematoencefálica.
+      2. **Contiguidade** a partir de foco parameníngeo: otite média aguda,
+         mastoidite, sinusite (especialmente esfenoidal/etmoidal), e fratura
+         de base de crânio com fístula liquórica.
+      3. **Inoculação direta**: neurocirurgia, trauma penetrante,
+         dispositivo de derivação ventricular (nesse caso o espectro
+         etiológico muda — predominam estafilococos e gram-negativos
+         nosocomiais, fora do escopo deste compêndio).
+
+      **Carga global**: uma revisão sistemática com metanálise de 56
+      estudos elegíveis mostrou que *Streptococcus pneumoniae* e *Neisseria
+      meningitidis* são, juntos, os agentes mais frequentes na população
+      geral em praticamente todas as regiões, com *Haemophilus influenzae*
+      tipo b historicamente relevante em crianças não vacinadas
+      [1](#ref-1). A introdução das vacinas conjugadas (Hib e
+      pneumocócica) na rotina infantil mudou de forma marcada essa
+      distribuição nas últimas décadas — ver seção de Prevenção.
+    keyTakeaways:
+      - Inflamação aguda de leptomeninges e espaço subaracnóideo por invasão bacteriana
+      - Via hematogênica é a mais comum; contiguidade (otite, mastoidite, sinusite) e inoculação direta são as outras duas rotas
+      - S. pneumoniae e N. meningitidis dominam a etiologia global na população geral, com Hib historicamente relevante em não vacinados
+    clinicalPearl: >
+      Um foco parameníngeo identificável (otite, mastoidite, sinusite) não é
+      só uma comorbidade associada — é a via de entrada, e isso muda a
+      conduta: pode exigir intervenção cirúrgica do foco além do
+      antibiótico sistêmico (ver seção 9).
+
+  - id: fisiopatologia
+    title: Fisiopatologia
+    mechanismTag: Fisiopatologia
+    content: |
+      A lesão neurológica na meningite bacteriana não decorre só da
+      presença da bactéria — é largamente mediada pela **resposta
+      inflamatória do próprio hospedeiro**.
+
+      **Sequência de eventos:**
+
+      1. Componentes da parede bacteriana (peptidoglicano, ácido
+         lipoteicoico em gram-positivos; lipopolissacarídeo em
+         gram-negativos) são reconhecidos por receptores de padrão
+         molecular (Toll-like receptors) em células da micróglia e do
+         endotélio.
+      2. Essa sinalização ativa NF-κB e desencadeia liberação maciça de
+         citocinas pró-inflamatórias — IL-1β, TNF-α, IL-6, IL-8/CXCL1
+         [2](#ref-2).
+      3. As citocinas recrutam neutrófilos para o espaço subaracnóideo (daí
+         a pleocitose neutrofílica característica) e aumentam a
+         permeabilidade da barreira hematoencefálica.
+      4. A barreira rota permite mais entrada de proteína plasmática no
+         líquor (explicando a hiperproteinorraquia) e contribui para
+         **edema cerebral** de três mecanismos simultâneos: vasogênico
+         (extravasamento capilar), citotóxico (edema intracelular por lesão
+         de membrana) e intersticial (obstrução da reabsorção liquórica).
+      5. O edema, somado a hidrocefalia obstrutiva/comunicante e a
+         vasculite/vasoespasmo de vasos que cruzam o espaço subaracnóideo
+         inflamado, eleva a pressão intracraniana e pode causar isquemia
+         focal ou infarto — a via final comum de boa parte das sequelas
+         neurológicas permanentes [2](#ref-2).
+    keyTakeaways:
+      - Boa parte do dano neurológico é mediado pela resposta inflamatória do hospedeiro, não diretamente pela bactéria
+      - Cascata de citocinas (IL-1β, TNF-α, IL-6) → neutrófilos no liquor → rotura da barreira hematoencefálica
+      - Edema cerebral (vasogênico + citotóxico + intersticial) e vasculite de vasos subaracnóideos explicam hipertensão intracraniana, infarto e sequelas
+    clinicalPearl: >
+      Essa fisiopatologia é a justificativa racional para a dexametasona
+      adjuvante (seção 6): se parte do dano é inflamatório e não
+      infeccioso, atenuar a resposta imune — não só matar a bactéria —
+      também protege o parênquima.
+
+  - id: etiologia-por-faixa-etaria
+    title: Etiologia por Faixa Etária
+    mechanismTag: Conduta
+    content: |
+      A escolha do antibiótico empírico depende diretamente da faixa
+      etária, porque o espectro etiológico muda de forma previsível
+      [3](#ref-3):
+
+      | Faixa etária | Agentes predominantes |
+      | --- | --- |
+      | Neonatos (0–28 dias) | *Streptococcus agalactiae* (grupo B) — o mais frequente; *Escherichia coli* e outros bacilos gram-negativos entéricos; *Listeria monocytogenes* |
+      | Lactentes (1–23 meses) | *S. pneumoniae*, *N. meningitidis*, *H. influenzae* tipo b (residual, em não vacinados); *S. agalactiae* ainda possível nos primeiros meses |
+      | Crianças maiores e adultos jovens | *S. pneumoniae* e *N. meningitidis* dominam |
+      | Adultos > 50 anos, gestantes, imunocomprometidos, etilistas | Mesmo espectro acima **mais** *Listeria monocytogenes* — cobertura obrigatória nesse grupo |
+
+      Essa tabela é a base direta da antibioticoterapia empírica por faixa
+      etária detalhada na seção de Tratamento: a cobertura para *Listeria*
+      (ampicilina) só entra no esquema quando a faixa etária ou a condição
+      do paciente justifica.
+    keyTakeaways:
+      - Neonatos: S. agalactiae, E. coli/gram-negativos entéricos, Listeria
+      - Lactentes e crianças maiores/adultos jovens: S. pneumoniae e N. meningitidis dominam
+      - Listeria monocytogenes exige cobertura empírica extra em neonatos, > 50 anos, gestantes e imunocomprometidos
+    warningAlert: >
+      Esquecer a cobertura para Listeria (ela é naturalmente resistente a
+      cefalosporinas) em paciente > 50 anos ou imunocomprometido é um erro
+      de tratamento empírico com consequência direta em mortalidade.
+
+  - id: quadro-clinico-sinais-exame
+    title: Quadro Clínico e Sinais de Exame
+    mechanismTag: Diagnóstico
+    content: |
+      A tríade clássica — febre, rigidez de nuca e alteração do nível de
+      consciência — está presente numa minoria dos casos quando os três
+      sinais são exigidos simultaneamente; a ausência de qualquer um deles
+      isoladamente **não afasta** o diagnóstico.
+
+      **Sinais e sintomas a buscar ativamente:**
+
+      - Febre, cefaleia intensa, rigidez de nuca, fotofobia, náuseas/vômitos.
+      - Sinais de irritação meníngea ao exame: Kernig (dor/resistência à
+        extensão do joelho com quadril fletido a 90°) e Brudzinski (flexão
+        involuntária dos joelhos à flexão passiva do pescoço) — sensibilidade
+        limitada, mas alta especificidade quando presentes.
+      - Alteração do nível de consciência: de confusão leve a coma —
+        marcador de gravidade e de possível hipertensão intracraniana.
+      - Sinais de foco neurológico: paresia, paralisia de nervo craniano,
+        afasia — sugerem complicação (infarto, abscesso, empiema) e mudam a
+        sequência diagnóstica (ver seção 5).
+      - Petéquias/púrpura: sugerem etiologia meningocócica com bacteremia,
+        e são um sinal de alarme para choque séptico iminente.
+      - Em neonatos e lactentes pequenos, os sinais clássicos costumam
+        estar ausentes; a apresentação é inespecífica — irritabilidade,
+        recusa alimentar, hipotonia, abaulamento de fontanela, hipotermia
+        em vez de febre [3](#ref-3).
+    keyTakeaways:
+      - A tríade clássica (febre + rigidez de nuca + confusão) está ausente com frequência — não exigir os três para suspeitar
+      - Kernig e Brudzinski têm baixa sensibilidade, mas alta especificidade
+      - Petéquias/púrpura sugerem meningococcemia e alertam para choque séptico
+      - Em neonatos/lactentes o quadro é inespecífico: irritabilidade, recusa alimentar, hipotonia, fontanela abaulada
+    warningAlert: >
+      Em neonato ou lactente pequeno, a ausência de febre e de sinais
+      meníngeos clássicos NÃO afasta meningite bacteriana — o limiar para
+      investigar deve ser baixo diante de irritabilidade/recusa alimentar
+      inexplicadas.
+
+  - id: diagnostico-perfil-liquorico
+    title: Diagnóstico e Perfil Liquórico
+    mechanismTag: Diagnóstico
+    content: |
+      **Sequência diagnóstica**: suspeita clínica → hemoculturas (antes do
+      antibiótico, se isso não atrasar o início do tratamento) →
+      antibioticoterapia empírica imediata → punção lombar assim que
+      possível.
+
+      A punção lombar não deve atrasar o início do antibiótico em paciente
+      grave. Tomografia de crânio antes da punção é reservada a situações
+      com risco aumentado de herniação: imunossupressão, doença de SNC
+      prévia, crise convulsiva recente, papiledema, déficit focal ou
+      alteração importante da consciência — nesses casos, colher
+      hemocultura e iniciar antibiótico antes de esperar a imagem
+      [3](#ref-3).
+
+      **Perfil liquórico típico da meningite bacteriana** (em contraste com
+      viral) [4](#ref-4):
+
+      | Parâmetro | Bacteriana | Viral |
+      | --- | --- | --- |
+      | Aspecto | Turvo | Claro |
+      | Celularidade | Centenas a milhares de céls./µL | Dezenas a centenas |
+      | Predomínio celular | Neutrofílico (> 80% PMN) | Linfomonocitário |
+      | Glicose | Baixa (hipoglicorraquia) | Normal |
+      | Relação glicose liquor/sangue | < 0,4 (tipicamente < 0,23) | > 0,6 |
+      | Proteína | Alta (> 100–200 mg/dL) | Normal a discretamente elevada |
+
+      Um estudo clássico com 422 pacientes identificou que glicorraquia <
+      1,9 mmol/L, relação glicose liquor/sangue < 0,23, proteína > 2,2 g/L,
+      leucócitos > 2000/µL ou polimorfonucleares > 1180/µL predizem
+      infecção bacteriana com certeza ≥ 99% quando presentes isoladamente
+      [4](#ref-4).
+
+      **Ressalva importante**: em até 25–30% dos casos de meningite por
+      *Listeria monocytogenes* o perfil liquórico é atipicamente
+      linfomonocitário, podendo simular etiologia viral — reforça que a
+      suspeita clínica (idade, imunossupressão) não deve ser abandonada só
+      por um perfil liquórico "viral" [3](#ref-3).
+
+      Confirmação etiológica: Gram e cultura do líquor (antes do
+      antibiótico sempre que possível), hemoculturas, e testes moleculares
+      (PCR multiplex) quando disponíveis, especialmente se o paciente já
+      recebeu antibiótico antes da coleta.
+    keyTakeaways:
+      - Não atrasar antibiótico esperando punção lombar ou TC de crânio em paciente grave
+      - Perfil bacteriano clássico: pleocitose neutrofílica, glicose baixa, relação liquor/sangue < 0,4, proteína alta
+      - Glicorraquia < 1,9 mmol/L ou relação < 0,23 têm alto valor preditivo isolado para etiologia bacteriana
+      - Listeria pode cursar com perfil linfomonocitário atípico — não descarta bacteriana
+    warningAlert: >
+      TC de crânio antes da punção lombar só está indicada em situações
+      específicas de risco de herniação — pedi-la por rotina é a causa
+      mais comum de atraso evitável no início do antibiótico.
+
+  - id: tratamento
+    title: Tratamento
+    mechanismTag: Conduta
+    content: |
+      **Princípio geral**: antibioticoterapia empírica de amplo espectro
+      deve começar assim que a suspeita é forte, sem esperar confirmação
+      liquórica, guiada por faixa etária e fatores de risco (seção 3)
+      [3](#ref-3).
+
+      **Esquema empírico por faixa etária/condição** [3](#ref-3):
+
+      | Grupo | Esquema empírico |
+      | --- | --- |
+      | Neonatos (0–28 dias) | Ampicilina + cefotaxima (cobre gram-negativos entéricos e Listeria; cefotaxima preferida a ceftriaxona no neonato pelo risco de deslocamento de bilirrubina) |
+      | 1–23 meses | Vancomicina + cefotaxima ou ceftriaxona |
+      | Crianças maiores e adultos até 50 anos, imunocompetentes | Vancomicina + ceftriaxona (ou cefotaxima) |
+      | > 50 anos, etilismo, imunossupressão, gestantes | Vancomicina + ceftriaxona (ou cefotaxima) **+ ampicilina** (cobertura de Listeria) |
+      | Fratura de base de crânio / pós-neurocirúrgico / derivação | Vancomicina + cefepima ou meropenem (cobertura ampliada para gram-negativos nosocomiais/Pseudomonas) |
+
+      A vancomicina é incluída empiricamente pela possibilidade de
+      pneumococo com sensibilidade reduzida à cefalosporina; ajustada ou
+      suspensa depois do resultado de cultura e antibiograma.
+
+      **Direcionamento pelo Gram/cultura**: assim que o agente é
+      identificado, a terapia é estreitada — por exemplo, penicilina G ou
+      ampicilina em altas doses para *N. meningitidis* sensível; ceftriaxona
+      isolada para pneumococo sensível.
+
+      **Duração** orientativa: *N. meningitidis* 7 dias; *H. influenzae* 7
+      dias; *S. pneumoniae* 10–14 dias; *S. agalactiae* 14–21 dias; bacilos
+      gram-negativos entéricos e *Listeria* 21 dias.
+
+      **Dexametasona adjuvante**: ver seção específica a seguir — deve ser
+      administrada **junto com ou imediatamente antes** da primeira dose de
+      antibiótico, nunca depois.
+
+      **Suporte**: monitorização de sinais de hipertensão intracraniana,
+      manejo cuidadoso de fluidos e sódio (seção 8), controle de crises
+      convulsivas, e avaliação precoce de foco parameníngeo cirurgicamente
+      tratável (seção 9).
+    keyTakeaways:
+      - Antibiótico empírico não espera confirmação liquórica quando a suspeita é forte
+      - Esquema muda por faixa etária: ampicilina+cefotaxima no neonato; vancomicina+ceftriaxona a partir de 1 mês; +ampicilina se > 50 anos/imunossupresso/gestante
+      - Terapia é estreitada assim que o agente é identificado por Gram/cultura
+      - Dexametasona deve ser dada junto com ou antes da primeira dose de antibiótico, nunca depois
+    clinicalPearl: >
+      A regra prática "vancomicina + ceftriaxona, mais ampicilina se > 50
+      anos" cobre a esmagadora maioria dos adultos com suspeita de
+      meningite bacteriana comunitária — o esquema pós-neurocirúrgico é uma
+      categoria à parte, guiada pela flora nosocomial local.
+
+  - id: dexametasona-adjuvante
+    title: "Dexametasona Adjuvante: Evidência e Indicação"
+    mechanismTag: Conduta
+    content: |
+      A racional é a fisiopatologia da seção 2: parte do dano é mediado
+      pela resposta inflamatória do próprio hospedeiro, não só pela
+      bactéria — reduzir essa resposta com corticoide pode limitar sequela,
+      independentemente de matar o patógeno.
+
+      **Ensaio de referência** (adultos, meningite bacteriana comunitária,
+      duplo-cego, multicêntrico, n=301): dexametasona associada a redução
+      de desfecho desfavorável e de mortalidade em comparação a placebo, com
+      o maior benefício observado em meningite pneumocócica
+      [5](#ref-5). Óbito ocorreu em 11% dos pacientes no desfecho primário,
+      em 8 semanas.
+
+      **Seguimento de longo prazo** da mesma coorte mostrou que o benefício
+      de sobrevida obtido na fase aguda se manteve ao longo dos anos
+      seguintes, sem sinal de que o efeito fosse apenas um adiamento do
+      desfecho [6](#ref-6).
+
+      **Esquema típico**: dexametasona 0,15 mg/kg IV a cada 6 horas por 2–4
+      dias, com a primeira dose administrada 10–20 minutos antes ou junto
+      com a primeira dose de antibiótico.
+
+      **Por que a ordem importa**: se dada depois do antibiótico, a lise
+      bacteriana já liberou os componentes de parede que desencadeiam a
+      cascata inflamatória — o corticoide perde a janela de ação
+      antecipatória sobre esse pico.
+    keyTakeaways:
+      - Racional: atenuar a resposta inflamatória do hospedeiro, não só tratar o patógeno
+      - RCT de referência em adultos mostrou redução de desfecho desfavorável e mortalidade, maior benefício em pneumococo
+      - Benefício de sobrevida persistiu no seguimento de longo prazo
+      - Dexametasona 0,15 mg/kg 6/6h por 2–4 dias, primeira dose junto ou antes do antibiótico
+    warningAlert: >
+      Dexametasona iniciada após a primeira dose de antibiótico perde
+      parte do racional fisiopatológico — a sequência correta é
+      corticoide junto com ou antes do antimicrobiano, nunca depois.
+
+  - id: complicacoes-sequelas
+    title: Complicações e Sequelas
+    mechanismTag: Prognóstico
+    content: |
+      Meningite bacteriana tem letalidade que pode chegar a 30% e cerca de
+      metade dos sobreviventes desenvolve alguma complicação neurológica,
+      transitória ou permanente [7](#ref-7).
+
+      **Complicações agudas** (durante a internação):
+
+      - Hipertensão intracraniana e herniação.
+      - Crises convulsivas — associadas a edema, hidrocefalia, empiema
+        subdural ou infarto cerebral subjacente.
+      - Infarto cerebral isquêmico ou hemorrágico por vasculite/vasoespasmo
+        de vasos que cruzam o espaço subaracnóideo inflamado.
+      - Hidrocefalia comunicante, por obstrução da reabsorção liquórica nas
+        granulações aracnóideas.
+      - Choque séptico, especialmente na meningococcemia com púrpura.
+      - SIADH/distúrbios hidroeletrolíticos (seção 8).
+
+      **Sequelas de longo prazo** (mais frequentes) [7](#ref-7):
+
+      - **Perda auditiva neurossensorial**: a mais comum e a mais
+        característica — bactérias e mediadores inflamatórios alcançam a
+        cóclea pelo aqueduto coclear, causando labirintite. Pode evoluir
+        para ossificação coclear, que compromete a colocação futura de
+        implante coclear se a indicação não for reconhecida precocemente.
+      - Déficits cognitivos e distúrbios de aprendizado.
+      - Epilepsia.
+      - Déficits motores focais residuais de infarto.
+
+      A magnitude do risco de sequela está ligada à gravidade na
+      apresentação (nível de consciência, convulsão precoce) e ao intervalo
+      até o início do antibiótico eficaz — reforçando por que a
+      antibioticoterapia empírica imediata (seção 6) é uma prioridade
+      absoluta de manejo, não um detalhe administrativo.
+    keyTakeaways:
+      - Letalidade até 30%; cerca de metade dos sobreviventes tem alguma sequela neurológica
+      - Perda auditiva neurossensorial é a sequela mais comum — risco de ossificação coclear se não avaliada a tempo
+      - Complicações agudas incluem hipertensão intracraniana, convulsão, infarto, hidrocefalia comunicante e choque séptico
+    clinicalPearl: >
+      Todo paciente que sobrevive a meningite bacteriana deveria ter
+      avaliação audiológica antes da alta ou logo após — a ossificação
+      coclear progride nas semanas seguintes e pode inviabilizar o implante
+      coclear se a perda auditiva só for notada meses depois.
+
+  - id: siadh-disturbios-hidroeletroliticos
+    title: SIADH e Distúrbios Hidroeletrolíticos
+    mechanismTag: Conduta
+    content: |
+      Hiponatremia é comum na meningite bacteriana aguda, e pode ter duas
+      causas com **tratamento opostos** — diferenciá-las é essencial
+      [8](#ref-8):
+
+      | | SIADH | Síndrome perdedora de sal cerebral (CSW) |
+      | --- | --- | --- |
+      | Volemia | Euvolemia ou hipervolemia | Hipovolemia |
+      | Débito urinário | Normal a reduzido | Aumentado |
+      | Sódio urinário | Elevado, mas em contexto de volume normal/expandido | Muito elevado, com perda de volume |
+      | Mecanismo | Liberação inapropriada de ADH → retenção de água livre | Perda renal de sódio (mecanismo não totalmente esclarecido, envolve peptídeos natriuréticos) |
+      | Tratamento | Restrição hídrica | Reposição de volume e sódio (salina) |
+
+      **Por que a diferenciação importa na prática**: tratar CSW como se
+      fosse SIADH (restringindo fluido num paciente já hipovolêmico) piora
+      a hipoperfusão cerebral — justamente no paciente que já tem risco de
+      isquemia por vasculite/vasoespasmo (seção 2). O eixo central da
+      diferenciação é o **estado volêmico** do paciente, avaliado
+      clinicamente (turgor, diurese, sinais vitais posturais) e não apenas
+      pelo sódio sérico isolado.
+
+      Outros distúrbios a monitorar: hipoglicemia/hiperglicemia de estresse,
+      e desequilíbrio ácido-base em choque séptico associado.
+    keyTakeaways:
+      - Hiponatremia na meningite bacteriana pode ser SIADH (euvolêmico/hipervolêmico) ou CSW (hipovolêmico)
+      - SIADH trata com restrição hídrica; CSW trata com reposição de volume e sódio — tratamentos opostos
+      - O estado volêmico clínico, não só o sódio sérico, é o que diferencia as duas síndromes
+    warningAlert: >
+      Restringir fluido por suspeita de SIADH num paciente que na verdade
+      está hipovolêmico por CSW pode agravar isquemia cerebral — sempre
+      avaliar volemia clínica antes de escolher a estratégia de fluidos.
+
+  - id: manejo-foco-otogenico
+    title: Manejo do Foco Otogênico Primário
+    mechanismTag: Conduta
+    content: |
+      Otite média aguda e mastoidite são a via de contiguidade mais
+      relevante para meningite bacteriana (seção 1) — o chamado foco
+      **otogênico**.
+
+      **Abordagem**: antibioticoterapia sistêmica imediata (seção 6) é a
+      base do tratamento, mas quando há foco supurativo persistente na
+      orelha média/mastoide, o controle cirúrgico do foco é parte do
+      manejo, não uma opção de segunda linha reservada à falha terapêutica.
+
+      Uma revisão sistemática multicêntrica recente (24 estudos, 181
+      pacientes analisados, mais coorte retrospectiva de 6 anos em dois
+      centros) propôs que a cirurgia (miringotomia, timpanomastoidectomia
+      ou mastoidectomia, conforme o achado) deve ser considerada **o quanto
+      antes**, com decisão idealmente tomada dentro de poucas horas da
+      admissão quando há evidência de coleção ou colesteatoma — não
+      esperando 48 horas de falha de antibiótico isolado, como sugeria a
+      prática mais antiga. O intervalo entre internação e cirurgia teve
+      papel prognóstico, com 10 dias identificado como ponto de corte
+      associado a pior desfecho quando a cirurgia é adiada além dele
+      [9](#ref-9).
+
+      Nas séries reunidas, a associação de cirurgia ao tratamento
+      antibiótico correlacionou-se com queda acentuada da taxa de óbito em
+      comparação ao tratamento apenas clínico [9](#ref-9).
+
+      **Implicação prática**: todo paciente com meningite bacteriana e foco
+      otológico concomitante deve ter avaliação otorrinolaringológica
+      precoce — a decisão sobre cirurgia não deve ser adiada até
+      constatar-se falha do antibiótico.
+    keyTakeaways:
+      - Foco otogênico (otite/mastoidite) exige antibiótico sistêmico + avaliação cirúrgica precoce, não sequencial
+      - Decisão cirúrgica idealmente em horas, não após 48h de tentativa isolada de antibiótico
+      - Cirurgia associada a antibiótico reduziu marcadamente a mortalidade nas séries reunidas
+    clinicalPearl: >
+      Meningite com otite/mastoidite concomitante deve acionar
+      otorrinolaringologia já na admissão — atrasar essa interconsulta até
+      "ver se o antibiótico funciona" é a falha de manejo mais citada nas
+      séries de otogênica.
+
+  - id: prevencao
+    title: Prevenção
+    mechanismTag: Prevenção
+    content: |
+      **Vacinação — o maior impacto em saúde pública nesta doença:**
+
+      - **Hib (Haemophilus influenzae tipo b)**: incorporada à rotina
+        infantil, praticamente eliminou a meningite por Hib em populações
+        com boa cobertura vacinal.
+      - **Pneumocócica conjugada — calendário brasileiro (PNI/Ministério
+        da Saúde)**: esquema infantil de rotina 2+1 — 2 meses, 4 meses e
+        reforço aos 12 meses. Em 2026 o PNI iniciou a transição da vacina
+        10-valente (VPC10) para a **20-valente (VPC20)**, conforme
+        distribuição de doses a estados e municípios; durante a transição
+        podem ocorrer esquemas mistos entre as duas formulações, com mesma
+        estrutura de doses/idades — a diferença é a cobertura ampliada de
+        sorotipos (10 → 20) [12](#ref-12). *A data de conclusão dessa
+        transição em cada localidade não está documentada de forma
+        centralizada — `LACUNA_DOCUMENTAL`.*
+        Nos EUA, o Comitê Consultivo em Práticas de Imunização (ACIP)
+        passou em 2024 a recomendar dose única de vacina pneumocócica
+        conjugada para todo adulto ≥ 50 anos ainda não vacinado ou com
+        histórico vacinal desconhecido — ampliando a faixa etária alvo, que
+        antes dependia mais de comorbidades específicas [10](#ref-10).
+      - **Meningocócica conjugada — calendário brasileiro (PNI)**: desde
+        1º/07/2025 o esquema infantil de rotina é meningocócica C aos 3 e
+        5 meses, com **reforço aos 12 meses passando a ser feito com
+        MenACWY** (substituindo o reforço que antes era MenC); reforço
+        adicional na adolescência aos 11 anos (até 14 anos 11 meses e 29
+        dias, se atrasado) [12](#ref-12)[13](#ref-13). Crianças que já
+        haviam recebido o reforço de MenC antes da mudança completam o
+        esquema com MenACWY apenas na adolescência. Nos EUA (ACIP), o
+        equivalente é a rotina de MenACWY em adolescentes com reforço,
+        citada acima.
+      - **MenB — só na rede privada no Brasil**: em abril/2026 o
+        Ministério da Saúde decidiu não incorporar a vacina meningocócica
+        B ao calendário nacional (PNI/SUS), por razões orçamentárias e de
+        disponibilidade de doses; permanece disponível apenas na rede
+        privada (esquema usual: 2 doses aos 3 e 5 meses + reforço aos
+        12–15 meses) [13](#ref-13). Nos EUA, MenB segue recomendada para
+        adolescentes/adultos jovens conforme risco e decisão compartilhada,
+        por ainda não integrar todos os esquemas de rotina universal.
+
+      **Quimioprofilaxis pós-exposição — específica para doença
+      meningocócica** (não se aplica a pneumococo):
+
+      Contactantes próximos de caso confirmado de doença meningocócica
+      invasiva (contato domiciliar, de creche/escola, ou exposição a
+      secreção respiratória) devem receber profilaxia antibiótica
+      idealmente dentro de 24 horas da identificação do caso índice —
+      depois de 2 semanas, o benefício é mínimo. Rifampicina,
+      ciprofloxacino e ceftriaxona reduzem a colonização de nasofaringe em
+      90–95% e são opções aceitas; ceftriaxona é a preferida em gestantes
+      [11](#ref-11).
+
+      **Atualização relevante (2024)**: por causa do aumento de cepas de
+      *N. meningitidis* resistentes a ciprofloxacino em determinadas áreas,
+      passou a ser recomendado considerar preferencialmente rifampicina,
+      ceftriaxona ou azitromicina em vez de ciprofloxacino como profilaxia,
+      quando a vigilância local documenta ≥ 2 casos por cepa resistente e
+      ≥ 20% das cepas circulantes resistentes num período de 12 meses
+      [11](#ref-11).
+
+      **Foco parameníngeo tratável**: tratamento oportuno de otite
+      média/sinusite/mastoidite reduz a chance de progressão para meningite
+      por contiguidade (ligação direta com a seção 9).
+    keyTakeaways:
+      - Vacinas Hib e pneumocócica conjugada tiveram o maior impacto histórico na incidência pediátrica
+      - No PNI, pneumocócica é esquema 2+1 (2, 4 e 12 meses); transição de VPC10 para VPC20 em curso desde 2026, mesma estrutura de doses
+      - No PNI, desde jul/2025 o reforço de meningocócica aos 12 meses passou de MenC para MenACWY; MenC continua aos 3 e 5 meses e há reforço adolescente (11 anos) com ACWY
+      - MenB não foi incorporada ao PNI/SUS (decisão de abr/2026) e segue disponível só na rede privada; nos EUA, MenB é decisão compartilhada por risco
+      - ACIP 2024 ampliou a recomendação de PCV para todo adulto ≥ 50 anos PCV-ingênuo (calendário americano, distinto do infantil brasileiro)
+      - Quimioprofilaxia pós-exposição é específica para contactantes de doença meningocócica, não para pneumococo
+      - Resistência emergente a ciprofloxacino (2024) mudou a preferência para rifampicina/ceftriaxona/azitromicina em áreas afetadas
+    warningAlert: >
+      Quimioprofilaxia com ciprofloxacino não deve mais ser escolha
+      automática em toda região — checar se a área tem vigilância
+      documentando resistência antes de prescrever.
+
+# Marcadores [N](#ref-N) no texto acima são links reais que apontam pro card
+# `id="ref-N"` correspondente no rodapé de referências do CompendiumReader —
+# N é a posição 1-based nesta lista. Mantido em sincronia manualmente neste
+# rascunho.
+#
+# Tipo de evidência marcado entre colchetes ao fim de cada citação, seguindo
+# o mesmo padrão do piloto pcsk9 — o leitor precisa saber que tipo de
+# evidência sustenta cada afirmação, não só a citação em si.
+references:
+  - "Oordt-Speets AM, Bolijn R, van Hoorn RC, Bhavsar A, Kyaw MH. Global etiology of bacterial meningitis: A systematic review and meta-analysis. PLoS One. 2018;13(6):e0198772. DOI: 10.1371/journal.pone.0198772 [Revisão sistemática com metanálise, 56 estudos]"
+  - "van de Beek D, Brouwer MC, Koedel U, Wall EC. Community-acquired bacterial meningitis. Lancet. 2021;398(10306):1171-1183. DOI: 10.1016/S0140-6736(21)00883-7 [Revisão narrativa (Seminar) de literatura]"
+  - "Tunkel AR, Hartman BJ, Kaplan SL, et al. Practice guidelines for the management of bacterial meningitis. Clin Infect Dis. 2004;39(9):1267-1284. DOI: 10.1086/425368 [Diretriz de prática clínica — Infectious Diseases Society of America]"
+  - "Spanos A, Harrell FE Jr, Durack DT. Differential diagnosis of acute meningitis: an analysis of the predictive value of initial observations. JAMA. 1989;262(19):2700-2707. DOI: 10.1001/jama.1989.03430190084036 [Estudo de coorte retrospectivo, 422 pacientes, com modelo preditivo]"
+  - "de Gans J, van de Beek D; European Dexamethasone in Adulthood Bacterial Meningitis Study Investigators. Dexamethasone in adults with bacterial meningitis. N Engl J Med. 2002;347(20):1549-1556. DOI: 10.1056/NEJMoa021334 [Ensaio clínico randomizado, duplo-cego, multicêntrico]"
+  - "Fritz D, Brouwer MC, van de Beek D. Dexamethasone and long-term survival in bacterial meningitis. Neurology. 2012;79(22):2177-2179. DOI: 10.1212/WNL.0b013e31827595f7 [Seguimento de longo prazo de coorte de ensaio clínico randomizado]"
+  - "Zainel A, Mitchell H, Sadarangani M. Bacterial Meningitis in Children: Neurological Complications, Associated Risk Factors, and Prevention. Microorganisms. 2021;9(3):535. DOI: 10.3390/microorganisms9030535 [Revisão narrativa de literatura]"
+  - "Sorkhi H, Salehi Omran MR, Barari Savadkoohi R, Baghdadi F, Nakhjavani N, Bijani A. CSWS versus SIADH as the probable causes of hyponatremia in children with acute CNS disorders. Iran J Child Neurol. 2013;7(1):34-39. [Estudo prospectivo observacional]"
+  - "Rubini A, Ronzani G, D'Alessandro E, Marchioni D. Management of Otogenic Meningitis: A Proposal for Practical Guidelines from a Multicenter Experience with a Systematic Review. J Clin Med. 2024;13(18):5509. DOI: 10.3390/jcm13185509 [Coorte retrospectiva multicêntrica + revisão sistemática PRISMA, 24 estudos/181 pacientes]"
+  - "Kobayashi M, Leidner AJ, Gierke R, et al. Expanded Recommendations for Use of Pneumococcal Conjugate Vaccines Among Adults Aged ≥50 Years: Recommendations of the Advisory Committee on Immunization Practices — United States, 2024. MMWR Morb Mortal Wkly Rep. 2025;74:1-8. DOI: 10.15585/mmwr.mm7401a1 [Diretriz de prática clínica — Advisory Committee on Immunization Practices/CDC]"
+  - "Berry I, Rubis AB, Howie RL, Sharma S, Marasini D, Marjuki H, Crowe S, McNamara LA. Selection of Antibiotics as Prophylaxis for Close Contacts of Patients with Meningococcal Disease in Areas with Ciprofloxacin Resistance — United States, 2024. MMWR Morb Mortal Wkly Rep. 2024;73(5):99-103. DOI: 10.15585/mmwr.mm7305a2 [Diretriz/atualização de prática clínica — CDC]"
+  - "Ministério da Saúde. Calendário Nacional de Vacinação. Brasília: Secretaria de Vigilância em Saúde e Ambiente/Programa Nacional de Imunizações. Disponível em: https://www.gov.br/saude/pt-br/vacinacao/calendario. Acesso em: 16 set. 2026 [Fonte oficial governamental — calendário vacinal vigente do PNI/SUS]"
+  - "Sociedade Brasileira de Imunizações (SBIm). PNI passa a oferecer vacina meningocócica ACWY aos 12 meses. Disponível em: https://sbim.org.br/noticias/pni-passa-a-oferecer-vacina-meningococica-acwy-aos-12-meses. Acesso em: 16 set. 2026 [Nota técnica de sociedade de especialidade sobre mudança de calendário oficial, com data de vigência (01/07/2025) e situação da MenB na rede privada]"
