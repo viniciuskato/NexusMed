@@ -48,7 +48,9 @@ Lição de publicação: o #2 foi mesclado antes da migration, e o "Salvar" do
 CMS ficou quebrado até ela ser aplicada — migration da qual o frontend
 depende vai **antes** do merge (RUNBOOK, seção 3).
 
-Pendências: `docs/diretoria/BACKLOG-ESTRATEGICO.md` (AUD-01 e AUD-03 a AUD-10).
+Pendências: `docs/diretoria/BACKLOG-ESTRATEGICO.md` — 3ª rodada de
+auditoria (2026-09-19, AUD-17 a AUD-34) com a ordem sugerida no topo da
+seção; da 1ª rodada seguem abertos AUD-01, 03, 05, 06, 07, 08 e 13.
 
 ## Baseline verificada nesta entrega (Entrega 40-A, 2026-09-17)
 

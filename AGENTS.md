@@ -112,6 +112,10 @@ seção "Armadilhas já descobertas".
     privileges de outro role do Supabase. Toda migration que cria tabela
     precisa de `revoke all on table public.<tabela> from anon;` explícito —
     a guarda `security_guards.test.sql` reprova se esquecer (NOVO-02).
+14. **Função nova em `public` nasce com EXECUTE para `PUBLIC`** (e `anon`
+    herda); o revoke de default privileges só tira `anon`. Toda RPC nova
+    precisa de `revoke all on function ... from public, anon;` explícito —
+    a guarda pgTAP ainda não confere isso (AUD-31).
 
 ## Convenções de trabalho
 
