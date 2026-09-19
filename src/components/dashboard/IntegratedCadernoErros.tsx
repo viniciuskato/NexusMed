@@ -552,7 +552,7 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
               <button
                 key={st.id}
                 type="button"
-                onClick={() => setSelectedStatus(st.id as any)}
+                onClick={() => setSelectedStatus(st.id as typeof selectedStatus)}
                 className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                   selectedStatus === st.id
                     ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'

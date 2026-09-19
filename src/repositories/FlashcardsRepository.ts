@@ -35,7 +35,7 @@ export interface FlashcardsRepository {
   saveFlashcard(flashcard: Flashcard): Promise<Flashcard>;
   deleteFlashcard(id: string): Promise<void>;
   getDueFlashcards(): Promise<Flashcard[]>;
-  updateFlashcardSRS(cardId: string, srs: any): Promise<void>;
+  updateFlashcardSRS(cardId: string, srs: FlashcardSRS): Promise<void>;
   createFlashcardFromQuestion(question: Question): Promise<Flashcard>;
   reviewFlashcard(card: Flashcard, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null>;
 }
@@ -56,7 +56,7 @@ class LocalStorageFlashcardsRepository implements FlashcardsRepository {
   async getDueFlashcards(): Promise<Flashcard[]> {
     return StorageService.getDueFlashcards();
   }
-  async updateFlashcardSRS(cardId: string, srs: any): Promise<void> {
+  async updateFlashcardSRS(cardId: string, srs: FlashcardSRS): Promise<void> {
     StorageService.updateFlashcardSRS(cardId, srs);
   }
   async createFlashcardFromQuestion(question: Question): Promise<Flashcard> {
@@ -125,7 +125,7 @@ class ResilientFlashcardsRepository implements FlashcardsRepository {
     }
   }
 
-  async updateFlashcardSRS(cardId: string, srs: any): Promise<void> {
+  async updateFlashcardSRS(cardId: string, srs: FlashcardSRS): Promise<void> {
     // Só usado para ajustes administrativos de estado (não é um evento de
     // revisão auditável — isso é reviewFlashcard). Upsert direto na tabela de
     // estado, idempotente por natureza (chave primária = flashcard_id).

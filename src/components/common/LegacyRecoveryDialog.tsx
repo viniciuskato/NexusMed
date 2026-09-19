@@ -35,6 +35,8 @@ export const LegacyRecoveryDialog: React.FC<LegacyRecoveryDialogProps> = ({ user
   const handleClose = useCallback(() => onClose(), [onClose]);
 
   useEffect(() => {
+    // Guardado antes de tornar #root inerte: é para onde o foco volta ao fechar.
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const appRoot = document.getElementById('root');
     const wasInert = appRoot?.inert ?? false;
     if (appRoot) appRoot.inert = true;
@@ -72,6 +74,8 @@ export const LegacyRecoveryDialog: React.FC<LegacyRecoveryDialogProps> = ({ user
       document.removeEventListener('keydown', handleKeyDown, true);
       if (appRoot) appRoot.inert = wasInert;
       document.body.style.overflow = oldOverflow;
+      // Só depois de remover o inert — foco em elemento inerte é ignorado.
+      if (previouslyFocused?.isConnected) previouslyFocused.focus();
     };
   }, [handleClose]);
 
@@ -82,7 +86,7 @@ export const LegacyRecoveryDialog: React.FC<LegacyRecoveryDialogProps> = ({ user
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Progresso local pendente de revisão"
+        aria-labelledby="legacy-recovery-title"
         tabIndex={-1}
         className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[101] w-[min(28rem,calc(100vw-2rem))] bg-white dark:bg-[#0F172A] rounded-2xl border border-slate-200 dark:border-[#243452] elev-lg p-4 text-sm max-h-[calc(100dvh-2rem)] overflow-y-auto focus:outline-hidden"
       >
@@ -90,7 +94,7 @@ export const LegacyRecoveryDialog: React.FC<LegacyRecoveryDialogProps> = ({ user
           <div className="flex items-start gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold text-slate-800 dark:text-slate-100">Progresso antigo para revisar</p>
+              <p id="legacy-recovery-title" className="font-bold text-slate-800 dark:text-slate-100">Progresso antigo para revisar</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Encontramos {items.length === 1 ? 'uma resposta' : `${items.length} respostas`} salva{items.length === 1 ? '' : 's'} só
                 neste dispositivo que não {items.length === 1 ? 'pôde' : 'puderam'} ser comparada{items.length === 1 ? '' : 's'} com

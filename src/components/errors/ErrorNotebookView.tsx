@@ -32,12 +32,11 @@ export const ErrorNotebookView: React.FC<ErrorNotebookViewProps> = ({
   disciplines,
   themes,
   onOpenCompendium,
-  onOpenQuestion,
   onStartErrorSimulado,
   onUpdate,
 }) => {
   const [selectedReason, setSelectedReason] = useState<string>('all');
-  const [selectedDiscipline, setSelectedDiscipline] = useState<string>('all');
+  const [selectedDiscipline] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState<string>('');

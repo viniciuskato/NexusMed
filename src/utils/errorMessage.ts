@@ -11,3 +11,14 @@ export function getErrorMessage(err: unknown): string {
   }
   return String(err);
 }
+
+// Equivalente tipado de `err?.message` para um `catch (err: unknown)`:
+// devolve a mensagem só quando ela existe e é string, sem o fallback
+// `String(err)` acima — para quem já usa `|| 'mensagem padrão'`.
+export function getOptionalErrorMessage(err: unknown): string | undefined {
+  if (typeof err === 'object' && err !== null && 'message' in err) {
+    const message = (err as { message: unknown }).message;
+    return typeof message === 'string' ? message : undefined;
+  }
+  return undefined;
+}

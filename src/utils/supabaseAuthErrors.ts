@@ -2,10 +2,11 @@
  * Utilitário de Tradução de Erros do Supabase Authentication para Português
  */
 
-export function getSupabaseAuthErrorMessage(error: any): string {
+export function getSupabaseAuthErrorMessage(error: unknown): string {
   if (!error) return 'Ocorreu um erro desconhecido.';
 
-  const code = typeof error === 'string' ? error : error?.code || '';
+  const fields = (typeof error === 'object' ? error : {}) as { code?: unknown; message?: unknown };
+  const code = typeof error === 'string' ? error : fields.code || '';
 
   switch (code) {
     case 'email_exists':
@@ -48,7 +49,7 @@ export function getSupabaseAuthErrorMessage(error: any): string {
     case 'request_timeout':
       return 'Falha de conexão com os servidores de autenticação. Verifique sua conexão com a internet e tente novamente.';
     default: {
-      const msg = error?.message;
+      const msg = fields.message;
       if (typeof msg === 'string' && msg.trim().length > 0) {
         return msg;
       }

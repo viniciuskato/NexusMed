@@ -10,8 +10,8 @@ export interface UserProfile {
   role: UserRole;
   plan: UserPlan;
   status?: 'active' | 'pending' | 'blocked';
-  createdAt?: any;
-  lastLoginAt?: any;
+  createdAt?: string;
+  lastLoginAt?: string;
 }
 
 export interface MigrationSummary {
