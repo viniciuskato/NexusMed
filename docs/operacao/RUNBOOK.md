@@ -43,7 +43,7 @@ git rev-parse origin/main
   servidor, não comportamento de cliente (dedupe de promises, sessão
   ativa, etc.) — ver `docs/archive/AGENTS-HISTORICO-2026-09-17.md` para o
   histórico de bugs que só apareceram em teste de navegador real.
-- Servidor de desenvolvimento: `npm run dev` escuta só em `localhost:3000`
+- Servidor de desenvolvimento: `npm run dev` escuta só em `127.0.0.1:3000` (abre também por `http://localhost:3000`)
   (desde AUD-10). Para abrir no celular/outro aparelho da rede local, use
   `npm run dev:lan` (`--host=0.0.0.0`) — só em rede confiável.
 - Antes de commitar: `git diff --check` (sem marcadores de conflito, sem
