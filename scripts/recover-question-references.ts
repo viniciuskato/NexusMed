@@ -175,7 +175,7 @@ async function main() {
       const { data, error } = await admin.from('disciplines').select('id').ilike('name', disciplinaNome).maybeSingle();
       if (error) throw error;
       disciplineId = data?.id ?? null;
-      disciplineIdByName.set(disciplinaNome, disciplineId);
+      disciplineIdByName.set(disciplinaNome, disciplineId ?? null);
     }
     if (!disciplineId) {
       counts.naoEncontradaNoSupabase++;
@@ -194,7 +194,7 @@ async function main() {
         .maybeSingle();
       if (error) throw error;
       themeId = data?.id ?? null;
-      themeIdByKey.set(themeKey, themeId);
+      themeIdByKey.set(themeKey, themeId ?? null);
     }
     if (!themeId) {
       counts.naoEncontradaNoSupabase++;

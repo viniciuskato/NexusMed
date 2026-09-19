@@ -195,8 +195,11 @@ select tests.clear_auth();
 -- ============================================================================
 
 select tests.authenticate_as_anon();
-select is_empty(
+-- Desde 20260918140000_revoke_anon_grants.sql anon não tem privilégio de
+-- tabela: a leitura é recusada (42501) antes mesmo da RLS.
+select throws_ok(
   $$ select 1 from public.materials where status = 'published' $$,
+  '42501', NULL::text,
   'anon não lê conteúdo editorial published'
 );
 select throws_ok(
@@ -730,8 +733,9 @@ values ('fonte-teste-' || gen_random_uuid()::text, 'Citação de teste', 'diretr
 returning id as v_source_id \gset
 
 select tests.authenticate_as_anon();
-select is_empty(
+select throws_ok(
   $$ select 1 from public.sources $$,
+  '42501', NULL::text,
   'anon não lê sources'
 );
 

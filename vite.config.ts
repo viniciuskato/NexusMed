@@ -1,11 +1,56 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import {defineConfig, loadEnv, type Plugin} from 'vite';
 
-export default defineConfig(() => {
+// Content-Security-Policy injetada só no build (o dev server do Vite usa
+// script inline para o HMR). Como meta tag, vale também no `vite preview`
+// usado pela suíte e2e — a política real é exercitada antes de publicar.
+// frame-ancestors e os demais headers que não funcionam via meta ficam em
+// vercel.json.
+function contentSecurityPolicy(supabaseUrl: string | undefined): Plugin {
+  // *.supabase.co sempre: supabaseClient.ts aceita VITE_SUPABASE_URL em
+  // formatos não-URL (só o ref do projeto etc.) e os normaliza para esse
+  // domínio. A origem exata entra quando é uma URL válida (ex.: Supabase
+  // local em 127.0.0.1 na suíte e2e).
+  const connect = ["'self'", 'https://*.supabase.co', 'wss://*.supabase.co'];
+  try {
+    const origin = new URL(supabaseUrl ?? '').origin;
+    if (!origin.endsWith('.supabase.co')) {
+      connect.push(origin, origin.replace(/^http/, 'ws'));
+    }
+  } catch {
+    // Não é URL: coberto pelo curinga acima.
+  }
+  const policy = [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https:",
+    `connect-src ${connect.join(' ')}`,
+    "worker-src 'self' blob:",
+    "manifest-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; ');
   return {
-    plugins: [react(), tailwindcss()],
+    name: 'content-security-policy',
+    apply: 'build',
+    transformIndexHtml(html) {
+      return html.replace(
+        '<meta charset="UTF-8" />',
+        `<meta charset="UTF-8" />\n    <meta http-equiv="Content-Security-Policy" content="${policy}" />`,
+      );
+    },
+  };
+}
+
+export default defineConfig(({mode}) => {
+  const env = loadEnv(mode, process.cwd(), 'VITE_');
+  return {
+    plugins: [react(), tailwindcss(), contentSecurityPolicy(env.VITE_SUPABASE_URL)],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
