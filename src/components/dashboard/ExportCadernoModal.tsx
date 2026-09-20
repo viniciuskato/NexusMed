@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Question, QuestionAnswerRecord, ErrorLogItem, Discipline } from '../../types';
 import { useDialogA11y } from '../../hooks/useDialogA11y';
+import { parseInline } from '../common/SafeMarkdown';
 
 interface ExportCadernoModalProps {
   isOpen: boolean;
@@ -181,7 +182,7 @@ export const ExportCadernoModal: React.FC<ExportCadernoModalProps> = ({
                   </div>
 
                   <p className="text-slate-800 dark:text-slate-200 font-serif-reading leading-relaxed line-clamp-3">
-                    {question.clinicalVignette || question.questionStem}
+                    {parseInline(question.clinicalVignette || question.questionStem)}
                   </p>
 
                   {log?.userNotes && (
@@ -194,7 +195,7 @@ export const ExportCadernoModal: React.FC<ExportCadernoModalProps> = ({
                   {question.highYieldSummary && (
                     <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-400/30 text-emerald-900 dark:text-emerald-200">
                       <strong className="block text-[10px] uppercase tracking-wider mb-0.5">Pérola de Prova:</strong>
-                      {question.highYieldSummary}
+                      {parseInline(question.highYieldSummary)}
                     </div>
                   )}
                 </div>

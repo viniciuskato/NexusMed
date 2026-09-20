@@ -232,6 +232,12 @@ export default function ProvenanceReviewPanel({
   // Seleção de seção/parte do conteúdo real: preenche "Localização estável"
   // sempre, e sugere um texto de claim só quando o campo ainda está vazio —
   // não sobrescreve texto que o usuário já tenha digitado/ajustado à mão.
+  // A sugestão difere por tipo de alvo: material usa a convenção de citação
+  // inline `[N](#ref-N)` (SafeMarkdown), mas questão não tem essa convenção
+  // — a fonte de uma questão vem de instituição/banca/ano declarados e de
+  // `question_references` (estruturado), nunca de marcador `[N]` no texto.
+  // Sugerir o texto de material para uma questão seria uma afirmação falsa
+  // dentro do próprio claim de atestação.
   const handleSelectContentOption = (locator: string) => {
     setSelectedContentOption(locator);
     if (!locator) return;
@@ -239,7 +245,11 @@ export default function ProvenanceReviewPanel({
     if (!option) return;
     setClaimLocator(option.locator);
     if (!claimText.trim()) {
-      setClaimText(`Conteúdo de "${option.label}" corresponde às referências citadas inline (marcadores [N]).`);
+      const suggestion =
+        'materialId' in target
+          ? `Conteúdo de "${option.label}" corresponde às referências citadas inline (marcadores [N]).`
+          : `Conteúdo de "${option.label}" corresponde à questão de origem declarada (instituição/banca e ano) e ao gabarito cadastrado.`;
+      setClaimText(suggestion);
     }
   };
 

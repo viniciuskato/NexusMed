@@ -41,6 +41,10 @@ protótipo).
 - **Produzir conteúdo (compêndio) do zero até publicado** — formulário
   do Admin vs. YAML, e o gate de revisão/atestação obrigatório antes de
   publicar: [`docs/editorial/PADRAO-NEXUSMED-CONTEUDOS.md`](docs/editorial/PADRAO-NEXUSMED-CONTEUDOS.md).
+- **Produzir questão comentada do zero até publicada** — formulário do
+  Admin (sem import de arquivo hoje, diferente de conteúdo), mesmo gate
+  de revisão/atestação por questão, e nota de direitos autorais de
+  questão de banca real: [`docs/editorial/PADRAO-NEXUSMED-QUESTOES.md`](docs/editorial/PADRAO-NEXUSMED-QUESTOES.md).
 - **URL de produção**: `https://synapse-med-firebase-auth.vercel.app`
 - **Deploy**: automático a cada push em `main` (Vercel + GitHub). **Por
   isso: nunca trabalhar direto em `main`, nunca publicar sem autorização

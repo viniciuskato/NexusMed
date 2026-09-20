@@ -31,6 +31,7 @@ import { answersRepository } from '../../repositories/AnswersRepository';
 import { questionsRepository } from '../../repositories/QuestionsRepository';
 import { errorNotebookRepository } from '../../repositories/ErrorNotebookRepository';
 import { ExportCadernoModal } from './ExportCadernoModal';
+import { parseInline } from '../common/SafeMarkdown';
 
 interface IntegratedCadernoErrosProps {
   questions: Question[];
@@ -644,11 +645,11 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
                 <div className="space-y-2">
                   {question.clinicalVignette && (
                     <p className="text-xs text-slate-600 dark:text-slate-300 italic leading-relaxed bg-slate-50 dark:bg-[#142038] p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                      {question.clinicalVignette}
+                      {parseInline(question.clinicalVignette)}
                     </p>
                   )}
                   <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 font-serif-reading leading-snug">
-                    {question.questionStem}
+                    {parseInline(question.questionStem)}
                   </h4>
                 </div>
 
@@ -659,12 +660,12 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
                     <span>Mecanismo Negligenciado & Distrator</span>
                   </div>
                   <p className="text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
-                    {review?.generalCommentary || question.generalCommentary || 'Revise o mecanismo fisiopatológico ou os critérios diagnósticos desta diretriz.'}
+                    {parseInline(review?.generalCommentary || question.generalCommentary || 'Revise o mecanismo fisiopatológico ou os critérios diagnósticos desta diretriz.')}
                   </p>
                   {(review?.highYieldSummary || question.highYieldSummary) && (
                     <div className="p-2.5 rounded-xl bg-white/80 dark:bg-[#0B1220]/80 border border-rose-200/50 dark:border-rose-900/40 text-[11px] text-slate-800 dark:text-slate-200">
                       <strong className="text-teal-700 dark:text-teal-400">Ponto-chave da diretriz: </strong>
-                      {review?.highYieldSummary || question.highYieldSummary}
+                      {parseInline(review?.highYieldSummary || question.highYieldSummary || '')}
                     </div>
                   )}
                 </div>

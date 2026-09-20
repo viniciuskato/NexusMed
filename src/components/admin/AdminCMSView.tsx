@@ -28,6 +28,7 @@ import {
   ThumbsDown,
   Link,
   Eye,
+  EyeOff,
 } from 'lucide-react';
 import { Discipline, Theme, Question, Compendium, Flashcard, CompendiumSection, UserFeedback } from '../../types';
 import { StorageService } from '../../services/storage';
@@ -326,6 +327,18 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   const [optB, setOptB] = useState({ text: '', isCorrect: false, exp: '' });
   const [optC, setOptC] = useState({ text: '', isCorrect: false, exp: '' });
   const [optD, setOptD] = useState({ text: '', isCorrect: false, exp: '' });
+  // Mesmo problema já resolvido na Revisão editorial ("mostra o conteúdo
+  // original no preview do claim com a tipografia do leitor") e no editor de
+  // seção do compêndio: digitar Markdown num input monoespaçado não deixa
+  // ver como vai aparecer pro estudante — e questão nem passava por nenhum
+  // parser até agora (ver QuestionCard.tsx). Prévia ao vivo a partir do que
+  // está nos campos do formulário agora, não do que já foi salvo.
+  const [showQuestionPreview, setShowQuestionPreview] = useState(false);
+  // Busca da listagem de questões — persistida (mesmo padrão de compSearch/
+  // activeTab) desde a criação, evitando reproduzir o bug já corrigido em
+  // "persiste busca de conteúdos do CMS entre navegações" (a aba é
+  // desmontada ao abrir "Visualizar"/"Revisão" e remontada ao voltar).
+  const [questionSearch, setQuestionSearch] = usePersistedState('admin_question_search', '');
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -585,6 +598,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
 
     await questionsRepository.saveCustomQuestion(question);
     setIsCreatingQuestion(false);
+    setShowQuestionPreview(false);
     onRefreshData();
     showToast('Questão cadastrada com sucesso e indexada no banco!');
   };
@@ -658,6 +672,19 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       c.title.toLowerCase().includes(q) ||
       c.subtitle.toLowerCase().includes(q) ||
       c.tags?.some((t) => t.toLowerCase().includes(q))
+    );
+  });
+
+  // Filtered questions — mesmo critério de busca do compêndio, adaptado aos
+  // campos que uma questão tem (sem título/subtítulo próprios).
+  const filteredQuestions = questions.filter((q) => {
+    if (!questionSearch.trim()) return true;
+    const s = questionSearch.toLowerCase();
+    return (
+      q.questionStem.toLowerCase().includes(s) ||
+      q.institution.toLowerCase().includes(s) ||
+      String(q.year).includes(s) ||
+      q.tags?.some((t) => t.toLowerCase().includes(s))
     );
   });
 
@@ -1464,15 +1491,130 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
             </div>
           </div>
 
+          {/* Top Control Bar — busca (mesmo padrão da aba de Conteúdos) */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#0F172A] p-4 rounded-xl border border-stone-200 dark:border-[#243452] elev-xs">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={questionSearch}
+                onChange={(e) => setQuestionSearch(e.target.value)}
+                placeholder="Buscar por enunciado, instituição, ano ou tag..."
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
+              />
+            </div>
+            <span className="text-[11px] text-stone-500 dark:text-slate-400 shrink-0">
+              {filteredQuestions.length} de {questions.length} questões
+            </span>
+          </div>
+
           {/* Creation Form */}
           {isCreatingQuestion && (
             <form
               onSubmit={handleSaveQuestion}
               className="bg-white dark:bg-[#0F172A] rounded-2xl border-2 border-amber-500/50 dark:border-teal-500/60 p-6 elev-sm space-y-4 text-xs animate-in fade-in"
             >
-              <h4 className="font-serif-reading font-bold text-sm text-stone-900 dark:text-slate-100 pb-2 border-b border-stone-200 dark:border-[#243452]">
-                Cadastrar Questão com Explicação por Alternativa
-              </h4>
+              <div className="flex items-center justify-between pb-2 border-b border-stone-200 dark:border-[#243452]">
+                <h4 className="font-serif-reading font-bold text-sm text-stone-900 dark:text-slate-100">
+                  Cadastrar Questão com Explicação por Alternativa
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setShowQuestionPreview((v) => !v)}
+                  className="px-3 py-1.5 rounded-lg border border-stone-200 dark:border-[#243452] hover:bg-stone-100 dark:hover:bg-[#1A2845] text-stone-700 dark:text-slate-300 font-semibold text-xs flex items-center gap-1 transition-colors shrink-0"
+                >
+                  {showQuestionPreview ? (
+                    <EyeOff className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  ) : (
+                    <Eye className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  )}
+                  <span>{showQuestionPreview ? 'Ocultar prévia' : 'Prévia'}</span>
+                </button>
+              </div>
+
+              {/* Prévia — mesma tipografia do QuestionCard real (vinheta,
+                  comando, alternativas com gabarito e explicação, pérola
+                  high-yield), via parseInline. Sem isso, Markdown digitado
+                  aqui (negrito, [N](#ref-N) etc.) só se descobre errado
+                  depois de publicado — mesmo problema já resolvido no
+                  preview de claim da Revisão editorial e no editor de seção
+                  do compêndio. */}
+              {showQuestionPreview && (
+                <div className="rounded-lg border border-stone-200 dark:border-[#243452] p-5 bg-white dark:bg-[#0F172A] max-h-[32rem] overflow-y-auto space-y-4">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-400">
+                    Prévia — como aparece para o estudante
+                  </div>
+
+                  {newQVignette.trim() && (
+                    <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-[#142038]/80 border border-slate-200/80 dark:border-[#243452] font-serif-reading text-slate-800 dark:text-slate-200 text-sm leading-relaxed">
+                      {parseInline(newQVignette)}
+                    </div>
+                  )}
+                  <p className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-snug">
+                    {newQStem.trim() ? (
+                      parseInline(newQStem)
+                    ) : (
+                      <span className="italic text-stone-400 dark:text-slate-500 font-normal">(sem comando da questão)</span>
+                    )}
+                  </p>
+
+                  <div className="space-y-2.5">
+                    {[
+                      { letter: 'A', state: optA },
+                      { letter: 'B', state: optB },
+                      { letter: 'C', state: optC },
+                      { letter: 'D', state: optD },
+                    ].map((item) => (
+                      <div
+                        key={item.letter}
+                        className={`rounded-xl border p-3 text-sm ${
+                          item.state.isCorrect
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800'
+                            : 'bg-slate-50/80 dark:bg-[#131F35] border-slate-200 dark:border-[#283C5A]'
+                        }`}
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <span
+                            className={`w-6 h-6 rounded-lg font-bold text-[11px] flex items-center justify-center shrink-0 ${
+                              item.state.isCorrect
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
+                            }`}
+                          >
+                            {item.letter}
+                          </span>
+                          <span className="text-slate-800 dark:text-slate-200 leading-relaxed pt-0.5 flex-1">
+                            {item.state.text.trim() ? (
+                              parseInline(item.state.text)
+                            ) : (
+                              <span className="italic text-stone-400 dark:text-slate-500">(sem texto)</span>
+                            )}
+                          </span>
+                          {item.state.isCorrect && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-600 text-white shrink-0">
+                              GABARITO
+                            </span>
+                          )}
+                        </div>
+                        {item.state.exp.trim() && (
+                          <p className="mt-2 pt-2 border-t border-black/5 dark:border-white/5 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                            {parseInline(item.state.exp)}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {newQHighYield.trim() && (
+                    <div className="p-3.5 rounded-2xl bg-teal-50/70 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800/60 text-xs text-teal-950 dark:text-teal-200">
+                      <span className="font-bold block mb-1 text-teal-900 dark:text-teal-300">
+                        Pérola High-Yield (Resumo Prático):
+                      </span>
+                      <p className="leading-relaxed font-medium">{parseInline(newQHighYield)}</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
@@ -1611,7 +1753,10 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               <div className="pt-3 border-t border-stone-200 dark:border-[#243452] flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setIsCreatingQuestion(false)}
+                  onClick={() => {
+                    setIsCreatingQuestion(false);
+                    setShowQuestionPreview(false);
+                  }}
                   className="px-4 py-2 rounded-lg text-stone-600 dark:text-slate-400 hover:bg-stone-100 dark:hover:bg-[#1A2845] font-semibold"
                 >
                   Cancelar
@@ -1629,7 +1774,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
 
           {/* List of existing questions */}
           <div className="bg-white dark:bg-[#0F172A] rounded-xl border border-stone-200 dark:border-[#243452] divide-y divide-stone-100 dark:divide-stone-800 overflow-hidden elev-xs">
-            {questions.map((q) => (
+            {filteredQuestions.map((q) => (
               <div
                 key={q.id}
                 id={`admin-question-${q.id}`}
@@ -1637,36 +1782,41 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                   highlightedQuestionId === q.id ? 'bg-teal-50 dark:bg-teal-950/30' : ''
                 }`}
               >
-              <div className="flex items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-stone-900 dark:text-slate-100">
-                      {q.institution} ({q.year})
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-stone-900 dark:text-slate-100">
+                    {q.institution} ({q.year})
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-stone-100 dark:bg-[#142038] text-stone-600 dark:text-slate-400 font-semibold">
+                    {q.difficulty}
+                  </span>
+                  <span
+                    className={`text-[9px] px-2 py-0.5 rounded font-bold border ${
+                      q.publicationStatus === 'published'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900'
+                        : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900'
+                    }`}
+                  >
+                    {q.publicationStatus === 'published' ? 'publicada' : 'rascunho'}
+                  </span>
+                  {(reactionCounts[q.id]?.up || reactionCounts[q.id]?.down) ? (
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-stone-100 dark:bg-[#142038] text-stone-500 dark:text-slate-400 font-semibold flex items-center gap-1.5">
+                      <span className="flex items-center gap-0.5"><ThumbsUp className="w-3 h-3" />{reactionCounts[q.id]?.up || 0}</span>
+                      <span className="flex items-center gap-0.5"><ThumbsDown className="w-3 h-3" />{reactionCounts[q.id]?.down || 0}</span>
                     </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-stone-100 dark:bg-[#142038] text-stone-600 dark:text-slate-400 font-semibold">
-                      {q.difficulty}
-                    </span>
-                    <span
-                      className={`text-[9px] px-2 py-0.5 rounded font-bold border ${
-                        q.publicationStatus === 'published'
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900'
-                          : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900'
-                      }`}
-                    >
-                      {q.publicationStatus === 'published' ? 'publicada' : 'rascunho'}
-                    </span>
-                    {(reactionCounts[q.id]?.up || reactionCounts[q.id]?.down) ? (
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-stone-100 dark:bg-[#142038] text-stone-500 dark:text-slate-400 font-semibold flex items-center gap-1.5">
-                        <span className="flex items-center gap-0.5"><ThumbsUp className="w-3 h-3" />{reactionCounts[q.id]?.up || 0}</span>
-                        <span className="flex items-center gap-0.5"><ThumbsDown className="w-3 h-3" />{reactionCounts[q.id]?.down || 0}</span>
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="text-stone-600 dark:text-slate-400 font-medium line-clamp-1">{q.questionStem}</p>
+                  ) : null}
                 </div>
+                <p className="text-stone-600 dark:text-slate-400 font-medium line-clamp-1">{q.questionStem}</p>
+              </div>
 
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-stone-400 text-[11px]">{q.options.length} alternativas</span>
+              {/* Ações — linha própria e com flex-wrap: numa questão (4
+                  botões + contagem de alternativas) o risco de vazar da
+                  borda do card é maior que no de conteúdo, já corrigido
+                  (ver "botões de ação do card de conteúdo não escapam mais
+                  do quadro"). */}
+              <div className="pt-2 border-t border-stone-100 dark:border-[#243452] flex flex-col gap-2">
+                <span className="text-stone-400 text-[11px]">{q.options.length} alternativas</span>
+                <div className="flex items-center flex-wrap gap-2">
                   <button
                     onClick={(e) => openProvenance(e, { kind: 'question', id: q.id, title: q.questionStem.slice(0, 60) })}
                     className="px-2.5 py-1 rounded-lg border border-stone-200 dark:border-[#243452] hover:bg-stone-100 dark:hover:bg-[#1A2845] text-stone-600 dark:text-stone-300 font-semibold flex items-center gap-1 transition-colors"

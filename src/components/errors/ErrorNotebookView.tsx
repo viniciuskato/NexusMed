@@ -12,6 +12,7 @@ import {
   Save,
 } from 'lucide-react';
 import { Question, Discipline, Theme, QuestionAnswerRecord, QuestionReviewResult, ErrorLogItem } from '../../types';
+import { parseInline } from '../common/SafeMarkdown';
 import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { answersRepository } from '../../repositories/AnswersRepository';
 import { questionsRepository } from '../../repositories/QuestionsRepository';
@@ -334,11 +335,11 @@ export const ErrorNotebookView: React.FC<ErrorNotebookViewProps> = ({
                 <div className="text-xs sm:text-sm font-serif-reading space-y-2">
                   {question.clinicalVignette && (
                     <p className="text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-[#142038] p-3 rounded-xl border border-slate-100 dark:border-[#243452]">
-                      {question.clinicalVignette}
+                      {parseInline(question.clinicalVignette)}
                     </p>
                   )}
                   <p className="font-bold text-slate-900 dark:text-slate-100 font-sans">
-                    {question.questionStem}
+                    {parseInline(question.questionStem)}
                   </p>
                 </div>
 
@@ -348,10 +349,10 @@ export const ErrorNotebookView: React.FC<ErrorNotebookViewProps> = ({
                     <span className="font-bold text-rose-900 dark:text-rose-200 block mb-1">
                       Sua Escolha (Incorreta): Alternativa {answer.selectedOption}
                     </span>
-                    <p className="text-rose-800 dark:text-rose-300">{selectedOpt?.text}</p>
+                    <p className="text-rose-800 dark:text-rose-300">{parseInline(selectedOpt.text ?? '')}</p>
                     {selectedOpt?.explanation && (
                       <p className="text-[11px] text-rose-700 dark:text-rose-400 mt-1 pt-1 border-t border-rose-200 dark:border-rose-900/60">
-                        {selectedOpt.explanation}
+                        {parseInline(selectedOpt.explanation)}
                       </p>
                     )}
                   </div>
@@ -360,10 +361,10 @@ export const ErrorNotebookView: React.FC<ErrorNotebookViewProps> = ({
                     <span className="font-bold text-emerald-900 dark:text-emerald-200 block mb-1">
                       Gabarito Oficial: Alternativa {correctOpt?.letter}
                     </span>
-                    <p className="text-emerald-800 dark:text-emerald-300">{correctOpt?.text}</p>
+                    <p className="text-emerald-800 dark:text-emerald-300">{parseInline(correctOpt.text ?? '')}</p>
                     {correctOpt?.explanation && (
                       <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1 pt-1 border-t border-emerald-200 dark:border-emerald-900/60">
-                        {correctOpt.explanation}
+                        {parseInline(correctOpt.explanation)}
                       </p>
                     )}
                   </div>
@@ -374,7 +375,7 @@ export const ErrorNotebookView: React.FC<ErrorNotebookViewProps> = ({
                   <Sparkles className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
                   <div>
                     <span className="font-bold block text-teal-900 dark:text-teal-300">Pérola de Aprendizado:</span>
-                    <p className="font-medium mt-0.5 text-teal-950 dark:text-teal-200">{review?.highYieldSummary}</p>
+                    <p className="font-medium mt-0.5 text-teal-950 dark:text-teal-200">{review && parseInline(review.highYieldSummary)}</p>
                   </div>
                 </div>
 
