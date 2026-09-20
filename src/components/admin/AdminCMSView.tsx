@@ -1304,10 +1304,10 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                     )}
                   </div>
 
-                  <div className="pt-3 border-t border-stone-100 dark:border-[#243452] flex items-center justify-between">
-                    <span className="text-[10px] text-stone-400 font-mono-code">ID: {c.id}</span>
+                  <div className="pt-3 border-t border-stone-100 dark:border-[#243452] flex flex-col gap-2">
+                    <span className="text-[10px] text-stone-400 font-mono-code break-all">ID: {c.id}</span>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center flex-wrap gap-2">
                       <button
                         onClick={() => onOpenCompendium(c.id)}
                         className="px-3 py-1.5 rounded-lg border border-stone-200 dark:border-[#243452] hover:bg-stone-100 dark:hover:bg-[#1A2845] text-stone-700 dark:text-slate-300 font-semibold text-xs flex items-center gap-1 transition-colors"
