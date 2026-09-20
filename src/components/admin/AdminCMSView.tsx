@@ -221,7 +221,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   const [isCompendiumFormOpen, setIsCompendiumFormOpen] = useState(false);
   const [isImportMaterialOpen, setIsImportMaterialOpen] = useState(false);
   const [editingCompId, setEditingCompId] = useState<string | null>(null);
-  const [compSearch, setCompSearch] = useState('');
+  const [compSearch, setCompSearch] = usePersistedState('admin_comp_search', '');
   // Editor de seção (piloto CMS) — guarda só o id, não o objeto Compendium,
   // para que o SectionEditor sempre receba a versão mais recente vinda de
   // onRefreshData (ver AGENTS.md / plano da feature).
