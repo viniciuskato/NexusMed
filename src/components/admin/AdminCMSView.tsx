@@ -1363,11 +1363,11 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                                 (só atalho de mouse; invisível e fora da árvore de
                                 acessibilidade — as opções do menu são botões reais). */}
                             <div
-                              className="fixed inset-0 z-10"
+                              className="fixed inset-0 z-40"
                               aria-hidden="true"
                               onClick={() => setOpenEditMenuCompId(null)}
                             />
-                            <div className="absolute right-0 mt-1 w-56 rounded-lg border border-stone-200 dark:border-[#243452] bg-white dark:bg-[#0F172A] elev-md z-20 overflow-hidden">
+                            <div className="absolute right-0 bottom-full mb-1 w-56 rounded-lg border border-stone-200 dark:border-[#243452] bg-white dark:bg-[#0F172A] elev-md z-50 overflow-hidden">
                               <button
                                 onClick={() => {
                                   setEditingSectionsCompId(c.id);

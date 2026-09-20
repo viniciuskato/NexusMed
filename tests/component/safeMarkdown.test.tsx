@@ -127,6 +127,70 @@ describe('SafeMarkdown — normalização de blocos sem linha em branco', () => 
   });
 });
 
+describe('SafeMarkdown — legenda de fonte em tabela', () => {
+  // PADRAO-NEXUSMED-CONTEUDOS.md pede citação na frase que introduz a
+  // tabela, não em cada célula — mas isso deixa a citação fisicamente longe
+  // da tabela. Achado real: compêndio de Espirometria, 3 tabelas já citadas
+  // na frase de abertura, mas sem nenhuma citação grudada na própria
+  // tabela — lido como "tabela sem referência" por quem estuda. A legenda
+  // "Fonte: [N]" é derivada automaticamente do parágrafo anterior, sem
+  // exigir reescrever conteúdo já correto.
+  it('deriva a legenda "Fonte: [N]" das citações do parágrafo que introduz a tabela', () => {
+    const content = [
+      'Substituindo o antigo conceito binário, o sistema atual gradua o exame em letras [1](#ref-1)[2](#ref-2)[8](#ref-8):',
+      '',
+      '| Grau | Aplicação |',
+      '| :--- | :--- |',
+      '| A | Plena confiança |',
+    ].join('\n');
+
+    render(<SafeMarkdown content={content} />);
+
+    expect(screen.getByText('Fonte:')).toBeTruthy();
+    const table = screen.getByRole('table');
+    const caption = table.parentElement?.parentElement?.querySelector('a[href="#ref-8"]');
+    expect(caption?.textContent).toBe('[8]');
+  });
+
+  it('não duplica número de referência citado mais de uma vez no mesmo parágrafo', () => {
+    const content = [
+      'Dado consagrado pela diretriz [1](#ref-1)[1](#ref-1):',
+      '',
+      '| Grau | Aplicação |',
+      '| :--- | :--- |',
+      '| A | Plena confiança |',
+    ].join('\n');
+
+    render(<SafeMarkdown content={content} />);
+
+    expect(screen.getAllByText('[1]')).toHaveLength(1);
+  });
+
+  it('não mostra legenda quando o parágrafo anterior não tem nenhuma citação', () => {
+    const content = [
+      'Segue a tabela de referência rápida:',
+      '',
+      '| Grau | Aplicação |',
+      '| :--- | :--- |',
+      '| A | Plena confiança |',
+    ].join('\n');
+
+    render(<SafeMarkdown content={content} />);
+
+    expect(screen.getByRole('table')).toBeTruthy();
+    expect(screen.queryByText('Fonte:')).toBeNull();
+  });
+
+  it('não mostra legenda quando a tabela é o primeiro bloco (sem parágrafo anterior)', () => {
+    const content = ['| Grau | Aplicação |', '| :--- | :--- |', '| A | Plena confiança |'].join('\n');
+
+    render(<SafeMarkdown content={content} />);
+
+    expect(screen.getByRole('table')).toBeTruthy();
+    expect(screen.queryByText('Fonte:')).toBeNull();
+  });
+});
+
 describe('SafeMarkdown — negrito com itálico aninhado', () => {
   it('renderiza "**negrito (*itálico*)**" sem deixar asteriscos soltos como texto literal', () => {
     const content = 'no chamado **Ponto de Igual Pressão (*Equal Pressure Point*)** simples.';
