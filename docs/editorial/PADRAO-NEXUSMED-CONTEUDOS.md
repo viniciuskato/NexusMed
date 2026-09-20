@@ -43,10 +43,34 @@ campo de conteúdo é texto simples (aceita Markdown: `**negrito**`,
      `N` é a posição da referência na lista de Referências (item 4).
      Se a fonte não cobrir algo, não invente — deixe mais enxuto ou
      escreva `LACUNA_DOCUMENTAL` no lugar do trecho que faltaria.
+     **Se o texto veio de uma IA de fontes (NotebookLM e similares):**
+     ela numera as citações pela ordem interna dela sobre as fontes que
+     carregou ali — isso quase nunca bate com a posição real na SUA
+     lista de Referências aqui embaixo. Antes de colar, renumere à mão
+     cada marcador para a posição certa e garanta que está no formato
+     `[N](#ref-N)`, nunca só `[N]` solto (isso não vira link nenhum e o
+     preview de importação vai reclamar).
    - **Pontos-Chave** — frases de resumo que fazem sentido lidas
      sozinhas, fora do corpo do texto. Opcional, mas ajuda no estudo.
    - **Pérola Clínica** / **Alerta de Armadilha** — só preencha quando
      houver mesmo algo relevante; não são obrigatórios.
+   - **Sempre deixe uma linha em branco antes e depois de um
+     subtítulo (`####`), de uma tabela ou de uma lista com
+     marcadores/numerada.** Um `#### Subtítulo` ou uma lista colados
+     direto na linha de cima (sem linha em branco separando) já
+     apareceram publicados como texto literal pro estudante —
+     `#### Subtítulo Texto do parágrafo...` numa linha só, ou
+     `* Item da lista` sem virar bullet — em vez de virar o elemento
+     visual esperado (achado real: compêndio de Espirometria, 2026-09).
+     O renderer (`SafeMarkdown`) foi endurecido pra tolerar essa falta
+     em boa parte dos casos, mas trate isso como rede de segurança, não
+     como desculpa pra pular a linha em branco — é a convenção correta
+     de Markdown e evita depender do endurecimento cobrir todo caso.
+     **Evite listas aninhadas** (um sub-item indentado dentro de um
+     item numerado, ex. `1. Item` seguido de `    * Sub-item`) — o
+     renderer não suporta aninhamento hoje; reescreva como itens de
+     mesmo nível (`1.`, `2.`, `3.`...) ou como frases dentro do próprio
+     item, em vez de indentar.
 4. **Tags**, **Nós de Conexão/Pré-requisitos** (só se houver um
    pré-requisito explícito) e **Referências Bibliográficas** (uma por
    linha, terminando com o tipo de evidência entre colchetes — ex.
@@ -69,6 +93,20 @@ similares — que produzem Markdown nativamente, não YAML) ou já tiver
 um texto pronto. Admin → **Importar material** → escolha o arquivo — a
 tela mostra um preview com campos faltando e pede escolha manual de
 disciplina/tema se o nome não bateu com o catálogo.
+
+**Antes de escrever `Disciplina`/`Tema` no arquivo, confira o valor
+exato do catálogo real** — abra "Novo Conteúdo / Mecanismo" no Admin e
+veja os dois *dropdowns* (não precisa criar nada, só olhar as opções
+já cadastradas). O erro mais comum aqui é **inventar um Tema
+específico pro assunto** (ex.: "Espirometria e Testes de Função
+Pulmonar"). `Tema` não é um resumo do conteúdo — é uma categoria ampla
+e fixa do currículo, a mesma para dezenas de conteúdos diferentes
+dentro da disciplina (ex.: `Clínica`, `Básica`). Use exatamente um
+valor que já existe no *dropdown*, nunca um termo novo criado pra
+combinar com o título. Se uma IA gerou o arquivo, ela não tem como
+saber esse valor sozinha — informe o Tema certo antes de pedir pra
+gerar, ou edite essa linha manualmente depois. Isso não trava a
+importação (só pede escolha manual na hora), mas evita o retrabalho.
 
 **Formato `.md`** — mesmo conteúdo do formulário, em Markdown simples:
 
@@ -100,11 +138,10 @@ posição da referência na lista de Referências abaixo.
 1. Referência completa, com [tipo de evidência entre colchetes]
 ```
 
-O preview avisa (sem bloquear) se encontrar citação em formato antigo
-`[268]` sem virar link `[N](#ref-N)` — comum quando o texto vem de uma
-ferramenta que usa sua própria numeração interna de fontes, diferente
-da posição real na sua lista de Referências. Corrija manualmente antes
-de publicar; ninguém remapeia isso por você automaticamente, porque
+Como rede de segurança, o preview de importação também avisa (sem
+bloquear) se ainda sobrar alguma citação em formato antigo tipo
+`[268]` sem virar link — mas o ideal é já entregar corrigido, como
+descrito acima; ninguém remapeia isso por você automaticamente, porque
 adivinhar a referência certa seria inventar citação.
 
 **Formato `.yaml`** — o formato de autoria original, mais verboso mas
