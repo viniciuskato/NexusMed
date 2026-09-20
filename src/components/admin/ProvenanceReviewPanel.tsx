@@ -62,11 +62,23 @@ const CLAIM_KIND_LABEL: Record<ClaimKind, string> = {
   inference: 'Inferência',
 };
 
+interface ProvenanceContentOption {
+  locator: string;
+  label: string;
+}
+
 interface ProvenanceReviewPanelProps {
   target: { materialId: string } | { questionId: string };
   title: string;
   onClose: () => void;
   onChanged?: () => void;
+  /**
+   * Seções (material) ou partes (enunciado/alternativas de questão) do
+   * conteúdo atual, para preencher "Localização estável" e um texto de claim
+   * sugerido por seleção — evita ter que copiar título/trecho manualmente.
+   * Opcional: sem isso, os campos continuam 100% de texto livre.
+   */
+  contentOptions?: ProvenanceContentOption[];
 }
 
 interface ClaimSourceLinkForm {
@@ -83,7 +95,13 @@ const emptyLinkForm = (): ClaimSourceLinkForm => ({
   sourceLocator: '',
 });
 
-export default function ProvenanceReviewPanel({ target, title, onClose, onChanged }: ProvenanceReviewPanelProps) {
+export default function ProvenanceReviewPanel({
+  target,
+  title,
+  onClose,
+  onChanged,
+  contentOptions,
+}: ProvenanceReviewPanelProps) {
   const [status, setStatus] = useState<ProvenanceStatus | null>(null);
   const [revisionId, setRevisionId] = useState<string | null>(null);
   const [revisionAttested, setRevisionAttested] = useState<boolean | null>(null);
@@ -97,6 +115,7 @@ export default function ProvenanceReviewPanel({ target, title, onClose, onChange
   const [claimLocator, setClaimLocator] = useState('');
   const [claimRisk, setClaimRisk] = useState<RiskCategory | ''>('');
   const [claimRequiresSource, setClaimRequiresSource] = useState(false);
+  const [selectedContentOption, setSelectedContentOption] = useState('');
 
   const [claimSourcesByClaim, setClaimSourcesByClaim] = useState<Record<string, ClaimSource[]>>({});
   const [sourcesById, setSourcesById] = useState<Map<string, SourceSummary>>(new Map());
@@ -193,11 +212,26 @@ export default function ProvenanceReviewPanel({ target, title, onClose, onChange
       setClaimLocator('');
       setClaimRisk('');
       setClaimRequiresSource(false);
+      setSelectedContentOption('');
       await load();
     } catch (err) {
       showToast(`Erro ao adicionar claim: ${getErrorMessage(err)}`);
     } finally {
       setBusy(false);
+    }
+  };
+
+  // Seleção de seção/parte do conteúdo real: preenche "Localização estável"
+  // sempre, e sugere um texto de claim só quando o campo ainda está vazio —
+  // não sobrescreve texto que o usuário já tenha digitado/ajustado à mão.
+  const handleSelectContentOption = (locator: string) => {
+    setSelectedContentOption(locator);
+    if (!locator) return;
+    const option = contentOptions?.find((o) => o.locator === locator);
+    if (!option) return;
+    setClaimLocator(option.locator);
+    if (!claimText.trim()) {
+      setClaimText(`Conteúdo de "${option.label}" corresponde às referências citadas inline (marcadores [N]).`);
     }
   };
 
@@ -293,7 +327,9 @@ export default function ProvenanceReviewPanel({ target, title, onClose, onChange
 
       <p className="text-stone-500 dark:text-slate-400">
         Aprovação editorial de conteúdo — não é assinatura digital qualificada. A identidade do autor/revisor vem do
-        login autenticado (nunca de texto digitado aqui).
+        login autenticado (nunca de texto digitado aqui). Publicar exige pelo menos um claim decidido e a revisão
+        atestada como aprovada — isso vale mesmo quando o conteúdo já está correto: é um registro de decisão
+        explícito, não uma busca por erros.
       </p>
 
       {loading ? (
@@ -315,7 +351,11 @@ export default function ProvenanceReviewPanel({ target, title, onClose, onChange
               <div className="rounded-lg border border-stone-200 dark:border-[#243452] p-4 space-y-3">
                 <h4 className="font-bold text-stone-700 dark:text-slate-300">Claims desta revisão</h4>
                 {claims.length === 0 ? (
-                  <p className="text-stone-500 dark:text-slate-400">Nenhum claim registrado ainda.</p>
+                  <p className="text-stone-500 dark:text-slate-400">
+                    Nenhum claim registrado ainda. Adicione ao menos um antes de conseguir atestar — um claim de
+                    síntese por seção já basta quando o conteúdo está correto, não precisa achar um problema para
+                    registrar.
+                  </p>
                 ) : (
                   <ul className="space-y-3">
                     {claims.map((c) => (
@@ -448,6 +488,20 @@ export default function ProvenanceReviewPanel({ target, title, onClose, onChange
                     <Plus className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
                     <span className="font-bold text-stone-700 dark:text-slate-300">Adicionar claim</span>
                   </div>
+                  {contentOptions && contentOptions.length > 0 && (
+                    <select
+                      value={selectedContentOption}
+                      onChange={(e) => handleSelectContentOption(e.target.value)}
+                      className="w-full px-2 py-1.5 rounded border border-stone-200 dark:border-[#243452] bg-white dark:bg-[#0B1424] text-stone-900 dark:text-slate-100"
+                    >
+                      <option value="">Selecionar seção/trecho (preenche texto e localização abaixo)</option>
+                      {contentOptions.map((o) => (
+                        <option key={o.locator} value={o.locator}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <textarea
                     value={claimText}
                     onChange={(e) => setClaimText(e.target.value)}
