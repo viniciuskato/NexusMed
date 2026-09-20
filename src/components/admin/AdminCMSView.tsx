@@ -249,6 +249,25 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     setProvenanceTarget(null);
     provenanceTriggerRef.current?.focus();
   };
+  // Seções (material) ou enunciado/alternativas (questão) do alvo aberto no
+  // painel de revisão, para o seletor de "Localização estável" — evita ter
+  // que copiar título/trecho manualmente para montar um claim.
+  const provenanceContentOptions: { locator: string; label: string }[] = (() => {
+    if (!provenanceTarget) return [];
+    if (provenanceTarget.kind === 'material') {
+      const material = compendiums.find((c) => c.id === provenanceTarget.id);
+      return (material?.sections ?? []).map((s) => ({ locator: `section:${s.id}`, label: s.title }));
+    }
+    const question = questions.find((q) => q.id === provenanceTarget.id);
+    if (!question) return [];
+    return [
+      { locator: 'question_stem', label: 'Enunciado' },
+      ...question.options.map((o) => ({
+        locator: `option:${o.letter}:explanation`,
+        label: `Alternativa ${o.letter} — explicação`,
+      })),
+    ];
+  })();
 
   // Associação de referências de material -> fonte curada (21-D).
   const [editingReferencesCompId, setEditingReferencesCompId] = useState<string | null>(null);
@@ -741,6 +760,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
           title={provenanceTarget.title}
           onClose={closeProvenance}
           onChanged={onRefreshData}
+          contentOptions={provenanceContentOptions}
         />
       )}
 
