@@ -126,3 +126,17 @@ describe('SafeMarkdown — normalização de blocos sem linha em branco', () => 
     expect(screen.getByRole('table')).toBeTruthy();
   });
 });
+
+describe('SafeMarkdown — negrito com itálico aninhado', () => {
+  it('renderiza "**negrito (*itálico*)**" sem deixar asteriscos soltos como texto literal', () => {
+    const content = 'no chamado **Ponto de Igual Pressão (*Equal Pressure Point*)** simples.';
+
+    const { container } = render(<SafeMarkdown content={content} />);
+
+    const strong = container.querySelector('strong');
+    expect(strong?.textContent).toBe('Ponto de Igual Pressão (Equal Pressure Point)');
+    expect(strong?.querySelector('em')?.textContent).toBe('Equal Pressure Point');
+    expect(container.textContent).toBe('no chamado Ponto de Igual Pressão (Equal Pressure Point) simples.');
+    expect(container.textContent).not.toContain('*');
+  });
+});

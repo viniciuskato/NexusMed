@@ -11,11 +11,19 @@ interface SafeMarkdownProps {
  */
 function parseInline(text: string): React.ReactNode[] {
   // Regex matches:
-  // 1. **bold**
-  // 2. *italic* or _italic_
+  // 1. **bold**, admitindo *itálico* aninhado dentro (ex.: "**Ponto de Igual
+  //    Pressão (*Equal Pressure Point*)**", padrão real do conteúdo médico)
+  //    — o conteúdo de `**...**` é "qualquer char que não é asterisco, OU um
+  //    asterisco isolado que não é seguido de outro asterisco". Sem o
+  //    lookahead negativo, `[^*]+` simples para no primeiro asterisco
+  //    interno e o "**" de fechamento nunca é alcançado: o par externo não
+  //    casa, os asteriscos do itálico aninhado viram texto literal solto, e
+  //    o negrito nem chega a ser aplicado (achado revisando visualmente um
+  //    compêndio real — ver AGENTS.md/TASKS.md).
+  // 2. *italic* ou _italic_
   // 3. `inline code`
   // 4. [text](url)
-  const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g;
+  const regex = /(\*\*(?:\*(?!\*)|[^*])+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g;
   const parts = text.split(regex);
 
   return parts.map((part, idx) => {

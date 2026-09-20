@@ -43,6 +43,22 @@ campo de conteúdo é texto simples (aceita Markdown: `**negrito**`,
      `N` é a posição da referência na lista de Referências (item 4).
      Se a fonte não cobrir algo, não invente — deixe mais enxuto ou
      escreva `LACUNA_DOCUMENTAL` no lugar do trecho que faltaria.
+     **Citação é por claim, não por frase.** Um claim é uma ideia
+     completa — pode levar 1 frase ou 3, tudo bem, desde que venha da(s)
+     mesma(s) fonte(s) — e leva UMA citação no fim dele, não uma citação
+     repetida atrás de cada frase/oração que o compõe. Errado:
+     `A retração elástica está preservada [1][4]. Há redução harmônica
+     dos volumes [1][4].` (mesmo par de fontes duas vezes — é 1 claim
+     só). Certo: `A retração elástica está preservada. Há redução
+     harmônica dos volumes [1][4].` Cite mais de uma vez dentro do mesmo
+     trecho só quando frases vizinhas vêm de fontes GENUINAMENTE
+     diferentes (nesse caso a citação já é informativa, não redundante)
+     — nunca por hábito. Isso vale para prosa, bullets e tabelas: numa
+     tabela onde toda linha repete a mesma citação, ela pertence à frase
+     que introduz a tabela, não a cada célula (achado real: compêndio de
+     Espirometria, 198 citações caindo pra 123 depois de aplicar esta
+     regra, sem perder nenhuma referência — nenhuma das 8 ficou sem
+     citação nenhuma no texto).
      **Se o texto veio de uma IA de fontes (NotebookLM e similares):**
      ela numera as citações pela ordem interna dela sobre as fontes que
      carregou ali — isso quase nunca bate com a posição real na SUA
