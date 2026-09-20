@@ -119,6 +119,15 @@ seção "Armadilhas já descobertas".
     herda); o revoke de default privileges só tira `anon`. Toda RPC nova
     precisa de `revoke all on function ... from public, anon;` explícito —
     a guarda pgTAP ainda não confere isso (AUD-31).
+15. **Campo de seção do compêndio com Markdown inline (`content`,
+    `keyTakeaways`, `clinicalPearl`, `warningAlert`, `examConsensus`, e
+    campos derivados como `Flashcard.back`/`mechanismHighlight`) renderizado
+    fora de um formulário sempre passa por `SafeMarkdown`/`parseInline`
+    (`src/components/common/SafeMarkdown.tsx`) — nunca string crua no JSX.
+    Três componentes diferentes já caíram nessa lacuna antes de ser notada
+    (achado revisando visualmente um compêndio real). Ver
+    [`INC-2026-002`](docs/operacao/incidents/INC-2026-002-safemarkdown-conteudo-real.md)
+    e [`standards/conteudo-markdown-inline.md`](docs/operacao/standards/conteudo-markdown-inline.md).
 
 ## Convenções de trabalho
 
