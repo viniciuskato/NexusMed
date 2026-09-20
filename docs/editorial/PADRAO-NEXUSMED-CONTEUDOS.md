@@ -59,6 +59,20 @@ campo de conteúdo é texto simples (aceita Markdown: `**negrito**`,
      Espirometria, 198 citações caindo pra 123 depois de aplicar esta
      regra, sem perder nenhuma referência — nenhuma das 8 ficou sem
      citação nenhuma no texto).
+     **Toda tabela precisa dessa frase de abertura citada — nunca zero
+     citação.** Não é só estilo: o `SafeMarkdown` lê o bloco
+     imediatamente anterior a cada tabela e, se ele terminar com
+     `[N](#ref-N)`, gera sozinho uma legenda "Fonte: [N]" grudada na
+     tabela — por isso a frase precisa ficar a **um parágrafo de
+     distância** da tabela, sem heading nem bloco extra no meio (`Frase
+     citada [N](#ref-N):` numa linha, linha em branco, `| tabela |` na
+     seguinte). Sem essa frase citada logo acima, a tabela renderiza sem
+     nenhuma citação visível grudada nela (achado real: compêndio de
+     Espirometria, 3 tabelas já tinham a frase citada corretamente no
+     parágrafo acima, mas nenhuma citação aparecia colada na tabela em
+     si — o dono do conteúdo leu isso como "tabela sem referência" antes
+     de existir a legenda automática; a citação já estava certa no
+     texto, só longe demais pra ser percebida olhando só a tabela).
      **Se o texto veio de uma IA de fontes (NotebookLM e similares):**
      ela numera as citações pela ordem interna dela sobre as fontes que
      carregou ali — isso quase nunca bate com a posição real na SUA
