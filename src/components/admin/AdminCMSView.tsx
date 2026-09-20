@@ -36,6 +36,7 @@ import { materialsRepository } from '../../repositories/MaterialsRepository';
 import { questionsRepository } from '../../repositories/QuestionsRepository';
 import { feedbackRepository } from '../../repositories/FeedbackRepository';
 import { supabase } from '../../lib/supabaseClient';
+import { parseInline } from '../common/SafeMarkdown';
 import SectionEditor from './SectionEditor';
 import ProvenanceReviewPanel from './ProvenanceReviewPanel';
 import MaterialReferencesPanel from './MaterialReferencesPanel';
@@ -1773,7 +1774,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               <div key={fc.id} className="p-4 flex items-center justify-between gap-4 text-xs">
                 <div className="space-y-1">
                   <span className="font-bold text-stone-900 dark:text-slate-100">{fc.front}</span>
-                  <p className="text-stone-500 dark:text-slate-400 line-clamp-1">{fc.back}</p>
+                  <p className="text-stone-500 dark:text-slate-400 line-clamp-1">{parseInline(fc.back)}</p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-[10px] px-2 py-0.5 rounded bg-amber-50 dark:bg-teal-950/60 text-amber-900 dark:text-teal-400 font-bold border border-amber-200 dark:border-teal-500/40">

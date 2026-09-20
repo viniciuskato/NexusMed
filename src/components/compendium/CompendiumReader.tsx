@@ -30,7 +30,7 @@ import { bookmarksRepository } from '../../repositories/BookmarksRepository';
 import { notesRepository } from '../../repositories/NotesRepository';
 import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { readingProgressRepository } from '../../repositories/ReadingProgressRepository';
-import { SafeMarkdown } from '../common/SafeMarkdown';
+import { SafeMarkdown, parseInline } from '../common/SafeMarkdown';
 import { ContextualFeedbackPopover } from '../feedback/ContextualFeedbackPopover';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
 
@@ -248,7 +248,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
       front: `[${discipline?.name || 'Medicina'}] ${sec.title}`,
       back: sec.keyTakeaways.join('\n• '),
       mechanismHighlight: sec.clinicalPearl || sec.keyTakeaways[0] || '',
-      tags: [discipline?.name || 'Geral', theme?.name || 'Teoria', 'Compêndio'],
+      tags: [discipline?.name || 'Geral', theme?.name || 'Teoria', 'Conteúdo'],
       difficulty: 'medio',
       isCustom: true,
       srs: {
@@ -737,7 +737,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
                       {sec.keyTakeaways.map((takeaway, tIdx) => (
                         <li key={tIdx} className="flex items-start gap-2">
                           <span className="text-[#0F766E] dark:text-[#14B8A6] mt-0.5 shrink-0">•</span>
-                          <span>{takeaway}</span>
+                          <span>{parseInline(takeaway)}</span>
                         </li>
                       ))}
                     </ul>
@@ -753,7 +753,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
                         Pérola clínica & Aplicação
                       </span>
                       <p className="text-sm text-[#172033] dark:text-[#E5E7EB] leading-relaxed">
-                        {sec.clinicalPearl}
+                        {parseInline(sec.clinicalPearl)}
                       </p>
                     </div>
                   </div>
@@ -768,7 +768,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
                         Atenção redobrada
                       </span>
                       <p className="text-sm text-[#172033] dark:text-[#E5E7EB] leading-relaxed">
-                        {sec.warningAlert}
+                        {parseInline(sec.warningAlert)}
                       </p>
                     </div>
                   </div>
@@ -783,7 +783,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
                         Consenso de Prova vs. Prática de Plantão
                       </span>
                       <p className="text-sm text-[#172033] dark:text-[#E5E7EB] leading-relaxed">
-                        {sec.examConsensus}
+                        {parseInline(sec.examConsensus)}
                       </p>
                     </div>
                   </div>

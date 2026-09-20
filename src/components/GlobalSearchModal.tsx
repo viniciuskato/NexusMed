@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Compendium, Question, Flashcard } from '../types';
 import { useDialogA11y } from '../hooks/useDialogA11y';
+import { parseInline } from './common/SafeMarkdown';
 
 interface GlobalSearchModalProps {
   isOpen: boolean;
@@ -154,7 +155,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
             }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
-            <span>Compêndios ({results.compendiums.length})</span>
+            <span>Conteúdos ({results.compendiums.length})</span>
           </button>
           <button
             onClick={() => setActiveFilter('question')}
@@ -212,7 +213,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                 <div>
                   <div className="px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-400 flex items-center gap-1.5">
                     <BookOpen className="w-3.5 h-3.5" />
-                    <span>Compêndios Teóricos & Diretrizes</span>
+                    <span>Conteúdos Teóricos & Diretrizes</span>
                   </div>
                   <div className="space-y-1.5 mt-1">
                     {results.compendiums.map((comp) => (
@@ -302,7 +303,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                             {fc.front}
                           </p>
                           <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
-                            {fc.mechanismHighlight || fc.back}
+                            {parseInline(fc.mechanismHighlight || fc.back)}
                           </p>
                           <div className="flex gap-1 flex-wrap">
                             {fc.tags.map((t) => (
