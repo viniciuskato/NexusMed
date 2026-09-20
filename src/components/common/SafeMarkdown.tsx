@@ -8,8 +8,22 @@ interface SafeMarkdownProps {
 /**
  * Safely parses inline markdown (bold, italic, inline code, links)
  * into React nodes WITHOUT dangerouslySetInnerHTML.
+ *
+ * Exportado à parte de `SafeMarkdown` (que faz split em blocos — parágrafo/
+ * heading/tabela/lista) porque campos curtos de uma seção (Pontos-Chave,
+ * Pérola Clínica, Alerta de Armadilha, Consenso de Prova, e os flashcards
+ * derivados deles) também carregam Markdown inline (negrito e sobretudo
+ * `[N](#ref-N)` de citação — a convenção editorial pede citação em
+ * qualquer afirmação de peso clínico, sem exceção pra esses campos) mas
+ * NUNCA precisam de heading/tabela — usar o `SafeMarkdown` inteiro ali
+ * geraria markup de bloco (`<div>`/`<p>`) onde o layout já é uma `<li>`/
+ * `<span>`/`<p>` existente. Renderizar esses campos como string crua (sem
+ * chamar nem isso nem `SafeMarkdown`) deixa o `[N](#ref-N)` literal na
+ * tela — achado real revisando o compêndio de Espirometria publicado: o
+ * corpo do texto (via `SafeMarkdown`) já citava certo, mas o box
+ * "Pontos-Chave & Mecanismos" mostrava a sintaxe Markdown crua.
  */
-function parseInline(text: string): React.ReactNode[] {
+export function parseInline(text: string): React.ReactNode[] {
   // Regex matches:
   // 1. **bold**, admitindo *itálico* aninhado dentro (ex.: "**Ponto de Igual
   //    Pressão (*Equal Pressure Point*)**", padrão real do conteúdo médico)

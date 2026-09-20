@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, afterEach } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 
-import { SafeMarkdown } from '../../src/components/common/SafeMarkdown';
+import { SafeMarkdown, parseInline } from '../../src/components/common/SafeMarkdown';
 
 // Achado revisando visualmente um compêndio real na Área Editorial: um
 // `#### Subtítulo` colado direto acima do parágrafo seguinte, uma tabela
@@ -138,5 +138,32 @@ describe('SafeMarkdown — negrito com itálico aninhado', () => {
     expect(strong?.querySelector('em')?.textContent).toBe('Equal Pressure Point');
     expect(container.textContent).toBe('no chamado Ponto de Igual Pressão (Equal Pressure Point) simples.');
     expect(container.textContent).not.toContain('*');
+  });
+});
+
+describe('parseInline — usado fora do SafeMarkdown (Pontos-Chave, Pérola Clínica, flashcards)', () => {
+  // Campos curtos como keyTakeaways/clinicalPearl/warningAlert e os
+  // flashcards derivados deles (CompendiumReader, FlashcardsView,
+  // FlashcardReviewSession, GlobalSearchModal, AdminCMSView) carregam
+  // citação `[N](#ref-N)` igual ao corpo do texto, mas são renderizados
+  // fora do SafeMarkdown (numa <li>/<span>/<p> já existente). Achado real:
+  // o corpo do compêndio de Espirometria já citava certo via SafeMarkdown,
+  // mas o box "Pontos-Chave & Mecanismos" mostrava "[1](#ref-1)[3](#ref-3)"
+  // como texto literal — porque esses componentes nunca chamavam nenhum
+  // parser, só interpolavam a string crua. Este teste trava que
+  // `parseInline` (agora exportado) resolve exatamente esse texto real.
+  it('converte "[N](#ref-N)" em link de citação, não em texto literal', () => {
+    const takeaway =
+      'A relação VEF1/CVF reduzida (abaixo do Limite Inferior da Normalidade) é o divisor de águas para o diagnóstico de Distúrbio Ventilatório Obstrutivo (DVO) [1](#ref-1)[3](#ref-3).';
+
+    const { container } = render(<ul><li>{parseInline(takeaway)}</li></ul>);
+
+    const links = container.querySelectorAll('a');
+    expect(links).toHaveLength(2);
+    expect(links[0].textContent).toBe('1');
+    expect(links[0].getAttribute('href')).toBe('#ref-1');
+    expect(links[1].textContent).toBe('3');
+    expect(container.textContent).not.toContain('(#ref-1)');
+    expect(container.textContent).not.toContain('[1]');
   });
 });

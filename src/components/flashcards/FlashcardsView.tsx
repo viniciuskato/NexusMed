@@ -17,6 +17,7 @@ import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
 import { onActivationKey } from '../../utils/keyboardActivation';
+import { parseInline } from '../common/SafeMarkdown';
 
 interface FlashcardsViewProps {
   flashcards: Flashcard[];
@@ -178,7 +179,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
             Flashcards com Algoritmo SM-2 Baseado em Evidências
           </h1>
           <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-            Memorize diretrizes, critérios diagnósticos e farmacodinâmica de forma duradoura. Cada cartão traz o mecanismo fisiopatológico resumido e link direto para o compêndio.
+            Memorize diretrizes, critérios diagnósticos e farmacodinâmica de forma duradoura. Cada cartão traz o mecanismo fisiopatológico resumido e link direto para o conteúdo.
           </p>
         </div>
 
@@ -360,11 +361,11 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
                           Resposta & Mecanismo:
                         </span>
                         <p className="text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
-                          {card.back}
+                          {parseInline(card.back)}
                         </p>
                         {card.mechanismHighlight && (
                           <div className="p-2 bg-teal-50 dark:bg-teal-950/60 rounded-xl text-[11px] text-teal-900 dark:text-teal-200 border border-teal-200/60 dark:border-teal-800/60">
-                            <strong>Destaque:</strong> {card.mechanismHighlight}
+                            <strong>Destaque:</strong> {parseInline(card.mechanismHighlight)}
                           </div>
                         )}
                         {compendiumId && (

@@ -28,6 +28,7 @@ Use `resolved` somente quando a prevenção executável estiver validada.
 | ID | Data | Severidade | Área | Estado | Resumo |
 |---|---|---|---|---|---|
 | [INC-2026-001](INC-2026-001-fixtures-e2e-residuais.md) | 2026-09-18 | média | E2E/CI | resolved | Teardown deixou três usuários `e2e-13a-*` no Supabase local |
+| [INC-2026-002](INC-2026-002-safemarkdown-conteudo-real.md) | 2026-09-20 | média | compendium-render | verifying | `SafeMarkdown` deixava heading/tabela/lista sem linha em branco, negrito com itálico aninhado, e Pontos-Chave/Pérola Clínica/flashcards sem passar por nenhum parser — todos como texto/Markdown cru na tela |
 
 ## Regra de consolidação
 

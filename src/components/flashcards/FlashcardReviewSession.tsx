@@ -12,6 +12,7 @@ import { Flashcard, Discipline, Theme, Compendium } from '../../types';
 import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { formatToAbntCitation } from '../../utils/bibliographicSources';
 import { onActivationKey } from '../../utils/keyboardActivation';
+import { parseInline } from '../common/SafeMarkdown';
 
 interface FlashcardReviewSessionProps {
   cards: Flashcard[];
@@ -283,7 +284,7 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
             ) : (
               <div className="space-y-4 animate-in fade-in zoom-in-95">
                 <div className="text-base sm:text-xl font-bold text-slate-900 dark:text-slate-100 leading-relaxed font-serif-reading whitespace-pre-line text-left">
-                  {currentCard.back}
+                  {parseInline(currentCard.back)}
                 </div>
 
                 {/* Mechanism Highlight */}
@@ -294,7 +295,7 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
                       Mecanismo Fisiopatológico / Mnemônico:
                     </span>
                     <p className="leading-relaxed font-medium">
-                      {currentCard.mechanismHighlight}
+                      {parseInline(currentCard.mechanismHighlight)}
                     </p>
                   </div>
                 )}
