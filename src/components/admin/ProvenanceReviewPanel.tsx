@@ -14,6 +14,7 @@ import {
 import { contentProvenanceRepository } from '../../repositories/ContentProvenanceRepository';
 import { getErrorMessage } from '../../utils/errorMessage';
 import SourceSelector from './SourceSelector';
+import { SafeMarkdown } from '../common/SafeMarkdown';
 
 const EVIDENCE_RELATION_LABEL: Record<EvidenceRelation, string> = {
   supports: 'Sustenta',
@@ -65,6 +66,8 @@ const CLAIM_KIND_LABEL: Record<ClaimKind, string> = {
 interface ProvenanceContentOption {
   locator: string;
   label: string;
+  /** Texto real (Markdown) da seção/parte, para preview sem sair do painel. */
+  content: string;
 }
 
 interface ProvenanceReviewPanelProps {
@@ -75,8 +78,9 @@ interface ProvenanceReviewPanelProps {
   /**
    * Seções (material) ou partes (enunciado/alternativas de questão) do
    * conteúdo atual, para preencher "Localização estável" e um texto de claim
-   * sugerido por seleção — evita ter que copiar título/trecho manualmente.
-   * Opcional: sem isso, os campos continuam 100% de texto livre.
+   * sugerido por seleção, e para exibir o próprio conteúdo em preview — evita
+   * alternar entre este painel e "Visualizar" para decidir um claim. Opcional:
+   * sem isso, os campos continuam 100% de texto livre e sem preview.
    */
   contentOptions?: ProvenanceContentOption[];
 }
@@ -116,6 +120,10 @@ export default function ProvenanceReviewPanel({
   const [claimRisk, setClaimRisk] = useState<RiskCategory | ''>('');
   const [claimRequiresSource, setClaimRequiresSource] = useState(false);
   const [selectedContentOption, setSelectedContentOption] = useState('');
+  // Locators com preview de conteúdo aberto nos claims já existentes (por
+  // padrão fechado, pra não poluir a lista quando não é preciso reler).
+  const [expandedLocators, setExpandedLocators] = useState<Set<string>>(new Set());
+  const contentByLocator = new Map((contentOptions ?? []).map((o) => [o.locator, o]));
 
   const [claimSourcesByClaim, setClaimSourcesByClaim] = useState<Record<string, ClaimSource[]>>({});
   const [sourcesById, setSourcesById] = useState<Map<string, SourceSummary>>(new Map());
@@ -234,6 +242,33 @@ export default function ProvenanceReviewPanel({
       setClaimText(`Conteúdo de "${option.label}" corresponde às referências citadas inline (marcadores [N]).`);
     }
   };
+
+  const toggleContentPreview = (locator: string) => {
+    setExpandedLocators((prev) => {
+      const next = new Set(prev);
+      if (next.has(locator)) {
+        next.delete(locator);
+      } else {
+        next.add(locator);
+      }
+      return next;
+    });
+  };
+
+  // Mesma tipografia de leitura do compêndio real (CompendiumReader.tsx:
+  // título da seção + `text-[17px] leading-[1.7]`) — o preview aqui existe
+  // pra decidir um claim comparando com o texto real, então precisa se
+  // parecer com o texto real, não com um campo de formulário.
+  const renderContentPreview = (option: ProvenanceContentOption) => (
+    <div className="rounded-lg border border-stone-200 dark:border-[#243452] bg-white dark:bg-[#0F172A] p-4 max-h-80 overflow-y-auto">
+      <div className="text-xs font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-400 mb-2">
+        {option.label}
+      </div>
+      <div className="text-[17px] leading-[1.7] text-stone-800 dark:text-slate-200">
+        <SafeMarkdown content={option.content} />
+      </div>
+    </div>
+  );
 
   const handleDecideClaim = async (claimId: string, decision: ClaimDecision) => {
     setBusy(true);
@@ -366,7 +401,21 @@ export default function ProvenanceReviewPanel({
                             {CLAIM_KIND_LABEL[c.claimKind]}
                           </span>
                         </div>
-                        <div className="text-[10px] text-stone-400 font-mono-code">{c.contentLocator}</div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] text-stone-400 font-mono-code">{c.contentLocator}</span>
+                          {contentByLocator.has(c.contentLocator) && (
+                            <button
+                              type="button"
+                              onClick={() => toggleContentPreview(c.contentLocator)}
+                              className="text-[10px] text-teal-600 dark:text-teal-400 underline cursor-pointer"
+                            >
+                              {expandedLocators.has(c.contentLocator) ? 'Ocultar conteúdo' : 'Ver conteúdo'}
+                            </button>
+                          )}
+                        </div>
+                        {expandedLocators.has(c.contentLocator) &&
+                          contentByLocator.has(c.contentLocator) &&
+                          renderContentPreview(contentByLocator.get(c.contentLocator)!)}
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-stone-500 dark:text-slate-400">Decisão: {c.decision}</span>
                           {c.requiresSource && (
@@ -502,6 +551,9 @@ export default function ProvenanceReviewPanel({
                       ))}
                     </select>
                   )}
+                  {selectedContentOption &&
+                    contentByLocator.has(selectedContentOption) &&
+                    renderContentPreview(contentByLocator.get(selectedContentOption)!)}
                   <textarea
                     value={claimText}
                     onChange={(e) => setClaimText(e.target.value)}

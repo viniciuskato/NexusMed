@@ -250,21 +250,29 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     provenanceTriggerRef.current?.focus();
   };
   // Seções (material) ou enunciado/alternativas (questão) do alvo aberto no
-  // painel de revisão, para o seletor de "Localização estável" — evita ter
-  // que copiar título/trecho manualmente para montar um claim.
-  const provenanceContentOptions: { locator: string; label: string }[] = (() => {
+  // painel de revisão, para o seletor de "Localização estável" e para o
+  // preview de conteúdo dentro do próprio painel — evita ter que copiar
+  // título/trecho manualmente, e alternar para "Visualizar" só para reler o
+  // texto antes de decidir um claim.
+  const provenanceContentOptions: { locator: string; label: string; content: string }[] = (() => {
     if (!provenanceTarget) return [];
     if (provenanceTarget.kind === 'material') {
       const material = compendiums.find((c) => c.id === provenanceTarget.id);
-      return (material?.sections ?? []).map((s) => ({ locator: `section:${s.id}`, label: s.title }));
+      return (material?.sections ?? []).map((s) => ({
+        locator: `section:${s.id}`,
+        label: s.title,
+        content: s.content,
+      }));
     }
     const question = questions.find((q) => q.id === provenanceTarget.id);
     if (!question) return [];
+    const stemContent = [question.clinicalVignette, question.questionStem].filter(Boolean).join('\n\n');
     return [
-      { locator: 'question_stem', label: 'Enunciado' },
+      { locator: 'question_stem', label: 'Enunciado', content: stemContent },
       ...question.options.map((o) => ({
         locator: `option:${o.letter}:explanation`,
         label: `Alternativa ${o.letter} — explicação`,
+        content: `**${o.letter}) ${o.text}**\n\n${o.explanation}`,
       })),
     ];
   })();
