@@ -139,13 +139,56 @@ html {
   padding: 16px 20px;
 }
 
+/* Bloco de fórmula em destaque (SafeMarkdown/FormulaDisplay) — visual de
+   "cartão" centrado, deliberadamente diferente das caixas de callout acima
+   (borda inteira, não só à esquerda): uma fórmula pede ser lida como um
+   objeto único, não como uma afirmação em prosa. */
 .eq-box {
-  background: var(--bg-surface);
+  background: linear-gradient(180deg, var(--ac-light) 0%, var(--bg-surface) 100%);
   border: 1px solid var(--border-color);
-  border-left: 3px solid var(--ac);
-  border-radius: 0 8px 8px 0;
-  padding: 14px 20px;
+  border-radius: 14px;
+  padding: 16px 20px;
+}
+
+.eq-box__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ac);
+  margin-bottom: 10px;
+}
+
+/* Cada termo (ex. "× min(SCr/κ, 1)^α") é um item flex que nunca quebra por
+   dentro — o wrap acontece só ENTRE termos, então uma fórmula mais larga
+   que a coluna de leitura reflui em várias linhas centradas em vez de
+   vazar/cortar (ver splitFormulaTerms em SafeMarkdown.tsx). */
+.eq-box__formula {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  row-gap: 4px;
+  column-gap: 0.55em;
   font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
+}
+
+.eq-box__formula .eq-term {
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .eq-box__formula {
+    font-size: 16px;
+  }
 }
 
 /* Hide scrollbar utility for horizontal scroll tabs and pills */

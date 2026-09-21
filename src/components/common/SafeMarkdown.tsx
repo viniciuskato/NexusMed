@@ -6,6 +6,46 @@ interface SafeMarkdownProps {
 }
 
 /**
+ * Notação de expoente em texto puro (ex.: "0,9938^Idade",
+ * "max(SCr/κ, 1)^(-1,200)") — convenção usada no conteúdo porque o
+ * SafeMarkdown não interpreta LaTeX (ver nota em `fix-tfge-compendio-
+ * latex.sql`). Sem decodificar o "^", ele ficava literal na tela em vez de
+ * virar um expoente legível (achado revisando o compêndio de TFGe
+ * publicado: a fórmula CKD-EPI 2021 mostrava "^α"/"^(-1,200)"/"^Idade"
+ * cru). O grupo entre parênteses cobre expoente composto (sinal, vírgula
+ * decimal); o token solto cobre variável/letra grega isolada — ambos param
+ * em qualquer espaço/operador/fechamento, então nunca engolem o resto da
+ * frase. `tokenizeSuperscripts` é o núcleo compartilhado por
+ * `decodeSuperscripts` (prosa comum, via `parseInline`) e `renderFormula`
+ * (bloco de fórmula em destaque, com operadores também estilizados).
+ */
+const SUPERSCRIPT_SPLIT = /(\^(?:\([^()]+\)|[^\s×÷/+\-=,()[\]]+))/g;
+
+type FormulaToken = string | { sup: string };
+
+function tokenizeSuperscripts(text: string): FormulaToken[] {
+  return text
+    .split(SUPERSCRIPT_SPLIT)
+    .filter((part) => part !== '')
+    .map((part): FormulaToken => {
+      const match = part.match(/^\^(?:\(([^()]+)\)|(.+))$/);
+      return match ? { sup: match[1] ?? match[2] } : part;
+    });
+}
+
+function decodeSuperscripts(text: string): React.ReactNode[] {
+  return tokenizeSuperscripts(text).map((token, idx) =>
+    typeof token === 'string' ? (
+      <React.Fragment key={idx}>{token}</React.Fragment>
+    ) : (
+      <sup key={idx} className="text-[0.72em] font-medium">
+        {token.sup}
+      </sup>
+    )
+  );
+}
+
+/**
  * Safely parses inline markdown (bold, italic, inline code, links)
  * into React nodes WITHOUT dangerouslySetInnerHTML.
  *
@@ -118,7 +158,10 @@ export function parseInline(text: string): React.ReactNode[] {
       }
     }
 
-    return <React.Fragment key={idx}>{part}</React.Fragment>;
+    // Texto comum: ainda pode carregar notação de expoente solta (ex. uma
+    // fórmula curta citada dentro de uma frase, "10^(9−pH)") — decodifica
+    // pro mesmo `<sup>` usado no bloco de fórmula em destaque.
+    return <React.Fragment key={idx}>{decodeSuperscripts(part)}</React.Fragment>;
   });
 }
 
@@ -273,6 +316,110 @@ function extractTableCitations(prevBlock: string | undefined): { num: string; hr
     citations.push({ num: match[1], href: match[2] });
   }
   return citations;
+}
+
+const FORMULA_OPERATOR_SPLIT = /([×÷=≥≤≈])/g;
+const FORMULA_TERM_BOUNDARY = new Set(['=', '×', '÷', '/']);
+
+/**
+ * Quebra a fórmula em "termos" (ex. "eGFRcr" | "= 142" | "× min(SCr/κ, 1)^α"
+ * | ...) nos operadores de topo (fora de `()`/`[]`) — cada termo vira depois
+ * um `<span>` sem quebra interna, então o navegador só quebra linha ENTRE
+ * termos, nunca no meio de um parêntese ou de um expoente. Sem isso, uma
+ * fórmula mais longa que a coluna de leitura (comum no celular) ou vazava
+ * do card ou cortava um termo ao meio de forma ilegível. Respeitar
+ * profundidade de parênteses é necessário porque `÷`/`/` aparecem às vezes
+ * DENTRO de um termo entre colchetes (ex. "[ASC real (m²) ÷ 1,73]") — ali
+ * não é fronteira de termo, é parte do mesmo termo.
+ */
+function splitFormulaTerms(text: string): string[] {
+  const splitPositions: number[] = [];
+  let depth = 0;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '(' || ch === '[') depth++;
+    else if (ch === ')' || ch === ']') depth--;
+    else if (depth === 0 && FORMULA_TERM_BOUNDARY.has(ch) && text[i - 1] === ' ' && text[i + 1] === ' ') {
+      splitPositions.push(i - 1);
+    }
+  }
+  const terms: string[] = [];
+  let start = 0;
+  for (const pos of splitPositions) {
+    terms.push(text.slice(start, pos).trim());
+    start = pos;
+  }
+  terms.push(text.slice(start).trim());
+  return terms.filter(Boolean);
+}
+
+/**
+ * Mesmo `tokenizeSuperscripts` de `decodeSuperscripts`, mas para o bloco de
+ * fórmula em destaque (`FormulaDisplay`): além do expoente, os operadores
+ * (×÷=≥≤≈) também ganham destaque de cor — a fórmula inteira é o conteúdo
+ * principal do bloco, então vale a estilização extra que seria ruído em
+ * texto corrido comum.
+ */
+function renderFormulaTerm(term: string): React.ReactNode[] {
+  return tokenizeSuperscripts(term).map((token, idx) => {
+    if (typeof token !== 'string') {
+      return (
+        <sup
+          key={idx}
+          className="ml-px text-[0.68em] font-semibold text-teal-700 dark:text-teal-300"
+        >
+          {token.sup}
+        </sup>
+      );
+    }
+    return (
+      <React.Fragment key={idx}>
+        {token.split(FORMULA_OPERATOR_SPLIT).map((seg, sIdx) =>
+          /^[×÷=≥≤≈]$/.test(seg) ? (
+            <span key={sIdx} className="mx-0.5 font-semibold text-teal-600 dark:text-teal-400">
+              {seg}
+            </span>
+          ) : (
+            seg
+          )
+        )}
+      </React.Fragment>
+    );
+  });
+}
+
+function renderFormula(text: string): React.ReactNode[] {
+  return splitFormulaTerms(text).map((term, idx) => (
+    <span key={idx} className="eq-term">
+      {renderFormulaTerm(term)}
+    </span>
+  ));
+}
+
+/**
+ * Uma linha isolada (quebra simples `\n`, dentro do mesmo bloco/parágrafo —
+ * sem linha em branco ao redor) conta como fórmula de exibição quando
+ * contém "=" e não termina como frase (".", ",", ";" ou ":"). "=" sozinho
+ * já é sinal suficiente: não ocorre em prosa médica em português fora de
+ * equação — conferido varrendo toda a base publicada (132 linhas com "="),
+ * nenhuma delas prosa comum caindo neste ramo por engano (as que usam "="
+ * como mnemônico curto, ex. "Tumor = instalação gradual.", sempre terminam
+ * em pontuação de frase, e as que ficam dentro de tabela/lista/blockquote
+ * já são tratadas por um ramo anterior deste parser).
+ */
+function isFormulaLine(line: string): boolean {
+  return line.includes('=') && line.length <= 220 && !/[.,;:]$/.test(line);
+}
+
+function FormulaDisplay({ formula }: { formula: string }) {
+  return (
+    <div className="eq-box my-4">
+      <div className="eq-box__label">
+        <span aria-hidden="true">∑</span> Fórmula
+      </div>
+      <div className="eq-box__formula">{renderFormula(formula)}</div>
+    </div>
+  );
 }
 
 /**
@@ -469,6 +616,46 @@ export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({ content, className =
             );
           }
 
+          // Fórmula citada como blockquote (ex.: "> Escore Z = (Valor
+          // Medido − Valor Previsto) ÷ Desvio Padrão da População de
+          // Referência [1](#ref-1)[3](#ref-3)", padrão real do compêndio de
+          // Espirometria) — mesmo `FormulaDisplay` do parágrafo comum, só
+          // que aqui a citação vem grudada no fim da própria linha (não
+          // numa frase antes/depois) e precisa ser destacada da fórmula
+          // antes do teste de `isFormulaLine`, senão o "[1](#ref-1)" cru
+          // vazaria dentro do card (renderFormula não interpreta link).
+          const citationTailMatch = quoteLines.match(/((?:\s*\[\d+\]\(#ref-\d+\))+)\s*$/);
+          const formulaCandidate = citationTailMatch
+            ? quoteLines.slice(0, citationTailMatch.index).trimEnd()
+            : quoteLines;
+          if (isFormulaLine(formulaCandidate)) {
+            const citations = citationTailMatch
+              ? Array.from(citationTailMatch[1].matchAll(TABLE_CITATION_PATTERN)).map((m) => ({
+                  num: m[1],
+                  href: m[2],
+                }))
+              : [];
+            return (
+              <div key={bIdx}>
+                <FormulaDisplay formula={formulaCandidate} />
+                {citations.length > 0 && (
+                  <div className="mt-1.5 flex items-center justify-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                    <span>Fonte:</span>
+                    {citations.map((c) => (
+                      <a
+                        key={c.num}
+                        href={c.href}
+                        className="text-teal-600/90 dark:text-teal-400/90 hover:underline font-medium"
+                      >
+                        [{c.num}]
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
           return (
             <blockquote
               key={bIdx}
@@ -509,6 +696,43 @@ export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({ content, className =
                 return <li key={lIdx}>{parseInline(itemText)}</li>;
               })}
             </ol>
+          );
+        }
+
+        // Fórmula de exibição isolada em sua própria linha dentro do bloco
+        // (ex.: "...expressa matematicamente por:\neGFRcr = 142 × ...\nonde
+        // SCr representa...", padrão real do compêndio de TFGe) — separa em
+        // segmentos de prosa/fórmula preservando a ordem, em vez de achatar
+        // tudo numa única frase corrida onde a fórmula ficava ilegível.
+        const trimmedLines = lines.map((l) => l.trim()).filter(Boolean);
+        if (trimmedLines.some(isFormulaLine)) {
+          const segments: { formula: boolean; lines: string[] }[] = [];
+          for (const line of trimmedLines) {
+            const formula = isFormulaLine(line);
+            const last = segments[segments.length - 1];
+            if (last && last.formula === formula) {
+              last.lines.push(line);
+            } else {
+              segments.push({ formula, lines: [line] });
+            }
+          }
+          return (
+            <React.Fragment key={bIdx}>
+              {segments.map((seg, sIdx) =>
+                seg.formula ? (
+                  seg.lines.map((formulaLine, fIdx) => (
+                    <FormulaDisplay key={`${bIdx}-${sIdx}-${fIdx}`} formula={formulaLine} />
+                  ))
+                ) : (
+                  <p
+                    key={`${bIdx}-${sIdx}`}
+                    className="leading-[1.7] text-slate-800 dark:text-slate-200 text-base text-justify [text-justify:inter-word]"
+                  >
+                    {parseInline(seg.lines.join(' '))}
+                  </p>
+                )
+              )}
+            </React.Fragment>
           );
         }
 

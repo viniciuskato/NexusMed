@@ -135,6 +135,19 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   };
 
   const pendingCount = profiles.filter((p) => p.status === 'pending').length;
+  // Filtro de status da listagem de usuários — mesmo padrão de
+  // `feedbackFilter` (aba de Feedback) e `questionStatusFilter`/
+  // `compStatusFilter` (Questões/Conteúdos): separar por status em vez de
+  // misturar tudo numa lista só que só se distingue pelo selo de cada linha.
+  const [profileStatusFilter, setProfileStatusFilter] = useState<'todos' | 'pendentes' | 'ativos' | 'bloqueados'>(
+    'todos'
+  );
+  const filteredProfiles = profiles.filter((p) => {
+    if (profileStatusFilter === 'pendentes') return p.status === 'pending';
+    if (profileStatusFilter === 'ativos') return p.status === 'active';
+    if (profileStatusFilter === 'bloqueados') return p.status === 'blocked';
+    return true;
+  });
 
   // ── Feedback State ──────────────────────────────────────────────
   const [feedbackList, setFeedbackList] = useState<UserFeedback[]>([]);
@@ -228,6 +241,13 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   const [isImportQuestionsOpen, setIsImportQuestionsOpen] = useState(false);
   const [editingCompId, setEditingCompId] = useState<string | null>(null);
   const [compSearch, setCompSearch] = usePersistedState('admin_comp_search', '');
+  // Filtro de status (publicado/não publicado) da listagem de conteúdos —
+  // mesmo padrão de `questionStatusFilter` (aba de Questões), persistido
+  // pelo mesmo motivo de `compSearch` acima.
+  const [compStatusFilter, setCompStatusFilter] = usePersistedState<'all' | 'published' | 'unpublished'>(
+    'admin_comp_status_filter',
+    'all'
+  );
   // Editor de seção (piloto CMS) — guarda só o id, não o objeto Compendium,
   // para que o SectionEditor sempre receba a versão mais recente vinda de
   // onRefreshData (ver AGENTS.md / plano da feature).
@@ -678,8 +698,17 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     }
   };
 
-  // Filtered compendiums
+  // Filtered compendiums — mesmo critério de status da listagem de questões
+  // (filteredQuestions), adaptado aos campos do compêndio. "unpublished"
+  // cobre draft e archived juntos, mesmo agrupamento que o selo do card já
+  // usa ("publicado" vs "rascunho").
   const filteredCompendiums = compendiums.filter((c) => {
+    const matchesStatus =
+      compStatusFilter === 'all' ||
+      (compStatusFilter === 'published'
+        ? c.publicationStatus === 'published'
+        : c.publicationStatus !== 'published');
+    if (!matchesStatus) return false;
     if (!compSearch.trim()) return true;
     const q = compSearch.toLowerCase();
     return (
@@ -839,7 +868,48 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       {/* ══════════════════════════════════════════════════════════════ */}
       {activeTab === 'compendiums' && (
         <div className="space-y-6">
-          {/* Top Control Bar */}
+          <div className="flex items-center justify-between bg-white dark:bg-[#0F172A] p-4 rounded-xl border border-stone-200 dark:border-[#243452] elev-xs">
+            <div>
+              <h3 className="font-serif-reading text-base font-bold text-stone-900 dark:text-slate-100">
+                Banco de Conteúdos Cadastrados
+              </h3>
+              <p className="text-[11px] text-stone-500 dark:text-slate-400">
+                {compendiums.length} conteúdos e mecanismos fisiopatológicos no acervo editorial
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handlePublishAllDraftCompendiums}
+                disabled={bulkPublishing}
+                className="px-3.5 py-2 rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 hover:dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                title="Publica todos os conteúdos que ainda estão em rascunho"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>Publicar rascunhos ({compendiums.filter((c) => c.publicationStatus !== 'published').length})</span>
+              </button>
+
+              <button
+                onClick={() => setIsImportMaterialOpen(true)}
+                className="px-3.5 py-2 rounded-lg border border-teal-200 dark:border-teal-900 bg-teal-50 dark:bg-teal-950/40 hover:bg-teal-100 hover:dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                title="Cria um rascunho a partir de um arquivo de conteúdo (.yaml) já pronto"
+              >
+                <FileUp className="w-4 h-4" />
+                <span>Importar material</span>
+              </button>
+
+              <button
+                onClick={handleOpenNewCompendium}
+                className="px-4 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white dark:bg-teal-600 dark:hover:bg-teal-500 text-xs font-bold transition-all flex items-center justify-center gap-1.5 elev-xs cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Novo Conteúdo / Mecanismo</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Top Control Bar — busca + filtro de status (mesmo padrão da aba
+              de Questões) */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#0F172A] p-4 rounded-xl border border-stone-200 dark:border-[#243452] elev-xs">
             <div className="relative flex-1 max-w-md">
               <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
@@ -852,32 +922,41 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               />
             </div>
 
-            <button
-              onClick={handlePublishAllDraftCompendiums}
-              disabled={bulkPublishing}
-              className="px-3.5 py-2 rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 hover:dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50 cursor-pointer"
-              title="Publica todos os conteúdos que ainda estão em rascunho"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Publicar rascunhos ({compendiums.filter((c) => c.publicationStatus !== 'published').length})</span>
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0" role="group" aria-label="Filtrar por status de publicação">
+              {(
+                [
+                  { key: 'all' as const, label: 'Todos', count: compendiums.length },
+                  {
+                    key: 'published' as const,
+                    label: 'Publicados',
+                    count: compendiums.filter((c) => c.publicationStatus === 'published').length,
+                  },
+                  {
+                    key: 'unpublished' as const,
+                    label: 'Não publicados',
+                    count: compendiums.filter((c) => c.publicationStatus !== 'published').length,
+                  },
+                ]
+              ).map(({ key, label, count }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setCompStatusFilter(key)}
+                  aria-pressed={compStatusFilter === key}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
+                    compStatusFilter === key
+                      ? 'bg-teal-700 dark:bg-teal-600 text-white border-teal-700 dark:border-teal-600'
+                      : 'bg-white dark:bg-[#142038] text-stone-600 dark:text-slate-300 border-stone-200 dark:border-[#243452] hover:bg-stone-100 dark:hover:bg-[#1A2845]'
+                  }`}
+                >
+                  {label} ({count})
+                </button>
+              ))}
+            </div>
 
-            <button
-              onClick={() => setIsImportMaterialOpen(true)}
-              className="px-3.5 py-2 rounded-lg border border-teal-200 dark:border-teal-900 bg-teal-50 dark:bg-teal-950/40 hover:bg-teal-100 hover:dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
-              title="Cria um rascunho a partir de um arquivo de conteúdo (.yaml) já pronto"
-            >
-              <FileUp className="w-4 h-4" />
-              <span>Importar material</span>
-            </button>
-
-            <button
-              onClick={handleOpenNewCompendium}
-              className="px-4 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white dark:bg-teal-600 dark:hover:bg-teal-500 text-xs font-bold transition-all flex items-center justify-center gap-1.5 elev-xs shrink-0 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Novo Conteúdo / Mecanismo</span>
-            </button>
+            <span className="text-[11px] text-stone-500 dark:text-slate-400 shrink-0">
+              {filteredCompendiums.length} de {compendiums.length} conteúdos
+            </span>
           </div>
 
           {isImportMaterialOpen && (
@@ -2076,7 +2155,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       {/* ══════════════════════════════════════════════════════════════ */}
       {activeTab === 'users' && (
         <div className="space-y-4">
-          <div className="bg-white dark:bg-[#0F172A] p-4 rounded-xl border border-stone-200 dark:border-[#243452] elev-xs flex items-center justify-between">
+          <div className="bg-white dark:bg-[#0F172A] p-4 rounded-xl border border-stone-200 dark:border-[#243452] elev-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="font-serif-reading text-base font-bold text-stone-900 dark:text-slate-100">
                 Cadastros e Aprovação de Acesso
@@ -2085,14 +2164,49 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                 Novas contas nascem como "pendente" e só acessam o conteúdo depois de aprovadas aqui.
               </p>
             </div>
-            <button
-              onClick={loadProfiles}
-              disabled={profilesLoading}
-              className="px-3.5 py-2 rounded-xl bg-stone-100 dark:bg-[#142038] hover:bg-stone-200 hover:dark:bg-stone-700 text-stone-700 dark:text-slate-300 border border-stone-200 dark:border-[#243452] text-xs font-semibold transition-colors flex items-center gap-2 shrink-0 disabled:opacity-50"
-            >
-              <RotateCcw className={`w-3.5 h-3.5 ${profilesLoading ? 'animate-spin' : ''}`} />
-              <span>Atualizar</span>
-            </button>
+            <div className="flex items-center gap-2.5 shrink-0">
+              <div className="flex items-center gap-1 p-1 bg-stone-100 dark:bg-[#142038] rounded-xl border border-stone-200 dark:border-[#243452]">
+                {(
+                  [
+                    { key: 'todos' as const, label: 'Todos', count: profiles.length },
+                    { key: 'pendentes' as const, label: 'Pendentes', count: pendingCount },
+                    {
+                      key: 'ativos' as const,
+                      label: 'Ativos',
+                      count: profiles.filter((p) => p.status === 'active').length,
+                    },
+                    {
+                      key: 'bloqueados' as const,
+                      label: 'Bloqueados',
+                      count: profiles.filter((p) => p.status === 'blocked').length,
+                    },
+                  ]
+                ).map(({ key, label, count }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setProfileStatusFilter(key)}
+                    aria-pressed={profileStatusFilter === key}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                      profileStatusFilter === key
+                        ? 'bg-white dark:bg-[#0F172A] text-stone-900 dark:text-slate-100 shadow-2xs'
+                        : 'text-stone-500 dark:text-slate-400 hover:text-stone-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {label} ({count})
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={loadProfiles}
+                disabled={profilesLoading}
+                className="px-3.5 py-2 rounded-xl bg-stone-100 dark:bg-[#142038] hover:bg-stone-200 hover:dark:bg-stone-700 text-stone-700 dark:text-slate-300 border border-stone-200 dark:border-[#243452] text-xs font-semibold transition-colors flex items-center gap-2 shrink-0 disabled:opacity-50"
+              >
+                <RotateCcw className={`w-3.5 h-3.5 ${profilesLoading ? 'animate-spin' : ''}`} />
+                <span>Atualizar</span>
+              </button>
+            </div>
           </div>
 
           {profilesError && (
@@ -2109,7 +2223,10 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
             {!profilesLoading && profiles.length === 0 && !profilesError && (
               <div className="p-6 text-center text-xs text-stone-500 dark:text-slate-400">Nenhum usuário cadastrado ainda.</div>
             )}
-            {profiles.map((p) => (
+            {!profilesLoading && profiles.length > 0 && filteredProfiles.length === 0 && (
+              <div className="p-6 text-center text-xs text-stone-500 dark:text-slate-400">Nenhum usuário neste filtro.</div>
+            )}
+            {filteredProfiles.map((p) => (
               <div key={p.id} className="p-4 flex items-center justify-between gap-4 text-xs">
                 <div className="space-y-1 min-w-0">
                   <div className="flex items-center gap-2">
