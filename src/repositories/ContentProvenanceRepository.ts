@@ -282,6 +282,40 @@ export class ContentProvenanceRepository {
     return (data ?? []).map(rowToSourceSummary);
   }
 
+  // Cria uma fonte nova no catálogo a partir de um DOI já confirmado por
+  // busca bibliográfica real (CrossRef) e escolhido por um humano — nunca
+  // chamado com um candidato aceito automaticamente (ver
+  // CrossRefSourceLookup.tsx). `tipo` também vem de escolha humana: a API
+  // do CrossRef não classifica de forma confiável se um DOI é diretriz,
+  // ensaio, revisão etc. `verificacao` é sempre 'verificada_por_busca_resumo'
+  // aqui — é o rótulo honesto pra "achamos por busca, ninguém leu o texto
+  // integral", nunca 'verificada'/'verificada_texto_integral'. Se já existir
+  // uma fonte no catálogo com o mesmo DOI (carregada antes por outro fluxo),
+  // reaproveita em vez de duplicar.
+  async createSourceFromLookup(input: { citationText: string; tipo: string; doi: string }): Promise<SourceSummary> {
+    const { data: existing, error: existErr } = await supabase
+      .from('sources')
+      .select('id, citation_text, tipo, verificacao, identificadores')
+      .eq('identificadores->>doi', input.doi)
+      .maybeSingle();
+    if (existErr) throw existErr;
+    if (existing) return rowToSourceSummary(existing as SourceSearchRow);
+
+    const { data, error } = await supabase
+      .from('sources')
+      .insert({
+        id: input.doi,
+        citation_text: input.citationText,
+        tipo: input.tipo,
+        verificacao: 'verificada_por_busca_resumo',
+        identificadores: { doi: input.doi },
+      })
+      .select('id, citation_text, tipo, verificacao, identificadores')
+      .single();
+    if (error) throw error;
+    return rowToSourceSummary(data as SourceSearchRow);
+  }
+
   async getSourcesByIds(ids: string[]): Promise<Map<string, SourceSummary>> {
     if (ids.length === 0) return new Map();
     const { data, error } = await supabase
