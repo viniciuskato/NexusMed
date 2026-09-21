@@ -43,18 +43,18 @@ function draftKey(simuladoId: string): string | null {
   return `synapse_${uid}_simulado_draft_${simuladoId}`;
 }
 
-function loadDraftAnswers(simuladoId: string): Record<string, 'A' | 'B' | 'C' | 'D' | 'E'> {
+function loadDraftAnswers(simuladoId: string): Record<string, string> {
   const key = draftKey(simuladoId);
   if (!key) return {};
   try {
     const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as Record<string, 'A' | 'B' | 'C' | 'D' | 'E'>) : {};
+    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
   } catch {
     return {};
   }
 }
 
-function saveDraftAnswers(simuladoId: string, answers: Record<string, 'A' | 'B' | 'C' | 'D' | 'E'>): void {
+function saveDraftAnswers(simuladoId: string, answers: Record<string, string>): void {
   const key = draftKey(simuladoId);
   if (!key) return;
   try {
@@ -106,7 +106,7 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
   onOpenCompendium,
 }) => {
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, 'A' | 'B' | 'C' | 'D' | 'E'>>(() => loadDraftAnswers(config.id));
+  const [answers, setAnswers] = useState<Record<string, string>>(() => loadDraftAnswers(config.id));
   const [secondsRemaining, setSecondsRemaining] = useState(config.timeLimitMinutes * 60);
   const [elapsedStudySeconds, setElapsedStudySeconds] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
@@ -141,7 +141,7 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
     }
   }, [isFinished, config.isExamMode]);
 
-  const handleSelectAnswer = (letter: 'A' | 'B' | 'C' | 'D' | 'E') => {
+  const handleSelectAnswer = (letter: string) => {
     if (isFinished) return;
     const currentQ = questions[currentIdx];
     if (!currentQ) return;
@@ -177,14 +177,19 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
         }
       } else {
         const keyUpper = e.key.toUpperCase();
-        if (['A', 'B', 'C', 'D', 'E'].includes(keyUpper)) {
-          handleSelectAnswer(keyUpper as 'A' | 'B' | 'C' | 'D' | 'E');
-        } else if (['1', '2', '3', '4', '5'].includes(e.key)) {
-          const letters: ('A' | 'B' | 'C' | 'D' | 'E')[] = ['A', 'B', 'C', 'D', 'E'];
+        const currentOptions = questions[currentIdx]?.options;
+        // Sem lista fixa de letras (A-E): uma tecla de letra única marca a
+        // alternativa só se ela realmente existir nesta questão — cobre
+        // questões com mais de 5 alternativas sem hardcodear o alfabeto.
+        if (/^[A-Z]$/.test(keyUpper) && currentOptions?.some((o) => o.letter === keyUpper)) {
+          handleSelectAnswer(keyUpper);
+        } else if (/^[1-9]$/.test(e.key)) {
+          // Atalho numérico marca pela POSIÇÃO real na questão (não por um
+          // alfabeto A-E assumido) — funciona mesmo se a letra na posição N
+          // não for a N-ésima letra do alfabeto.
           const num = parseInt(e.key, 10) - 1;
-          const currentOptions = questions[currentIdx]?.options;
-          if (num >= 0 && currentOptions && num < currentOptions.length) {
-            handleSelectAnswer(letters[num]);
+          if (currentOptions && num < currentOptions.length) {
+            handleSelectAnswer(currentOptions[num].letter);
           }
         }
       }
@@ -471,7 +476,7 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
 
             <div className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500 font-medium">
               <span>Marcar:</span>
-              <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#142038] border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[10px]">A-E</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#142038] border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[10px]">A-Z / 1-9</kbd>
               <span className="text-slate-300 dark:text-slate-600">·</span>
               <span>Navegar:</span>
               <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#142038] border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[10px]">←/→</kbd>

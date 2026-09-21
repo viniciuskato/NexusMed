@@ -33,6 +33,40 @@ git log --oneline -10 origin/main
 Qualquer hash citado neste documento é **baseline histórica de quando foi
 escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
 
+## Filtro de status (Todas/Publicadas/Não publicadas) em Questões Comentadas (2026-09-21) — implementado, não publicado
+
+- **Objetivo**: pedido explícito do usuário — a listagem de "Questões
+  Comentadas" no Admin misturava questões publicadas e em rascunho, só
+  distinguíveis pelo selo de cada card; sem forma de olhar só um dos dois
+  grupos.
+- **Impacto/arquivos**: `src/components/admin/AdminCMSView.tsx` — novo
+  estado persistido `questionStatusFilter` (`'all' | 'published' |
+  'unpublished'`, mesmo padrão `usePersistedState` já usado por
+  `questionSearch`/`activeTab`); `filteredQuestions` agora combina esse
+  filtro com a busca por texto já existente (E lógico: status bate E texto
+  bate); três botões novos ("Todas"/"Publicadas"/"Não publicadas", com
+  contagem) na barra de controle da aba, ao lado da busca.
+  "Não publicadas" agrupa `draft` e `archived` juntos — mesmo agrupamento
+  que o selo do card já usa (rótulo "rascunho" para qualquer status
+  diferente de `published`). Só a aba de Questões — a de Conteúdos não
+  tinha esse pedido e não foi tocada.
+- **Ambiente tocado**: só local (código React puro, sem migration nem RPC
+  nova — filtra um array já carregado, não faz nenhuma query nova).
+- **Evidência**: `tsc --noEmit` e `npm run lint` limpos (mesma baseline de
+  5 warnings pré-existentes); `npm run build` OK; novo teste E2E
+  `tests/e2e/specs/admin-questoes-filtro-status.spec.ts` (Playwright real
+  contra Supabase local, 3 fixtures — 2 publicadas + 1 rascunho — via SQL
+  direto) — 1/1, provando que "Publicadas" esconde o rascunho, "Não
+  publicadas" esconde as publicadas, "Todas" mostra as três, e o contador
+  "N de M questões" acompanha cada filtro; resíduo de fixtures confirmado
+  zero após o teste (`select count(*) ... where question_stem like
+  'e2e-filtro-status-%'` = 0).
+- **Não verificado nesta entrega**: smoke manual em produção (a mudança é
+  só frontend, sem risco de schema, mas ainda não foi vista pelo usuário
+  na tela real).
+- **Publicação**: mesma branch local `feat/questoes-markdown-previa-busca-
+  overflow`, ainda não commitada nem mesclada.
+
 ## Importação de questões em lote (2026-09-21) — implementado, não publicado
 
 - **Objetivo**: paridade de import entre questões e conteúdo — antes desta
@@ -87,6 +121,131 @@ escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
   inalterados; a migration nova **não foi aplicada no Supabase remoto**
   (pré-requisito de publicação, RUNBOOK seção 3 — decisão/execução do
   usuário).
+
+### Complemento (mesmo dia, mesma branch): sem teto de 5 alternativas (A–E deixa de ser o limite)
+
+- **Objetivo**: pedido explícito do usuário — o import (pensado para
+  questão de residência real) não deve forçar truncar/reordenar uma prova
+  que tenha mais de 5 alternativas, nem reordenar alfabeticamente quando a
+  banca não numera em sequência A,B,C...; o cadastro unitário do Admin
+  continua fixo em A-D, de propósito (limitação da TELA, não do banco).
+- **Impacto/arquivos**: nova migration
+  `supabase/migrations/20260921130000_question_options_letter_unbounded.sql`
+  — troca o `check (letter in ('A'..'E'))` de `question_options` por
+  `check (letter ~ '^[A-Z]{1,3}$')` e replica a mesma validação em
+  `import_question_draft` (era uma lista fechada `not in ('A'..'E')`).
+  `src/utils/questionsImport.ts`: `OPTION_LETTERS` fixo removido — as
+  letras são descobertas dinamicamente no arquivo, e a ORDEM final das
+  alternativas passa a ser a ordem de aparição no arquivo (não mais uma
+  varredura alfabética A→E), preservando a questão fiel ao original.
+  `src/types/index.ts`: os 4 pontos com union literal `'A'|'B'|'C'|'D'|'E'`
+  (`QuestionOption.letter`, `QuestionReviewOption.letter`,
+  `QuestionAnswerRecord.selectedOption`,
+  `SimuladoSessionData.answers[].selectedOption`) viram `string` — achado
+  ao investigar: a submissão de resposta real (`submit_question_attempt`)
+  já opera por `option_id` (uuid), nunca por letra: o teto vivia só no
+  parser, no schema e nos atalhos de teclado, nunca na lógica de
+  corrigir/gravar resposta. Atalhos de teclado generalizados (sem lista
+  `['A'..'E']` hardcoded) em `QuestionCard.tsx` e `SimuladoSession.tsx` —
+  agora aceitam qualquer letra que exista de fato nas opções da questão; o
+  atalho numérico do simulado passou a marcar pela alternativa na POSIÇÃO
+  real (`options[n].letter`), não mais por um alfabeto A-E assumido.
+  `SupabaseSimuladosRepository.ts` perdeu o cast agora redundante para o
+  union antigo. Formulário unitário (`AdminCMSView.tsx`, fixo em A-D) e
+  `publish_question`/`submit_question_attempt` (já genéricos por
+  `option_id`) não precisaram de nenhuma mudança.
+- **Ambiente tocado**: local (código) e Supabase **local** (nova migration
+  aplicada via `supabase db reset`). Supabase remoto, `main` e produção
+  **não tocados** — mesmo estado de pendência de publicação do complemento
+  acima (as duas migrations desta branch, `20260921120000` e
+  `20260921130000`, precisam ser aplicadas juntas no remoto antes do merge).
+- **Evidência**: `tsc --noEmit` limpo; `npm run lint` 0 erros/5 warnings
+  (mesma baseline pré-existente — os 2 warnings novos listados em
+  `SimuladoSession.tsx` são do padrão já conhecido de dependências de
+  `useEffect`, não introduzidos por esta mudança); `npm run build` OK;
+  `npx vitest run` 186/186 (20 arquivos), incluindo 2 casos novos em
+  `questionsImport.test.ts` (mais de 5 alternativas; ordem de arquivo
+  preservada para letras fora de sequência) e 1 caso novo em
+  `questionCardKeyboardShortcuts.test.tsx` (atalho de tecla funciona para
+  uma 6ª alternativa e ignora letra inexistente na questão); `supabase db
+  reset` limpo + `supabase test db` (pgTAP) 319 asserções/12 arquivos,
+  `Result: PASS`, incluindo 4 novas asserções em
+  `import_question_draft.test.sql` (6 alternativas com letra F aceitas e
+  gravadas corretamente; letra minúscula e letra numérica seguem
+  rejeitadas).
+- **Não verificado nesta entrega**: `npm run test:e2e` (Playwright) não foi
+  executado — mesma lacuna já declarada no complemento anterior desta
+  branch.
+
+### Complemento (mesmo dia, mesma branch): INC-2026-003 — import falhava 100% contra ambiente sem a migration
+
+- **Sintoma real reportado pelo usuário**: lote de 18 questões reais
+  (Espirometria) falhou por inteiro ao importar, cada linha com
+  `Questão N: Could not find the function public.import_question_draft(...)
+  in the schema cache` (código PostgREST `PGRST202` — função ausente do
+  schema cache daquele Supabase, não erro de dado da questão).
+- **Causa-raiz confirmada** (ver
+  [`INC-2026-003`](incidents/INC-2026-003-import-questoes-schema-cache-remoto.md)
+  para a investigação completa): as duas migrations desta branch só
+  foram aplicadas ao Supabase **local**; a tela testada pelo usuário
+  resolvia `VITE_SUPABASE_URL` para o Supabase **remoto** — confirmado
+  que um build de produção local (`npm run build`, sem
+  `.env.production*` neste repo) cai em `.env.local` (remoto), enquanto
+  só `npm run dev` usa `.env.development.local` (local). Parser e
+  formato do arquivo `.md` foram validados à parte e estão corretos (as
+  18 linhas produzem `blockingErrors: []`); a função também resolve
+  normalmente via chamada HTTP direta ao PostgREST local. Não é um bug
+  de lógica no import — é o gap de publicação já pendente (ver
+  complemento anterior), agora com reprodução real.
+- **Impacto/arquivos**: `src/utils/errorMessage.ts` — `getErrorMessage()`
+  reconhece `PGRST202` e troca a mensagem crua por uma acionável (causa
+  provável + próximo passo), mantendo o detalhe técnico original;
+  beneficia os 6 pontos do Admin que usam esse helper, não só questões.
+  `docs/editorial/PADRAO-NEXUSMED-QUESTOES.md` ganhou nota "Erro comum"
+  na seção de import e uma clarificação de escopo (este guia é para
+  IMPORTAR questão que já existe — prova de residência real — não para
+  autorar questão original; documento de criação fica para o futuro,
+  pedido explícito do usuário).
+- **Ainda não corrigido, de propósito**: as migrations `20260921120000`
+  e `20260921130000` seguem não aplicadas no Supabase remoto — é a única
+  ação que resolve o sintoma de verdade, e é uma escrita em produção que
+  exige autorização explícita (RUNBOOK seção 3), não executada nesta
+  entrega.
+- **Evidência**: `npx vitest run tests/unit/errorMessage.test.ts` 7/7
+  (novo); reprodução controlada via `curl` direto ao PostgREST local
+  (função resolve com os 13 parâmetros reais; nome inexistente reproduz
+  o formato exato do erro do print); `node -e loadEnv(...)` confirmando
+  a resolução de env var por modo; arquivo real de 18 questões rodado
+  via `parseQuestionsMarkdownText` fora do navegador, 0 `blockingErrors`.
+- **Descoberta crítica ao investigar**: `origin/main` já tinha
+  `b00e7b5` — merge da PR #49 (`feat/questoes-markdown-previa-busca-
+  overflow`, até o commit `1803548`) — ou seja, **o import de questões
+  já estava em produção real** (Vercel, deploy automático), não era
+  "branch pendente de merge" como o estado anterior deste documento
+  registrava. O usuário confirmou (print de
+  `synapse-med-firebase-auth.vercel.app/#/admin`) que o teste foi na
+  própria produção. Isso eleva a severidade do INC-2026-003: era uma
+  funcionalidade já publicada e quebrada para qualquer administrador
+  que tentasse usá-la, não um risco futuro.
+- **Ação corretiva executada, com autorização explícita do usuário**:
+  `20260921120000_import_question_draft.sql` foi aplicada ao Supabase
+  **remoto** (`jfvhwwvixwvgjfqzlkkb`) via `supabase db push --linked`
+  — só essa migration, a que o código já deployado (PR #49) de fato
+  usa. `20260921130000_question_options_letter_unbounded.sql` (o
+  complemento de remoção do teto de alternativas, código ainda só
+  local/não mesclado) foi deliberadamente removida da pasta
+  `supabase/migrations/` antes do push (`supabase db push --dry-run`
+  confirmou a lista exata antes e depois) e restaurada logo em seguida
+  — nunca chegou a ir para o remoto, para não aplicar schema de um
+  recurso cujo frontend ainda não foi revisado/mesclado.
+  `supabase migration list --linked` confirma `20260921120000` com
+  `local` == `remote` após o push. Nenhum dado existente foi tocado —
+  a migration só cria a função/RPC.
+- **Ainda pendente**: `20260921130000` continua não aplicada em lugar
+  nenhum fora do Supabase local desta sessão — só deve ir ao remoto
+  junto com o merge do código que a usa (mesmo processo normal do
+  RUNBOOK). Falta também a confirmação do usuário de que o lote real de
+  18 questões importa com sucesso agora em produção (ver INC-2026-003).
 
 ## Auditoria técnica de 2026-09-18 — publicada
 

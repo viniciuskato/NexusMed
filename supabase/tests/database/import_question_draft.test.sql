@@ -55,7 +55,7 @@ $$;
 grant usage on schema tests to anon, authenticated;
 grant execute on function tests.clear_auth() to anon, authenticated;
 
-select plan(23);
+select plan(27);
 
 -- ----------------------------------------------------------------------------
 -- Fixtures
@@ -227,6 +227,46 @@ select throws_ok(
   $$ select public.import_question_draft(gen_random_uuid(), null, null, 'internato_residencia', 'medio', 'ENARE', 2025, '', '', '', '', '{}'::text[], '[]'::jsonb) $$,
   NULL::char(5), NULL::text,
   'comando da questão vazio é rejeitado antes mesmo de checar disciplina'
+);
+
+-- ============================================================================
+-- 6-B) sem teto de 5 alternativas (letra > E funciona; formato ainda validado)
+-- ============================================================================
+
+select gen_random_uuid() as v_manyopt_question_id \gset
+
+select public.import_question_draft(
+  :'v_manyopt_question_id', :'v_discipline_id', :'v_theme_id', 'internato_residencia', 'medio',
+  'ENARE', 2025, '', 'Pergunta com 6 alternativas', '', '',
+  '{}'::text[],
+  '[{"letter":"A","text":"A","is_correct":false},{"letter":"B","text":"B","is_correct":false},{"letter":"C","text":"C","is_correct":false},{"letter":"D","text":"D","is_correct":false},{"letter":"E","text":"E","is_correct":false},{"letter":"F","text":"F","is_correct":true}]'::jsonb
+);
+select is(
+  (select count(*)::int from public.question_options where question_id = :'v_manyopt_question_id'),
+  6,
+  'uma 6ª alternativa (letra F, além do antigo teto A-E) é aceita e gravada'
+);
+select is(
+  (select is_correct from public.question_option_keys k join public.question_options o on o.id = k.option_id where o.question_id = :'v_manyopt_question_id' and o.letter = 'F'),
+  true,
+  'a alternativa F é reconhecida como o gabarito informado'
+);
+
+select throws_ok(
+  format(
+    $$ select public.import_question_draft(gen_random_uuid(), %L, %L, 'internato_residencia', 'medio', 'ENARE', 2025, '', 'Pergunta', '', '', '{}'::text[], '[{"letter":"a","text":"A","is_correct":true},{"letter":"B","text":"B","is_correct":false}]'::jsonb) $$,
+    :'v_discipline_id', :'v_theme_id'
+  ),
+  NULL::char(5), NULL::text,
+  'letra minúscula é rejeitada (formato exige maiúscula, sem teto de contagem)'
+);
+select throws_ok(
+  format(
+    $$ select public.import_question_draft(gen_random_uuid(), %L, %L, 'internato_residencia', 'medio', 'ENARE', 2025, '', 'Pergunta', '', '', '{}'::text[], '[{"letter":"1","text":"A","is_correct":true},{"letter":"B","text":"B","is_correct":false}]'::jsonb) $$,
+    :'v_discipline_id', :'v_theme_id'
+  ),
+  NULL::char(5), NULL::text,
+  'letra numérica é rejeitada'
 );
 
 -- ============================================================================

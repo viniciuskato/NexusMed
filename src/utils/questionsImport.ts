@@ -50,11 +50,19 @@ import { DifficultyLevel, Discipline, MedicalCycle, Question, QuestionOption, Th
 //
 //   ### Tags
 //   `tag1` `tag2`
+//
+// Alternativas: sem teto fixo. Ao contrário do cadastro unitário do Admin
+// (travado em A-D), o import aceita quantas alternativas a prova de origem
+// tiver — `**F)**`, `**G)**` etc. funcionam igual a `**A)**`..`**E)**`, sem
+// precisar de nenhum campo extra no arquivo. A ORDEM final das alternativas
+// é a ordem em que aparecem no arquivo (não uma reordenação alfabética),
+// para manter a questão o mais parecida possível do original — bancas que
+// não numeram as alternativas em sequência A,B,C... continuam representadas
+// fielmente.
 // ============================================================================
 
 const VALID_CYCLES: MedicalCycle[] = ['basico', 'clinico', 'internato_residencia'];
 const VALID_DIFFICULTIES: DifficultyLevel[] = ['facil', 'medio', 'dificil'];
-const OPTION_LETTERS = ['A', 'B', 'C', 'D', 'E'] as const;
 
 const DEFAULT_CYCLE: MedicalCycle = 'internato_residencia';
 const DEFAULT_DIFFICULTY: DifficultyLevel = 'medio';
@@ -75,7 +83,8 @@ function isNonEmptyString(v: string | undefined): v is string {
 }
 
 export interface QuestionImportOption {
-  letter: (typeof OPTION_LETTERS)[number];
+  /** Sem alfabeto fixo — qualquer sequência de letras encontrada no arquivo (A, B, ..., F, G, ...). */
+  letter: string;
   text: string;
   explanation: string;
   isCorrect: boolean;
@@ -126,21 +135,26 @@ function resolveByName<T extends { name: string }>(name: string, list: T[]): T |
 interface LabelMatch {
   /** Rótulo já normalizado (sem acento, minúsculo). */
   label: string;
-  /** Letra da alternativa, quando o rótulo for "A)".."E)" ou "Explicação X". */
-  letter?: (typeof OPTION_LETTERS)[number];
+  /** Letra da alternativa (já normalizada para maiúscula), quando o rótulo for "A)".."Z)" ou "Explicação X". */
+  letter?: string;
   kind: 'field' | 'optionText' | 'optionExplanation';
   line: number;
   inline: string;
 }
 
-const OPTION_TEXT_RE = /^\*\*([A-E])\)\*\*\s*(.*)$/;
+// Sem limite de alfabeto: `[A-Za-z]+` aceita A-Z (e, em tese, além disso se
+// o arquivo algum dia rotular alternativas com mais de uma letra) — quem
+// decide quantas alternativas existem é o arquivo de origem, nunca este
+// regex. Case-insensitive por consistência com OPTION_EXPLANATION_RE logo
+// abaixo (a letra capturada é normalizada para maiúscula no ponto de uso).
+const OPTION_TEXT_RE = /^\*\*([A-Za-z]+)\)\*\*\s*(.*)$/i;
 // [cç][aã] (não c?a?) porque a forma correta é "Explicação" — com cedilha e
 // til — não "Explicacao"; um regex sem os dois acentos combinados nunca
 // bate com o rótulo do jeito que o guia e os próprios exemplos deste
 // arquivo escrevem (achado real: nenhum teste unitário conferia o texto de
 // `explanation`, só a existência da opção — o gap passou pela suíte até
 // ser conferido manualmente).
-const OPTION_EXPLANATION_RE = /^\*\*explica[cç][aã]o\s+([a-e]):?\*\*\s*(.*)$/i;
+const OPTION_EXPLANATION_RE = /^\*\*explica[cç][aã]o\s+([A-Za-z]+):?\*\*\s*(.*)$/i;
 const GENERIC_LABEL_RE = /^\*\*([^*:]+):?\*\*\s*(.*)$/;
 
 /** Rótulos reconhecidos (já normalizados) e o campo do preview a que correspondem. */
@@ -171,14 +185,14 @@ function findLabelMatches(lines: string[]): LabelMatch[] {
     const line = rawLine.trim();
     const optText = line.match(OPTION_TEXT_RE);
     if (optText) {
-      matches.push({ label: 'optionText', letter: optText[1] as LabelMatch['letter'], kind: 'optionText', line: i, inline: optText[2] });
+      matches.push({ label: 'optionText', letter: optText[1].toUpperCase(), kind: 'optionText', line: i, inline: optText[2] });
       return;
     }
     const optExp = line.match(OPTION_EXPLANATION_RE);
     if (optExp) {
       matches.push({
         label: 'optionExplanation',
-        letter: optExp[1].toUpperCase() as LabelMatch['letter'],
+        letter: optExp[1].toUpperCase(),
         kind: 'optionExplanation',
         line: i,
         inline: optExp[2],
@@ -251,6 +265,10 @@ function parseQuestionBlock(
   const optionTextByLetter: Partial<Record<string, string>> = {};
   const optionExplanationByLetter: Partial<Record<string, string>> = {};
   const gabaritoLetters: string[] = [];
+  // Ordem de PRIMEIRA aparição de cada letra no arquivo (não alfabética) —
+  // é isso que preserva a questão parecida com o original quando a banca
+  // não numera as alternativas em sequência A,B,C...
+  const letterOrder: string[] = [];
 
   matches.forEach((match, i) => {
     const nextLine = i + 1 < matches.length ? matches[i + 1].line : contentLines.length;
@@ -258,6 +276,7 @@ function parseQuestionBlock(
     if (match.kind === 'field') {
       values[match.label] = value;
     } else if (match.kind === 'optionText' && match.letter) {
+      if (!letterOrder.includes(match.letter)) letterOrder.push(match.letter);
       const hasGabarito = /\[\s*gabarito\s*\]/i.test(value);
       const cleanText = value.replace(/\[\s*gabarito\s*\]/gi, '').trim();
       optionTextByLetter[match.letter] = cleanText;
@@ -314,14 +333,14 @@ function parseQuestionBlock(
     values['comando da questao (pergunta)']?.trim() || values['comando da questao']?.trim() || values.pergunta?.trim() || '';
   if (!questionStem) blockingErrors.push('Comando da Questão (Pergunta) vazio — questão não pode ser criada.');
 
-  const options: QuestionImportOption[] = OPTION_LETTERS.filter((letter) => isNonEmptyString(optionTextByLetter[letter])).map(
-    (letter) => ({
+  const options: QuestionImportOption[] = letterOrder
+    .filter((letter) => isNonEmptyString(optionTextByLetter[letter]))
+    .map((letter) => ({
       letter,
       text: (optionTextByLetter[letter] ?? '').trim(),
       explanation: (optionExplanationByLetter[letter] ?? '').trim(),
       isCorrect: gabaritoLetters.includes(letter),
-    })
-  );
+    }));
 
   if (options.length < 2) {
     blockingErrors.push(`Menos de 2 alternativas com texto (encontradas: ${options.length}) — questão não pode ser criada.`);

@@ -216,6 +216,46 @@ describe('parseQuestionsMarkdownText', () => {
     expect(result.rows[0].options.map((o) => o.letter)).toEqual(['A', 'B', 'C', 'D', 'E']);
   });
 
+  it('sem teto de alternativas: aceita mais de 5 (F, G...), sem truncar nem exigir campo extra', () => {
+    const batch = `
+## Questão 1
+
+**Disciplina:** Pneumologia
+**Comando da Questão (Pergunta):** Pergunta
+**A)** X
+**B)** Y
+**C)** Z
+**D)** W
+**E)** V
+**F)** U
+**G)** T [GABARITO]
+`;
+    const result = parseQuestionsMarkdownText(batch, [discipline], [theme]);
+    if (result.ok === false) throw new Error('esperado sucesso');
+    expect(result.rows[0].options).toHaveLength(7);
+    expect(result.rows[0].options.map((o) => o.letter)).toEqual(['A', 'B', 'C', 'D', 'E', 'F', 'G']);
+    expect(result.rows[0].options.find((o) => o.letter === 'G')?.isCorrect).toBe(true);
+    expect(result.rows[0].blockingErrors).toEqual([]);
+  });
+
+  it('preserva a ORDEM de aparição das alternativas no arquivo, não uma ordenação alfabética', () => {
+    const batch = `
+## Questão 1
+
+**Disciplina:** Pneumologia
+**Comando da Questão (Pergunta):** Pergunta
+**C)** Terceira no alfabeto, primeira no arquivo
+**Explicação C:** exp C
+**A)** Primeira no alfabeto, segunda no arquivo [GABARITO]
+**Explicação A:** exp A
+**B)** Segunda no alfabeto, terceira no arquivo
+**Explicação B:** exp B
+`;
+    const result = parseQuestionsMarkdownText(batch, [discipline], [theme]);
+    if (result.ok === false) throw new Error('esperado sucesso');
+    expect(result.rows[0].options.map((o) => o.letter)).toEqual(['C', 'A', 'B']);
+  });
+
   it('ciclo/dificuldade inválidos caem no padrão e são avisados, sem bloquear', () => {
     const batch = `
 ## Questão 1

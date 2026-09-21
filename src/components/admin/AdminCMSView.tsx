@@ -341,6 +341,14 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   // "persiste busca de conteúdos do CMS entre navegações" (a aba é
   // desmontada ao abrir "Visualizar"/"Revisão" e remontada ao voltar).
   const [questionSearch, setQuestionSearch] = usePersistedState('admin_question_search', '');
+  // Filtro de status (publicada/não publicada) da listagem de questões —
+  // antes de existir isso, publicada e rascunho apareciam misturados na
+  // mesma lista, só distinguíveis pelo selo de cada card. Persistido pelo
+  // mesmo motivo de `questionSearch` acima.
+  const [questionStatusFilter, setQuestionStatusFilter] = usePersistedState<'all' | 'published' | 'unpublished'>(
+    'admin_question_status_filter',
+    'all'
+  );
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -678,8 +686,16 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   });
 
   // Filtered questions — mesmo critério de busca do compêndio, adaptado aos
-  // campos que uma questão tem (sem título/subtítulo próprios).
+  // campos que uma questão tem (sem título/subtítulo próprios), mais o
+  // filtro de status abaixo. "unpublished" cobre draft e archived juntos —
+  // mesmo agrupamento que o selo do card já usa ("publicada" vs "rascunho").
   const filteredQuestions = questions.filter((q) => {
+    const matchesStatus =
+      questionStatusFilter === 'all' ||
+      (questionStatusFilter === 'published'
+        ? q.publicationStatus === 'published'
+        : q.publicationStatus !== 'published');
+    if (!matchesStatus) return false;
     if (!questionSearch.trim()) return true;
     const s = questionSearch.toLowerCase();
     return (
@@ -1511,7 +1527,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
             />
           )}
 
-          {/* Top Control Bar — busca (mesmo padrão da aba de Conteúdos) */}
+          {/* Top Control Bar — busca (mesmo padrão da aba de Conteúdos) + filtro de status */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#0F172A] p-4 rounded-xl border border-stone-200 dark:border-[#243452] elev-xs">
             <div className="relative flex-1 max-w-md">
               <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
@@ -1523,6 +1539,39 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                 className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
               />
             </div>
+
+            <div className="flex items-center gap-1.5 shrink-0" role="group" aria-label="Filtrar por status de publicação">
+              {(
+                [
+                  { key: 'all' as const, label: 'Todas', count: questions.length },
+                  {
+                    key: 'published' as const,
+                    label: 'Publicadas',
+                    count: questions.filter((q) => q.publicationStatus === 'published').length,
+                  },
+                  {
+                    key: 'unpublished' as const,
+                    label: 'Não publicadas',
+                    count: questions.filter((q) => q.publicationStatus !== 'published').length,
+                  },
+                ]
+              ).map(({ key, label, count }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setQuestionStatusFilter(key)}
+                  aria-pressed={questionStatusFilter === key}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
+                    questionStatusFilter === key
+                      ? 'bg-teal-700 dark:bg-teal-600 text-white border-teal-700 dark:border-teal-600'
+                      : 'bg-white dark:bg-[#142038] text-stone-600 dark:text-slate-300 border-stone-200 dark:border-[#243452] hover:bg-stone-100 dark:hover:bg-[#1A2845]'
+                  }`}
+                >
+                  {label} ({count})
+                </button>
+              ))}
+            </div>
+
             <span className="text-[11px] text-stone-500 dark:text-slate-400 shrink-0">
               {filteredQuestions.length} de {questions.length} questões
             </span>
