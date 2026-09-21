@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { BookOpen, X, Save, History, RotateCcw } from 'lucide-react';
+import { BookOpen, X, Save, History, RotateCcw, Eye, EyeOff, Sparkles, Lightbulb, AlertTriangle } from 'lucide-react';
 import { Compendium, CompendiumSection, MaterialSectionVersion } from '../../types';
 import { materialsRepository } from '../../repositories/MaterialsRepository';
+import { SafeMarkdown, parseInline } from '../common/SafeMarkdown';
 
 // Editor dedicado de conteúdo de seção — deliberadamente separado do form
 // grande de criação/edição de compêndio (handleSaveCompendium em
@@ -34,6 +35,14 @@ export default function SectionEditor({ compendium, onClose, onSaved }: SectionE
   const [versions, setVersions] = useState<MaterialSectionVersion[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  // Mesmo problema já resolvido na Revisão editorial (ProvenanceReviewPanel:
+  // "mostra o conteúdo original no preview do claim com a tipografia do
+  // leitor") — editar Markdown cru num textarea monoespaçado não dá pra ver
+  // como negrito/lista/citação [N] vão realmente aparecer. A prévia reusa a
+  // tipografia real do CompendiumReader, ao vivo, a partir do que está nos
+  // campos agora (não do que já foi salvo).
+  const [showPreview, setShowPreview] = useState(false);
+
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3500);
@@ -47,6 +56,7 @@ export default function SectionEditor({ compendium, onClose, onSaved }: SectionE
     setClinicalPearl(s.clinicalPearl || '');
     setWarningAlert(s.warningAlert || '');
     setShowHistory(false);
+    setShowPreview(false);
   };
 
   useEffect(() => {
@@ -162,15 +172,94 @@ export default function SectionEditor({ compendium, onClose, onSaved }: SectionE
             <>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-stone-400 font-mono-code">ID: {selectedSection.id}</span>
-                <button
-                  type="button"
-                  onClick={handleOpenHistory}
-                  className="px-3 py-1.5 rounded-lg border border-stone-200 dark:border-[#243452] hover:bg-stone-100 dark:hover:bg-[#1A2845] text-stone-700 dark:text-slate-300 font-semibold text-xs flex items-center gap-1 transition-colors"
-                >
-                  <History className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                  <span>Histórico</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview((v) => !v)}
+                    className="px-3 py-1.5 rounded-lg border border-stone-200 dark:border-[#243452] hover:bg-stone-100 dark:hover:bg-[#1A2845] text-stone-700 dark:text-slate-300 font-semibold text-xs flex items-center gap-1 transition-colors"
+                  >
+                    {showPreview ? (
+                      <EyeOff className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                    ) : (
+                      <Eye className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                    )}
+                    <span>{showPreview ? 'Ocultar prévia' : 'Prévia'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenHistory}
+                    className="px-3 py-1.5 rounded-lg border border-stone-200 dark:border-[#243452] hover:bg-stone-100 dark:hover:bg-[#1A2845] text-stone-700 dark:text-slate-300 font-semibold text-xs flex items-center gap-1 transition-colors"
+                  >
+                    <History className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                    <span>Histórico</span>
+                  </button>
+                </div>
               </div>
+
+              {showPreview && (
+                <div className="rounded-lg border border-stone-200 dark:border-[#243452] p-5 bg-white dark:bg-[#0F172A] max-h-[32rem] overflow-y-auto">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-400 mb-3">
+                    Prévia — como aparece para o estudante
+                  </div>
+
+                  <h2 className="text-xl sm:text-2xl font-bold text-[#172033] dark:text-[#E5E7EB] mb-4">
+                    {title || <span className="italic text-stone-400 dark:text-slate-500">(sem título)</span>}
+                  </h2>
+
+                  <div className="text-[17px] leading-[1.7] text-[#172033] dark:text-[#E5E7EB]">
+                    <SafeMarkdown content={content} />
+                  </div>
+
+                  {keyTakeawaysStr.trim() && (
+                    <div className="mt-6 p-4 rounded-r-lg border-l-4 border-[#0F766E] dark:border-[#14B8A6] bg-teal-500/5 dark:bg-teal-500/10">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#0F766E] dark:text-[#14B8A6] mb-2">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Pontos-chave & Mecanismos</span>
+                      </div>
+                      <ul className="space-y-1.5 text-sm text-[#172033] dark:text-[#E5E7EB]">
+                        {keyTakeawaysStr
+                          .split('\n')
+                          .map((t) => t.trim())
+                          .filter(Boolean)
+                          .map((takeaway, tIdx) => (
+                            <li key={tIdx} className="flex items-start gap-2">
+                              <span className="text-[#0F766E] dark:text-[#14B8A6] mt-0.5 shrink-0">•</span>
+                              <span>{parseInline(takeaway)}</span>
+                            </li>
+                          ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {clinicalPearl.trim() && (
+                    <div className="mt-4 p-4 rounded-r-lg border-l-4 border-[#F59E0B] bg-amber-500/5 dark:bg-amber-500/10 flex items-start gap-3">
+                      <Lightbulb className="w-4 h-4 text-[#F59E0B] shrink-0 mt-0.5" />
+                      <div>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-[#F59E0B] block mb-0.5">
+                          Pérola clínica & Aplicação
+                        </span>
+                        <p className="text-sm text-[#172033] dark:text-[#E5E7EB] leading-relaxed">
+                          {parseInline(clinicalPearl)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {warningAlert.trim() && (
+                    <div className="mt-4 p-4 rounded-r-lg border-l-4 border-rose-500 bg-rose-500/5 dark:bg-rose-500/10 flex items-start gap-3">
+                      <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400 block mb-0.5">
+                          Atenção redobrada
+                        </span>
+                        <p className="text-sm text-[#172033] dark:text-[#E5E7EB] leading-relaxed">
+                          {parseInline(warningAlert)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {showHistory && (
                 <div className="rounded-lg border border-stone-200 dark:border-[#243452] p-4 space-y-3 bg-stone-50 dark:bg-[#0B1424]">
