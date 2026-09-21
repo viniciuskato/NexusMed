@@ -134,7 +134,13 @@ interface LabelMatch {
 }
 
 const OPTION_TEXT_RE = /^\*\*([A-E])\)\*\*\s*(.*)$/;
-const OPTION_EXPLANATION_RE = /^\*\*explicac?a?o\s+([a-e]):?\*\*\s*(.*)$/i;
+// [cç][aã] (não c?a?) porque a forma correta é "Explicação" — com cedilha e
+// til — não "Explicacao"; um regex sem os dois acentos combinados nunca
+// bate com o rótulo do jeito que o guia e os próprios exemplos deste
+// arquivo escrevem (achado real: nenhum teste unitário conferia o texto de
+// `explanation`, só a existência da opção — o gap passou pela suíte até
+// ser conferido manualmente).
+const OPTION_EXPLANATION_RE = /^\*\*explica[cç][aã]o\s+([a-e]):?\*\*\s*(.*)$/i;
 const GENERIC_LABEL_RE = /^\*\*([^*:]+):?\*\*\s*(.*)$/;
 
 /** Rótulos reconhecidos (já normalizados) e o campo do preview a que correspondem. */

@@ -86,6 +86,15 @@ describe('parseQuestionsMarkdownText', () => {
     expect(q1.options).toHaveLength(4);
     expect(q1.options.find((o) => o.letter === 'B')?.isCorrect).toBe(true);
     expect(q1.options.filter((o) => o.isCorrect)).toHaveLength(1);
+    // Regressão: "Explicação" com cedilha/til (a forma correta em
+    // português, e a que o próprio guia usa como exemplo) precisa ser
+    // capturada — um regex que só aceitasse a grafia sem acento deixaria
+    // toda explicação vazia silenciosamente.
+    expect(q1.options.find((o) => o.letter === 'A')?.explanation).toBe('Incorreto, CPT não está reduzida.');
+    expect(q1.options.find((o) => o.letter === 'B')?.explanation).toBe(
+      'Correto, VEF1/CVF reduzido com CPT aumentada.'
+    );
+    expect(q1.missingFields.some((m) => /Explicação vazia/.test(m))).toBe(false);
     expect(q1.tags).toEqual(['espirometria', 'dpoc']);
     expect(q1.blockingErrors).toEqual([]);
     // Comentário Geral e Pérola foram preenchidos no arquivo — sem aviso de "usando padrão".
@@ -127,6 +136,24 @@ describe('parseQuestionsMarkdownText', () => {
     expect(row.disciplineId).toBeNull();
     expect(row.missingFields.some((m) => m.includes('Disciplina Inexistente'))).toBe(true);
     expect(row.blockingErrors).toEqual([]); // disciplina não encontrada não bloqueia — só exige seleção manual
+  });
+
+  it('reconhece "Explicação" tanto acentuado quanto sem acento', () => {
+    const batch = `
+## Questão 1
+
+**Disciplina:** Pneumologia
+**Comando da Questão (Pergunta):** Pergunta
+**A)** X
+**Explicação A:** Texto com acento correto.
+**B)** Y [GABARITO]
+**Explicacao B:** Texto sem acento (tolerado).
+`;
+    const result = parseQuestionsMarkdownText(batch, [discipline], [theme]);
+    if (result.ok === false) throw new Error('esperado sucesso');
+    const row = result.rows[0];
+    expect(row.options.find((o) => o.letter === 'A')?.explanation).toBe('Texto com acento correto.');
+    expect(row.options.find((o) => o.letter === 'B')?.explanation).toBe('Texto sem acento (tolerado).');
   });
 
   it('bloqueia questão sem Comando da Questão, sem Disciplina e sem alternativas suficientes', () => {
