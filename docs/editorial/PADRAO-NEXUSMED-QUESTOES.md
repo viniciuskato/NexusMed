@@ -11,8 +11,9 @@ conteúdo.
 
 **Fluxo completo, em 4 passos:**
 
-1. Cadastrar a questão (só pelo formulário do Admin — **não existe
-   import de arquivo para questões hoje**, diferente de conteúdo).
+1. Cadastrar a questão — pelo formulário do Admin (unitário) **ou
+   importando um lote inteiro de um arquivo `.md`** (Admin → "Importar
+   questões" — ver Passo 1).
 2. Revisar/atestar o rascunho (obrigatório antes de publicar — mesmo
    mecanismo de conteúdo, mas decidido **questão por questão**, nunca
    em lote).
@@ -23,9 +24,9 @@ Antes de cadastrar questões extraídas de prova real (ex.: um lote que
 você levantou com NotebookLM ou outra busca na web), leia a seção
 "Direitos autorais de questão de banca" no fim deste guia — é rápida e
 evita rotular como "autoral" algo que não é. Se for usar uma IA de
-fontes pra levantar o lote, veja também "Se você usa uma IA de fontes
-(NotebookLM e similares) para levantar o lote" no Passo 1 — diferente
-de conteúdo, ela não tem como te devolver um arquivo pra importar.
+fontes pra levantar o lote, veja "Importar um lote de questões (arquivo
+`.md`)" no Passo 1 — é o formato que **Admin → Importar questões**
+sabe ler, mesma ideia do import de conteúdo.
 
 ---
 
@@ -59,9 +60,15 @@ manual em cada questão depois.
 
 ### O que o formulário NÃO deixa você escolher (limitações reais, não bugs a se esperar que sumam)
 
+Esta seção descreve o formulário **"Nova Questão" (cadastro unitário)**,
+que continua exatamente assim. O importador em lote descrito logo
+adiante fecha várias dessas lacunas — cada bullet abaixo diz
+explicitamente se o import resolve ou não.
+
 - **Só 4 alternativas (A–D).** O modelo de dados aceita uma 5ª
   (`E`), mas o formulário de hoje nunca monta essa opção — não tem
-  como cadastrar uma questão de 5 alternativas por aqui.
+  como cadastrar uma questão de 5 alternativas por aqui. **Resolvido no
+  import**: o arquivo aceita `**E)**` opcional.
 - **Sem campo de "Comentário Geral".** O banco exige um
   `general_commentary` preenchido para publicar, mas o formulário não
   tem campo para ele — grava um texto fixo genérico
@@ -71,27 +78,45 @@ manual em cada questão depois.
   **explicações por alternativa** e na **Pérola High-Yield** — são os
   dois campos que o estudante realmente lê como comentário
   substancioso; o "Comentário Geral" fica genérico até esse gap ser
-  fechado.
+  fechado. **Resolvido no import**: campo `**Comentário Geral:**`
+  próprio; se omitido, cai no mesmo texto genérico de hoje.
 - **Tema não é escolhido — é auto-atribuído** ao primeiro tema
   cadastrado dentro da disciplina selecionada. Se a disciplina tiver
-  vários temas, pode não ser o tema certo.
+  vários temas, pode não ser o tema certo. **Resolvido no import, de um
+  jeito mais seguro que um "conserto"**: em vez de repetir esse palpite
+  em lote (errar N questões de uma vez é pior que errar uma), o
+  importador **nunca adivinha o tema** — sem `**Tema:**` no arquivo ou
+  sem bater com o catálogo, a pré-visualização exige escolha manual
+  antes de liberar aquela linha, mesma lógica de disciplina/tema do
+  import de conteúdo.
+- **Dificuldade (`fácil`/`médio`/`difícil`) vem fixa em `médio`** —
+  também sem controle nenhum na tela, mesmo padrão do Ciclo abaixo.
+  **Resolvido no import**: campo `**Dificuldade:**` opcional.
 - **Ciclo (`básico`/`clínico`/`internato_residencia`) vem fixo em
   `internato_residencia`**, qualquer que seja a disciplina — o que
   costuma bater com questão de residência (o caso do lote de
   Espirometria), mas não dá pra mudar por aqui se um dia você cadastrar
-  questão de outro ciclo por este mesmo formulário.
+  questão de outro ciclo por este mesmo formulário. **Resolvido no
+  import**: campo `**Ciclo:**` opcional.
 - **Tags vêm fixas** (`Admin`, `CMS`, `Custom`) — o formulário não tem
-  campo de tags.
-- **O vínculo com o compêndio é um palpite, não uma escolha.** Ao
-  salvar, o sistema vincula a questão ao **primeiro compêndio
-  encontrado na mesma disciplina** — se a disciplina tiver mais de um
-  compêndio (ex. Pneumologia com vários temas além de Espirometria),
-  pode vincular no compêndio errado. **Corrija na hora**: depois de
-  criar a questão, clique **"Vínculo"** na listagem — ali sim há dois
-  dropdowns reais (Material e Seção, com as seções do material
-  escolhido) para apontar pro compêndio/seção certos. O botão
-  "Vínculo" só mexe nesses dois campos — nunca reescreve enunciado,
-  alternativas, gabarito ou status.
+  campo de tags. **Resolvido no import**: bloco `### Tags` opcional
+  (mesma convenção de crases do import de conteúdo); sem ele, cai nas
+  mesmas três tags fixas de hoje.
+- **O vínculo com o compêndio é um palpite, não uma escolha** no
+  cadastro unitário. Ao salvar, o sistema vincula a questão ao
+  **primeiro compêndio encontrado na mesma disciplina** — se a
+  disciplina tiver mais de um compêndio (ex. Pneumologia com vários
+  temas além de Espirometria), pode vincular no compêndio errado.
+  **Corrija na hora**: depois de criar a questão, clique **"Vínculo"**
+  na listagem — ali sim há dois dropdowns reais (Material e Seção, com
+  as seções do material escolhido) para apontar pro compêndio/seção
+  certos. O botão "Vínculo" só mexe nesses dois campos — nunca
+  reescreve enunciado, alternativas, gabarito ou status. **Não
+  "resolvido" no import, de propósito**: repetir esse palpite em lote
+  multiplicaria o risco de errar (uma disciplina com vários compêndios
+  erra N vezes de uma vez, em vez de uma). Toda questão que sai do
+  import nasce **sem vínculo** ("Material: Pendente") — use o botão
+  "Vínculo" linha a linha depois, mesmo fluxo de sempre.
 - **Markdown inline funciona (desde 2026-09-20); Markdown de bloco,
   não.** Vinheta, enunciado, cada alternativa, cada explicação,
   Comentário Geral e Pérola High-Yield passam por `parseInline`
@@ -126,46 +151,29 @@ manual em cada questão depois.
   Conteúdo" no formulário de compêndio. A questão continua invisível
   para quem estuda até você repetir os passos 2 e 3 abaixo.
 
-### Sem import de arquivo (diferente de conteúdo)
+### Importar um lote de questões (arquivo `.md`)
 
-Hoje **não existe** um "Importar questões" na Área Editorial — nem
-`.md`, nem `.yaml`, nem `.csv`. Para um lote pequeno (como as questões
-de Espirometria levantadas via NotebookLM), o caminho real é cadastrar
-uma de cada vez pelo formulário "Nova Questão" descrito acima.
+Admin → aba **"Questões Comentadas"** → botão **"Importar questões"**.
+Diferente do cadastro unitário acima (que continua existindo,
+inalterado), isto lê um **arquivo `.md` com várias questões de uma
+vez** — pensado especificamente para o caso real que motivou esta
+seção: um lote levantado com uma IA de fontes (NotebookLM e similares)
+ou outra busca na web.
 
-Existe um script interno (`scripts/load-questoes.ts`) que carrega um
-lote grande a partir de um JSON num formato próprio
-(`banco-questoes.json`), mas é uma ferramenta de operação — roda por
-linha de comando, exige acesso de desenvolvedor e Supabase local, e
-não é um fluxo editorial self-service. Não é o caminho para um lote
-pontual; é a ferramenta que existe para migrações grandes já feitas
-pelo projeto.
-
-### Se você usa uma IA de fontes (NotebookLM e similares) para levantar o lote
-
-Em conteúdo, o `.md` de `PADRAO-NEXUSMED-CONTEUDOS.md` **é** o formato
-que **Admin → Importar material** sabe ler — por isso pedir pra uma IA
-de fontes gerar a resposta nesse formato e baixar o arquivo funciona
-ponta a ponta. Em questão **não existe esse reconhecimento em nenhum
-lugar do app** (seção anterior). Por isso pedir pra ferramenta "gere um
-`.md` pra eu importar" não tem como funcionar — ela pode até produzir
-um texto bem formatado, mas não há botão de import de questão pra
-apontar pra esse arquivo depois. O caminho continua sendo transcrever
-campo a campo no formulário "Nova Questão" (Passo 1), questão por
-questão.
-
-Vale, ainda assim, pedir a saída num formato previsível — organiza o
-lote inteiro antes de você abrir o Admin, na mesma ordem dos campos do
-formulário, em vez de caçar cada informação espalhada pela resposta.
-Peça algo como (adapte à sua ferramenta; isto não é lido por nenhum
-importador, é só um rascunho de trabalho):
+Cada questão do arquivo começa com um heading `## Questão N` (o número
+é só para você se orientar — nunca é gravado). Dentro de cada bloco, os
+campos seguem a convenção `**Rótulo:** valor` (valor pode ficar na
+mesma linha ou nas linhas seguintes, como preferir):
 
 ```markdown
 ## Questão 1
 
-**Disciplina:** Nome da Disciplina (confira o dropdown do Admin antes de pedir o lote)
+**Disciplina:** Nome da Disciplina (precisa bater com um nome já cadastrado, ou a pré-visualização pede escolha manual)
+**Tema:** Nome do Tema (também por nome; sem isto, ou sem bater com o catálogo, exige escolha manual — nunca um palpite automático)
 **Instituição / Banca:** ENARE
 **Ano:** 2025
+**Ciclo:** internato_residencia (opcional — padrão internato_residencia; aceita basico/clinico/internato_residencia)
+**Dificuldade:** medio (opcional — padrão medio; aceita facil/medio/dificil)
 
 **Enunciado Clínico (Caso / Vinheta):** (opcional)
 Texto da vinheta...
@@ -181,16 +189,56 @@ Texto da pergunta...
 **Explicação C:** ...
 **D)** Texto da alternativa D
 **Explicação D:** ...
+**E)** Texto da alternativa E (opcional — a 5ª alternativa que o cadastro unitário não permite)
+**Explicação E:** ...
 
+**Comentário Geral:** (opcional — sem isto, grava o mesmo texto genérico de sempre)
 **Pérola High-Yield:** Frase de fixação rápida...
+
+### Tags
+`tag1` `tag2`
 ```
 
-Antes de colar cada campo no formulário: remova qualquer `[N](#ref-N)`
-que a IA tenha inserido nas explicações (pelo motivo do bullet acima,
-não serve pra nada numa questão publicada) e confira que só uma
-alternativa está marcada `[GABARITO]`. Fora isso, `**negrito**` nas
-alternativas/explicações pode ficar — hoje já renderiza formatado para
-o estudante (ver seção anterior).
+Exatamente **uma** alternativa precisa do marcador `[GABARITO]` colado
+no fim do texto da alternativa (`**B)** Texto [GABARITO]`) — nem zero,
+nem duas. A ordem das alternativas no arquivo é a ordem final; letras
+`A`–`E` são aceitas em qualquer combinação, mas cada questão precisa de
+pelo menos 2 com texto preenchido.
+
+Ao escolher o arquivo, a tela mostra uma **lista** (não uma única
+pré-visualização, porque cada questão do lote é uma linha independente
+no banco): cada uma marcada **Pronta**, **Falta disciplina/tema** (com
+dropdown para resolver ali mesmo, sem editar o arquivo) ou **Bloqueada**
+(dado insuficiente para criar — comando da questão vazio, menos de 2
+alternativas, ou gabarito ausente/duplicado; a mensagem explica qual).
+Um quadro por linha lista o que ficou ausente ou caiu num valor padrão
+(Instituição, Ano, Ciclo/Dificuldade inválidos, Comentário
+Geral/Pérola/Tags ausentes, explicação vazia em alguma alternativa) —
+nada disso bloqueia a criação do rascunho, só avisa o que revisar antes
+de publicar (Passo 3). O botão final só importa as linhas **Prontas**;
+as demais ficam de fora e continuam disponíveis pelo cadastro unitário
+se preferir corrigi-las à mão.
+
+Cada questão importada nasce **rascunho**, sem vínculo com compêndio
+("Material: Pendente" — ver o bullet sobre vínculo acima) e sem
+revisão/atestação — Passo 2 e Passo 3 abaixo continuam obrigatórios,
+questão por questão, exatamente como no cadastro unitário. Importar o
+arquivo não publica nada.
+
+Por baixo, cada linha da lista vira uma chamada da função
+`import_question_draft()` do banco — toda a gravação de uma questão
+(linha em `questions` + alternativas + gabarito + comentário) acontece
+numa única transação atômica (mesmo padrão de `import_compendium_draft`
+usado pelo import de conteúdo): ou grava tudo, ou não grava nada
+daquela questão. Uma falha numa linha do lote é reportada isoladamente
+ao final ("N de M rascunhos criados") — não derruba as demais.
+
+Existe também um script interno (`scripts/load-questoes.ts`) que
+carrega um lote muito grande a partir de um JSON num formato próprio
+(`banco-questoes.json`) — é uma ferramenta de operação (linha de
+comando, exige acesso de desenvolvedor e Supabase local), não um fluxo
+editorial self-service. Para o caso comum (um lote levantado numa
+sessão de estudo), "Importar questões" é o caminho certo.
 
 ---
 

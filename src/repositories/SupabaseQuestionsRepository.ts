@@ -248,6 +248,46 @@ export class SupabaseQuestionsRepository implements QuestionsRepository {
     if (error) throw error;
   }
 
+  /**
+   * Cria uma questão nova via RPC `import_question_draft` — toda a gravação
+   * (questions + question_options + question_option_keys +
+   * question_answer_keys) acontece dentro de uma ÚNICA chamada PL/pgSQL
+   * (mesmo padrão de `import_compendium_draft`, Missão 42-B), ao contrário
+   * de `saveQuestion` acima (5 requisições HTTP independentes). Usada só
+   * pelo importador em lote — o formulário "Nova Questão" continua usando
+   * `saveCustomQuestion`.
+   */
+  async importQuestionDraft(question: Question): Promise<Question> {
+    const optionsPayload = question.options.map((o) => ({
+      letter: o.letter,
+      text: o.text,
+      explanation: o.explanation,
+      is_correct: o.isCorrect,
+    }));
+
+    const { data, error } = await supabase.rpc('import_question_draft', {
+      p_id: question.id,
+      p_discipline_id: question.disciplineId,
+      p_theme_id: question.themeId,
+      p_cycle: question.cycle,
+      p_difficulty: question.difficulty,
+      p_institution: question.institution || null,
+      p_year: question.year || null,
+      p_clinical_vignette: question.clinicalVignette || '',
+      p_question_stem: question.questionStem,
+      p_general_commentary: question.generalCommentary || '',
+      p_high_yield_summary: question.highYieldSummary || '',
+      p_tags: question.tags ?? [],
+      p_options: optionsPayload,
+    });
+    if (error) throw error;
+    const row = data as QuestionRow;
+    return {
+      ...question,
+      publicationStatus: (row.status as Question['publicationStatus']) ?? 'draft',
+    };
+  }
+
   async saveCustomQuestion(question: Question): Promise<void> {
     // Sem equivalente de "custom" para questions no schema atual — mesmo
     // comportamento do LocalStorageQuestionsRepository (delega a saveQuestion).

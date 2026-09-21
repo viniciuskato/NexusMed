@@ -10,6 +10,13 @@ export interface QuestionsRepository {
   saveQuestion(question: Question): Promise<void>;
   deleteQuestion(id: string): Promise<void>;
   saveCustomQuestion(question: Question): Promise<void>;
+  /**
+   * Cria uma questão nova como rascunho, numa única operação atômica (RPC
+   * `import_question_draft`) — usado pelo importador em lote
+   * (`ImportQuestionsModal`), nunca pelo formulário "Nova Questão" (que
+   * continua usando `saveCustomQuestion`/`saveQuestion`, inalterado).
+   */
+  importQuestionDraft(question: Question): Promise<Question>;
   getQuestionReview(questionId: string): Promise<QuestionReviewResult>;
   publishQuestion(id: string): Promise<void>;
   unpublishQuestion(id: string): Promise<void>;
@@ -38,6 +45,11 @@ class LocalStorageQuestionsRepository implements QuestionsRepository {
   }
   async saveCustomQuestion(question: Question): Promise<void> {
     StorageService.saveCustomQuestion(question);
+  }
+  async importQuestionDraft(question: Question): Promise<Question> {
+    const draft: Question = { ...question, publicationStatus: 'draft' };
+    StorageService.saveCustomQuestion(draft);
+    return draft;
   }
   async getQuestionReview(questionId: string): Promise<QuestionReviewResult> {
     const question = StorageService.getQuestions().find((q) => q.id === questionId);
@@ -110,6 +122,23 @@ class ResilientQuestionsRepository implements QuestionsRepository {
     if (isSupabaseConfigured) {
       try { await this.supa.saveCustomQuestion(question); } catch (err) { console.error(`[QuestionsRepository] falha ao sincronizar saveCustomQuestion com Supabase:`, err); throw err; }
     }
+  }
+
+  /**
+   * Como `MaterialsRepository.importCompendiumDraft` (Missão 42-B): ao
+   * contrário dos demais métodos deste repositório (que gravam local
+   * primeiro e tentam sincronizar depois), a cópia local só é atualizada
+   * DEPOIS do sucesso integral da gravação remota — evita um "sucesso"
+   * local fantasma quando a gravação atômica real falhou. Sem Supabase
+   * configurado, grava só local (não há sincronização remota para fingir).
+   */
+  async importQuestionDraft(question: Question): Promise<Question> {
+    if (!isSupabaseConfigured) {
+      return this.local.importQuestionDraft(question);
+    }
+    const saved = await this.supa.importQuestionDraft(question);
+    await this.local.importQuestionDraft(saved);
+    return saved;
   }
 
   async getQuestionReview(questionId: string): Promise<QuestionReviewResult> {
