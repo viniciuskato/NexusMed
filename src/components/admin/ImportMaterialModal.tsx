@@ -11,6 +11,9 @@ import {
   CompendiumImportSection,
 } from '../../utils/compendiumImport';
 import { parseCompendiumMarkdownText } from '../../utils/compendiumMarkdownImport';
+import CreateThemeModal from './CreateThemeModal';
+
+const CREATE_NEW_THEME = '__create_new_theme__';
 
 // ============================================================================
 // Missão 42-A — "Importar material": ponte entre o arquivo .compendium.yaml
@@ -25,6 +28,8 @@ interface ImportMaterialModalProps {
   compendiums: Compendium[];
   onClose: () => void;
   onImported: () => void;
+  /** Chamado depois de criar um tema novo pelo "+ Criar novo tema..." do dropdown — avisa o pai para recarregar o catálogo global. */
+  onThemeCreated?: () => void;
 }
 
 type WizardState =
@@ -50,8 +55,14 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
   compendiums,
   onClose,
   onImported,
+  onThemeCreated,
 }) => {
   const [state, setState] = useState<WizardState>({ step: 'pick' });
+  // Cópia local que recebe temas criados na hora (via "+ Criar novo tema...")
+  // sem esperar o refresh do catálogo global do pai — senão o tema recém-criado
+  // não apareceria selecionável neste mesmo modal.
+  const [availableThemes, setAvailableThemes] = useState<Theme[]>(themes);
+  const [isCreateThemeOpen, setIsCreateThemeOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useDialogA11y<HTMLDivElement>({ onClose });
 
@@ -115,8 +126,17 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
 
   const availableThemesForOverride =
     state.step === 'preview'
-      ? themes.filter((t) => !state.overrideDisciplineId || t.disciplineId === state.overrideDisciplineId)
+      ? availableThemes.filter((t) => !state.overrideDisciplineId || t.disciplineId === state.overrideDisciplineId)
       : [];
+
+  const handleThemeCreated = (newTheme: Theme) => {
+    setAvailableThemes((prev) => [...prev, newTheme]);
+    setIsCreateThemeOpen(false);
+    if (state.step === 'preview') {
+      setState({ ...state, overrideThemeId: newTheme.id });
+    }
+    onThemeCreated?.();
+  };
 
   return (
     // AS1-B3.2: o modal precisa da mesma camada de sobreposição usada pelos
@@ -257,12 +277,19 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
               <span className="font-bold text-stone-700 dark:text-slate-300 block mb-1">Tema</span>
               {state.overrideThemeId ? (
                 <p className="text-stone-900 dark:text-slate-100">
-                  {themes.find((t) => t.id === state.overrideThemeId)?.name ?? state.preview.themeName}
+                  {availableThemes.find((t) => t.id === state.overrideThemeId)?.name ?? state.preview.themeName}
                 </p>
               ) : (
                 <select
+                  data-testid="import-theme-override-select"
                   value=""
-                  onChange={(e) => setState({ ...state, overrideThemeId: e.target.value })}
+                  onChange={(e) => {
+                    if (e.target.value === CREATE_NEW_THEME) {
+                      setIsCreateThemeOpen(true);
+                      return;
+                    }
+                    setState({ ...state, overrideThemeId: e.target.value });
+                  }}
                   disabled={!state.overrideDisciplineId}
                   className="w-full p-2 rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 text-stone-900 dark:text-slate-100 text-xs disabled:opacity-50"
                 >
@@ -274,6 +301,7 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
                       {t.name}
                     </option>
                   ))}
+                  <option value={CREATE_NEW_THEME}>+ Criar novo tema...</option>
                 </select>
               )}
             </div>
@@ -402,6 +430,16 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
         </div>
       )}
       </div>
+
+      {isCreateThemeOpen && (
+        <CreateThemeModal
+          disciplines={disciplines}
+          themes={availableThemes}
+          defaultDisciplineId={state.step === 'preview' ? state.overrideDisciplineId ?? undefined : undefined}
+          onClose={() => setIsCreateThemeOpen(false)}
+          onCreated={handleThemeCreated}
+        />
+      )}
     </div>
   );
 };
