@@ -22,7 +22,10 @@ conteúdo.
 Antes de cadastrar questões extraídas de prova real (ex.: um lote que
 você levantou com NotebookLM ou outra busca na web), leia a seção
 "Direitos autorais de questão de banca" no fim deste guia — é rápida e
-evita rotular como "autoral" algo que não é.
+evita rotular como "autoral" algo que não é. Se for usar uma IA de
+fontes pra levantar o lote, veja também "Se você usa uma IA de fontes
+(NotebookLM e similares) para levantar o lote" no Passo 1 — diferente
+de conteúdo, ela não tem como te devolver um arquivo pra importar.
 
 ---
 
@@ -89,14 +92,29 @@ manual em cada questão depois.
   escolhido) para apontar pro compêndio/seção certos. O botão
   "Vínculo" só mexe nesses dois campos — nunca reescreve enunciado,
   alternativas, gabarito ou status.
-- **Sem Markdown.** Diferente do conteúdo (que passa por
-  `SafeMarkdown`), todo texto de questão — vinheta, enunciado,
-  alternativas, explicação por alternativa, Pérola High-Yield — é
-  renderizado como texto puro para o estudante. `**negrito**`,
-  `[N](#ref-N)` ou tabela em Markdown aparecem literalmente com
-  asteriscos/colchetes na tela, não formatados. Não use a convenção de
-  citação `[N](#ref-N)` do compêndio aqui — ela não faz nada numa
-  questão.
+- **Markdown inline funciona (desde 2026-09-20); Markdown de bloco,
+  não.** Vinheta, enunciado, cada alternativa, cada explicação,
+  Comentário Geral e Pérola High-Yield passam por `parseInline`
+  (`src/components/common/SafeMarkdown.tsx`) antes de chegar ao
+  estudante — `**negrito**`, `*itálico*`, `` `código` `` e
+  `[texto](https://...)` já renderizam formatados, não aparecem crus
+  com asteriscos/colchetes (ver
+  `tests/component/questionCardMarkdown.test.tsx`). O que **não**
+  funciona é Markdown de **bloco**: heading (`####`), tabela
+  (`| col | col |`) e lista (`- item`/`1. item`) continuam aparecendo
+  literalmente, porque questão só passa por `parseInline`, nunca pelo
+  `SafeMarkdown` inteiro (o parser de bloco, exclusivo do compêndio).
+  Não peça pra uma IA gerar tabela ou lista dentro de um campo de
+  questão — vai aparecer com os caracteres de Markdown visíveis.
+- **`[N](#ref-N)` de citação agora renderiza como link estilizado, mas
+  não leva a lugar nenhum.** Diferente do compêndio, a questão não tem
+  um rodapé de referências numeradas com âncora `id="ref-N"` na tela —
+  então o link fica com a aparência de citação, mas clicar nele não
+  navega pra nada. Não é mais "aparece cru" (era o caso antes de
+  2026-09-20), mas segue inútil aqui: não use essa convenção do
+  compêndio em questão. Pra citar uma fonte, escreva por extenso ou use
+  um link real (`[nome da fonte](https://...)`), que funciona de
+  verdade.
 - **Sem edição depois de criada.** O Admin não tem uma tela de
   "Editar questão" — só dá pra: vincular material/seção, revisar/
   atestar, publicar/despublicar e excluir. Se errar algo no enunciado
@@ -122,6 +140,57 @@ linha de comando, exige acesso de desenvolvedor e Supabase local, e
 não é um fluxo editorial self-service. Não é o caminho para um lote
 pontual; é a ferramenta que existe para migrações grandes já feitas
 pelo projeto.
+
+### Se você usa uma IA de fontes (NotebookLM e similares) para levantar o lote
+
+Em conteúdo, o `.md` de `PADRAO-NEXUSMED-CONTEUDOS.md` **é** o formato
+que **Admin → Importar material** sabe ler — por isso pedir pra uma IA
+de fontes gerar a resposta nesse formato e baixar o arquivo funciona
+ponta a ponta. Em questão **não existe esse reconhecimento em nenhum
+lugar do app** (seção anterior). Por isso pedir pra ferramenta "gere um
+`.md` pra eu importar" não tem como funcionar — ela pode até produzir
+um texto bem formatado, mas não há botão de import de questão pra
+apontar pra esse arquivo depois. O caminho continua sendo transcrever
+campo a campo no formulário "Nova Questão" (Passo 1), questão por
+questão.
+
+Vale, ainda assim, pedir a saída num formato previsível — organiza o
+lote inteiro antes de você abrir o Admin, na mesma ordem dos campos do
+formulário, em vez de caçar cada informação espalhada pela resposta.
+Peça algo como (adapte à sua ferramenta; isto não é lido por nenhum
+importador, é só um rascunho de trabalho):
+
+```markdown
+## Questão 1
+
+**Disciplina:** Nome da Disciplina (confira o dropdown do Admin antes de pedir o lote)
+**Instituição / Banca:** ENARE
+**Ano:** 2025
+
+**Enunciado Clínico (Caso / Vinheta):** (opcional)
+Texto da vinheta...
+
+**Comando da Questão (Pergunta):**
+Texto da pergunta...
+
+**A)** Texto da alternativa A
+**Explicação A:** ...
+**B)** Texto da alternativa B [GABARITO]
+**Explicação B:** ...
+**C)** Texto da alternativa C
+**Explicação C:** ...
+**D)** Texto da alternativa D
+**Explicação D:** ...
+
+**Pérola High-Yield:** Frase de fixação rápida...
+```
+
+Antes de colar cada campo no formulário: remova qualquer `[N](#ref-N)`
+que a IA tenha inserido nas explicações (pelo motivo do bullet acima,
+não serve pra nada numa questão publicada) e confira que só uma
+alternativa está marcada `[GABARITO]`. Fora isso, `**negrito**` nas
+alternativas/explicações pode ficar — hoje já renderiza formatado para
+o estudante (ver seção anterior).
 
 ---
 
