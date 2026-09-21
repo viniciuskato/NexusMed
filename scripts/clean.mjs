@@ -10,7 +10,16 @@ const projectRoot = resolve(import.meta.dirname, '..');
 
 // Lista fechada de artefatos descartáveis e recriáveis por `npm run build`
 // ou por scripts operacionais do projeto — nada aqui é fonte.
-const targets = ['dist', 'server.js', 'load-pilot-cardiologia.report.txt'];
+const targets = [
+  'dist',
+  'dist-e2e',
+  'playwright-report',
+  'test-results',
+  'server.js',
+  'load-pilot-cardiologia.report.txt',
+  'recover-question-references.dry-run.report.txt',
+  'recover-question-references.execute.report.txt',
+];
 
 for (const target of targets) {
   const fullPath = resolve(projectRoot, target);

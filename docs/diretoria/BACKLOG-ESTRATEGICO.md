@@ -651,7 +651,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
   4. Updates que atingem 0 linhas contam como sucesso
      (`SupabaseQuestionsRepository` e `SupabaseMaterialsRepository`, nos
      vínculos de fonte; `error_notebook_update`).
-  5. `management/audits/2026-09-14/auditar-materiais-nexusmed.mjs` usa a
+  5. `docs/archive/management-legado/audits/2026-09-14/auditar-materiais-nexusmed.mjs` usa a
      chave `service_role` e imprime conteúdo completo, e o repositório é
      público.
 - **Por que importa**: são mitigações de defesa em profundidade e de
