@@ -43,6 +43,9 @@ import ProvenanceReviewPanel from './ProvenanceReviewPanel';
 import MaterialReferencesPanel from './MaterialReferencesPanel';
 import ImportMaterialModal from './ImportMaterialModal';
 import ImportQuestionsModal from './ImportQuestionsModal';
+import CreateThemeModal from './CreateThemeModal';
+
+const CREATE_NEW_THEME = '__create_new_theme__';
 import { getErrorMessage } from '../../utils/errorMessage';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
@@ -295,6 +298,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   const [compSubtitle, setCompSubtitle] = useState('');
   const [compDisciplineId, setCompDisciplineId] = useState(disciplines[0]?.id || 'cardio');
   const [compThemeId, setCompThemeId] = useState(themes[0]?.id || 'cardio-ic');
+  const [isCreateThemeOpen, setIsCreateThemeOpen] = useState(false);
   const [compMode, setCompMode] = useState<'atlas' | 'mecanismos'>('mecanismos');
   const [compAuthor, setCompAuthor] = useState('Dr. Roberto Albuquerque / Comitê Editorial');
   const [compModuleNumber, setCompModuleNumber] = useState<string>('');
@@ -883,6 +887,21 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               compendiums={compendiums}
               onClose={() => setIsImportMaterialOpen(false)}
               onImported={onRefreshData}
+              onThemeCreated={onRefreshData}
+            />
+          )}
+
+          {isCreateThemeOpen && (
+            <CreateThemeModal
+              disciplines={disciplines}
+              themes={themes}
+              defaultDisciplineId={compDisciplineId}
+              onClose={() => setIsCreateThemeOpen(false)}
+              onCreated={(newTheme) => {
+                setCompThemeId(newTheme.id);
+                setIsCreateThemeOpen(false);
+                onRefreshData();
+              }}
             />
           )}
 
@@ -994,7 +1013,13 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                   </label>
                   <select id="admincmsview-tema-vinculado-5"
                     value={compThemeId}
-                    onChange={(e) => setCompThemeId(e.target.value)}
+                    onChange={(e) => {
+                      if (e.target.value === CREATE_NEW_THEME) {
+                        setIsCreateThemeOpen(true);
+                        return;
+                      }
+                      setCompThemeId(e.target.value);
+                    }}
                     className="w-full p-2.5 rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 text-xs"
                   >
                     {themes
@@ -1005,6 +1030,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                         </option>
                       ))}
                     <option value="custom-geral">Geral / Teoria Integrada</option>
+                    <option value={CREATE_NEW_THEME}>+ Criar novo tema...</option>
                   </select>
                 </div>
 
