@@ -13,7 +13,11 @@ function contentSecurityPolicy(supabaseUrl: string | undefined): Plugin {
   // formatos não-URL (só o ref do projeto etc.) e os normaliza para esse
   // domínio. A origem exata entra quando é uma URL válida (ex.: Supabase
   // local em 127.0.0.1 na suíte e2e).
-  const connect = ["'self'", 'https://*.supabase.co', 'wss://*.supabase.co'];
+  // api.crossref.org: CrossRefSourceLookup (Admin) busca candidatos de DOI
+  // direto do navegador — sem isto o fetch é bloqueado pela CSP mesmo com
+  // CORS liberado no servidor (achado real: "Failed to fetch" indistinguível
+  // de falha de rede até checar a CSP).
+  const connect = ["'self'", 'https://*.supabase.co', 'wss://*.supabase.co', 'https://api.crossref.org'];
   try {
     const origin = new URL(supabaseUrl ?? '').origin;
     if (!origin.endsWith('.supabase.co')) {

@@ -4,6 +4,7 @@ import { Compendium, SourceSummary } from '../../types';
 import { materialsRepository } from '../../repositories/MaterialsRepository';
 import { getErrorMessage } from '../../utils/errorMessage';
 import SourceSelector from './SourceSelector';
+import CrossRefSourceLookup from './CrossRefSourceLookup';
 
 // ============================================================================
 // MaterialReferencesPanel (Prompt 21-D)
@@ -12,9 +13,13 @@ import SourceSelector from './SourceSelector';
 // Para referências de material (bibliografia em texto livre,
 // material_references.citation_text) ainda sem source_id, oferece
 // associação explícita a uma fonte já cadastrada em `sources` — nunca
-// matching automático, sempre escolha humana via SourceSelector. Preserva
-// texto/ordem/URL: usa updateMaterialReferenceSource (UPDATE direcionado por
-// id), nunca saveCompendium (que reinsere seções e referências inteiras).
+// matching automático, sempre escolha humana via SourceSelector. Quando o
+// catálogo não tem a fonte (caso mais comum), CrossRefSourceLookup
+// complementa buscando candidatos reais no CrossRef — mesma regra de nunca
+// decidir sozinho, só que criando a fonte no catálogo ao confirmar em vez
+// de só selecionar uma já existente. Preserva texto/ordem/URL: usa
+// updateMaterialReferenceSource (UPDATE direcionado por id), nunca
+// saveCompendium (que reinsere seções e referências inteiras).
 // ============================================================================
 
 interface MaterialReferencesPanelProps {
@@ -98,24 +103,39 @@ export default function MaterialReferencesPanel({ compendium, onClose, onSaved }
                     <span className="truncate">{ref.citationText ?? ref.sourceId}</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex-1">
-                      <SourceSelector
-                        id={`material-ref-source-${i}`}
-                        selected={pendingByIndex[i] ?? null}
-                        onSelect={(s) => setPendingByIndex((prev) => ({ ...prev, [i]: s }))}
-                        onClear={() => setPendingByIndex((prev) => ({ ...prev, [i]: null }))}
-                        disabled={busyIndex === i}
-                      />
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex-1">
+                        <SourceSelector
+                          id={`material-ref-source-${i}`}
+                          selected={pendingByIndex[i] ?? null}
+                          onSelect={(s) => setPendingByIndex((prev) => ({ ...prev, [i]: s }))}
+                          onClear={() => setPendingByIndex((prev) => ({ ...prev, [i]: null }))}
+                          disabled={busyIndex === i}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        disabled={busyIndex === i || !pendingByIndex[i]}
+                        onClick={() => handleAssociate(i)}
+                        className="px-2.5 py-1.5 rounded bg-teal-700 hover:bg-teal-800 text-white font-semibold cursor-pointer disabled:opacity-50 shrink-0"
+                      >
+                        Associar
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      disabled={busyIndex === i || !pendingByIndex[i]}
-                      onClick={() => handleAssociate(i)}
-                      className="px-2.5 py-1.5 rounded bg-teal-700 hover:bg-teal-800 text-white font-semibold cursor-pointer disabled:opacity-50 shrink-0"
-                    >
-                      Associar
-                    </button>
+                    {!pendingByIndex[i] && ref?.id && (
+                      <>
+                        <p className="text-stone-400">Fonte não cadastrada no catálogo?</p>
+                        <CrossRefSourceLookup
+                          referenceId={ref.id}
+                          citationText={text}
+                          onLinked={() => {
+                            showToast('Fonte criada a partir do CrossRef e associada à referência.');
+                            onSaved?.();
+                          }}
+                        />
+                      </>
+                    )}
                   </div>
                 )}
               </li>

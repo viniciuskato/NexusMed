@@ -54,12 +54,17 @@ export interface OpenAccessReferenceLink {
  *
  * Prioridade: (1) URL curada explícita já registrada para essa fonte; (2)
  * URL embutida no próprio texto da citação; (3) DOI embutido; (4) PMID
- * embutido; (5) como último recurso, uma sugestão de busca no Google
- * Scholar — sempre rotulada como sugestão, nunca como acesso confirmado.
+ * embutido; (5) como último recurso, uma busca no Google — sempre rotulada
+ * como sugestão, nunca como acesso confirmado.
  * Só os casos (1) e (2) são "acesso aberto" de verdade (URL curada/
  * verificada); (3) e (4) são identificadores reais e clicáveis, mas não
  * são promessa de texto gratuito (muitos DOIs levam a paywall); (5) não é
- * nem uma coisa nem outra — é só um ponto de partida de busca.
+ * nem uma coisa nem outra — é só um ponto de partida de busca. Usa a busca
+ * web geral do Google, não o Google Scholar: para diretrizes/consensos de
+ * sociedade médica (o caso mais comum de citação sem DOI/PMID neste
+ * projeto) o site oficial da entidade costuma ficar no topo da busca geral,
+ * enquanto o Scholar prioriza indexação acadêmica e frequentemente não
+ * lista a página oficial do documento.
  */
 export function resolveOpenAccessReferenceLink(
   citationText: string,
@@ -123,20 +128,21 @@ export function resolveOpenAccessReferenceLink(
     };
   }
 
-  // 5. Nenhum identificador real encontrado: sugestão de busca no Google
-  // Scholar, explicitamente rotulada como sugestão — nunca apresentada
-  // como acesso confirmado, texto integral ou fonte verificada.
+  // 5. Nenhum identificador real encontrado: sugestão de busca na web geral
+  // do Google (não Scholar — ver comentário do JSDoc acima), explicitamente
+  // rotulada como sugestão — nunca apresentada como acesso confirmado,
+  // texto integral ou fonte verificada.
   const cleanTitle = citationText
     .replace(/^\[?\d+\]?\s*/, '')
     .replace(/^(autor|autores|ref|fonte):\s*/i, '')
     .trim();
 
   return {
-    url: `https://scholar.google.com/scholar?q=${encodeURIComponent(cleanTitle)}`,
+    url: `https://www.google.com/search?q=${encodeURIComponent(cleanTitle)}`,
     badgeLabel: 'Sugestão de busca',
     documentType: studyType ?? 'Referência sem identificador confirmado',
     isOpenAccess: false,
-    actionLabel: 'Pesquisar referência (Google Scholar)',
+    actionLabel: 'Pesquisar referência (Google)',
   };
 }
 
