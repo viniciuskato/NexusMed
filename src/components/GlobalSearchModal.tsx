@@ -268,10 +268,10 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                             </span>
                           </div>
                           <p className="text-xs text-slate-800 dark:text-slate-200 font-medium line-clamp-2">
-                            {qItem.questionStem}
+                            {parseInline(qItem.questionStem)}
                           </p>
                           <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1">
-                            {qItem.highYieldSummary}
+                            {parseInline(qItem.highYieldSummary)}
                           </p>
                         </div>
                         <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 shrink-0" />

@@ -15,6 +15,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { Question, QuestionAnswerRecord, QuestionReviewResult, Discipline, Theme, QuestionReactionValue, Compendium } from '../../types';
+import { parseInline } from '../common/SafeMarkdown';
 import { bookmarksRepository } from '../../repositories/BookmarksRepository';
 import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { answersRepository } from '../../repositories/AnswersRepository';
@@ -422,11 +423,11 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       <div className="space-y-4 mb-6">
         {question.clinicalVignette && (
           <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-[#142038]/80 border border-slate-200/80 dark:border-[#243452] font-serif-reading text-slate-800 dark:text-slate-200 text-sm sm:text-base leading-relaxed">
-            {question.clinicalVignette}
+            {parseInline(question.clinicalVignette)}
           </div>
         )}
         <p className="font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-base leading-snug">
-          {question.questionStem}
+          {parseInline(question.questionStem)}
         </p>
       </div>
 
@@ -481,7 +482,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                     {opt.letter}
                   </span>
                   <span className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-medium leading-relaxed pt-0.5">
-                    {opt.text}
+                    {parseInline(opt.text)}
                   </span>
                 </div>
 
@@ -515,10 +516,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                     )}
                     <span>{reviewOpt.isCorrect ? 'Por que está correta:' : 'Por que está incorreta (distrator):'}</span>
                   </div>
-                  <p>{reviewOpt.explanation}</p>
+                  <p>{parseInline(reviewOpt.explanation)}</p>
                   {opt.mechanismReference && (
                     <p className="mt-1 text-[11px] font-mono text-slate-500 dark:text-slate-400 italic">
-                      Mecanismo: {opt.mechanismReference}
+                      Mecanismo: {parseInline(opt.mechanismReference)}
                     </p>
                   )}
                 </div>
@@ -562,7 +563,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                   Confirmação Clínica · Resposta Correta
                 </span>
                 <p className="text-xs leading-relaxed text-emerald-900/90 dark:text-emerald-200/90">
-                  {reviewResult?.generalCommentary}
+                  {reviewResult && parseInline(reviewResult.generalCommentary)}
                 </p>
               </div>
             </div>
@@ -574,10 +575,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                   Mecanismo Negligenciado ou Distrator Identificado
                 </span>
                 <p className="text-xs leading-relaxed text-rose-900/90 dark:text-rose-200/90">
-                  {reviewResult?.generalCommentary}
+                  {reviewResult && parseInline(reviewResult.generalCommentary)}
                 </p>
                 <div className="p-2.5 rounded-xl bg-rose-100/60 dark:bg-rose-900/40 border border-rose-200 dark:border-rose-800 text-[11px] text-rose-900 dark:text-rose-200">
-                  <strong>Ponto-chave negligenciado:</strong> {reviewResult?.highYieldSummary}
+                  <strong>Ponto-chave negligenciado:</strong> {reviewResult && parseInline(reviewResult.highYieldSummary)}
                 </div>
               </div>
             </div>
@@ -589,7 +590,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               <Sparkles className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
               Pérola High-Yield (Resumo Prático):
             </span>
-            <p className="leading-relaxed font-medium text-teal-950/90 dark:text-teal-200/90">{reviewResult?.highYieldSummary}</p>
+            <p className="leading-relaxed font-medium text-teal-950/90 dark:text-teal-200/90">{reviewResult && parseInline(reviewResult.highYieldSummary)}</p>
           </div>
 
           {/* Fontes vinculadas a esta questão - Padronizadas em ABNT NBR 6023 com link clicável */}
