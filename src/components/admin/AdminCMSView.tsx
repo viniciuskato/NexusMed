@@ -42,6 +42,7 @@ import SectionEditor from './SectionEditor';
 import ProvenanceReviewPanel from './ProvenanceReviewPanel';
 import MaterialReferencesPanel from './MaterialReferencesPanel';
 import ImportMaterialModal from './ImportMaterialModal';
+import ImportQuestionsModal from './ImportQuestionsModal';
 import { getErrorMessage } from '../../utils/errorMessage';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
@@ -221,6 +222,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   // ── Compendium State ───────────────────────────────────────────
   const [isCompendiumFormOpen, setIsCompendiumFormOpen] = useState(false);
   const [isImportMaterialOpen, setIsImportMaterialOpen] = useState(false);
+  const [isImportQuestionsOpen, setIsImportQuestionsOpen] = useState(false);
   const [editingCompId, setEditingCompId] = useState<string | null>(null);
   const [compSearch, setCompSearch] = usePersistedState('admin_comp_search', '');
   // Editor de seção (piloto CMS) — guarda só o id, não o objeto Compendium,
@@ -1482,6 +1484,15 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               </button>
 
               <button
+                onClick={() => setIsImportQuestionsOpen(true)}
+                className="px-3.5 py-2 rounded-lg border border-teal-200 dark:border-teal-900 bg-teal-50 dark:bg-teal-950/40 hover:bg-teal-100 hover:dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                title="Cria rascunhos a partir de um lote de questões em arquivo (.md)"
+              >
+                <FileUp className="w-4 h-4" />
+                <span>Importar questões</span>
+              </button>
+
+              <button
                 onClick={() => setIsCreatingQuestion(!isCreatingQuestion)}
                 className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white dark:bg-teal-600 dark:text-white dark:hover:bg-teal-500 font-bold text-xs rounded-lg elev-xs transition-colors flex items-center gap-1.5"
               >
@@ -1490,6 +1501,15 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               </button>
             </div>
           </div>
+
+          {isImportQuestionsOpen && (
+            <ImportQuestionsModal
+              disciplines={disciplines}
+              themes={themes}
+              onClose={() => setIsImportQuestionsOpen(false)}
+              onImported={onRefreshData}
+            />
+          )}
 
           {/* Top Control Bar — busca (mesmo padrão da aba de Conteúdos) */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#0F172A] p-4 rounded-xl border border-stone-200 dark:border-[#243452] elev-xs">

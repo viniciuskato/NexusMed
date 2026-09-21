@@ -42,7 +42,8 @@ protótipo).
   do Admin vs. YAML, e o gate de revisão/atestação obrigatório antes de
   publicar: [`docs/editorial/PADRAO-NEXUSMED-CONTEUDOS.md`](docs/editorial/PADRAO-NEXUSMED-CONTEUDOS.md).
 - **Produzir questão comentada do zero até publicada** — formulário do
-  Admin (sem import de arquivo hoje, diferente de conteúdo), mesmo gate
+  Admin (unitário) ou import em lote por arquivo `.md` (botão "Importar
+  questões", RPC `import_question_draft`, desde 2026-09-21), mesmo gate
   de revisão/atestação por questão, e nota de direitos autorais de
   questão de banca real: [`docs/editorial/PADRAO-NEXUSMED-QUESTOES.md`](docs/editorial/PADRAO-NEXUSMED-QUESTOES.md).
 - **URL de produção**: `https://synapse-med-firebase-auth.vercel.app`
@@ -132,6 +133,16 @@ seção "Armadilhas já descobertas".
     (achado revisando visualmente um compêndio real). Ver
     [`INC-2026-002`](docs/operacao/incidents/INC-2026-002-safemarkdown-conteudo-real.md)
     e [`standards/conteudo-markdown-inline.md`](docs/operacao/standards/conteudo-markdown-inline.md).
+16. **Toda linha nova em `question_options` já ganha automaticamente uma
+    `question_option_keys` correspondente** via trigger
+    `trg_create_question_option_key` (`is_correct=false`, `explanation=''`,
+    ver `rls_policies.sql`) — uma função/script que insere a alternativa e
+    depois faz `INSERT` (em vez de `UPDATE`) em `question_option_keys` para
+    a mesma `option_id` viola a PK. `SupabaseQuestionsRepository.saveQuestion`
+    já usa `upsert` por isso; `import_question_draft` (migration
+    `20260921120000`) baixou a mesma armadilha durante o próprio
+    desenvolvimento, pego pelo gate pgTAP antes de publicar — use `UPDATE`
+    (ou `upsert`) sempre que uma RPC nova criar alternativas.
 
 ## Convenções de trabalho
 

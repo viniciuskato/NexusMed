@@ -33,6 +33,61 @@ git log --oneline -10 origin/main
 Qualquer hash citado neste documento é **baseline histórica de quando foi
 escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
 
+## Importação de questões em lote (2026-09-21) — implementado, não publicado
+
+- **Objetivo**: paridade de import entre questões e conteúdo — antes desta
+  entrega não existia NENHUM caminho de arquivo para questão (só o
+  formulário "Nova Questão"), pedido explícito do usuário depois de tentar
+  usar NotebookLM para levantar um lote de Espirometria e não ter para onde
+  levar o resultado.
+- **Impacto/arquivos**: novo parser puro `src/utils/questionsImport.ts`
+  (Markdown, lote com vários `## Questão N` por arquivo — diferente do
+  import de conteúdo, que é uma entidade só); nova migration
+  `supabase/migrations/20260921120000_import_question_draft.sql` (RPC
+  atômica `import_question_draft`, mesmo padrão de `import_compendium_draft`
+  da Missão 42-B); `QuestionsRepository`/`SupabaseQuestionsRepository` ganham
+  `importQuestionDraft` (remoto-antes-do-local, mesma regra de
+  `importCompendiumDraft`); novo componente
+  `src/components/admin/ImportQuestionsModal.tsx` (pré-visualização em
+  LISTA, cada questão do lote resolvida/bloqueada independentemente — nunca
+  tudo-ou-nada por arquivo) plugado na aba "Questões Comentadas"
+  (`AdminCMSView.tsx`) como botão "Importar questões". Decisão deliberada:
+  o import **não adivinha tema nem vínculo de compêndio** (exige escolha
+  manual quando ausente/não encontrado) — diferente do formulário unitário,
+  que adivinha os dois e já é uma limitação documentada; um palpite errado
+  multiplicado por um lote inteiro é pior que nenhum palpite.
+  `docs/editorial/PADRAO-NEXUSMED-QUESTOES.md` reescrita nas seções de
+  limitações/import; `AGENTS.md` ganhou o risco #16 (trigger
+  `trg_create_question_option_key` já insere a linha de gabarito — RPC nova
+  precisa de `UPDATE`, não `INSERT`, achado durante o próprio
+  desenvolvimento desta entrega).
+- **Ambiente tocado**: local (código) e Supabase **local** (migration
+  aplicada via `supabase db reset`, dados de teste só do próprio pgTAP).
+  Supabase remoto, `main` e produção **não tocados**.
+- **Evidência**: `npm run typecheck` limpo; `npm run lint` 0 erros/5
+  warnings (mesma baseline pré-existente, nenhum novo); `npx vitest run`
+  182/182 (20 arquivos), incluindo os 3 novos desta entrega
+  (`questionsImport.test.ts` 12, `questionsRepository.importQuestionDraft.test.ts`
+  3, `importQuestionsModal.test.tsx` 6); `supabase db reset` limpo + `npm run
+  test` (pgTAP) 315 asserções/12 arquivos, `Result: PASS`, incluindo o novo
+  `import_question_draft.test.sql` (23 asserções: bloqueio de
+  estudante/admin bloqueado, disciplina/tema incompatível ou inexistente,
+  ciclo/dificuldade inválidos, importação válida, validação de alternativas,
+  controle negativo de rollback integral, nenhuma `content_revisions`
+  criada); `npm run build` e `npm run check:no-debug-bundle` OK (0
+  ocorrências de debug).
+- **Não verificado nesta entrega**: `npm run test:e2e` (Playwright) não foi
+  executado — a cobertura desta entrega é pgTAP (RPC/segurança) + Vitest
+  (parser + repositório resiliente + wizard completo com repositório
+  mockado), sem um smoke em navegador real. Declarado aqui em vez de
+  presumido como coberto.
+- **Publicação**: branch local `feat/questoes-markdown-previa-busca-overflow`
+  (mesma branch da correção de Markdown/doc anterior desta sessão, ainda não
+  mesclada) — ver `TASKS.md` para o estado de push/PR. `main`/produção
+  inalterados; a migration nova **não foi aplicada no Supabase remoto**
+  (pré-requisito de publicação, RUNBOOK seção 3 — decisão/execução do
+  usuário).
+
 ## Auditoria técnica de 2026-09-18 — publicada
 
 PRs #1 a #8 mesclados e no ar em 2026-09-18; migrations `20260918120000`,
