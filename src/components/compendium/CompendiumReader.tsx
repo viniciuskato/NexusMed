@@ -682,38 +682,10 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
                 className="pb-10 border-b border-[#E2E8F0] dark:border-[#263244] last:border-b-0"
               >
                 {/* Section Sub-header */}
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
                   <span className="text-xs font-semibold uppercase tracking-wider text-[#0F766E] dark:text-[#14B8A6]">
                     {sec.mechanismTag || `Seção ${idx + 1}`}
                   </span>
-
-                  {/* Inline actions */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleCreateFlashcardFromSection(sec)}
-                      className="px-2 py-1 rounded-md text-xs font-medium text-[#64748B] dark:text-[#94A3B8] hover:bg-slate-100 dark:hover:bg-[#182235] flex items-center gap-1 cursor-pointer transition-colors"
-                      title="Gerar flashcard com os pontos desta seção"
-                    >
-                      <Layers className="w-3.5 h-3.5 text-[#0F766E] dark:text-[#14B8A6]" />
-                      <span className="hidden sm:inline">Gerar flashcard</span>
-                    </button>
-
-                    <button
-                      onClick={() => handleToggleRead(sec.id)}
-                      className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
-                        isRead
-                          ? 'bg-teal-50 dark:bg-teal-950/40 text-[#0F766E] dark:text-[#14B8A6]'
-                          : 'text-[#64748B] dark:text-[#94A3B8] hover:bg-slate-100 dark:hover:bg-[#182235]'
-                      }`}
-                    >
-                      <CheckCircle2
-                        className={`w-3.5 h-3.5 ${
-                          isRead ? 'text-teal-600 dark:text-teal-400' : 'text-[#94A3B8]'
-                        }`}
-                      />
-                      <span>{isRead ? 'Lida' : 'Marcar lida'}</span>
-                    </button>
-                  </div>
                 </div>
 
                 {/* Section Title */}
@@ -788,6 +760,38 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
                     </div>
                   </div>
                 )}
+
+                {/* Section actions belong after the section has been read */}
+                <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    aria-label="Gerar flashcard"
+                    onClick={() => handleCreateFlashcardFromSection(sec)}
+                    className="px-2 py-1 rounded-md text-xs font-medium text-[#64748B] dark:text-[#94A3B8] hover:bg-slate-100 dark:hover:bg-[#182235] flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Gerar flashcard com os pontos desta seção"
+                  >
+                    <Layers className="w-3.5 h-3.5 text-[#0F766E] dark:text-[#14B8A6]" />
+                    <span className="hidden sm:inline">Gerar flashcard</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    aria-pressed={isRead}
+                    onClick={() => handleToggleRead(sec.id)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
+                      isRead
+                        ? 'bg-teal-50 dark:bg-teal-950/40 text-[#0F766E] dark:text-[#14B8A6]'
+                        : 'text-[#64748B] dark:text-[#94A3B8] hover:bg-slate-100 dark:hover:bg-[#182235]'
+                    }`}
+                  >
+                    <CheckCircle2
+                      className={`w-3.5 h-3.5 ${
+                        isRead ? 'text-teal-600 dark:text-teal-400' : 'text-[#94A3B8]'
+                      }`}
+                    />
+                    <span>{isRead ? 'Lida' : 'Marcar lida'}</span>
+                  </button>
+                </div>
               </section>
             );
           })}
