@@ -126,7 +126,9 @@ describe('ImportQuestionsModal', () => {
     await selectFile(makeMarkdownFile(validBatch));
     await waitFor(() => screen.getByText(/2 questão\(ões\) encontrada\(s\)/i));
 
-    const themeSelect = screen.getByDisplayValue(/"não encontrado" — selecione um|selecione/i, { selector: 'select' });
+    // Questão 1 já vem com disciplina/tema resolvidos (texto simples); só a
+    // Questão 2 (sem "Tema:" no arquivo) renderiza um <select> — único combobox da tela.
+    const themeSelect = screen.getByRole('combobox');
     fireEvent.change(themeSelect, { target: { value: 'tema-espirometria' } });
 
     await waitFor(() => expect(screen.getAllByText('Pronta')).toHaveLength(2));
