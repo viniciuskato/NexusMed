@@ -77,7 +77,7 @@ function buildSession(
     const ans = allAnswers.find((a) => a.simulation_question_id === sq.id);
     if (ans) {
       answers[sq.question_id] = {
-        selectedOption: (letterById.get(ans.selected_option_id) ?? 'A') as 'A' | 'B' | 'C' | 'D' | 'E',
+        selectedOption: letterById.get(ans.selected_option_id) ?? 'A',
         timeSpent: ans.time_spent_seconds,
       };
     }

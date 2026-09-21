@@ -129,7 +129,14 @@ export interface Compendium {
 }
 
 export interface QuestionOption {
-  letter: 'A' | 'B' | 'C' | 'D' | 'E';
+  /**
+   * Letra da alternativa (A, B, C, ...). Sem limite fixo de alfabeto — uma
+   * questão pode ter quantas alternativas a prova de origem tiver (o
+   * cadastro unitário do Admin continua fixo em A-D, mas o import de lote e
+   * o resto do app não impõem teto nenhum, ver
+   * docs/editorial/PADRAO-NEXUSMED-QUESTOES.md).
+   */
+  letter: string;
   text: string;
   isCorrect: boolean;
   explanation: string;
@@ -213,7 +220,7 @@ export type AppView =
 
 export interface QuestionAnswerRecord {
   questionId: string;
-  selectedOption: 'A' | 'B' | 'C' | 'D' | 'E';
+  selectedOption: string;
   isCorrect: boolean;
   timestamp: string;
   timeSpentSeconds: number;
@@ -229,7 +236,7 @@ export interface QuestionAnswerRecord {
 // têm policy de leitura para estudante (ver rls_policies.sql).
 export interface QuestionReviewOption {
   optionId: string;
-  letter: 'A' | 'B' | 'C' | 'D' | 'E';
+  letter: string;
   isCorrect: boolean;
   explanation: string;
 }
@@ -274,7 +281,7 @@ export interface SimuladoSessionData {
   id: string;
   config: SimuladoConfig;
   questionIds: string[];
-  answers: Record<string, { selectedOption: 'A' | 'B' | 'C' | 'D' | 'E'; timeSpent: number }>;
+  answers: Record<string, { selectedOption: string; timeSpent: number }>;
   startedAt: string;
   completedAt?: string;
   score?: number;

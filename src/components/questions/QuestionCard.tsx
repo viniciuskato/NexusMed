@@ -32,8 +32,8 @@ interface QuestionCardProps {
   onOpenCompendium: (compendiumId?: string, sectionId?: string, originQuestionId?: string) => void;
   onAnswerRecorded?: (record: QuestionAnswerRecord) => void;
   isExamMode?: boolean;
-  selectedOptionInExam?: 'A' | 'B' | 'C' | 'D' | 'E';
-  onSelectOptionInExam?: (opt: 'A' | 'B' | 'C' | 'D' | 'E') => void;
+  selectedOptionInExam?: string;
+  onSelectOptionInExam?: (opt: string) => void;
   /**
    * Resposta/favorito/reação já resolvidos em lote pelo componente pai (ex.:
    * <QuestionsView>, que busca os três de uma vez para TODOS os cartões
@@ -64,7 +64,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   hydrated,
 }) => {
   // Local state for study mode
-  const [selectedOption, setSelectedOption] = useState<'A' | 'B' | 'C' | 'D' | 'E' | null>(
+  const [selectedOption, setSelectedOption] = useState<string | null>(
     selectedOptionInExam || null
   );
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
@@ -257,7 +257,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   // Deps reais e completas: isSubmitted/isExamMode/onSelectOptionInExam são
   // exatamente os valores lidos pelo corpo da função.
   const handleSelectOption = useCallback(
-    (letter: 'A' | 'B' | 'C' | 'D' | 'E') => {
+    (letter: string) => {
       if (isSubmitted) return;
       if (isExamMode) {
         if (onSelectOptionInExam) onSelectOptionInExam(letter);
@@ -278,13 +278,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       if (tag === 'input' || tag === 'textarea') return;
 
       const key = e.key.toUpperCase();
-      if (['A', 'B', 'C', 'D', 'E'].includes(key)) {
-        const letter = key as 'A' | 'B' | 'C' | 'D' | 'E';
-        // Verifica se a questão possui essa opção
-        if (question.options.some((o) => o.letter === letter)) {
-          e.preventDefault();
-          handleSelectOption(letter);
-        }
+      // Sem lista fixa de letras (A-E): qualquer tecla de letra única que
+      // corresponda a uma alternativa REAL desta questão funciona como
+      // atalho — cobre questões com mais de 5 alternativas sem precisar
+      // hardcodear o alfabeto aqui.
+      if (/^[A-Z]$/.test(key) && question.options.some((o) => o.letter === key)) {
+        e.preventDefault();
+        handleSelectOption(key);
       } else if (e.key === 'Enter' && selectedOption && !isSubmitted && !isExamMode) {
         e.preventDefault();
         handleConfirmAnswer();

@@ -174,4 +174,38 @@ describe('QuestionCard - atalhos de teclado sobrevivem a rerender (41-B)', () =>
     expect(onSelectNew).toHaveBeenCalledWith('C');
     expect(onSelectOld).not.toHaveBeenCalled();
   });
+
+  it('atalho de letra funciona além de A-E (sem teto hardcoded) e ignora letra que a questão não tem', () => {
+    const questionWithSixOptions: Question = {
+      ...baseQuestion,
+      options: [
+        ...baseQuestion.options,
+        { letter: 'D', text: 'Alternativa D', isCorrect: false, explanation: '' },
+        { letter: 'E', text: 'Alternativa E', isCorrect: false, explanation: '' },
+        { letter: 'F', text: 'Alternativa F', isCorrect: false, explanation: '' },
+      ],
+    };
+    const onSelect = vi.fn();
+
+    const { container } = render(
+      <QuestionCard
+        question={questionWithSixOptions}
+        onOpenCompendium={() => {}}
+        isExamMode
+        onSelectOptionInExam={onSelect}
+        hydrated={{ answer: null, bookmarked: false, reaction: null }}
+      />
+    );
+
+    const card = container.querySelector(`#question-${questionWithSixOptions.id}`) as HTMLElement;
+    fireEvent.mouseEnter(card);
+
+    // F existe nesta questão (a 6ª alternativa, além do antigo teto A-E).
+    fireEvent.keyDown(window, { key: 'f' });
+    expect(onSelect).toHaveBeenCalledWith('F');
+
+    // Z não existe nesta questão — não deve disparar seleção nenhuma.
+    fireEvent.keyDown(window, { key: 'z' });
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  });
 });

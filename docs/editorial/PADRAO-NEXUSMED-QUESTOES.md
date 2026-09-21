@@ -9,6 +9,17 @@ diferenças reais que valem a pena conhecer antes de cadastrar um lote,
 porque hoje não existem tantas redes de segurança quanto no fluxo de
 conteúdo.
 
+**Escopo deste guia**: cadastrar/importar questões que **já existem**
+— provas de residência reais, questões de banca, lotes levantados com
+uma IA de fontes (NotebookLM e similares) a partir de material já
+publicado por uma instituição. Não é um guia para **autorar** uma
+questão original do zero (enunciado e alternativas inventados, sem
+prova de origem) — isso muda a seção de direitos autorais no fim deste
+guia e o próprio nível de rigor esperado no claim de revisão (Passo 2,
+que hoje atesta "correspondência com a prova de origem"). A criação de
+questão autoral vai ganhar um documento próprio no futuro; até lá, uma
+questão sem prova de origem real está fora do escopo deste guia.
+
 **Fluxo completo, em 4 passos:**
 
 1. Cadastrar a questão — pelo formulário do Admin (unitário) **ou
@@ -65,10 +76,14 @@ que continua exatamente assim. O importador em lote descrito logo
 adiante fecha várias dessas lacunas — cada bullet abaixo diz
 explicitamente se o import resolve ou não.
 
-- **Só 4 alternativas (A–D).** O modelo de dados aceita uma 5ª
-  (`E`), mas o formulário de hoje nunca monta essa opção — não tem
-  como cadastrar uma questão de 5 alternativas por aqui. **Resolvido no
-  import**: o arquivo aceita `**E)**` opcional.
+- **Só 4 alternativas (A–D).** O formulário de hoje nunca monta um 5º
+  campo (ou mais) — não tem como cadastrar uma questão com mais de 4
+  alternativas por aqui. **Resolvido no import, sem teto nenhum**: o
+  arquivo aceita `**E)**`, `**F)**`, `**G)**`... — quantas alternativas
+  a prova de origem tiver, na ordem em que aparecem no arquivo (não
+  reordenadas alfabeticamente). O banco (`question_options.letter`) só
+  exige que a letra seja maiúscula — não existe mais um limite fixo em
+  `E` em lugar nenhum do fluxo de import.
 - **Sem campo de "Comentário Geral".** O banco exige um
   `general_commentary` preenchido para publicar, mas o formulário não
   tem campo para ele — grava um texto fixo genérico
@@ -189,8 +204,10 @@ Texto da pergunta...
 **Explicação C:** ...
 **D)** Texto da alternativa D
 **Explicação D:** ...
-**E)** Texto da alternativa E (opcional — a 5ª alternativa que o cadastro unitário não permite)
+**E)** Texto da alternativa E (opcional — além do que o cadastro unitário permite)
 **Explicação E:** ...
+**F)** Texto da alternativa F (opcional — sem teto: F, G, H... também funcionam se a prova de origem tiver)
+**Explicação F:** ...
 
 **Comentário Geral:** (opcional — sem isto, grava o mesmo texto genérico de sempre)
 **Pérola High-Yield:** Frase de fixação rápida...
@@ -201,9 +218,12 @@ Texto da pergunta...
 
 Exatamente **uma** alternativa precisa do marcador `[GABARITO]` colado
 no fim do texto da alternativa (`**B)** Texto [GABARITO]`) — nem zero,
-nem duas. A ordem das alternativas no arquivo é a ordem final; letras
-`A`–`E` são aceitas em qualquer combinação, mas cada questão precisa de
-pelo menos 2 com texto preenchido.
+nem duas. A ordem das alternativas no arquivo é a ordem final (não uma
+reordenação alfabética — uma prova que não numera A,B,C... em sequência
+continua fiel ao original); letras `A` em diante são aceitas em
+qualquer combinação e **sem teto de quantidade** (a prova de origem
+manda, não este importador), mas cada questão precisa de pelo menos 2
+alternativas com texto preenchido.
 
 Ao escolher o arquivo, a tela mostra uma **lista** (não uma única
 pré-visualização, porque cada questão do lote é uma linha independente
@@ -232,6 +252,26 @@ numa única transação atômica (mesmo padrão de `import_compendium_draft`
 usado pelo import de conteúdo): ou grava tudo, ou não grava nada
 daquela questão. Uma falha numa linha do lote é reportada isoladamente
 ao final ("N de M rascunhos criados") — não derruba as demais.
+
+**Erro comum: "Could not find the function ... in the schema cache"
+em TODAS as linhas do lote.** Isto não é um problema do arquivo `.md`
+— é o ambiente Supabase que a tela está usando não ter a função
+`import_question_draft()` (ou `question_options.letter` sem o suporte
+a mais de 5 alternativas — migrations
+`20260921120000_import_question_draft.sql` e
+`20260921130000_question_options_letter_unbounded.sql`). Isso acontece
+sempre que a migration foi aplicada só no Supabase **local**
+(`supabase db reset`) e a tela testada está apontando para o Supabase
+**remoto** — o caso mais comum é rodar `npm run build` +
+`vite preview` (ou abrir um build de produção) localmente: sem um
+`.env.production*`, o build de produção usa `VITE_SUPABASE_URL` de
+`.env.local`, que aponta pro remoto por padrão (`AGENTS.md`, risco #4).
+`npm run dev` já usa o Supabase local (`.env.development.local`) e não
+sofre disso. O sistema já reconhece esse erro específico (código
+PostgREST `PGRST202`) e troca a mensagem crua por uma que explica a
+causa provável e o que fazer — ver `src/utils/errorMessage.ts`. A
+correção real é aplicar a migration pendente no ambiente que faltou
+(RUNBOOK seção 3), nunca reinterpretar isso como erro no arquivo.
 
 Existe também um script interno (`scripts/load-questoes.ts`) que
 carrega um lote muito grande a partir de um JSON num formato próprio
