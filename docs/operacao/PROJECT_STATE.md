@@ -33,7 +33,7 @@ git log --oneline -10 origin/main
 Qualquer hash citado neste documento é **baseline histórica de quando foi
 escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
 
-## Filtro de status (Todas/Publicadas/Não publicadas) em Questões Comentadas (2026-09-21) — implementado, não publicado
+## Filtro de status (Todas/Publicadas/Não publicadas) em Questões Comentadas (2026-09-21) — commitado (`e379cba`), não publicado
 
 - **Objetivo**: pedido explícito do usuário — a listagem de "Questões
   Comentadas" no Admin misturava questões publicadas e em rascunho, só
@@ -64,6 +64,51 @@ escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
 - **Não verificado nesta entrega**: smoke manual em produção (a mudança é
   só frontend, sem risco de schema, mas ainda não foi vista pelo usuário
   na tela real).
+- **Publicação**: commitado em `e379cba`, mesma branch local
+  `feat/questoes-markdown-previa-busca-overflow`, ainda não mesclada.
+  **Estendido para Conteúdos & Mecanismos e para Usuários** na entrega
+  seguinte — ver seção abaixo.
+
+## Filtro de status estendido para Conteúdos & Mecanismos e Usuários (2026-09-21) — implementado, não commitado
+
+- **Objetivo**: pedido explícito do usuário, depois de ver o filtro acima
+  em Questões Comentadas — "faça isso para conteúdos também" + "veja se
+  essa função pode ser útil em outro lugar e já aplique". Mesmo problema
+  (itens publicados/rascunho, ou pendente/ativo/bloqueado, misturados numa
+  única lista, só distinguíveis pelo selo de cada linha) existia em dois
+  outros lugares do Admin.
+- **Impacto/arquivos**: `src/components/admin/AdminCMSView.tsx`.
+  - **Conteúdos & Mecanismos**: réplica exata do padrão de Questões —
+    estado persistido `compStatusFilter` (`usePersistedState`, mesma chave
+    `admin_comp_status_filter`), `filteredCompendiums` agora combina esse
+    filtro com a busca por texto já existente, três botões
+    ("Todos"/"Publicados"/"Não publicados", com contagem) e o contador "N
+    de M conteúdos". A aba ganhou também um bloco de cabeçalho (título +
+    descrição + os 3 botões de ação) igual ao de Questões — antes a aba
+    não tinha esse cabeçalho, só a barra de busca+botões numa linha só.
+  - **Usuários**: `profileStatusFilter` (`useState` simples, sem persistir
+    — segue o padrão já existente de `feedbackFilter` na aba Feedback, não
+    o de busca persistida) com 4 estados (`todos`/`pendentes`/`ativos`/
+    `bloqueados`); `filteredProfiles` filtra a lista antes de renderizar;
+    segmented control igual ao já usado em Feedback, ao lado do botão
+    "Atualizar" no cabeçalho da aba.
+  - Flashcards e Feedback não foram tocados: flashcards não têm campo de
+    status/publicação (nada a separar); Feedback já tinha esse exato
+    padrão de filtro (Todos/Pendentes/Resolvidos) antes desta entrega.
+- **Ambiente tocado**: só local (código React puro, sem migration nem RPC
+  nova — filtra arrays já carregados, não faz nenhuma query nova).
+- **Evidência**: `tsc --noEmit` e `npm run lint` limpos; novo teste E2E
+  `tests/e2e/specs/admin-conteudos-filtro-status.spec.ts` (mesmo desenho
+  do de Questões — 3 fixtures em `materials` via SQL direto, 2 publicadas +
+  1 rascunho) — 1/1 contra Supabase local, rodado 3x seguidas (incluindo
+  junto com `admin-questoes-filtro-status.spec.ts` e
+  `provenance-attestation-23b.spec.ts`) sem flakiness; resíduo de fixtures
+  confirmado zero após o teste. Filtro de Usuários não ganhou E2E dedicado
+  nesta entrega (sem fixture de perfil pendente/bloqueado pronta nos
+  helpers de teste) — verificado só por leitura do componente
+  (`filteredProfiles` e os 4 botões) e pelos gates de tipo/lint.
+- **Não verificado nesta entrega**: smoke manual em produção; E2E do
+  filtro de Usuários.
 - **Publicação**: mesma branch local `feat/questoes-markdown-previa-busca-
   overflow`, ainda não commitada nem mesclada.
 
