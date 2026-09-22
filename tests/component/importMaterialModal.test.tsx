@@ -14,9 +14,11 @@ import type { Compendium, Discipline, Theme } from '../../src/types';
 // antes de confirmar -> nenhuma gravação.
 
 const importCompendiumDraftMock = vi.fn().mockImplementation((c: unknown) => Promise.resolve(c));
+const saveThemesMock = vi.fn().mockResolvedValue(undefined);
 vi.mock('../../src/repositories/MaterialsRepository', () => ({
   materialsRepository: {
     importCompendiumDraft: (...args: unknown[]) => importCompendiumDraftMock(...args),
+    saveThemes: (...args: unknown[]) => saveThemesMock(...args),
   },
 }));
 
@@ -82,6 +84,7 @@ async function selectFile(file: File) {
 afterEach(() => {
   cleanup();
   importCompendiumDraftMock.mockClear();
+  saveThemesMock.mockClear();
 });
 
 describe('ImportMaterialModal', () => {
@@ -246,5 +249,47 @@ Texto da seção.
     await waitFor(() => screen.getByText(/não foi possível salvar o rascunho agora/i));
     expect(screen.queryByText(/criado com sucesso/i)).toBeNull();
     expect(onImported).not.toHaveBeenCalled();
+  });
+
+  it('cria um tema novo pelo "+ Criar novo tema..." quando o tema do arquivo não bate com o catálogo', async () => {
+    const onImported = vi.fn();
+    const yamlComTemaInexistente = validYaml.replace('themeName: Clínica', 'themeName: Endocardite Infecciosa');
+    render(
+      <ImportMaterialModal
+        disciplines={[discipline]}
+        themes={[theme]}
+        compendiums={[]}
+        onClose={vi.fn()}
+        onImported={onImported}
+      />
+    );
+
+    await selectFile(makeYamlFile(yamlComTemaInexistente));
+    await waitFor(() => screen.getByText('Meningite Bacteriana Aguda'));
+    expect(screen.getByTestId('import-missing-fields-panel').textContent).toMatch(/Endocardite Infecciosa/);
+
+    const themeSelect = screen.getByTestId('import-theme-override-select');
+    fireEvent.change(themeSelect, { target: { value: '__create_new_theme__' } });
+
+    await waitFor(() => screen.getByTestId('create-theme-modal'));
+    fireEvent.change(screen.getByLabelText(/nome do tema/i), { target: { value: 'Endocardite Infecciosa' } });
+    fireEvent.click(screen.getByRole('button', { name: /^criar tema$/i }));
+
+    await waitFor(() => expect(saveThemesMock).toHaveBeenCalledTimes(1));
+    const savedThemes = saveThemesMock.mock.calls[0][0] as Theme[];
+    expect(savedThemes).toHaveLength(2);
+    const newTheme = savedThemes.find((t) => t.name === 'Endocardite Infecciosa');
+    expect(newTheme?.disciplineId).toBe('disc-infecto');
+
+    // Modal de criação fecha e a pré-visualização já mostra o tema recém-criado selecionado.
+    await waitFor(() => expect(screen.queryByTestId('create-theme-modal')).toBeNull());
+    expect(screen.getByText('Endocardite Infecciosa')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /salvar rascunho/i }));
+
+    await waitFor(() => expect(importCompendiumDraftMock).toHaveBeenCalledTimes(1));
+    const saved = importCompendiumDraftMock.mock.calls[0][0] as Compendium;
+    expect(saved.themeId).toBe(newTheme?.id);
+    expect(onImported).toHaveBeenCalledTimes(1);
   });
 });
