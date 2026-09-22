@@ -84,7 +84,7 @@ test.describe('Admin — filtro de status (Todos/Publicados/Não publicados) em 
 
     // Restringe a lista às 3 fixtures desta suíte via a busca já existente,
     // para o filtro de status ser a única variável sob teste.
-    await page.getByPlaceholder('Buscar por título, subtítulo ou tag...').fill(TITLE_PREFIX);
+    await page.getByPlaceholder('Buscar por título, subtítulo, tag ou conteúdo...').fill(TITLE_PREFIX);
 
     const rowPublished1 = page.locator(`[data-compendium-row-id="${publishedId1}"]`);
     const rowPublished2 = page.locator(`[data-compendium-row-id="${publishedId2}"]`);

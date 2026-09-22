@@ -6,6 +6,38 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-22 — `work/integracao-estabilizacao-11b` fica pendente de decisão, não é lixo de repositório
+
+Auditoria de organização do repositório (limpeza de branches locais/remotas
+já mescladas) encontrou duas branches antigas (2026-09-11) nunca mescladas
+em `main`. Investigação decidiu o destino de cada uma de forma diferente:
+
+- **`work/carga-conteudo-nativo-yaml`** (carga de questões via YAML nativo
+  com `institution`/`year`, script `scripts/load-native-content.ts`) foi
+  **apagada** (local e remota) — confirmado que a RPC `import_question_draft`
+  (migration `20260921120000`, botão "Importar questões" do Admin) já cobre
+  `institution`/`year` por outro caminho, mais integrado. Superada de fato,
+  não por suposição.
+- **`work/integracao-estabilizacao-11b`** ("11-B2") **continua existindo, de
+  propósito.** Contém um fix real de deduplicação de SRS de flashcard
+  (migration `flashcard_srs_unique_creation` + RPC), documentado em
+  `docs/diretoria/registro.md` (seção "Achado em produção... 2026-09-11") como
+  deliberadamente não mesclado porque depende de uma "reconciliação de
+  duplicata remota" (Prompt 11-C) que nunca foi concluída. Só o sintoma mais
+  estreito (id de flashcard automático não-uuid) foi extraído e publicado à
+  parte como `hotfix/flashcard-auto-uuid`; a correção completa de
+  deduplicação segue represada.
+
+**Como aplicar**: não tratar `work/integracao-estabilizacao-11b` como
+branch órfã em futuras limpezas de repositório até uma sessão de diretoria
+escolher explicitamente entre (a) destravar o Prompt 11-C e mergear a
+correção completa, ou (b) confirmar que o bug de duplicata deixou de ser
+reproduzível/relevante e só então apagar a branch, registrando isso aqui.
+Repositório limpo não é o mesmo que decisão tomada — a ausência de decisão
+não deve ser resolvida silenciosamente apagando a evidência do problema.
+
+---
+
 ## 2026-09-18 — Mudança entra em `main` só por Pull Request com CI verde
 
 Auditoria de 2026-09-18: o CI do `main` estava vermelho havia vários

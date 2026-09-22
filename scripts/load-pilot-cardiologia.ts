@@ -89,7 +89,7 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 });
 
 const ONEDRIVE = 'C:\\Users\\vinic\\OneDrive';
-const PILOT_JSON_PATH = path.resolve(__dirname, '..', '_pilot-cardiologia.json.txt');
+const PILOT_JSON_PATH = path.resolve(__dirname, '_pilot-cardiologia.json.txt');
 const BANCO_DIR = path.join(ONEDRIVE, 'Questões', '_banco');
 
 // ----------------------------------------------------------------------------

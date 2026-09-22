@@ -248,6 +248,16 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     'admin_comp_status_filter',
     'all'
   );
+  // Filtro por disciplina da listagem de conteúdos — complementa a busca por
+  // texto (que já cobre título/subtítulo/tag) com um recorte por categoria
+  // estruturada, para achar materiais sem precisar adivinhar a palavra exata
+  // usada no título/tag (ex.: "Antimicrobianos" com tags "MRSA"/
+  // "Betalactâmicos" não aparece buscando "antibiótico" só por metadado —
+  // por isso a busca abaixo também passou a vasculhar o conteúdo das seções).
+  const [compDisciplineFilter, setCompDisciplineFilter] = usePersistedState<string>(
+    'admin_comp_discipline_filter',
+    'all'
+  );
   // Editor de seção (piloto CMS) — guarda só o id, não o objeto Compendium,
   // para que o SectionEditor sempre receba a versão mais recente vinda de
   // onRefreshData (ver AGENTS.md / plano da feature).
@@ -701,7 +711,12 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   // Filtered compendiums — mesmo critério de status da listagem de questões
   // (filteredQuestions), adaptado aos campos do compêndio. "unpublished"
   // cobre draft e archived juntos, mesmo agrupamento que o selo do card já
-  // usa ("publicado" vs "rascunho").
+  // usa ("publicado" vs "rascunho"). Busca cobre título/subtítulo/tag E o
+  // conteúdo de cada seção (texto, pontos-chave, pérola clínica, alerta,
+  // consenso de prova) — sem isso, um material só era achável pela palavra
+  // exata usada no título/tag, mesmo com o termo buscado espalhado pelo
+  // corpo do texto (achado real: "antibiótico" não batia em nenhum metadado
+  // do material "Mecanismos Moleculares de Antimicrobianos & Resistência").
   const filteredCompendiums = compendiums.filter((c) => {
     const matchesStatus =
       compStatusFilter === 'all' ||
@@ -709,12 +724,18 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
         ? c.publicationStatus === 'published'
         : c.publicationStatus !== 'published');
     if (!matchesStatus) return false;
+    if (compDisciplineFilter !== 'all' && c.disciplineId !== compDisciplineFilter) return false;
     if (!compSearch.trim()) return true;
     const q = compSearch.toLowerCase();
-    return (
+    const matchesMetadata =
       c.title.toLowerCase().includes(q) ||
       c.subtitle.toLowerCase().includes(q) ||
-      c.tags?.some((t) => t.toLowerCase().includes(q))
+      c.tags?.some((t) => t.toLowerCase().includes(q));
+    if (matchesMetadata) return true;
+    return c.sections.some((s) =>
+      [s.title, s.mechanismTag, s.content, s.clinicalPearl, s.warningAlert, s.examConsensus, ...s.keyTakeaways]
+        .filter((field): field is string => Boolean(field))
+        .some((field) => field.toLowerCase().includes(q))
     );
   });
 
@@ -908,8 +929,8 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
             </div>
           </div>
 
-          {/* Top Control Bar — busca + filtro de status (mesmo padrão da aba
-              de Questões) */}
+          {/* Top Control Bar — busca + seletor de disciplina + filtro de
+              status (mesmo padrão da aba de Questões) */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#0F172A] p-4 rounded-xl border border-stone-200 dark:border-[#243452] elev-xs">
             <div className="relative flex-1 max-w-md">
               <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
@@ -917,10 +938,24 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                 type="text"
                 value={compSearch}
                 onChange={(e) => setCompSearch(e.target.value)}
-                placeholder="Buscar por título, subtítulo ou tag..."
+                placeholder="Buscar por título, subtítulo, tag ou conteúdo..."
                 className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
               />
             </div>
+
+            <select
+              value={compDisciplineFilter}
+              onChange={(e) => setCompDisciplineFilter(e.target.value)}
+              aria-label="Filtrar por disciplina"
+              className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
+            >
+              <option value="all">Todas as disciplinas</option>
+              {disciplines.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
 
             <div className="flex items-center gap-1.5 shrink-0" role="group" aria-label="Filtrar por status de publicação">
               {(

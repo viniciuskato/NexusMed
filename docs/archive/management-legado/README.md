@@ -1,4 +1,14 @@
-# NexusMed — memória Git da diretoria
+# NexusMed — memória Git da diretoria (ARQUIVADO)
+
+> **Arquivado em 2026-09-21.** Este era um sistema de acompanhamento de
+> diretoria paralelo, parado desde 2026-09-12. O fluxo atual de estado,
+> decisões e fila de trabalho vive em
+> [`docs/operacao/`](../../operacao/) e
+> [`docs/diretoria/`](../../diretoria/) — ver
+> [`AGENTS.md`](../../../AGENTS.md). O texto abaixo é histórico e cita um
+> caminho de repositório (`...\NexusMed\firebase-auth`) que não existe
+> mais na estrutura atual; preservado sem edição por ser registro do que
+> foi, não do que é.
 
 Este repositório é o plano de controle do projeto. O código continua em `C:\Users\vinic\dev\NexusMed\firebase-auth`; aqui ficam decisões, despachos, retornos e verificações entre sessões.
 

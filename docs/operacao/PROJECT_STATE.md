@@ -33,6 +33,51 @@ git log --oneline -10 origin/main
 Qualquer hash citado neste documento é **baseline histórica de quando foi
 escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
 
+## Criar Tema direto na UI do Admin (2026-09-22) — PR #55 mesclado em `main` (`88a0fb7`)
+
+- **Objetivo**: usuário tentou importar um compêndio de Endocardite e o
+  catálogo de Cardiologia não tinha tema correspondente; não havia nenhuma
+  tela para criar um novo (só `insert` SQL direto, ver precedente
+  "Distúrbio Acidobásico"/Nefrologia em `docs/diretoria/registro.md`).
+- **Impacto/arquivos**: novo `src/components/admin/CreateThemeModal.tsx`
+  (nome, descrição, disciplina, high-yield; bloqueia nome duplicado na
+  mesma disciplina; chama `materialsRepository.saveThemes`). Opção "+
+  Criar novo tema..." adicionada ao dropdown de Tema em dois pontos:
+  formulário manual "Novo Conteúdo/Mecanismo" (`AdminCMSView.tsx`) e wizard
+  "Importar material" (`ImportMaterialModal.tsx` — este último mescla o
+  tema recém-criado numa cópia local antes do refresh do catálogo global,
+  pra já vir selecionável/selecionado sem esperar round-trip).
+- **Ambiente tocado**: só frontend. Nenhuma migration nova — a RLS
+  `themes_admin_write` (migration `20260903120100`) já liberava escrita
+  para admin ativo; a lacuna era 100% de UI (nenhuma tela chamava
+  `materialsRepository.saveThemes` antes disso).
+- **Risco**: baixo — feature aditiva, sem tocar fluxo existente de leitura
+  de temas; validação de nome duplicado por disciplina evita poluir o
+  catálogo com temas redundantes por erro de digitação.
+- **Evidência**: `tsc --noEmit` limpo; `eslint` limpo nos arquivos tocados;
+  `npm run build` OK; `vitest run tests/component/importMaterialModal.test.tsx`
+  7/7 (6 pré-existentes + 1 novo cobrindo exatamente o cenário reportado:
+  tema do arquivo não encontrado → "+ Criar novo tema..." → preenche nome
+  → salva → tema aparece selecionado na pré-visualização → "Salvar
+  rascunho" grava com o novo `themeId`).
+- **Publicação**: commit isolado (`d2d1358`) construído num worktree à
+  parte a partir de `origin/main`, pois o checkout principal tinha ~80
+  arquivos de uma reorganização de `management/` de outra sessão já
+  staged no mesmo diretório — evitado misturar os dois. PR #55 aberto e
+  mesclado pelo usuário; `main`/`origin/main` = `88a0fb7`. Deploy
+  automático via Vercel (não confirmado por smoke test nesta sessão).
+- **Não verificado nesta entrega**: QA visual manual em produção do botão
+  "+ Criar novo tema..." (só testes automatizados + revisão de código).
+- **Nota operacional**: esta sessão encontrou o repositório com ~24 outras
+  sessões Claude Code no mesmo projeto (todas ociosas no momento da
+  checagem) e uma reorganização de repositório em andamento por outra
+  sessão concorrente (commit `6a511f8`/`chore(repo): organiza raiz...`,
+  seguido de `0ba247c`/`docs(operacao): registra decisão pendente sobre
+  work/integracao-estabilizacao-11b`, ambos na mesma branch
+  `feat/questoes-markdown-previa-busca-overflow`, sem PR aberto ainda no
+  fim desta sessão). Não investigado a fundo nem mesclado por esta sessão
+  — fora do escopo do pedido original do usuário.
+
 ## Filtro de status (Todas/Publicadas/Não publicadas) em Questões Comentadas (2026-09-21) — commitado (`e379cba`), não publicado
 
 - **Objetivo**: pedido explícito do usuário — a listagem de "Questões

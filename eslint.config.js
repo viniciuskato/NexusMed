@@ -21,7 +21,7 @@ export default tseslint.config(
       'playwright-report/**',
       'test-results/**',
       '.claude/**',
-      'management/**',
+      'docs/archive/management-legado/**',
     ],
   },
   js.configs.recommended,
