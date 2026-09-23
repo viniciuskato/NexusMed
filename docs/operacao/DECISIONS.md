@@ -6,6 +6,73 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-22 (revisão) — A árvore é amarrada por disciplina, e o hash de atestação não cobre navegação
+
+Revisa a entrada abaixo, do mesmo dia, depois de medir a fundação contra o
+Supabase local. Três regras dela não sobreviveram ao teste:
+
+1. **Pai e filho compartilham a disciplina, não o tema.** Exigir o tema
+   congelava cada ramo no tema em que nasceu: mover o pai primeiro, o filho
+   primeiro ou os dois no mesmo `UPDATE` falhavam todos, e a única saída era
+   destacar os filhos, mover e reanexar — com a árvore quebrada na tela do
+   estudante no meio do processo.
+2. **O hash de atestação cobre conteúdo, nunca posição nem ligação.** Com
+   navegação dentro do snapshot, um link `related` criado em C invalidava a
+   revisão aprovada de A (o link é simétrico e aparece nos dois snapshots) e
+   reordenar irmãos invalidava a do próprio material. Pior: como
+   `create_content_revision` não herda claims, a revisão nova nascia com zero
+   claims e era aprovável sem nenhuma verificação — o gate científico viraria
+   carimbo justamente no fluxo mais frequente do produto. Quem garante a
+   integridade da árvore são os gates de `publish_material`/`unpublish_material`,
+   que checam o estado real.
+3. **Um par de materiais tem no máximo uma relação, e ancestral nunca é
+   pré-requisito.** `prerequisite` e `related` coexistiam no mesmo par (o
+   estudante veria o mesmo material em "Estude antes" e em "Veja também"), e o
+   catálogo do piloto cadastrava o próprio pai como "Estude antes" — informação
+   que a trilha de navegação já dá.
+
+Decisões novas da mesma revisão: a árvore tem teto de **8 níveis**; `materials`
+ganha `nav_short_title` (rótulo curto de trilha, separado do título editorial) e
+`taxonomy_kind` (nível do nó); mover um material passa pela RPC
+`set_material_position`, sem reescrever conteúdo.
+
+**Por quê**: a fundação foi revisada antes de produzir conteúdo, não depois. As
+três regras revistas só apareceriam como atrito editorial quando já houvesse
+dezenas de materiais na árvore — e aí cada correção custaria migration mais
+passada editorial em cada nó.
+
+**Como aplicar**: ver
+[`standards/taxonomia-materiais.md`](standards/taxonomia-materiais.md) para as
+regras que valem na produção de conteúdo e nas Fases 2 e 3.
+
+---
+
+## 2026-09-22 — Materiais usam uma árvore canônica e apenas dois tipos de ligação transversal
+
+> **Revisada em 2026-09-22 pela entrada acima.** Os pontos sobre tema
+> compartilhado, navegação no snapshot e um par com duas ligações não valem
+> mais; o restante desta entrada continua em vigor.
+
+Cada material pode ter no máximo um pai, que precisa pertencer à mesma
+disciplina e ao mesmo tema. A profundidade não é fixada: visão geral, classe,
+subclasse e fármaco são materiais comuns ligados pela mesma árvore. Filhos são
+ordenados por número; `Aprofunde-se` será derivado dos filhos, não cadastrado.
+
+Fora da árvore existem somente `prerequisite` (`Estude antes`, direcionado) e
+`related` (`Veja também`, simétrico). Tanto a árvore quanto o grafo de
+pré-requisitos são acíclicos. Um estudante só enxerga ligações cujas duas
+pontas estão publicadas. Filho exige ancestrais publicados; material exige seus
+pré-requisitos publicados; despublicação que quebraria uma dessas garantias é
+bloqueada, nunca propagada em cascata.
+
+**Como aplicar**: imports continuam criando raízes sem links; reorganização do
+acervo legado é tarefa editorial explícita. Posição e ligações são salvas junto
+com o compêndio pela RPC transacional. A primeira validação de produto fica
+limitada ao caminho piloto dos β-lactâmicos; não criar grafo visual, novos tipos
+de ligação ou páginas individuais para todo fármaco antes de validar o piloto.
+
+---
+
 ## 2026-09-22 — `work/integracao-estabilizacao-11b` fica pendente de decisão, não é lixo de repositório
 
 Auditoria de organização do repositório (limpeza de branches locais/remotas

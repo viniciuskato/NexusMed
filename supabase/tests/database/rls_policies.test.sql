@@ -132,21 +132,21 @@ returning id as v_material_pub_id \gset
 select tests.force_publish_material(:'v_material_pub_id');
 
 -- Segundo material published, usado só para ter um par (material_id,
--- depends_on_material_id) ainda não inserido em material_dependencies —
+-- target_material_id) ainda não inserido em material_links —
 -- necessário para testar a negação de RLS na escrita sem esbarrar na
 -- constraint unique dos pares já usados nas fixtures abaixo.
 insert into public.materials (discipline_id, theme_id, title) values (:'v_discipline_id', :'v_theme_id', 'Material Published 2')
 returning id as v_material_pub2_id \gset
 select tests.force_publish_material(:'v_material_pub2_id');
 
--- material_dependencies segue o mesmo padrão de RLS de material_references:
--- leitura liberada quando o material "de origem" (material_id) está
--- published; o status do pré-requisito (depends_on_material_id) é
--- irrelevante para a policy de leitura.
-insert into public.material_dependencies (material_id, depends_on_material_id) values (:'v_material_pub_id', :'v_material_draft_id')
+-- material_links só é visível ao estudante quando as duas pontas estão
+-- published. Um related pode apontar para draft, mas fica invisível até lá.
+insert into public.material_links (source_material_id, target_material_id, link_type)
+values (:'v_material_pub_id', :'v_material_pub2_id', 'prerequisite')
 returning id as v_dep_pub_origin_id \gset
 
-insert into public.material_dependencies (material_id, depends_on_material_id) values (:'v_material_draft_id', :'v_material_pub_id')
+insert into public.material_links (source_material_id, target_material_id, link_type)
+values (:'v_material_pub_id', :'v_material_draft_id', 'related')
 returning id as v_dep_draft_origin_id \gset
 
 -- Questão A: será levada até published, com gabarito completo.
@@ -257,30 +257,26 @@ select is(
 );
 
 -- ============================================================================
--- 2b) material_dependencies: mesmo padrão de materials (leitura conforme
--- status do material de origem, escrita só admin)
+-- 2b) material_links: leitura exige as duas pontas published; escrita só admin
 -- ============================================================================
 
 select isnt_empty(
-  format($$ select 1 from public.material_dependencies where id = %L $$, :'v_dep_pub_origin_id'),
-  'active lê dependency cujo material de origem está published'
+  format($$ select 1 from public.material_links where id = %L $$, :'v_dep_pub_origin_id'),
+  'active lê link quando as duas pontas estão published'
 );
 select is_empty(
-  format($$ select 1 from public.material_dependencies where id = %L $$, :'v_dep_draft_origin_id'),
-  'active não lê dependency cujo material de origem está em draft'
+  format($$ select 1 from public.material_links where id = %L $$, :'v_dep_draft_origin_id'),
+  'active não lê link quando uma das pontas está em draft'
 );
 select throws_ok(
-  format($$ insert into public.material_dependencies (material_id, depends_on_material_id) values (%L, %L) $$, :'v_material_pub2_id', :'v_material_pub_id'),
+  format($$ insert into public.material_links (source_material_id, target_material_id, link_type) values (%L, %L, 'prerequisite') $$, :'v_material_pub2_id', :'v_material_pub_id'),
   NULL::char(5), NULL::text,
-  'active não cria material_dependencies'
+  'active não cria material_links'
 );
--- mesmo motivo dos blocos de materials/notes acima: UPDATE sob RLS filtra a
--- linha silenciosamente, não lança exceção.
-update public.material_dependencies set depends_on_material_id = :'v_material_pub_id' where id = :'v_dep_pub_origin_id';
-select is(
-  (select depends_on_material_id from public.material_dependencies where id = :'v_dep_pub_origin_id'),
-  :'v_material_draft_id'::uuid,
-  'active não altera material_dependencies (RLS bloqueia silenciosamente, 0 linhas afetadas)'
+select throws_ok(
+  format($$ update public.material_links set target_material_id = %L where id = %L $$, :'v_material_pub_id', :'v_dep_pub_origin_id'),
+  '42501', NULL::text,
+  'active não altera material_links'
 );
 
 -- ============================================================================
@@ -292,9 +288,10 @@ select lives_ok(
   format($$ update public.materials set subtitle = 'editado por admin' where id = %L $$, :'v_material_pub_id'),
   'admin active edita conteúdo editorial'
 );
-select lives_ok(
-  format($$ insert into public.material_dependencies (material_id, depends_on_material_id) values (%L, %L) $$, :'v_material_pub2_id', :'v_material_pub_id'),
-  'admin active cria material_dependencies'
+select throws_ok(
+  format($$ insert into public.material_links (source_material_id, target_material_id, link_type) values (%L, %L, 'prerequisite') $$, :'v_material_draft_id', :'v_material_pub_id'),
+  '42501', NULL::text,
+  'admin grava material_links somente pela RPC atômica'
 );
 
 -- ============================================================================
