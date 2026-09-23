@@ -106,11 +106,19 @@ campo de conteúdo é texto simples (aceita Markdown: `**negrito**`,
      renderer não suporta aninhamento hoje; reescreva como itens de
      mesmo nível (`1.`, `2.`, `3.`...) ou como frases dentro do próprio
      item, em vez de indentar.
-4. **Tags**, **Nós de Conexão/Pré-requisitos** (só se houver um
-   pré-requisito explícito) e **Referências Bibliográficas** (uma por
-   linha, terminando com o tipo de evidência entre colchetes — ex.
-   `[Diretriz de prática clínica — nome da entidade]`) ficam no fim do
-   formulário.
+4. **Tags** e **Referências Bibliográficas** (uma por linha, terminando
+   com o tipo de evidência entre colchetes — ex. `[Diretriz de prática
+   clínica — nome da entidade]`) ficam no fim do formulário.
+
+   Desde a Fase 2 da taxonomia (2026-09-23), o campo de texto livre "Nós
+   de Conexão/Pré-requisitos" foi substituído pelo bloco **Navegação do
+   conteúdo**: material-pai, ordem entre irmãos, rótulo curto de trilha,
+   tipo do nó, e os seletores **Estude antes**/**Veja também** — todos
+   por seleção de material real (busca + clique), nunca título digitado.
+   Um ancestral já é pré-requisito implícito pela trilha e não deve ser
+   recadastrado em "Estude antes"; o formulário recusa antes mesmo de
+   salvar. Ver `docs/operacao/standards/taxonomia-materiais.md` para as
+   regras completas de quando usar cada tipo de ligação.
 5. Clique em salvar. **Atenção**: o botão diz "Publicar Conteúdo", mas
    isso é só o nome do botão — o conteúdo continua como rascunho,
    invisível para quem estuda, até você fazer os passos 2 e 3 abaixo.
@@ -246,9 +254,9 @@ profundidade — use esta gradação pra decidir onde investir:
    definição própria — não satura, mas não fica só citado de passagem.
 3. **Menção contextual** — aparece só pra situar; pertence a outro
    Conteúdo. Nomeie e, se já existir um Conteúdo publicado cobrindo
-   aquilo, aponte com **Nós de Conexão/Pré-requisitos** (campo do item
-   4) em vez de reexplicar — mas nunca deixe o termo solto sem
-   nenhuma ponte pra onde aprofundar.
+   aquilo, aponte com o bloco **Navegação do conteúdo** (`Estude antes`
+   ou `Veja também`, ver item 4) em vez de reexplicar — mas nunca deixe
+   o termo solto sem nenhuma ponte pra onde aprofundar.
 
 **Isto reconcilia com a regra "não invente, escreva `LACUNA_DOCUMENTAL`"
 do Passo 1:** ela vale bem pra conceito de apoio ou menção contextual —

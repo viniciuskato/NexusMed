@@ -30,7 +30,9 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { Discipline, Theme, Question, Compendium, Flashcard, CompendiumSection, UserFeedback } from '../../types';
+import { Discipline, Theme, Question, Compendium, Flashcard, CompendiumSection, UserFeedback, TaxonomyKind } from '../../types';
+import { getAncestors, getDescendantIds, getBreadcrumbTrail, breadcrumbLabel } from '../../utils/materialTree';
+import { MaterialMultiSelect } from './MaterialMultiSelect';
 import { StorageService } from '../../services/storage';
 import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { materialsRepository } from '../../repositories/MaterialsRepository';
@@ -334,8 +336,22 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   const [compModuleNumber, setCompModuleNumber] = useState<string>('');
   const [compEstimatedTime, setCompEstimatedTime] = useState(15);
   const [compTagsStr, setCompTagsStr] = useState('Fisiopatologia, Clínica Médica, Alta Relevância');
-  const [compDependenciesStr, setCompDependenciesStr] = useState('Anatomia Básica, Semiologia');
   const [compReferencesStr, setCompReferencesStr] = useState('Diretrizes Brasileiras / Sociedades Médicas de Especialidade');
+
+  // ── Navegação do conteúdo (árvore de materiais, Fase 2) ──────────────────
+  // Substitui o antigo campo de texto livre "Nós de Conexão / Pré-requisitos"
+  // (compDependenciesStr, nunca persistido em material_dependencies/links —
+  // ver docs/produto/TAXONOMIA-ANTIBIOTICOS-PLANO-TECNICO.md §4). Seleção só
+  // por material real (id), nunca título digitado — renomear não quebra o
+  // vínculo. O Postgres é a autoridade final para ciclo/disciplina/
+  // profundidade; as blindagens aqui (excluir self/descendente da lista de
+  // pai) são só UX, não a garantia de integridade.
+  const [compParentId, setCompParentId] = useState<string>('');
+  const [compTreeSortOrder, setCompTreeSortOrder] = useState<number>(0);
+  const [compNavShortTitle, setCompNavShortTitle] = useState('');
+  const [compTaxonomyKind, setCompTaxonomyKind] = useState<TaxonomyKind | ''>('');
+  const [compPrerequisiteIds, setCompPrerequisiteIds] = useState<string[]>([]);
+  const [compRelatedIds, setCompRelatedIds] = useState<string[]>([]);
 
   const [compSections, setCompSections] = useState<CompendiumSection[]>([
     {
@@ -401,8 +417,13 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     setCompModuleNumber('');
     setCompEstimatedTime(15);
     setCompTagsStr('Fisiopatologia, Alta Relevância');
-    setCompDependenciesStr('Bases Fisiológicas');
     setCompReferencesStr('Diretriz Oficial de Especialidade (2024)');
+    setCompParentId('');
+    setCompTreeSortOrder(0);
+    setCompNavShortTitle('');
+    setCompTaxonomyKind('');
+    setCompPrerequisiteIds([]);
+    setCompRelatedIds([]);
     setCompSections([
       {
         id: crypto.randomUUID(),
@@ -428,8 +449,13 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     setCompModuleNumber(comp.moduleNumber ? String(comp.moduleNumber) : '');
     setCompEstimatedTime(comp.estimatedReadTimeMinutes);
     setCompTagsStr(comp.tags?.join(', ') || '');
-    setCompDependenciesStr(comp.dependencies?.map((d) => d.title).join(', ') || '');
     setCompReferencesStr(comp.references.join('\n'));
+    setCompParentId(comp.parentMaterialId || '');
+    setCompTreeSortOrder(comp.treeSortOrder ?? 0);
+    setCompNavShortTitle(comp.navShortTitle || '');
+    setCompTaxonomyKind(comp.taxonomyKind || '');
+    setCompPrerequisiteIds((comp.navigationLinks || []).filter((l) => l.linkType === 'prerequisite').map((l) => l.materialId));
+    setCompRelatedIds((comp.navigationLinks || []).filter((l) => l.linkType === 'related').map((l) => l.materialId));
     setCompSections(
       comp.sections.map((s) => ({
         ...s,
@@ -503,18 +529,44 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       .map((t) => t.trim())
       .filter(Boolean);
 
-    const dependencies = compDependenciesStr
-      .split(',')
-      .map((d) => d.trim())
-      .filter(Boolean)
-      .map((title) => ({ title }));
-
     const references = compReferencesStr
       .split('\n')
       .map((r) => r.trim())
       .filter(Boolean);
 
     const compId = editingCompId || crypto.randomUUID();
+
+    // Blindagens de UX antes de chamar o servidor — o Postgres é quem
+    // decide de verdade (trigger valida ciclo/disciplina/profundidade), mas
+    // reportar aqui evita a viagem de rede pro erro mais comum de digitação.
+    if (compParentId) {
+      if (compParentId === compId) {
+        showToast('Um material não pode ser pai de si mesmo.');
+        return;
+      }
+      if (editingCompId && getDescendantIds(compendiums, editingCompId).has(compParentId)) {
+        showToast('O pai selecionado é um descendente deste material na árvore — escolha outro.');
+        return;
+      }
+    }
+    const ancestorIds = new Set(
+      (editingCompId ? getAncestors(compendiums, editingCompId) : []).map((a) => a.id)
+    );
+    // Pré-requisito já implícito pelo caminho da árvore: o banco recusa
+    // (ver validate_material_link_publication), então avisamos antes.
+    const redundantPrereq = compPrerequisiteIds.find((id) => ancestorIds.has(id) || id === compParentId);
+    if (redundantPrereq) {
+      const redundant = compendiums.find((c) => c.id === redundantPrereq);
+      showToast(
+        `"${redundant?.title || redundantPrereq}" já é ancestral deste material na árvore — a trilha já mostra o caminho, não cadastre como "Estude antes".`
+      );
+      return;
+    }
+
+    const navigationLinks: Compendium['navigationLinks'] = [
+      ...compPrerequisiteIds.map((materialId, i) => ({ materialId, linkType: 'prerequisite' as const, sortOrder: i * 10 })),
+      ...compRelatedIds.map((materialId, i) => ({ materialId, linkType: 'related' as const, sortOrder: i * 10 })),
+    ];
 
     const newComp: Compendium = {
       id: compId,
@@ -528,12 +580,21 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       author: compAuthor.trim(),
       mode: compMode,
       tags,
-      dependencies: dependencies.length > 0 ? dependencies : undefined,
+      parentMaterialId: compParentId || null,
+      treeSortOrder: Number(compTreeSortOrder) || 0,
+      navShortTitle: compNavShortTitle.trim() || undefined,
+      taxonomyKind: compTaxonomyKind || undefined,
+      navigationLinks,
       sections: compSections,
       references,
     };
 
-    await materialsRepository.saveCompendium(newComp);
+    try {
+      await materialsRepository.saveCompendium(newComp);
+    } catch (err) {
+      showToast(getErrorMessage(err));
+      return;
+    }
     setIsCompendiumFormOpen(false);
     setEditingCompId(null);
     onRefreshData();
@@ -1235,15 +1296,125 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="font-bold text-stone-700 dark:text-slate-300 block mb-1" htmlFor="admincmsview-nos-de-conexao-pre-requisitos-10">
-                    Nós de Conexão / Pré-requisitos (separados por vírgula)
+                  <label className="font-bold text-stone-700 dark:text-slate-300 block mb-1" htmlFor="admincmsview-rotulo-curto-nav">
+                    Rótulo curto de navegação (opcional, até 40 caracteres)
                   </label>
-                  <input id="admincmsview-nos-de-conexao-pre-requisitos-10"
+                  <input id="admincmsview-rotulo-curto-nav"
                     type="text"
-                    value={compDependenciesStr}
-                    onChange={(e) => setCompDependenciesStr(e.target.value)}
-                    placeholder="Ex: Potencial de Ação Cardíaco, Anatomia dos Átrios"
+                    maxLength={40}
+                    value={compNavShortTitle}
+                    onChange={(e) => setCompNavShortTitle(e.target.value)}
+                    placeholder="Ex: Terceira geração (título completo: Cefalosporinas de terceira geração)"
                     className="w-full p-2.5 rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 text-xs"
+                  />
+                  <p className="text-[11px] text-stone-500 dark:text-slate-400 mt-1">
+                    Usado na trilha de navegação e nos cartões da árvore. Vazio = usa o título completo.
+                  </p>
+                </div>
+              </div>
+
+              {/* ── NAVEGAÇÃO DO CONTEÚDO (árvore de materiais) ─────────── */}
+              <div className="space-y-4 pt-4 border-t border-stone-200 dark:border-[#243452]">
+                <div>
+                  <h4 className="font-bold text-sm text-stone-900 dark:text-slate-100 flex items-center gap-2">
+                    <Link className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                    <span>Navegação do conteúdo</span>
+                  </h4>
+                  <p className="text-[11px] text-stone-500 dark:text-slate-400">
+                    Posição na árvore e ligações com outros materiais. Sempre por seleção de material real — nunca por título digitado.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="font-bold text-stone-700 dark:text-slate-300 block mb-1" htmlFor="admincmsview-material-pai">
+                      Material-pai
+                    </label>
+                    <select id="admincmsview-material-pai"
+                      value={compParentId}
+                      onChange={(e) => setCompParentId(e.target.value)}
+                      className="w-full p-2.5 rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 text-xs"
+                    >
+                      <option value="">— Nenhum (raiz) —</option>
+                      {compendiums
+                        .filter((c) => {
+                          if (c.id === (editingCompId || '__novo__')) return false;
+                          if (c.disciplineId !== compDisciplineId) return false;
+                          if (editingCompId && getDescendantIds(compendiums, editingCompId).has(c.id)) return false;
+                          return true;
+                        })
+                        .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.title}
+                          </option>
+                        ))}
+                    </select>
+                    <p className="text-[11px] text-stone-500 dark:text-slate-400 mt-1">Só materiais da mesma disciplina.</p>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-stone-700 dark:text-slate-300 block mb-1" htmlFor="admincmsview-ordem-irmaos">
+                      Ordem entre irmãos
+                    </label>
+                    <input id="admincmsview-ordem-irmaos"
+                      type="number"
+                      min={0}
+                      step={10}
+                      value={compTreeSortOrder}
+                      onChange={(e) => setCompTreeSortOrder(Number(e.target.value))}
+                      className="w-full p-2.5 rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 text-xs"
+                    />
+                    <p className="text-[11px] text-stone-500 dark:text-slate-400 mt-1">Passos de 10 dão espaço para inserir entre dois irmãos depois.</p>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-stone-700 dark:text-slate-300 block mb-1" htmlFor="admincmsview-tipo-no">
+                      Tipo do nó (opcional)
+                    </label>
+                    <select id="admincmsview-tipo-no"
+                      value={compTaxonomyKind}
+                      onChange={(e) => setCompTaxonomyKind(e.target.value as TaxonomyKind | '')}
+                      className="w-full p-2.5 rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 text-xs"
+                    >
+                      <option value="">— Não classificado —</option>
+                      <option value="visao_geral">Visão geral</option>
+                      <option value="mecanismo">Mecanismo</option>
+                      <option value="classe">Classe</option>
+                      <option value="subclasse">Subclasse</option>
+                      <option value="farmaco">Fármaco</option>
+                      <option value="condicao">Condição</option>
+                    </select>
+                  </div>
+                </div>
+
+                {compParentId && (
+                  <p className="text-[11px] text-stone-500 dark:text-slate-400">
+                    <span className="font-semibold">Caminho resultante:</span>{' '}
+                    {getBreadcrumbTrail(compendiums, compParentId).map(breadcrumbLabel).join(' › ')}
+                    {' › '}
+                    <span className="italic">{compNavShortTitle.trim() || compTitle.trim() || '(este material)'}</span>
+                  </p>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <MaterialMultiSelect
+                    label="Estude antes (prerequisite)"
+                    helperText="Só fora do ramo — um ancestral já é pré-requisito implícito pela trilha."
+                    options={compendiums.filter((c) => c.id !== (editingCompId || '__novo__'))}
+                    selectedIds={compPrerequisiteIds}
+                    onChange={setCompPrerequisiteIds}
+                    excludeIds={compRelatedIds}
+                    htmlId="admincmsview-nav-prerequisite"
+                  />
+                  <MaterialMultiSelect
+                    label="Veja também (related)"
+                    helperText="Simétrico: aparece nos dois materiais. Pode apontar pra rascunho durante a preparação."
+                    options={compendiums.filter((c) => c.id !== (editingCompId || '__novo__'))}
+                    selectedIds={compRelatedIds}
+                    onChange={setCompRelatedIds}
+                    excludeIds={compPrerequisiteIds}
+                    htmlId="admincmsview-nav-related"
                   />
                 </div>
               </div>

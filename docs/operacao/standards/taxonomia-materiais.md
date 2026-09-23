@@ -97,6 +97,19 @@ Continuam bloqueando a exclusão, de propósito: ter materiais-filhos, e ser
 realocação desbloqueia — ver `INTEGRITY_HINTS` em
 [`src/utils/errorMessage.ts`](../../../src/utils/errorMessage.ts).
 
+## 6.1. Contrato do Admin com `save_compendium` (desde a Fase 2)
+
+`save_compendium` trata cada campo de navegação como "só altera se a chave
+aparecer no payload" (ver §4 da migration 1.5) — pensado para um cliente que
+ainda não conhece esses campos. **O formulário do Admin não é esse cliente**:
+desde a Fase 2, ele é a fonte de verdade da navegação e envia sempre
+`parent_material_id`, `tree_sort_order`, `nav_short_title`, `taxonomy_kind` e
+`navigation_links` (mesmo `null`/`0`/`[]`) a cada save. Um novo caminho de
+escrita que reutilizar `saveCompendium()` sem passar por esse formulário
+precisa decidir explicitamente qual dos dois contratos seguir — omitir por
+descuido preserva o valor anterior, o que é surpreendente para quem espera
+"salvar limpa o que não foi preenchido".
+
 ## 7. Pendente para as Fases 2 e 3
 
 - **Questões por nó da árvore — bloqueado por vinculação editorial, não por
@@ -116,6 +129,11 @@ realocação desbloqueia — ver `INTEGRITY_HINTS` em
   árvore/biblioteca" (id, título, `nav_short_title`, pai, ordem,
   `taxonomy_kind`, status) de "seções do material aberto" antes que esse
   número cresça o suficiente para importar.
-- **Árvore defensiva no cliente.** Material cujo pai não está na lista
-  carregada (fallback do `ResilientMaterialsRepository` para `localStorage`, por
-  exemplo) é renderizado como **raiz**, nunca escondido.
+- ~~**Árvore defensiva no cliente.**~~ **Resolvido na Fase 2** —
+  `buildMaterialTree`/`getAncestors`/`getDescendantIds`
+  (`src/utils/materialTree.ts`) tratam pai fora da lista carregada (fallback
+  do `ResilientMaterialsRepository` para `localStorage`, por exemplo) e ciclo
+  corrompido sem travar nem esconder o material: ele vira raiz visível
+  (`isOrphanedParent: true`). Cobertura em `tests/unit/materialTree.test.ts`.
+  Reaproveitar este utilitário na árvore/biblioteca e no breadcrumb da Fase 3
+  em vez de reimplementar a travessia.

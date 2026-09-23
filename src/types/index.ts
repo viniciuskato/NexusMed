@@ -94,6 +94,20 @@ export type StudyLens =
 
 export type EditorialStatus = 'completo' | 'em_atualizacao' | 'em_revisao';
 
+/** Nível do nó na árvore editorial — ver docs/operacao/standards/taxonomia-materiais.md. */
+export type TaxonomyKind = 'visao_geral' | 'mecanismo' | 'classe' | 'subclasse' | 'farmaco' | 'condicao';
+
+/**
+ * Ligação transversal entre dois materiais na árvore (material_links).
+ * `materialId` é sempre o OUTRO lado do vínculo, nunca o próprio material —
+ * ver app.build_material_snapshot no banco, mesma convenção.
+ */
+export interface MaterialNavigationLink {
+  materialId: string;
+  linkType: 'prerequisite' | 'related';
+  sortOrder: number;
+}
+
 export interface Compendium {
   id: string;
   disciplineId: string;
@@ -112,6 +126,15 @@ export interface Compendium {
   publicationStatus?: 'draft' | 'published' | 'archived';
   tags?: string[];
   dependencies?: { title: string; linkId?: string }[];
+  /** Material-pai na árvore de navegação. Ausente/null = raiz. Mesma disciplina exigida pelo banco. */
+  parentMaterialId?: string | null;
+  /** Ordem entre irmãos (mesmo parentMaterialId). Convenção: passos de 10. */
+  treeSortOrder?: number;
+  /** Rótulo curto de trilha/cartão (até 40 caracteres). Ausente = usar `title`. */
+  navShortTitle?: string;
+  taxonomyKind?: TaxonomyKind;
+  /** Vínculos `Estude antes`/`Veja também`. Ausente na leitura = nunca carregado; ausente na gravação = não altera (ver save_compendium). */
+  navigationLinks?: MaterialNavigationLink[];
   sections: CompendiumSection[];
   references: string[];
   /**
