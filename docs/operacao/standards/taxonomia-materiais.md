@@ -66,12 +66,17 @@ estudo útil, e diferenças que não cabem numa tabela comparativa do pai. Acima
 
 ## 4. O que entra no hash de atestação
 
-**Entra:** título, subtítulo, `nav_short_title`, metadados editoriais, seções,
-referências — tudo que o revisor científico lê.
+**Entra:** título, subtítulo, metadados editoriais (`mode`, `study_lens`,
+autor, tags, tempo...), seções, referências (com id e vínculo de fonte) —
+tudo que o revisor científico lê. O snapshot é idêntico ao de antes da
+taxonomia (`20260914120000`).
 
 **Não entra:** `parent_material_id`, `tree_sort_order`, `taxonomy_kind`,
-ligações. Reposicionar um material **não** invalida a revisão aprovada dele nem
-a de nenhum vizinho.
+`nav_short_title`, ligações. Reposicionar um material **não** invalida a
+revisão aprovada dele nem a de nenhum vizinho. (`nav_short_title` entrou no
+hash na Fase 1.5 e saiu em `20260923120000`: no fluxo real — importar, depois
+posicionar — ele só pode ser preenchido depois do conteúdo pronto, e reatestar
+por causa de um rótulo de trilha não protegia nada.)
 
 Ao mexer em `app.build_material_snapshot`, manter esta fronteira. Colocar
 navegação de volta no snapshot reintroduz duas falhas medidas: um material novo
@@ -86,6 +91,14 @@ Despublicação é de baixo para cima. Qualquer rotina de lote precisa disso —
 só desiste quando uma passada inteira não publica nada, porque o cliente não
 tem como ordenar topologicamente um grafo de pré-requisitos.
 
+**Mensagem de bloqueio lista a ordem inteira.** Quando `publish_material`
+recusa por causa da árvore, a mensagem traz **todos** os ancestrais em
+rascunho, do mais alto para o mais baixo — a sequência em que cada publicação
+vai dar certo. A Fase 1.5 chegou a apontar só o ancestral mais próximo, o que
+estava errado: o mais próximo também está bloqueado pelo de cima dele, e a
+tentativa seguinte falhava de novo. O cartão do Admin mostra a mesma lista
+antes do clique (`publishPrerequisitesInOrder`).
+
 ## 6. Exclusão
 
 `Veja também` é limpo automaticamente das duas pontas antes do `DELETE` (sem
@@ -96,6 +109,31 @@ Continuam bloqueando a exclusão, de propósito: ter materiais-filhos, e ser
 `Estude antes` de outro material. O Admin traduz essas duas FKs em qual
 realocação desbloqueia — ver `INTEGRITY_HINTS` em
 [`src/utils/errorMessage.ts`](../../../src/utils/errorMessage.ts).
+
+## 6.0. "Salvar" sem mudança é no-op (desde 2026-09-23)
+
+Abrir um material no formulário do Admin e clicar **Salvar alterações** sem
+mudar nada **não pode alterar nenhum campo gravado**. Antes alterava três e
+cada um mudava o hash atestado: `mode` nulo virava `mecanismos` (os 38
+materiais de produção tinham `mode` nulo), `study_lens` era apagado (o
+formulário não tem o campo), e as referências eram apagadas e recriadas com
+ids novos — perdendo, em silêncio, o vínculo com fonte curada.
+
+Como está garantido:
+
+- **Cliente** — `src/utils/compendiumForm.ts` faz a conversão
+  formulário ⇄ material partindo do material original, então todo campo que
+  o formulário não edita atravessa intacto. Garantia em
+  `tests/unit/compendiumForm.test.ts`, com controle negativo feito.
+- **Banco** — `save_compendium` casa cada referência com a existente de
+  **texto idêntico** e preserva id e vínculo; nunca altera `source_id`/`url`
+  de uma referência existente (o vínculo é gerido só pelo painel de
+  referências). Garantia em `supabase/tests/database/salvar_sem_perda.test.sql`,
+  que usa de propósito o payload do cliente antigo (com `source_id` nulo).
+
+Ao adicionar um campo novo em `materials`: se o formulário não vai editá-lo,
+ele atravessa pelo `original`; se vai, acrescente-o a `CompendiumFormState` e
+ao teste de ida e volta.
 
 ## 6.1. Contrato do Admin com `save_compendium` (desde a Fase 2)
 
@@ -109,6 +147,20 @@ escrita que reutilizar `saveCompendium()` sem passar por esse formulário
 precisa decidir explicitamente qual dos dois contratos seguir — omitir por
 descuido preserva o valor anterior, o que é surpreendente para quem espera
 "salvar limpa o que não foi preenchido".
+
+## 6.1b. Importação já posicionada (desde 2026-09-23)
+
+`import_compendium_draft` aceita `p_parent_material_id`, `p_tree_sort_order`,
+`p_nav_short_title`, `p_taxonomy_kind` e `p_navigation_links`, todos com
+default — o cliente antigo, que chama só com os dez parâmetros originais, segue
+funcionando. Posição e ligações são gravadas **na mesma transação** do
+material: se qualquer regra da árvore for violada, nada é criado.
+
+O modal "Importar material" e o formulário de edição usam o **mesmo**
+componente (`MaterialNavigationFields`) e a mesma validação
+(`src/utils/materialNavigation.ts`). As ligações são gravadas por uma função
+única, `app.replace_material_links`, chamada pelas duas RPCs e fora do alcance
+do cliente.
 
 ## 6.2. Navegação do estudante (Fase 3)
 

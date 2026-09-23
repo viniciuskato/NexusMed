@@ -108,7 +108,7 @@ test.describe('Importar material (42-A)', () => {
     await dialog.locator('#import-material-file-input').setInputFiles(MENINGITE_YAML_PATH);
 
     // Pré-visualização mostra os campos-chave antes de qualquer gravação.
-    await expect(dialog.getByText('Meningite Bacteriana Aguda')).toBeVisible();
+    await expect(dialog.getByText('Meningite Bacteriana Aguda').first()).toBeVisible();
     await expect(dialog.getByText('Infectologia', { exact: true })).toBeVisible();
     await expect(dialog.getByText('Clínica', { exact: true })).toBeVisible();
     await expect(dialog.getByTestId('import-preview-sections-count')).toHaveText('11');
@@ -117,7 +117,7 @@ test.describe('Importar material (42-A)', () => {
 
     // Confirma — só agora deve haver gravação.
     await dialog.getByRole('button', { name: 'Salvar rascunho' }).click();
-    await expect(dialog.getByText(/criado com sucesso/i)).toBeVisible({ timeout: 15_000 });
+    await expect(dialog.getByText(/Rascunho de .* criado\./i)).toBeVisible({ timeout: 15_000 });
     await dialog.getByRole('button', { name: 'Fechar' }).click();
 
     // Confirmação visual: aparece na lista como rascunho (não publicado).
@@ -178,7 +178,7 @@ test.describe('Importar material (42-A)', () => {
     let dialog = page.getByRole('dialog', { name: 'Importar material' });
     await dialog.locator('#import-material-file-input').setInputFiles(MENINGITE_YAML_PATH);
     await dialog.getByRole('button', { name: 'Salvar rascunho' }).click();
-    await expect(dialog.getByText(/criado com sucesso/i)).toBeVisible({ timeout: 15_000 });
+    await expect(dialog.getByText(/Rascunho de .* criado\./i)).toBeVisible({ timeout: 15_000 });
     await dialog.getByRole('button', { name: 'Fechar' }).click();
 
     // Segunda tentativa do MESMO arquivo deve ser bloqueada por duplicidade.
@@ -208,7 +208,7 @@ test.describe('Importar material (42-A)', () => {
     await page.getByRole('button', { name: 'Importar material' }).click();
     const dialog = page.getByRole('dialog', { name: 'Importar material' });
     await dialog.locator('#import-material-file-input').setInputFiles(MENINGITE_YAML_PATH);
-    await expect(dialog.getByText('Meningite Bacteriana Aguda')).toBeVisible();
+    await expect(dialog.getByText('Meningite Bacteriana Aguda').first()).toBeVisible();
 
     await dialog.getByRole('button', { name: 'Cancelar' }).click();
 

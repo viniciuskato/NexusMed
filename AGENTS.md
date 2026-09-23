@@ -144,6 +144,20 @@ seção "Armadilhas já descobertas".
     desenvolvimento, pego pelo gate pgTAP antes de publicar — use `UPDATE`
     (ou `upsert`) sempre que uma RPC nova criar alternativas.
 
+17. **"Salvar" sem mudança no formulário de conteúdo do Admin tem que ser
+    no-op** — nenhum campo gravado pode mudar, senão o hash de atestação muda
+    e a revisão aprovada morre (já aconteceu: `mode` nulo virava
+    `mecanismos`, `study_lens` era apagado, referências eram recriadas e
+    perdiam o vínculo com fonte curada). A conversão formulário ⇄ material
+    vive em `src/utils/compendiumForm.ts` e parte do material original;
+    campo novo que o formulário edite entra no teste de ida e volta
+    (`tests/unit/compendiumForm.test.ts`). Ver
+    [`standards/taxonomia-materiais.md`](docs/operacao/standards/taxonomia-materiais.md) §6.0.
+18. **`runCleanup` dos E2E executa na ordem dada, não LIFO.** Quem cria
+    revisão/atestação precisa limpá-las ANTES de apagar o usuário autor
+    (`content_revisions`/`content_reviews` têm FK restrict para ele) — a
+    ordem invertida deixa usuário residual no banco local.
+
 ## Convenções de trabalho
 
 - **Toda mudança entra em `main` por Pull Request com CI verde** (desde

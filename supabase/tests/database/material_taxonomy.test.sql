@@ -353,10 +353,10 @@ select is(
   'set_material_position grava a ordem entre irmãos'
 );
 
--- publish_material aponta o ancestral MAIS PRÓXIMO como bloqueador, não o mais
--- distante: publicação é bottom-up, então apontar o avô primeiro faria o
--- admin tentar publicá-lo, ser barrado de novo (agora pelo pai, ainda em
--- draft) e só então chegar ao pai — dois ciclos de erro em vez de um.
+-- publish_material lista TODOS os ancestrais em rascunho, do mais alto para o
+-- mais baixo. Publicação é de cima para baixo: apontar só o mais próximo (como
+-- fazia 20260922130000) levava o admin a tentar o pai, ser barrado pelo avô e
+-- errar de novo. A lista em ordem faz cada publicação seguinte dar certo.
 insert into public.materials (discipline_id, theme_id, title)
 values (:'v_discipline_id', :'v_theme_id', 'Avô') returning id as v_grandparent_id \gset
 insert into public.materials (discipline_id, theme_id, title)
@@ -368,8 +368,8 @@ select public.set_material_position(:'v_grandchild_id', :'v_near_parent_id', 0);
 select tests.approve_material_revision(:'v_grandchild_id');
 select throws_like(
   format($$ select public.publish_material(%L) $$, :'v_grandchild_id'),
-  '%"Pai próximo"%',
-  'bloqueador de publicação é o ancestral mais próximo, não o mais distante'
+  '%"Avô" → "Pai próximo"%',
+  'bloqueio de publicação lista os ancestrais em rascunho de cima para baixo'
 );
 
 -- save_compendium conta sort_order por tipo de link: um array intercalado

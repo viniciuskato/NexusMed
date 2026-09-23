@@ -6,6 +6,36 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-23 — "Salvar" sem mudança é no-op, e a importação é o caminho de primeira classe
+
+Três decisões, tomadas depois de medir o fluxo real do dono do produto
+(produzir fora → **importar** → posicionar → atestar → publicar):
+
+1. **Abrir um material e salvar sem mudar nada não altera nada gravado.**
+   Medido: o formulário trocava `mode` nulo por `mecanismos` (os 38 materiais
+   de produção), apagava `study_lens` e recriava todas as referências com ids
+   novos — cada um invalidava a atestação, e a recriação das referências
+   apagava em silêncio o vínculo com fonte curada. Agora a conversão
+   formulário ⇄ material parte do original, e `save_compendium` preserva
+   referências por texto idêntico.
+2. **O vínculo de referência com fonte curada tem um dono só: o painel de
+   referências.** `save_compendium` nunca altera `source_id`/`url` de
+   referência existente. Nenhum cliente desvincula sem querer.
+3. **`nav_short_title` sai do hash de atestação** — revisa o que a Fase 1.5
+   definiu (a migration `20260922130000` o colocou no snapshot como "texto
+   exibido"). No fluxo de importação o rótulo curto só
+   pode ser preenchido depois do texto pronto; reatestar por causa de um
+   rótulo de trilha não protegia nada. O snapshot volta a ser idêntico ao
+   pré-taxonomia.
+
+**Como aplicar**: importação e formulário usam o mesmo componente de posição
+(`MaterialNavigationFields`) e a mesma validação; a importação grava posição e
+ligações na mesma transação. Posicionar antes ou depois de atestar tanto faz.
+Detalhe em [`standards/taxonomia-materiais.md`](standards/taxonomia-materiais.md)
+§4, §6.0 e §6.1b.
+
+---
+
 ## 2026-09-22 (revisão) — A árvore é amarrada por disciplina, e o hash de atestação não cobre navegação
 
 Revisa a entrada abaixo, do mesmo dia, depois de medir a fundação contra o

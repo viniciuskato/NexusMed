@@ -33,6 +33,30 @@ git log --oneline -10 origin/main
 Qualquer hash citado neste documento é **baseline histórica de quando foi
 escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
 
+## "Salvar" sem perda e importação já posicionada (2026-09-23) — implementado, não publicado
+
+- **Problema medido** (Supabase local, payload exato do formulário do Admin):
+  um "Salvar" sem mudar nada mudava o hash de atestação, recriava todas as
+  referências com ids novos e apagava o vínculo com fonte curada. O
+  formulário também trocava `mode` nulo por `mecanismos` e apagava
+  `study_lens`. Em produção (só leitura): os 38 materiais têm `mode` nulo;
+  nenhum vínculo de fonte nem rótulo curto ainda existe, então nada foi
+  perdido e a correção não invalida aprovação nenhuma.
+- **Correção**: migration `20260923120000` (referências casadas por texto,
+  vínculo intocável pelo "Salvar", `nav_short_title` fora do hash, importação
+  com posição e ligações na mesma transação, mensagem de publicação com a
+  ordem completa) + `src/utils/compendiumForm.ts` (ida e volta sem perda).
+- **Processo**: modal de importação com o bloco "Posição na árvore" (mesmo
+  componente do formulário), erro com a causa real e "Voltar e corrigir", e
+  sucesso mostrando a trilha e os próximos passos; cartão do Admin com "Na
+  árvore" e "Publique antes, nesta ordem"; botão "Salvar rascunho" no lugar
+  de "Publicar Conteúdo". Posicionar antes ou depois de atestar tanto faz.
+- **Evidência local**: pgTAP 398/398, Vitest 257/257, E2E do fluxo completo
+  7/7 sem resíduo, typecheck/lint/build limpos.
+- **Publicação**: branch `work/processo-importacao-arvore`. **Aplicar a
+  migration no remoto antes do merge** — o frontend novo chama a
+  `import_compendium_draft` de 15 parâmetros.
+
 ## Taxonomia hierárquica de materiais — Fase 1 + 1.5 publicadas (2026-09-22/23)
 
 - **Objetivo**: fundação de banco para materiais em árvore e ligações
