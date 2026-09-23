@@ -542,7 +542,16 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
 
   const handleDeleteCompendium = async (id: string, title: string) => {
     if (window.confirm(`Tem certeza de que deseja excluir o conteúdo "${title}"? Esta ação não pode ser desfeita.`)) {
-      await materialsRepository.deleteCompendium(id);
+      // Desde a taxonomia, a exclusão é barrada pelo banco quando o material
+      // tem filhos na árvore ou é pré-requisito de outro. Sem este `catch` a
+      // ação falhava em silêncio: o admin clicava, nada acontecia e nenhuma
+      // mensagem explicava o que realocar primeiro.
+      try {
+        await materialsRepository.deleteCompendium(id);
+      } catch (err) {
+        showToast(`Não foi possível excluir "${title}". ${getErrorMessage(err)}`);
+        return;
+      }
       onRefreshData();
       showToast('Conteúdo excluído.');
     }
@@ -559,17 +568,38 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     if (!window.confirm(`Publicar os ${drafts.length} conteúdos em rascunho? Ficam visíveis para estudantes imediatamente.`)) return;
     setBulkPublishing(true);
     let ok = 0;
-    for (const c of drafts) {
-      try {
-        await materialsRepository.publishCompendium(c.id);
-        ok++;
-      } catch (err) {
-        console.error(`Falha ao publicar ${c.id}:`, err);
+    // publish_material() exige ancestrais e pré-requisitos já publicados, então
+    // a ordem importa. Em vez de ordenar topologicamente no cliente (que hoje
+    // nem carrega o pai, e para o qual pré-requisito é um grafo, não uma
+    // árvore), repetimos passadas enquanto houver progresso: um material que
+    // falhou só por ordem entra na passada seguinte, e o laço termina quando
+    // uma passada inteira não publica nada — aí o que restou falhou por motivo
+    // real, e é isso que o relatório mostra.
+    let pending = [...drafts];
+    const lastError = new Map<string, unknown>();
+    while (pending.length > 0) {
+      const stillPending: typeof pending = [];
+      for (const c of pending) {
+        try {
+          await materialsRepository.publishCompendium(c.id);
+          ok++;
+        } catch (err) {
+          lastError.set(c.id, err);
+          stillPending.push(c);
+        }
       }
+      if (stillPending.length === pending.length) break;
+      pending = stillPending;
     }
     setBulkPublishing(false);
     onRefreshData();
-    showToast(`${ok}/${drafts.length} conteúdos publicados.`);
+    if (pending.length === 0) {
+      showToast(`${ok}/${drafts.length} conteúdos publicados.`);
+    } else {
+      const report = pending.map((c) => `${c.title}: ${getErrorMessage(lastError.get(c.id))}`);
+      showToast(`${ok}/${drafts.length} conteúdos publicados. ${pending.length} bloqueados (ver console).`);
+      console.warn('Conteúdos não publicados:\n' + report.join('\n'));
+    }
   };
 
   const handlePublishAllDraftQuestions = async () => {

@@ -37,6 +37,43 @@ describe('getErrorMessage', () => {
   });
 });
 
+describe('getErrorMessage — integridade da árvore de materiais', () => {
+  it('traduz FK de material-pai em qual realocação desbloqueia a exclusão', () => {
+    const result = getErrorMessage({
+      code: '23503',
+      message:
+        'update or delete on table "materials" violates foreign key constraint "materials_parent_material_id_fkey" on table "materials"',
+    });
+    expect(result).toContain('materiais-filhos');
+    expect(result).not.toContain('foreign key');
+  });
+
+  it('traduz FK de destino de ligação', () => {
+    const result = getErrorMessage({
+      code: '23503',
+      message: 'violates foreign key constraint "material_links_target_fkey"',
+    });
+    expect(result).toContain('Estude antes');
+  });
+
+  // O nome da constraint chega em `details`, não em `message`, quando o
+  // PostgREST separa os dois — a tradução tem que olhar os dois campos.
+  it('encontra a constraint quando ela vem em details', () => {
+    const result = getErrorMessage({
+      code: '23505',
+      message: 'duplicate key value violates unique constraint',
+      details: 'Key (...) already exists in "material_links_pair_unique"',
+    });
+    expect(result).toContain('nunca os dois ao mesmo tempo');
+  });
+
+  it('não interfere em erro sem constraint conhecida', () => {
+    expect(getErrorMessage({ code: '23503', message: 'outra constraint qualquer' })).toBe(
+      'outra constraint qualquer',
+    );
+  });
+});
+
 describe('getOptionalErrorMessage', () => {
   it('devolve undefined quando não há .message', () => {
     expect(getOptionalErrorMessage({})).toBeUndefined();

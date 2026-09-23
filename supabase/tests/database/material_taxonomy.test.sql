@@ -3,7 +3,7 @@
 -- ============================================================================
 
 create extension if not exists pgtap;
-select plan(32);
+select plan(51);
 
 select has_column('public', 'materials', 'parent_material_id', 'materials tem pai opcional');
 select has_column('public', 'materials', 'tree_sort_order', 'materials tem ordem na árvore');
@@ -36,15 +36,39 @@ values (:'v_discipline_id', :'v_other_theme_id', 'Outro tema') returning id as v
 insert into public.materials (discipline_id, theme_id, title)
 values (:'v_discipline_id', :'v_theme_id', 'Material simples') returning id as v_plain_id \gset
 
+insert into public.disciplines (name, code, cycle)
+values ('Disciplina Taxonomia 2', 'TAX2-' || substr(gen_random_uuid()::text, 1, 8), 'clinico')
+returning id as v_other_discipline_id \gset
+insert into public.themes (discipline_id, name) values (:'v_other_discipline_id', 'Tema C')
+returning id as v_other_discipline_theme_id \gset
+insert into public.materials (discipline_id, theme_id, title)
+values (:'v_other_discipline_id', :'v_other_discipline_theme_id', 'Outra disciplina')
+returning id as v_other_discipline_material_id \gset
+
 select throws_ok(
   format($$ update public.materials set parent_material_id = %L where id = %L $$, :'v_child_id', :'v_root_id'),
   NULL::char(5), NULL::text,
   'árvore rejeita ciclos'
 );
 select throws_ok(
-  format($$ update public.materials set parent_material_id = %L where id = %L $$, :'v_other_theme_material_id', :'v_root_id'),
+  format($$ update public.materials set parent_material_id = %L where id = %L $$, :'v_other_discipline_material_id', :'v_root_id'),
   NULL::char(5), NULL::text,
-  'pai e filho precisam compartilhar disciplina e tema'
+  'pai e filho precisam compartilhar a disciplina'
+);
+-- Tema deixou de amarrar pai e filho: amarrar congelava o ramo no tema em que
+-- nasceu, porque nenhuma ordem de UPDATE conseguia mover a subárvore inteira.
+select lives_ok(
+  format($$ update public.materials set parent_material_id = %L where id = %L $$, :'v_root_id', :'v_other_theme_material_id'),
+  'filho pode estar em outro tema da mesma disciplina'
+);
+select lives_ok(
+  format($$ update public.materials set theme_id = %L where id = %L $$, :'v_other_theme_id', :'v_root_id'),
+  'pai troca de tema sem desmontar a árvore'
+);
+select lives_ok(
+  format($$ update public.materials set theme_id = %L, parent_material_id = null where id = %L $$,
+         :'v_theme_id', :'v_other_theme_material_id'),
+  'filho volta a ser raiz para não interferir nos testes seguintes'
 );
 select throws_ok(
   format($$ delete from public.materials where id = %L $$, :'v_root_id'),
@@ -89,6 +113,115 @@ select throws_ok(
 select tests.approve_material_revision(:'v_child_id');
 select tests.approve_material_revision(:'v_root_id');
 select tests.approve_material_revision(:'v_prereq_id');
+
+-- ============================================================================
+-- Fase 1.5 — o que a revisão da fundação corrigiu
+-- ============================================================================
+
+select has_column('public', 'materials', 'nav_short_title', 'materials tem rótulo curto de navegação');
+select has_column('public', 'materials', 'taxonomy_kind', 'materials tem tipo de nó');
+
+-- O snapshot atestado não pode depender de navegação: antes, um link criado por
+-- um vizinho invalidava a revisão aprovada de um material que ninguém editou, e
+-- reordenar irmãos invalidava a do próprio material.
+insert into public.materials (discipline_id, theme_id, title)
+values (:'v_discipline_id', :'v_theme_id', 'Hash raiz') returning id as v_hash_root_id \gset
+insert into public.materials (discipline_id, theme_id, title)
+values (:'v_discipline_id', :'v_theme_id', 'Hash filho') returning id as v_hash_child_id \gset
+update public.materials set parent_material_id = :'v_hash_root_id', tree_sort_order = 1 where id = :'v_hash_child_id';
+
+create temp table tax_hash (k text primary key, v text);
+insert into tax_hash values
+  ('root_antes', encode(extensions.digest(app.build_material_snapshot(:'v_hash_root_id')::text, 'sha256'), 'hex')),
+  ('child_antes', encode(extensions.digest(app.build_material_snapshot(:'v_hash_child_id')::text, 'sha256'), 'hex'));
+
+insert into public.material_links (source_material_id, target_material_id, link_type)
+values (:'v_hash_child_id', :'v_plain_id', 'related');
+update public.materials set tree_sort_order = 9 where id = :'v_hash_child_id';
+
+select is(
+  (select v from tax_hash where k = 'root_antes'),
+  encode(extensions.digest(app.build_material_snapshot(:'v_hash_root_id')::text, 'sha256'), 'hex'),
+  'link criado por um vizinho não invalida a revisão aprovada do outro material'
+);
+select is(
+  (select v from tax_hash where k = 'child_antes'),
+  encode(extensions.digest(app.build_material_snapshot(:'v_hash_child_id')::text, 'sha256'), 'hex'),
+  'reordenar irmãos não invalida a revisão aprovada'
+);
+-- Um par de materiais tem no máximo uma relação: prerequisite e related juntos
+-- fariam o mesmo material aparecer em "Estude antes" e em "Veja também".
+select throws_ok(
+  format($$ insert into public.material_links (source_material_id, target_material_id, link_type)
+            values (%L, %L, 'prerequisite') $$, :'v_hash_child_id', :'v_plain_id'),
+  '23505', NULL::text,
+  'par com related não aceita também prerequisite'
+);
+
+-- Ancestral já é pré-requisito implícito pelo caminho da árvore.
+select throws_ok(
+  format($$ insert into public.material_links (source_material_id, target_material_id, link_type)
+            values (%L, %L, 'prerequisite') $$, :'v_hash_child_id', :'v_hash_root_id'),
+  NULL::char(5), NULL::text,
+  'ancestral não é cadastrável como "Estude antes"'
+);
+
+-- Travessia com guarda de ciclo.
+select is(
+  (select count(*)::int from app.material_ancestors(:'v_hash_child_id')),
+  1,
+  'material_ancestors devolve a cadeia até a raiz'
+);
+select is(
+  (select count(*)::int from app.material_descendants(:'v_hash_root_id')),
+  1,
+  'material_descendants devolve a subárvore'
+);
+
+-- Teto de profundidade: sem ele, uma trilha de 60 níveis entrava sem aviso.
+create function pg_temp.tax_chain(p_discipline uuid, p_theme uuid, p_root uuid, p_levels int)
+returns void language plpgsql as $chain$
+declare v_prev uuid := p_root; v_new uuid; i int;
+begin
+  for i in 1..p_levels loop
+    insert into public.materials (discipline_id, theme_id, title)
+    values (p_discipline, p_theme, 'Nível ' || i || ' ' || gen_random_uuid()::text)
+    returning id into v_new;
+    update public.materials set parent_material_id = v_prev where id = v_new;
+    v_prev := v_new;
+  end loop;
+end $chain$;
+
+select lives_ok(
+  format($$ select pg_temp.tax_chain(%L, %L, %L, 6) $$,
+         :'v_discipline_id', :'v_theme_id', :'v_hash_child_id'),
+  'árvore aceita a profundidade máxima'
+);
+select throws_ok(
+  format($$ select pg_temp.tax_chain(%L, %L, %L, 1) $$,
+         :'v_discipline_id', :'v_theme_id',
+         (select id from public.materials where title like 'Nível 6 %' limit 1)),
+  NULL::char(5), NULL::text,
+  'árvore rejeita profundidade acima do teto'
+);
+
+-- Exclusão determinística: `related` é guardado em ordem canônica de uuid, então
+-- sem limpar os dois lados o resultado dependia de qual uuid era menor.
+insert into public.materials (id, discipline_id, theme_id, title)
+values ('00000000-0000-4000-8000-000000000001', :'v_discipline_id', :'v_theme_id', 'Par uuid menor');
+insert into public.materials (id, discipline_id, theme_id, title)
+values ('ffffffff-0000-4000-8000-00000000000f', :'v_discipline_id', :'v_theme_id', 'Par uuid maior');
+insert into public.material_links (source_material_id, target_material_id, link_type)
+values ('00000000-0000-4000-8000-000000000001', 'ffffffff-0000-4000-8000-00000000000f', 'related');
+
+select lives_ok(
+  $$ delete from public.materials where id = 'ffffffff-0000-4000-8000-00000000000f' $$,
+  'material do lado "target" de um related é excluível'
+);
+select lives_ok(
+  $$ delete from public.materials where id = '00000000-0000-4000-8000-000000000001' $$,
+  'material do lado "source" de um related é excluível'
+);
 
 select tests.authenticate_as(:'v_admin');
 select throws_ok(
@@ -204,11 +337,32 @@ select is(
   'RPC sincroniza a lista estruturada de links'
 );
 
+-- Mover um nó deixa de exigir save_compendium (que reescreve conteúdo inteiro).
+select lives_ok(
+  format($$ select public.set_material_position(%L, null, 30) $$, :'v_hash_child_id'),
+  'set_material_position move o nó sem tocar em conteúdo'
+);
+select is(
+  (select parent_material_id from public.materials where id = :'v_hash_child_id'),
+  NULL::uuid,
+  'set_material_position destaca o material da árvore'
+);
+select is(
+  (select tree_sort_order from public.materials where id = :'v_hash_child_id'),
+  30,
+  'set_material_position grava a ordem entre irmãos'
+);
+
 select tests.authenticate_as(:'v_student');
 select throws_ok(
   format($$ select public.unpublish_material(%L) $$, :'v_root_id'),
   NULL::char(5), NULL::text,
   'estudante não despublica material'
+);
+select throws_ok(
+  format($$ select public.set_material_position(%L, null, 1) $$, :'v_hash_child_id'),
+  NULL::char(5), NULL::text,
+  'estudante não move material na árvore'
 );
 
 select tests.clear_auth();

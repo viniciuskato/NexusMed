@@ -20,7 +20,43 @@ function isFunctionMissingFromSchemaCache(err: unknown): boolean {
   return typeof err === 'object' && err !== null && (err as { code?: unknown }).code === 'PGRST202';
 }
 
+// A taxonomia de materiais depende de FK restritiva e de índices únicos para
+// garantir que a árvore não quebre. Quando eles barram uma ação, o Postgres
+// devolve o nome da constraint e nada sobre o que o admin deve fazer — e a
+// Área Editorial mostrava esse texto cru (ou, no caso da exclusão, mostrava
+// nada: a ação não tinha `try/catch` e falhava em silêncio). Cada entrada aqui
+// traduz um bloqueio real em qual realocação editorial o desbloqueia.
+const INTEGRITY_HINTS: Array<[string, string]> = [
+  [
+    'materials_parent_material_id_fkey',
+    'Este material tem materiais-filhos na árvore. Realoque ou exclua os filhos antes de excluí-lo.',
+  ],
+  [
+    'material_links_target_fkey',
+    'Outro material aponta para este em "Estude antes". Remova essa ligação no material de origem antes de excluí-lo.',
+  ],
+  [
+    'material_links_pair_unique',
+    'Estes dois materiais já têm uma ligação entre si. Um par pode ser "Estude antes" ou "Veja também", nunca os dois ao mesmo tempo.',
+  ],
+  [
+    'material_links_direction_unique',
+    'Esta ligação já existe entre os dois materiais.',
+  ],
+];
+
+function getIntegrityHint(err: unknown): string | undefined {
+  const raw = getRawMessage(err);
+  const details = typeof err === 'object' && err !== null && 'details' in err
+    ? String((err as { details: unknown }).details ?? '')
+    : '';
+  const haystack = `${raw} ${details}`;
+  return INTEGRITY_HINTS.find(([constraint]) => haystack.includes(constraint))?.[1];
+}
+
 export function getErrorMessage(err: unknown): string {
+  const integrityHint = getIntegrityHint(err);
+  if (integrityHint) return integrityHint;
   if (isFunctionMissingFromSchemaCache(err)) {
     const raw = getRawMessage(err);
     return (
