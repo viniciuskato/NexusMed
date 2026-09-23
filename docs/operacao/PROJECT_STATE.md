@@ -73,10 +73,11 @@ escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
 - **Objetivo**: dar ao Admin uma interface estruturada para posicionar
   materiais na árvore e cadastrar `Estude antes`/`Veja também`, substituindo
   o campo de texto livre "Nós de Conexão/Pré-requisitos" (nunca persistido).
-- **Estado**: implementada e validada localmente, branch
-  `work/taxonomia-fase2-admin` a partir de `main`@`8d1232e` (pós-merge da
-  Fase 1.5). **Nenhuma migration nova** — usa `save_compendium` já publicada.
-  Ainda sem PR/merge/deploy.
+- **Estado**: **concluída e publicada** — PR #58 mesclado em `main`
+  (`3d126f6`), deploy confirmado em produção (bundle carrega o SHA do merge
+  commit, sem instrumentação de teste). CI verde (fast + full) nas duas
+  rodadas. **Nenhuma migration nova** — usa `save_compendium` já publicada na
+  Fase 1.5.
 - **Impacto**: `Compendium` ganha `parentMaterialId`/`treeSortOrder`/
   `navShortTitle`/`taxonomyKind`/`navigationLinks`; `SupabaseMaterialsRepository`
   passa a ler `material_links` e a sempre enviar os campos de navegação ao
@@ -94,9 +95,11 @@ escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
 - **Evidência local**: Vitest 23 arquivos/218 testes (13 novos em
   `materialTree.test.ts`); typecheck limpo; lint 0 erros/5 warnings da
   baseline; build ok; `git diff --check` limpo.
-- **Pendente antes de publicar**: revisão, PR, CI verde, merge — sem
-  migration remota nem aplicação de schema, é só frontend contra RPCs já em
-  produção.
+- **Pendente**: Fase 3 (árvore na biblioteca, breadcrumb no leitor, cartões
+  `Aprofunde-se`, caixas `Estude antes`/`Veja também` visíveis ao estudante) —
+  ainda não autorizada. Ver `docs/operacao/standards/taxonomia-materiais.md`
+  §7 para o que fica desenhado, mas não implementado, antes dela: escopo de
+  questões por nó (bloqueado por vinculação editorial) e leitura sob demanda.
 
 ## Criar Tema direto na UI do Admin (2026-09-22) — PR #55 mesclado em `main` (`88a0fb7`)
 
