@@ -394,6 +394,18 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
       p_tags: compendium.tags ?? [],
       p_sections: sectionsPayload,
       p_references: compendium.references ?? [],
+      // Posição na árvore na MESMA transação da importação (migration
+      // 20260923120000): se o pai ou uma ligação violar uma regra da árvore,
+      // nada é criado — não sobra rascunho pela metade.
+      p_parent_material_id: compendium.parentMaterialId ?? null,
+      p_tree_sort_order: compendium.treeSortOrder ?? 0,
+      p_nav_short_title: compendium.navShortTitle?.trim() || null,
+      p_taxonomy_kind: compendium.taxonomyKind ?? null,
+      p_navigation_links: (compendium.navigationLinks ?? []).map((l) => ({
+        material_id: l.materialId,
+        link_type: l.linkType,
+        sort_order: l.sortOrder,
+      })),
     });
     if (error) throw error;
     const materialRow = data as MaterialRow;
@@ -428,7 +440,9 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
         mode: compendium.mode ?? null,
         study_lens: compendium.studyLens ?? null,
         module_number: compendium.moduleNumber ?? null,
-        estimated_read_time_minutes: compendium.estimatedReadTimeMinutes ?? null,
+        // 0 é "desconhecido": a leitura mapeia nulo → 0 (o tipo é number), então
+        // gravar 0 de volta trocaria nulo por 0 e mudaria o hash atestado.
+        estimated_read_time_minutes: compendium.estimatedReadTimeMinutes || null,
         author: compendium.author || null,
         tags: compendium.tags ?? [],
         parent_material_id: compendium.parentMaterialId ?? null,
@@ -450,14 +464,13 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
         clinical_pearl: s.clinicalPearl ?? null,
         warning_alert: s.warningAlert ?? null,
       })),
-      p_references: compendium.references.map((text, i) => {
-        const linked = compendium.referenceSources?.[i];
-        return {
-          citation_text: text,
-          source_id: linked?.linked ? linked.sourceId ?? null : null,
-          url: linked?.linked ? linked.url ?? null : null,
-        };
-      }),
+      // Só o texto. O banco casa cada referência com a existente de texto
+      // idêntico e preserva id e vínculo com fonte curada; o vínculo é gerido
+      // exclusivamente pelo painel de referências (updateMaterialReferenceSource).
+      // Mandar source_id aqui era perigoso: referenceSources é alinhado por
+      // ÍNDICE com as referências antigas, então inserir ou remover uma linha
+      // no formulário desalinhava e podia pendurar o vínculo na referência errada.
+      p_references: compendium.references.map((text) => ({ citation_text: text })),
     });
     if (error) throw error;
   }

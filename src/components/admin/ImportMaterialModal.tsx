@@ -11,7 +11,15 @@ import {
   CompendiumImportSection,
 } from '../../utils/compendiumImport';
 import { parseCompendiumMarkdownText } from '../../utils/compendiumMarkdownImport';
+import {
+  MaterialNavigationValue,
+  emptyNavigationValue,
+  navigationFieldsFromValue,
+  validateNavigationValue,
+} from '../../utils/materialNavigation';
+import { getBreadcrumbTrail, breadcrumbLabel } from '../../utils/materialTree';
 import CreateThemeModal from './CreateThemeModal';
+import { MaterialNavigationFields } from './MaterialNavigationFields';
 
 const CREATE_NEW_THEME = '__create_new_theme__';
 
@@ -32,6 +40,8 @@ interface ImportMaterialModalProps {
   onThemeCreated?: () => void;
 }
 
+type PreviewState = Extract<WizardState, { step: 'preview' }>;
+
 type WizardState =
   | { step: 'pick' }
   | { step: 'error'; fileName: string; errors: string[]; technicalDetail?: string }
@@ -44,10 +54,12 @@ type WizardState =
       tags: string[];
       overrideDisciplineId: string | null;
       overrideThemeId: string | null;
+      /** Posição na árvore escolhida já na importação — antes exigia reabrir o rascunho. */
+      navigation: MaterialNavigationValue;
     }
   | { step: 'saving' }
-  | { step: 'success'; title: string }
-  | { step: 'save-error'; technicalDetail: string };
+  | { step: 'success'; title: string; trail: string[] }
+  | { step: 'save-error'; message: string; previous: PreviewState };
 
 export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
   disciplines,
@@ -95,6 +107,7 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
       tags: result.tags,
       overrideDisciplineId: result.preview.disciplineId,
       overrideThemeId: result.preview.themeId,
+      navigation: emptyNavigationValue(),
     });
   };
 
@@ -104,23 +117,36 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
     const themeId = state.overrideThemeId;
     if (!disciplineId || !themeId) return;
     if (state.preview.isDuplicate) return;
+    if (validateNavigationValue(state.navigation, { compendiums, selfId: null, disciplineId })) return;
 
+    const previous = state;
+    const navigation = state.navigation;
+    const title = state.preview.title;
     setState({ step: 'saving' });
     try {
-      const compendium = buildCompendiumFromImport(
-        state.preview,
-        state.sections,
-        state.references,
-        state.tags,
-        disciplineId,
-        themeId
-      );
+      const compendium = {
+        ...buildCompendiumFromImport(
+          state.preview,
+          state.sections,
+          state.references,
+          state.tags,
+          disciplineId,
+          themeId
+        ),
+        ...navigationFieldsFromValue(navigation),
+      };
       await materialsRepository.importCompendiumDraft(compendium);
       onImported();
-      setState({ step: 'success', title: state.preview.title });
+      const trail = navigation.parentId
+        ? getBreadcrumbTrail(compendiums, navigation.parentId).map(breadcrumbLabel)
+        : [];
+      setState({ step: 'success', title, trail: [...trail, navigation.navShortTitle.trim() || title] });
     } catch (err) {
       console.error('[ImportMaterialModal] falha ao salvar rascunho importado:', err);
-      setState({ step: 'save-error', technicalDetail: getErrorMessage(err) });
+      // A mensagem do banco já é acionável (pai de outra disciplina, ciclo,
+      // ancestral como "Estude antes"...) e getErrorMessage traduz as de
+      // integridade. Mostrar ela, não um "verifique sua conexão" genérico.
+      setState({ step: 'save-error', message: getErrorMessage(err), previous });
     }
   };
 
@@ -258,7 +284,12 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
                 <select
                   value=""
                   onChange={(e) =>
-                    setState({ ...state, overrideDisciplineId: e.target.value, overrideThemeId: null })
+                    setState({
+                      ...state,
+                      overrideDisciplineId: e.target.value,
+                      overrideThemeId: null,
+                      navigation: emptyNavigationValue(),
+                    })
                   }
                   className="w-full p-2 rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 text-stone-900 dark:text-slate-100 text-xs"
                 >
@@ -352,6 +383,20 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
             </div>
           )}
 
+          {state.overrideDisciplineId && !state.preview.isDuplicate && (
+            <div className="pt-4 border-t border-stone-200 dark:border-[#243452]">
+              <MaterialNavigationFields
+                value={state.navigation}
+                onChange={(navigation) => setState({ ...state, navigation })}
+                compendiums={compendiums}
+                disciplineId={state.overrideDisciplineId}
+                selfId={null}
+                currentTitle={state.preview.title}
+                idPrefix="import-material"
+              />
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-2 border-t border-stone-200 dark:border-[#243452]">
             <button
               type="button"
@@ -363,7 +408,16 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
             <button
               type="button"
               onClick={handleConfirm}
-              disabled={!state.overrideDisciplineId || !state.overrideThemeId || state.preview.isDuplicate}
+              disabled={
+                !state.overrideDisciplineId ||
+                !state.overrideThemeId ||
+                state.preview.isDuplicate ||
+                validateNavigationValue(state.navigation, {
+                  compendiums,
+                  selfId: null,
+                  disciplineId: state.overrideDisciplineId,
+                }) !== null
+              }
               className="px-4 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white dark:bg-teal-600 dark:hover:bg-teal-500 text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
               Salvar rascunho
@@ -380,9 +434,22 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
         <div className="space-y-4">
           <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900">
             <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-            <p className="text-emerald-800 dark:text-emerald-300">
-              Rascunho de "{state.title}" criado com sucesso. Ele está pendente de revisão — a
-              publicação continua sendo uma ação manual separada.
+            <div className="text-emerald-800 dark:text-emerald-300 space-y-1">
+              <p>Rascunho de "{state.title}" criado.</p>
+              <p data-testid="import-success-trail">
+                <span className="font-semibold">Na árvore:</span> {state.trail.join(' › ')}
+                {state.trail.length === 1 && ' (raiz)'}
+              </p>
+            </div>
+          </div>
+          <div className="p-3 rounded-lg bg-stone-50 dark:bg-[#142038] border border-stone-200 dark:border-[#243452]">
+            <p className="font-bold text-stone-700 dark:text-slate-300 mb-1">Próximos passos</p>
+            <ol className="list-decimal list-inside space-y-0.5 text-stone-600 dark:text-slate-400">
+              <li>Revisar e atestar o conteúdo no painel de proveniência.</li>
+              <li>Publicar — de cima para baixo: o material acima dele na árvore precisa estar publicado antes.</li>
+            </ol>
+            <p className="mt-1.5 text-stone-500 dark:text-slate-500">
+              A posição na árvore pode ser ajustada depois, pela edição, sem precisar atestar de novo.
             </p>
           </div>
           <div className="flex justify-end">
@@ -402,22 +469,22 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
           <div className="flex items-start gap-3 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900">
             <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
             <div className="space-y-2">
-              <p className="text-rose-700 dark:text-rose-300">
-                Não foi possível salvar o rascunho agora. Verifique sua conexão e tente novamente.
+              <p className="text-rose-700 dark:text-rose-300 font-semibold">Não foi possível salvar o rascunho.</p>
+              <p data-testid="import-save-error-message" className="text-rose-700 dark:text-rose-300">
+                {state.message}
               </p>
-              <details className="text-stone-500 dark:text-slate-500">
-                <summary className="cursor-pointer">Detalhes técnicos</summary>
-                <p className="mt-1 font-mono text-[10px] break-all">{state.technicalDetail}</p>
-              </details>
+              <p className="text-stone-500 dark:text-slate-500">
+                Nada foi criado — a importação é tudo ou nada. Volte, corrija e salve de novo.
+              </p>
             </div>
           </div>
           <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={() => setState({ step: 'pick' })}
+              onClick={() => setState(state.previous)}
               className="px-4 py-2 rounded-lg border border-stone-200 dark:border-[#243452] text-stone-600 dark:text-slate-300 hover:bg-stone-100 dark:hover:bg-[#142038] text-xs font-bold transition-all cursor-pointer"
             >
-              Tentar novamente
+              Voltar e corrigir
             </button>
             <button
               type="button"

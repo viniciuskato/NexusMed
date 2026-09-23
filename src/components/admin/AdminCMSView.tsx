@@ -30,9 +30,11 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { Discipline, Theme, Question, Compendium, Flashcard, CompendiumSection, UserFeedback, TaxonomyKind } from '../../types';
-import { getAncestors, getDescendantIds, getBreadcrumbTrail, breadcrumbLabel } from '../../utils/materialTree';
-import { MaterialMultiSelect } from './MaterialMultiSelect';
+import { Discipline, Theme, Question, Compendium, Flashcard, CompendiumSection, UserFeedback } from '../../types';
+import { MaterialNavigationFields } from './MaterialNavigationFields';
+import { MaterialNavigationValue, emptyNavigationValue, validateNavigationValue, publishPrerequisitesInOrder } from '../../utils/materialNavigation';
+import { getBreadcrumbTrail, breadcrumbLabel } from '../../utils/materialTree';
+import { formStateFromCompendium, compendiumFromFormState, linkedReferencesThatWillBeLost } from '../../utils/compendiumForm';
 import { StorageService } from '../../services/storage';
 import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { materialsRepository } from '../../repositories/MaterialsRepository';
@@ -331,27 +333,22 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   const [compDisciplineId, setCompDisciplineId] = useState(disciplines[0]?.id || 'cardio');
   const [compThemeId, setCompThemeId] = useState(themes[0]?.id || 'cardio-ic');
   const [isCreateThemeOpen, setIsCreateThemeOpen] = useState(false);
-  const [compMode, setCompMode] = useState<'atlas' | 'mecanismos'>('mecanismos');
+  const [compMode, setCompMode] = useState<'atlas' | 'mecanismos' | ''>('mecanismos');
   const [compAuthor, setCompAuthor] = useState('Dr. Roberto Albuquerque / Comitê Editorial');
   const [compModuleNumber, setCompModuleNumber] = useState<string>('');
   const [compEstimatedTime, setCompEstimatedTime] = useState(15);
   const [compTagsStr, setCompTagsStr] = useState('Fisiopatologia, Clínica Médica, Alta Relevância');
   const [compReferencesStr, setCompReferencesStr] = useState('Diretrizes Brasileiras / Sociedades Médicas de Especialidade');
 
-  // ── Navegação do conteúdo (árvore de materiais, Fase 2) ──────────────────
-  // Substitui o antigo campo de texto livre "Nós de Conexão / Pré-requisitos"
-  // (compDependenciesStr, nunca persistido em material_dependencies/links —
-  // ver docs/produto/TAXONOMIA-ANTIBIOTICOS-PLANO-TECNICO.md §4). Seleção só
-  // por material real (id), nunca título digitado — renomear não quebra o
-  // vínculo. O Postgres é a autoridade final para ciclo/disciplina/
-  // profundidade; as blindagens aqui (excluir self/descendente da lista de
-  // pai) são só UX, não a garantia de integridade.
-  const [compParentId, setCompParentId] = useState<string>('');
-  const [compTreeSortOrder, setCompTreeSortOrder] = useState<number>(0);
-  const [compNavShortTitle, setCompNavShortTitle] = useState('');
-  const [compTaxonomyKind, setCompTaxonomyKind] = useState<TaxonomyKind | ''>('');
-  const [compPrerequisiteIds, setCompPrerequisiteIds] = useState<string[]>([]);
-  const [compRelatedIds, setCompRelatedIds] = useState<string[]>([]);
+  // ── Posição na árvore ─────────────────────────────────────────────────────
+  // Mesmo estado e mesmo componente do modal "Importar material"
+  // (MaterialNavigationFields). A validação ao vivo é só UX — o Postgres é a
+  // autoridade final para ciclo/disciplina/profundidade.
+  const [compNavigation, setCompNavigation] = useState<MaterialNavigationValue>(emptyNavigationValue());
+  // Material como estava no banco ao abrir a edição. O "Salvar" parte dele,
+  // para que campos que o formulário não edita (studyLens, vínculos de
+  // referência...) atravessem intactos — ver src/utils/compendiumForm.ts.
+  const [editingOriginal, setEditingOriginal] = useState<Compendium | null>(null);
 
   const [compSections, setCompSections] = useState<CompendiumSection[]>([
     {
@@ -418,12 +415,8 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     setCompEstimatedTime(15);
     setCompTagsStr('Fisiopatologia, Alta Relevância');
     setCompReferencesStr('Diretriz Oficial de Especialidade (2024)');
-    setCompParentId('');
-    setCompTreeSortOrder(0);
-    setCompNavShortTitle('');
-    setCompTaxonomyKind('');
-    setCompPrerequisiteIds([]);
-    setCompRelatedIds([]);
+    setCompNavigation(emptyNavigationValue());
+    setEditingOriginal(null);
     setCompSections([
       {
         id: crypto.randomUUID(),
@@ -439,29 +432,21 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   };
 
   const handleEditCompendium = (comp: Compendium) => {
+    const form = formStateFromCompendium(comp);
     setEditingCompId(comp.id);
-    setCompTitle(comp.title);
-    setCompSubtitle(comp.subtitle);
-    setCompDisciplineId(comp.disciplineId);
-    setCompThemeId(comp.themeId);
-    setCompMode(comp.mode || 'mecanismos');
-    setCompAuthor(comp.author);
-    setCompModuleNumber(comp.moduleNumber ? String(comp.moduleNumber) : '');
-    setCompEstimatedTime(comp.estimatedReadTimeMinutes);
-    setCompTagsStr(comp.tags?.join(', ') || '');
-    setCompReferencesStr(comp.references.join('\n'));
-    setCompParentId(comp.parentMaterialId || '');
-    setCompTreeSortOrder(comp.treeSortOrder ?? 0);
-    setCompNavShortTitle(comp.navShortTitle || '');
-    setCompTaxonomyKind(comp.taxonomyKind || '');
-    setCompPrerequisiteIds((comp.navigationLinks || []).filter((l) => l.linkType === 'prerequisite').map((l) => l.materialId));
-    setCompRelatedIds((comp.navigationLinks || []).filter((l) => l.linkType === 'related').map((l) => l.materialId));
-    setCompSections(
-      comp.sections.map((s) => ({
-        ...s,
-        id: s.id || crypto.randomUUID(),
-      }))
-    );
+    setEditingOriginal(comp);
+    setCompTitle(form.title);
+    setCompSubtitle(form.subtitle);
+    setCompDisciplineId(form.disciplineId);
+    setCompThemeId(form.themeId);
+    setCompMode(form.mode);
+    setCompAuthor(form.author);
+    setCompModuleNumber(form.moduleNumber);
+    setCompEstimatedTime(form.estimatedTime);
+    setCompTagsStr(form.tagsStr);
+    setCompReferencesStr(form.referencesStr);
+    setCompNavigation(form.navigation);
+    setCompSections(form.sections);
     setIsCompendiumFormOpen(true);
   };
 
@@ -524,70 +509,37 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       return;
     }
 
-    const tags = compTagsStr
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean);
-
-    const references = compReferencesStr
-      .split('\n')
-      .map((r) => r.trim())
-      .filter(Boolean);
-
     const compId = editingCompId || crypto.randomUUID();
 
-    // Blindagens de UX antes de chamar o servidor — o Postgres é quem
-    // decide de verdade (trigger valida ciclo/disciplina/profundidade), mas
-    // reportar aqui evita a viagem de rede pro erro mais comum de digitação.
-    if (compParentId) {
-      if (compParentId === compId) {
-        showToast('Um material não pode ser pai de si mesmo.');
-        return;
-      }
-      if (editingCompId && getDescendantIds(compendiums, editingCompId).has(compParentId)) {
-        showToast('O pai selecionado é um descendente deste material na árvore — escolha outro.');
-        return;
-      }
-    }
-    const ancestorIds = new Set(
-      (editingCompId ? getAncestors(compendiums, editingCompId) : []).map((a) => a.id)
-    );
-    // Pré-requisito já implícito pelo caminho da árvore: o banco recusa
-    // (ver validate_material_link_publication), então avisamos antes.
-    const redundantPrereq = compPrerequisiteIds.find((id) => ancestorIds.has(id) || id === compParentId);
-    if (redundantPrereq) {
-      const redundant = compendiums.find((c) => c.id === redundantPrereq);
-      showToast(
-        `"${redundant?.title || redundantPrereq}" já é ancestral deste material na árvore — a trilha já mostra o caminho, não cadastre como "Estude antes".`
-      );
+    // Mesma regra que o banco aplica, respondida antes da viagem de rede.
+    const navProblem = validateNavigationValue(compNavigation, {
+      compendiums,
+      selfId: editingCompId,
+      disciplineId: compDisciplineId,
+    });
+    if (navProblem) {
+      showToast(navProblem);
       return;
     }
 
-    const navigationLinks: Compendium['navigationLinks'] = [
-      ...compPrerequisiteIds.map((materialId, i) => ({ materialId, linkType: 'prerequisite' as const, sortOrder: i * 10 })),
-      ...compRelatedIds.map((materialId, i) => ({ materialId, linkType: 'related' as const, sortOrder: i * 10 })),
-    ];
-
-    const newComp: Compendium = {
-      id: compId,
-      disciplineId: compDisciplineId,
-      themeId: compThemeId || 'geral',
-      title: compTitle.trim(),
-      subtitle: compSubtitle.trim(),
-      moduleNumber: compModuleNumber.trim() ? Number(compModuleNumber) : undefined,
-      estimatedReadTimeMinutes: Number(compEstimatedTime) || 15,
-      lastUpdated: new Date().toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }),
-      author: compAuthor.trim(),
-      mode: compMode,
-      tags,
-      parentMaterialId: compParentId || null,
-      treeSortOrder: Number(compTreeSortOrder) || 0,
-      navShortTitle: compNavShortTitle.trim() || undefined,
-      taxonomyKind: compTaxonomyKind || undefined,
-      navigationLinks,
-      sections: compSections,
-      references,
-    };
+    const newComp = compendiumFromFormState(
+      {
+        title: compTitle,
+        subtitle: compSubtitle,
+        disciplineId: compDisciplineId,
+        themeId: compThemeId,
+        mode: compMode,
+        author: compAuthor,
+        moduleNumber: compModuleNumber,
+        estimatedTime: compEstimatedTime,
+        tagsStr: compTagsStr,
+        referencesStr: compReferencesStr,
+        sections: compSections,
+        navigation: compNavigation,
+      },
+      editingOriginal,
+      compId
+    );
 
     try {
       await materialsRepository.saveCompendium(newComp);
@@ -597,6 +549,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     }
     setIsCompendiumFormOpen(false);
     setEditingCompId(null);
+    setEditingOriginal(null);
     onRefreshData();
     showToast(editingCompId ? 'Conteúdo atualizado com sucesso!' : 'Novo conteúdo incluído e indexado com sucesso!');
   };
@@ -1142,6 +1095,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                   onClick={() => {
                     setIsCompendiumFormOpen(false);
                     setEditingCompId(null);
+                    setEditingOriginal(null);
                   }}
                   className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-slate-200 hover:bg-stone-100 dark:hover:bg-[#142038] cursor-pointer"
                 >
@@ -1171,9 +1125,13 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                   </label>
                   <select id="admincmsview-modalidade-categoria-2"
                     value={compMode}
-                    onChange={(e) => setCompMode(e.target.value as 'atlas' | 'mecanismos')}
+                    onChange={(e) => setCompMode(e.target.value as 'atlas' | 'mecanismos' | '')}
                     className="w-full p-2.5 rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 font-semibold text-xs"
                   >
+                    {/* Sem esta opção, material com mode nulo (todos os de produção)
+                        era gravado como "mecanismos" no primeiro Salvar — e isso
+                        mudava o hash atestado sem ninguém ter editado nada. */}
+                    <option value="">— Não definido —</option>
                     <option value="mecanismos">Mecanismo Fisiopatológico (Fisio/Farmaco)</option>
                     <option value="atlas">Conteúdo de Área (Atlas / Panorama)</option>
                   </select>
@@ -1295,128 +1253,20 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                   />
                 </div>
 
-                <div>
-                  <label className="font-bold text-stone-700 dark:text-slate-300 block mb-1" htmlFor="admincmsview-rotulo-curto-nav">
-                    Rótulo curto de navegação (opcional, até 40 caracteres)
-                  </label>
-                  <input id="admincmsview-rotulo-curto-nav"
-                    type="text"
-                    maxLength={40}
-                    value={compNavShortTitle}
-                    onChange={(e) => setCompNavShortTitle(e.target.value)}
-                    placeholder="Ex: Terceira geração (título completo: Cefalosporinas de terceira geração)"
-                    className="w-full p-2.5 rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 text-xs"
-                  />
-                  <p className="text-[11px] text-stone-500 dark:text-slate-400 mt-1">
-                    Usado na trilha de navegação e nos cartões da árvore. Vazio = usa o título completo.
-                  </p>
-                </div>
               </div>
 
-              {/* ── NAVEGAÇÃO DO CONTEÚDO (árvore de materiais) ─────────── */}
-              <div className="space-y-4 pt-4 border-t border-stone-200 dark:border-[#243452]">
-                <div>
-                  <h4 className="font-bold text-sm text-stone-900 dark:text-slate-100 flex items-center gap-2">
-                    <Link className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                    <span>Navegação do conteúdo</span>
-                  </h4>
-                  <p className="text-[11px] text-stone-500 dark:text-slate-400">
-                    Posição na árvore e ligações com outros materiais. Sempre por seleção de material real — nunca por título digitado.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="font-bold text-stone-700 dark:text-slate-300 block mb-1" htmlFor="admincmsview-material-pai">
-                      Material-pai
-                    </label>
-                    <select id="admincmsview-material-pai"
-                      value={compParentId}
-                      onChange={(e) => setCompParentId(e.target.value)}
-                      className="w-full p-2.5 rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 text-xs"
-                    >
-                      <option value="">— Nenhum (raiz) —</option>
-                      {compendiums
-                        .filter((c) => {
-                          if (c.id === (editingCompId || '__novo__')) return false;
-                          if (c.disciplineId !== compDisciplineId) return false;
-                          if (editingCompId && getDescendantIds(compendiums, editingCompId).has(c.id)) return false;
-                          return true;
-                        })
-                        .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
-                        .map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.title}
-                          </option>
-                        ))}
-                    </select>
-                    <p className="text-[11px] text-stone-500 dark:text-slate-400 mt-1">Só materiais da mesma disciplina.</p>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-stone-700 dark:text-slate-300 block mb-1" htmlFor="admincmsview-ordem-irmaos">
-                      Ordem entre irmãos
-                    </label>
-                    <input id="admincmsview-ordem-irmaos"
-                      type="number"
-                      min={0}
-                      step={10}
-                      value={compTreeSortOrder}
-                      onChange={(e) => setCompTreeSortOrder(Number(e.target.value))}
-                      className="w-full p-2.5 rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 text-xs"
-                    />
-                    <p className="text-[11px] text-stone-500 dark:text-slate-400 mt-1">Passos de 10 dão espaço para inserir entre dois irmãos depois.</p>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-stone-700 dark:text-slate-300 block mb-1" htmlFor="admincmsview-tipo-no">
-                      Tipo do nó (opcional)
-                    </label>
-                    <select id="admincmsview-tipo-no"
-                      value={compTaxonomyKind}
-                      onChange={(e) => setCompTaxonomyKind(e.target.value as TaxonomyKind | '')}
-                      className="w-full p-2.5 rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 text-xs"
-                    >
-                      <option value="">— Não classificado —</option>
-                      <option value="visao_geral">Visão geral</option>
-                      <option value="mecanismo">Mecanismo</option>
-                      <option value="classe">Classe</option>
-                      <option value="subclasse">Subclasse</option>
-                      <option value="farmaco">Fármaco</option>
-                      <option value="condicao">Condição</option>
-                    </select>
-                  </div>
-                </div>
-
-                {compParentId && (
-                  <p className="text-[11px] text-stone-500 dark:text-slate-400">
-                    <span className="font-semibold">Caminho resultante:</span>{' '}
-                    {getBreadcrumbTrail(compendiums, compParentId).map(breadcrumbLabel).join(' › ')}
-                    {' › '}
-                    <span className="italic">{compNavShortTitle.trim() || compTitle.trim() || '(este material)'}</span>
-                  </p>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <MaterialMultiSelect
-                    label="Estude antes (prerequisite)"
-                    helperText="Só fora do ramo — um ancestral já é pré-requisito implícito pela trilha."
-                    options={compendiums.filter((c) => c.id !== (editingCompId || '__novo__'))}
-                    selectedIds={compPrerequisiteIds}
-                    onChange={setCompPrerequisiteIds}
-                    excludeIds={compRelatedIds}
-                    htmlId="admincmsview-nav-prerequisite"
-                  />
-                  <MaterialMultiSelect
-                    label="Veja também (related)"
-                    helperText="Simétrico: aparece nos dois materiais. Pode apontar pra rascunho durante a preparação."
-                    options={compendiums.filter((c) => c.id !== (editingCompId || '__novo__'))}
-                    selectedIds={compRelatedIds}
-                    onChange={setCompRelatedIds}
-                    excludeIds={compPrerequisiteIds}
-                    htmlId="admincmsview-nav-related"
-                  />
-                </div>
+              {/* ── POSIÇÃO NA ÁRVORE ─────────────────────────────────────
+                  Mesmo componente do modal "Importar material". */}
+              <div className="pt-4 border-t border-stone-200 dark:border-[#243452]">
+                <MaterialNavigationFields
+                  value={compNavigation}
+                  onChange={setCompNavigation}
+                  compendiums={compendiums}
+                  disciplineId={compDisciplineId}
+                  selfId={editingCompId}
+                  currentTitle={compTitle}
+                  idPrefix="admincmsview"
+                />
               </div>
 
               {/* ── SECTIONS BUILDER ───────────────────────────────────── */}
@@ -1594,6 +1444,21 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                   placeholder="Ex: Diretriz de Fibrilação Atrial da Sociedade Brasileira de Cardiologia (2024)"
                   className="w-full p-2.5 rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 text-xs"
                 />
+                {(() => {
+                  // O banco casa referência por texto idêntico: editar o texto de uma
+                  // referência vinculada a fonte curada cria outra, e o vínculo não vai
+                  // junto. Avisar ANTES de salvar, em vez de perder em silêncio.
+                  const lost = linkedReferencesThatWillBeLost(editingOriginal, compReferencesStr);
+                  if (lost.length === 0) return null;
+                  return (
+                    <p role="alert" className="mt-2 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 text-xs text-amber-800 dark:text-amber-300">
+                      {lost.length === 1 ? 'Esta referência está vinculada' : 'Estas referências estão vinculadas'} a uma
+                      fonte curada e o vínculo será perdido ao salvar, porque o texto mudou ou foi removido:{' '}
+                      <span className="font-semibold">{lost.join('; ')}</span>. Depois de salvar, refaça o vínculo no
+                      painel de referências.
+                    </p>
+                  );
+                })()}
               </div>
 
               {/* Form Buttons */}
@@ -1613,7 +1478,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                   className="px-6 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white dark:bg-teal-600 dark:text-white dark:hover:bg-teal-500 font-bold elev-xs flex items-center gap-1.5 transition-all"
                 >
                   <Save className="w-4 h-4" />
-                  <span>{editingCompId ? 'Atualizar Conteúdo' : 'Publicar Conteúdo'}</span>
+                  <span>{editingCompId ? 'Salvar alterações' : 'Salvar rascunho'}</span>
                 </button>
               </div>
             </form>
@@ -1669,6 +1534,28 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                     <p className="text-xs text-stone-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
                       {c.subtitle}
                     </p>
+
+                    {(() => {
+                      // Onde o material está e o que falta publicar antes dele — sem
+                      // isto, o admin só descobria a ordem da árvore quando o
+                      // "Publicar" era recusado.
+                      const trail = getBreadcrumbTrail(compendiums, c.id);
+                      const blockers = publishPrerequisitesInOrder(compendiums, c);
+                      return (
+                        <div className="space-y-1 pt-1">
+                          <p className="text-[11px] text-stone-500 dark:text-slate-400" data-testid="admin-card-tree-position">
+                            <span className="font-semibold">Na árvore:</span>{' '}
+                            {trail.length > 1 ? trail.map(breadcrumbLabel).join(' › ') : 'raiz (sem material acima)'}
+                          </p>
+                          {blockers.length > 0 && (
+                            <p className="text-[11px] text-amber-700 dark:text-amber-300" data-testid="admin-card-publish-blockers">
+                              <span className="font-semibold">Publique antes, nesta ordem:</span>{' '}
+                              {blockers.map((b) => b.title).join(' → ')}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     <div className="flex items-center gap-2 text-[11px] text-stone-500 dark:text-slate-400 pt-1">
                       <span>{c.sections.length} {c.sections.length === 1 ? 'seção' : 'seções'} estruturadas</span>
@@ -1776,8 +1663,8 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                               >
                                 <Edit3 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                                 <span>
-                                  <span className="block font-semibold">Metadados</span>
-                                  <span className="block text-[10px] text-stone-400">Título, disciplina, tags, autor...</span>
+                                  <span className="block font-semibold">Metadados e posição na árvore</span>
+                                  <span className="block text-[10px] text-stone-400">Título, disciplina, pai, ligações, tags...</span>
                                 </span>
                               </button>
                               <button

@@ -102,7 +102,8 @@ describe('ImportMaterialModal', () => {
 
     await selectFile(makeYamlFile(validYaml));
 
-    await waitFor(() => screen.getByText('Meningite Bacteriana Aguda'));
+    // O título aparece no campo Título e no "Caminho resultante" da posição na árvore.
+    await waitFor(() => screen.getAllByText('Meningite Bacteriana Aguda'));
     expect(screen.getByText(/apenas um/i)).toBeTruthy(); // aviso "cria apenas um rascunho"
     expect(importCompendiumDraftMock).not.toHaveBeenCalled();
 
@@ -115,7 +116,9 @@ describe('ImportMaterialModal', () => {
     expect(saved.themeId).toBe('tema-clinica');
     expect(saved.sections).toHaveLength(1);
     expect(onImported).toHaveBeenCalledTimes(1);
-    await waitFor(() => screen.getByText(/criado com sucesso/i));
+    await waitFor(() => screen.getByText(/Rascunho de .* criado\./i));
+    // Sem pai escolhido, o material entra como raiz — e o sucesso diz onde ficou.
+    expect(screen.getByTestId('import-success-trail').textContent).toMatch(/raiz/);
   });
 
   it('reconhece .md pela extensão e importa pelo parser de Markdown', async () => {
@@ -145,7 +148,8 @@ Texto da seção.
 
     await selectFile(makeMarkdownFile(validMarkdown));
 
-    await waitFor(() => screen.getByText('Meningite Bacteriana Aguda'));
+    // O título aparece no campo Título e no "Caminho resultante" da posição na árvore.
+    await waitFor(() => screen.getAllByText('Meningite Bacteriana Aguda'));
     fireEvent.click(screen.getByRole('button', { name: /salvar rascunho/i }));
 
     await waitFor(() => expect(importCompendiumDraftMock).toHaveBeenCalledTimes(1));
@@ -221,7 +225,8 @@ Texto da seção.
     );
 
     await selectFile(makeYamlFile(validYaml));
-    await waitFor(() => screen.getByText('Meningite Bacteriana Aguda'));
+    // O título aparece no campo Título e no "Caminho resultante" da posição na árvore.
+    await waitFor(() => screen.getAllByText('Meningite Bacteriana Aguda'));
 
     fireEvent.click(screen.getByRole('button', { name: /^cancelar$/i }));
 
@@ -243,11 +248,15 @@ Texto da seção.
     );
 
     await selectFile(makeYamlFile(validYaml));
-    await waitFor(() => screen.getByText('Meningite Bacteriana Aguda'));
+    // O título aparece no campo Título e no "Caminho resultante" da posição na árvore.
+    await waitFor(() => screen.getAllByText('Meningite Bacteriana Aguda'));
     fireEvent.click(screen.getByRole('button', { name: /salvar rascunho/i }));
 
-    await waitFor(() => screen.getByText(/não foi possível salvar o rascunho agora/i));
-    expect(screen.queryByText(/criado com sucesso/i)).toBeNull();
+    await waitFor(() => screen.getByText(/não foi possível salvar o rascunho/i));
+    // A causa real aparece — antes a tela dizia "verifique sua conexão" para
+    // qualquer erro, inclusive regra da árvore violada.
+    expect(screen.getByTestId('import-save-error-message').textContent).toContain('falha simulada de rede/servidor');
+    expect(screen.queryByText(/Rascunho de .* criado\./i)).toBeNull();
     expect(onImported).not.toHaveBeenCalled();
   });
 
@@ -265,7 +274,8 @@ Texto da seção.
     );
 
     await selectFile(makeYamlFile(yamlComTemaInexistente));
-    await waitFor(() => screen.getByText('Meningite Bacteriana Aguda'));
+    // O título aparece no campo Título e no "Caminho resultante" da posição na árvore.
+    await waitFor(() => screen.getAllByText('Meningite Bacteriana Aguda'));
     expect(screen.getByTestId('import-missing-fields-panel').textContent).toMatch(/Endocardite Infecciosa/);
 
     const themeSelect = screen.getByTestId('import-theme-override-select');

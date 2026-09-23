@@ -9,17 +9,28 @@ etapa de revisão/atestação, que **é obrigatória no banco de dados**
 
 **Fluxo completo, em 4 passos:**
 
-1. Escrever o conteúdo (direto no Admin — não precisa de YAML nem de
-   Word, você já vai colar o texto ali mesmo), seguindo o padrão de
-   completude e profundidade descrito mais abaixo.
+1. Colocar o conteúdo na plataforma, já na posição certa da árvore. Dois
+   caminhos, mesmo resultado:
+   - **Importar material** (`.md` ou `.compendium.yaml`) — o caminho de
+     quem produz o texto fora, com IA de fontes ou editor próprio; ver
+     [Importar um arquivo](#importar-um-arquivo-md-ou-compendiumyaml);
+   - **Novo Conteúdo** — digitar ou colar direto no formulário do Admin.
+
+   Nos dois, o bloco **Posição na árvore** (pai, ordem, rótulo curto,
+   tipo, "Estude antes", "Veja também") é preenchido na mesma tela.
 2. Revisar/atestar o rascunho (obrigatório antes de publicar).
-3. Publicar.
+3. Publicar — de cima para baixo na árvore.
 4. Estudar — o resto (questões, caderno de erros, flashcards) já roda sozinho.
 
 Escreva e reescreva o texto livremente no passo 1. Só faça o passo 2
-quando o texto já estiver do jeito que você quer — **qualquer edição
-depois de atestado invalida a aprovação** e te obriga a repetir o
-passo 2.
+quando o texto já estiver do jeito que você quer — **editar o texto
+depois de atestado invalida a aprovação** (título, subtítulo, seções,
+referências, tags, autor) e te obriga a repetir o passo 2.
+
+**O que NÃO invalida a atestação** (desde 2026-09-23): mudar a posição na
+árvore (pai, ordem, tipo do nó, rótulo curto), mudar "Estude antes" ou
+"Veja também", e abrir o formulário e salvar sem mudar nada. Posicionar
+antes ou depois de atestar tanto faz.
 
 ---
 
@@ -110,32 +121,53 @@ campo de conteúdo é texto simples (aceita Markdown: `**negrito**`,
    com o tipo de evidência entre colchetes — ex. `[Diretriz de prática
    clínica — nome da entidade]`) ficam no fim do formulário.
 
-   Desde a Fase 2 da taxonomia (2026-09-23), o campo de texto livre "Nós
-   de Conexão/Pré-requisitos" foi substituído pelo bloco **Navegação do
-   conteúdo**: material-pai, ordem entre irmãos, rótulo curto de trilha,
+   O bloco **Posição na árvore** define onde o material aparece para o
+   estudante: material-pai, ordem entre irmãos, rótulo curto de trilha,
    tipo do nó, e os seletores **Estude antes**/**Veja também** — todos
    por seleção de material real (busca + clique), nunca título digitado.
-   Um ancestral já é pré-requisito implícito pela trilha e não deve ser
-   recadastrado em "Estude antes"; o formulário recusa antes mesmo de
-   salvar. Ver `docs/operacao/standards/taxonomia-materiais.md` para as
-   regras completas de quando usar cada tipo de ligação.
-5. Clique em salvar. **Atenção**: o botão diz "Publicar Conteúdo", mas
-   isso é só o nome do botão — o conteúdo continua como rascunho,
-   invisível para quem estuda, até você fazer os passos 2 e 3 abaixo.
+   O **Caminho resultante**, no topo do bloco, mostra ao vivo onde o
+   material vai ficar. Um ancestral já é pré-requisito implícito pela
+   trilha e não deve ser recadastrado em "Estude antes"; o bloco avisa
+   antes mesmo de salvar. Ver `docs/operacao/standards/taxonomia-materiais.md`
+   para as regras completas de quando usar cada tipo de ligação.
+5. Clique em **Salvar rascunho**. O conteúdo fica invisível para quem
+   estuda até você fazer os passos 2 e 3 abaixo.
 
 Toda referência listada precisa ter pelo menos um `[N]` amarrado a ela
 no texto — evite deixar referência "órfã", sem citação nenhuma.
 
-Você pode reabrir e editar esse mesmo formulário quantas vezes quiser
-antes do passo 2, sem custo nenhum.
+Para reabrir: na lista de Conteúdos, **Editar → Metadados e posição na
+árvore**. Pode editar quantas vezes quiser antes do passo 2, sem custo
+nenhum.
 
-### Alternativa: importar um arquivo (`.md` ou `.compendium.yaml`)
+**Vínculo de referência com fonte curada** (feito no painel de
+referências): o "Salvar" preserva o vínculo enquanto o texto da
+referência continuar igual. Se você editar ou apagar o texto de uma
+referência vinculada, o formulário avisa antes de salvar que o vínculo
+vai se perder — refaça-o depois no painel de referências.
 
-Vale a pena se você gerar o conteúdo com uma IA de fontes (NotebookLM e
-similares — que produzem Markdown nativamente, não YAML) ou já tiver
-um texto pronto. Admin → **Importar material** → escolha o arquivo — a
-tela mostra um preview com campos faltando e pede escolha manual de
-disciplina/tema se o nome não bateu com o catálogo.
+### Importar um arquivo (`.md` ou `.compendium.yaml`)
+
+O caminho de quem produz o conteúdo fora — com IA de fontes (NotebookLM e
+similares, que produzem Markdown nativamente) ou editor próprio. Admin →
+**Importar material** → escolha o arquivo. A tela mostra:
+
+1. **Prévia** — título, disciplina, tema, contagem de seções e
+   referências, campos faltando. Pede escolha manual de disciplina/tema se
+   o nome não bateu com o catálogo.
+2. **Posição na árvore** — o mesmo bloco do formulário: escolha o pai, o
+   rótulo curto e as ligações já aqui. O **Caminho resultante** mostra
+   onde o material vai ficar antes de gravar. Tudo opcional: sem pai, ele
+   entra como raiz e pode ser posicionado depois.
+3. **Salvar rascunho** — grava tudo numa transação só. Se a posição
+   violar uma regra da árvore (pai de outra disciplina, ancestral em
+   "Estude antes"...), **nada é criado** e a tela mostra o motivo real;
+   **Voltar e corrigir** leva de volta à prévia, sem reenviar o arquivo.
+4. **Sucesso** — mostra onde o material ficou na árvore e os próximos
+   passos (atestar, depois publicar de cima para baixo).
+
+Importe **de cima para baixo** (a classe antes da subclasse, a subclasse
+antes do fármaco): o pai precisa existir para ser escolhido.
 
 **Antes de escrever `Disciplina`/`Tema` no arquivo, confira o valor
 exato do catálogo real** — abra "Novo Conteúdo / Mecanismo" no Admin e
@@ -426,6 +458,12 @@ um botão **Revisão**. Nele:
 Botão **Publicar** na mesma linha do conteúdo. A partir daqui fica
 visível para quem tem conta ativa na plataforma (você e quem você
 liberou).
+
+**Publique de cima para baixo na árvore.** Um material só publica
+depois de tudo acima dele e de tudo em "Estude antes" estar publicado. O
+cartão de cada conteúdo mostra **"Na árvore:"** (onde ele está) e, quando
+algo bloqueia, **"Publique antes, nesta ordem:"** com a lista já na
+sequência certa. "Publicar rascunhos" (em lote) resolve a ordem sozinho.
 
 ## Passo 4 — Estudar (isto já roda sozinho)
 
