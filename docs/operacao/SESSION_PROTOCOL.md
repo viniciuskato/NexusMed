@@ -31,7 +31,7 @@
 3. Se houver divergência entre o que `PROJECT_STATE.md` descreve e o que
    os comandos acima mostram — **parar e relatar a divergência antes de
    agir**, não presumir qual dos dois está certo.
-4. Definir (ou confirmar, se veio de um prompt de diretoria) **um único
+4. Definir (ou confirmar, se veio de uma ficha de etapa) **um único
    objetivo principal** para a sessão. Duas sessões não devem escrever nos
    mesmos arquivos ao mesmo tempo — checar `TASKS.md` e perguntar se
    houver qualquer dúvida de sobreposição.

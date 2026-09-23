@@ -6,6 +6,72 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-23 — Ciclo de estudo: a árvore fica, as ligações cadastradas congelam, a conexão passa a ser questão ↔ materiais
+
+O produto é um banco de materiais a serviço de um ciclo: encontrar o assunto →
+ler e aprofundar → testar o que leu (inclusive questões entre materiais) → o
+erro vira flashcard → revisão diária controlada pela plataforma. A estrutura
+existe para o estudo, não para si mesma.
+
+1. **A árvore (pai → filhos) fica.** É o mecanismo de "aprofundar até onde
+   achar necessário".
+2. **"Estude antes" e "Veja também" param de ser cadastrados.** Saem do
+   formulário e da importação; o que já existe continua funcionando e visível;
+   nada é apagado. Eram a maior fonte de complexidade e de envelhecimento da
+   rede — um material novo não atualiza os antigos — e não aparecem em nenhum
+   passo do ciclo. Revisa a decisão de 2026-09-22 (árvore + dois tipos de
+   ligação) no que diz respeito às ligações.
+3. **A conexão que importa é questão ↔ materiais.** Uma questão cobra um ou
+   vários materiais. Daí saem o "testar o que li", as questões entre materiais
+   (aparecem quando todos os materiais que exigem foram lidos) e, se fizer
+   falta, um "Veja também" calculado. A rede se atualiza a cada questão nova,
+   sem manutenção retroativa.
+4. **Busca no banco, no padrão de base de artigos científicos** — várias
+   palavras, sem acento, relevância, trecho destacado, abre na seção.
+
+**Por quê**: o dono do produto apontou que o emaranhado de interligações e
+subordinações ficava complexo demais e envelheceria com a produção de
+material novo. A análise confirmou: a árvore não envelhece (cresce para baixo,
+o "Aprofunde-se" é calculado), mas as ligações cadastradas envelhecem e não
+servem ao ciclo; o passo que faltava ("testar o que li") depende de outra
+conexão.
+
+**Como aplicar**: iniciativa 43,
+[`docs/produto/CICLO-DE-ESTUDO.md`](../produto/CICLO-DE-ESTUDO.md). Ordem:
+primeiro o que muda a forma de produzir conteúdo, depois o que só lê.
+
+---
+
+## 2026-09-23 — Fichas de etapa no lugar de prompts
+
+Encaminhamentos deixam de ser prompts persistidos em `docs/diretoria/prompts/`
+e passam a ser **fichas de etapa** num documento vivo por iniciativa, em
+`docs/produto/`. A ficha guarda só o que não envelhece: por quê, critério de
+aceite observável, restrições e armadilhas conhecidas (com onde conferir),
+fora de escopo, dependências, estado. O como (arquivos, SQL, comandos,
+hashes, passo a passo) é derivado por quem executa, lendo o código naquele
+momento. O encaminhamento vira uma linha: "execute a etapa X de Y seguindo o
+EXECUTOR_PROTOCOL".
+
+**Por quê**: os prompts envelheciam antes de serem executados. O 42-C ainda
+apontava para um caminho de repositório que não existe mais; o plano técnico da
+taxonomia foi desmentido três vezes em um dia; e os achados que mais importam
+(ex.: o hash de atestação da questão incluir o vínculo com material) só
+aparecem lendo o código na hora. O projeto já tinha lugar para o que dura
+(`DECISIONS.md`, `standards/`, `TASKS.md`, o PR como diário) e para o como
+genérico (`AGENTS.md`, `RUNBOOK.md`, `EXECUTOR_PROTOCOL.md`); o prompt
+duplicava tudo num texto perecível.
+
+**O que não muda**: autorização específica para push, PR, merge e escrita
+remota; gates completos; verificação independente por outra sessão.
+
+**Como aplicar**: ver `docs/diretoria/MODELO-DIRETORIA.md`, seção "Fichas de
+etapa", e `docs/operacao/EXECUTOR_PROTOCOL.md`. Uma ficha sem critério de
+aceite observável não é executável — "só a ideia" não basta.
+`docs/diretoria/prompts/` fica como histórico.
+
+---
+
 ## 2026-09-23 — "Salvar" sem mudança é no-op, e a importação é o caminho de primeira classe
 
 Três decisões, tomadas depois de medir o fluxo real do dono do produto
