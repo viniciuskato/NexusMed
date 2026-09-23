@@ -11,11 +11,8 @@ name: CI
 # Segurança: `pull_request` (nunca `pull_request_target`) — roda com o código
 # do PR, mas SEM acesso a segredos de repositório (não há nenhum `secrets.*`
 # usado aqui; tudo local/efêmero: Supabase local, chaves demo do próprio CLI).
-# O único token usado é o `github.token` efêmero do próprio Actions, e só para
-# autenticar o PULL de imagens públicas no ghcr.io (job `full`, ver lá).
-# `permissions` no nível do workflow é o mínimo (`contents: read`); o job
-# `full` acrescenta só `packages: read`. Nenhum job escreve no repositório,
-# comenta em PR ou publica nada.
+# `permissions` no nível do workflow é o mínimo (`contents: read`) — nenhum
+# job escreve no repositório, comenta em PR ou publica nada.
 #
 # Actions fixadas por SHA de commit completo (comentário `# vX.Y.Z` ao lado)
 # e Supabase CLI em versão fixa — nada de tag móvel/`latest` (AUD-10). O
@@ -88,10 +85,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: fast
-    # packages: read — só para o `docker login ghcr.io` abaixo. Leitura apenas.
-    permissions:
-      contents: read
-      packages: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -111,19 +104,17 @@ jobs:
       - name: Instalar navegadores do Playwright (Chromium)
         run: npx playwright install --with-deps chromium
 
-      # As imagens do Supabase vêm do ghcr.io (padrão do setup-cli v3). Pull
-      # ANÔNIMO divide a cota com todos os runners do GitHub: em 2026-09-23 o
-      # `supabase start` falhou 3 vezes seguidas em ~16 min com
-      # `toomanyrequests` — antes de qualquer teste — sem incidente declarado
-      # no GitHub Status. Pull autenticado conta na cota do token do repo.
-      # Passo de shell de propósito: nenhuma action de terceiro nova (AUD-10).
-      - name: Autenticar pull de imagens no ghcr.io
-        env:
-          GHCR_TOKEN: ${{ github.token }}
-        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-
+      # Registro das imagens: AWS ECR Public, não o ghcr.io que o setup-cli v3
+      # exporta via GITHUB_ENV (o `env:` do passo tem precedência sobre ele).
+      # Em 2026-09-23 o ghcr.io passou a responder `toomanyrequests` a partir
+      # das 19h12 UTC — 5 execuções seguidas falharam aqui, antes de qualquer
+      # teste, inclusive com pull AUTENTICADO (testado e descartado no PR #63).
+      # O ECR Public é espelho oficial das mesmas imagens do Supabase e era o
+      # padrão da CLI antes do setup-cli v3.
       - name: Subir Supabase local (supabase start)
         id: supabase_start
+        env:
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: public.ecr.aws
         run: supabase start
 
       - name: Resetar banco local (migrations + seed determinístico)
