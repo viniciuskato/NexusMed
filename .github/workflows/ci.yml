@@ -111,11 +111,31 @@ jobs:
       # teste, inclusive com pull AUTENTICADO (testado e descartado no PR #63).
       # O ECR Public é espelho oficial das mesmas imagens do Supabase e era o
       # padrão da CLI antes do setup-cli v3.
+      #
+      # Mesmo no ECR, baixar ~12 imagens em paralelo pode estourar o limite
+      # POR SEGUNDO dele (aconteceu com a edge-runtime). Por isso:
+      #   - `-x edge-runtime,studio`: nenhum teste usa Edge Functions (não há
+      #     supabase/functions) nem o painel Studio — menos imagens, menos
+      #     requisições. mailpit, storage e imgproxy ficam: cadastro por e-mail
+      #     e a migration de políticas de storage dependem deles;
+      #   - até 3 tentativas: o que já baixou fica no cache do Docker, então a
+      #     tentativa seguinte só busca as imagens que faltaram.
       - name: Subir Supabase local (supabase start)
         id: supabase_start
         env:
           SUPABASE_INTERNAL_IMAGE_REGISTRY: public.ecr.aws
-        run: supabase start
+        run: |
+          for attempt in 1 2 3; do
+            if supabase start -x edge-runtime,studio; then
+              echo "Supabase local no ar (tentativa $attempt)."
+              exit 0
+            fi
+            echo "::warning::supabase start falhou (tentativa $attempt/3) — aguardando antes de tentar de novo."
+            supabase stop --no-backup || true
+            sleep $((attempt * 30))
+          done
+          echo "::error::supabase start falhou 3 vezes — ver as mensagens de pull acima (limite do registro de imagens?)."
+          exit 1
 
       - name: Resetar banco local (migrations + seed determinístico)
         run: supabase db reset
