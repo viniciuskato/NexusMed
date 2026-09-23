@@ -33,7 +33,7 @@ git log --oneline -10 origin/main
 Qualquer hash citado neste documento é **baseline histórica de quando foi
 escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
 
-## "Salvar" sem perda e importação já posicionada (2026-09-23) — implementado, não publicado
+## "Salvar" sem perda e importação já posicionada (2026-09-23) — publicado (PR #62, `6d1f71d`)
 
 - **Problema medido** (Supabase local, payload exato do formulário do Admin):
   um "Salvar" sem mudar nada mudava o hash de atestação, recriava todas as
@@ -53,9 +53,15 @@ escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
   de "Publicar Conteúdo". Posicionar antes ou depois de atestar tanto faz.
 - **Evidência local**: pgTAP 398/398, Vitest 257/257, E2E do fluxo completo
   7/7 sem resíduo, typecheck/lint/build limpos.
-- **Publicação**: branch `work/processo-importacao-arvore`. **Aplicar a
-  migration no remoto antes do merge** — o frontend novo chama a
-  `import_compendium_draft` de 15 parâmetros.
+- **Publicação**: migration `20260923120000` aplicada no remoto antes do
+  merge e verificada por leitura direta (29/29 migrations; a importação
+  resolve com 15 e com 10 parâmetros; `app.replace_material_links` não fica
+  exposta). PR #62 mesclado (`6d1f71d`), deploy confirmado pelo SHA dentro do
+  bundle de produção, sem instrumentação de teste.
+- **CI**: o merge exigiu antes o PR #63 (`9b9c8f7`) — o ghcr.io passou a
+  recusar o download das imagens do Supabase; o job `full` agora usa o ECR
+  Public, sobe só os serviços usados, tenta até 3 vezes, e fechou uma corrida
+  no E2E `cms-human-review-21d` que só aparecia no CI.
 
 ## Taxonomia hierárquica de materiais — Fase 1 + 1.5 publicadas (2026-09-22/23)
 
