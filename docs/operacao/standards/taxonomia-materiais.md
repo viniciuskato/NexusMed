@@ -99,18 +99,23 @@ realocação desbloqueia — ver `INTEGRITY_HINTS` em
 
 ## 7. Pendente para as Fases 2 e 3
 
-- **Questões por nó da árvore.** Hoje "Resolver questões" no leitor filtra por
-  **tema** (`onOpenQuestionsForTheme`), então todos os materiais de um mesmo
-  ramo mostram o mesmo conjunto. Com a árvore, o escopo correto é "questões
-  deste material e dos descendentes" — `app.material_descendants()` já existe
-  para isso. Antes de trocar, é preciso saber quantas questões do acervo remoto
-  têm `material_id` preenchido: se forem poucas, o escopo por nó esvazia o botão
-  e o filtro precisa de fallback explícito.
+- **Questões por nó da árvore — bloqueado por vinculação editorial, não por
+  código.** Hoje "Resolver questões" no leitor filtra por **tema**
+  (`onOpenQuestionsForTheme`); com a árvore, o escopo correto seria "questões
+  deste material e dos descendentes" (`app.material_descendants()` já existe
+  para isso). Inventário remoto de 2026-09-22: **apenas 9 de 420 questões
+  (2,1%) têm `material_id` preenchido.** Trocar o filtro agora esvaziaria
+  "Resolver questões" para quase todo estudante. Não implementar o escopo por
+  nó sem, antes, um plano editorial de vinculação em massa — este item não
+  reabre até essa vinculação avançar.
 - **Leitura sob demanda.** `getCompendiums()` baixa todos os materiais, todas as
-  seções e todas as referências a cada login. A árvore incentiva muitos nós
-  pequenos, então a Fase 3 deve separar "lista leve para árvore/biblioteca"
-  (id, título, `nav_short_title`, pai, ordem, `taxonomy_kind`, status) de
-  "seções do material aberto".
+  seções e todas as referências a cada login. Inventário remoto de
+  2026-09-22: 38 materiais, 836 seções, ~947 mil caracteres de `content`
+  (~1 MB no payload hoje). A árvore incentiva muitos nós pequenos — 21 só no
+  piloto de β-lactâmicos —, então a Fase 3 deve separar "lista leve para
+  árvore/biblioteca" (id, título, `nav_short_title`, pai, ordem,
+  `taxonomy_kind`, status) de "seções do material aberto" antes que esse
+  número cresça o suficiente para importar.
 - **Árvore defensiva no cliente.** Material cujo pai não está na lista
   carregada (fallback do `ResilientMaterialsRepository` para `localStorage`, por
   exemplo) é renderizado como **raiz**, nunca escondido.
