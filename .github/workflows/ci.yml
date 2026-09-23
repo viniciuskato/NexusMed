@@ -11,8 +11,11 @@ name: CI
 # Segurança: `pull_request` (nunca `pull_request_target`) — roda com o código
 # do PR, mas SEM acesso a segredos de repositório (não há nenhum `secrets.*`
 # usado aqui; tudo local/efêmero: Supabase local, chaves demo do próprio CLI).
-# `permissions` no nível do workflow é o mínimo (`contents: read`) — nenhum
-# job escreve no repositório, comenta em PR ou publica nada.
+# O único token usado é o `github.token` efêmero do próprio Actions, e só para
+# autenticar o PULL de imagens públicas no ghcr.io (job `full`, ver lá).
+# `permissions` no nível do workflow é o mínimo (`contents: read`); o job
+# `full` acrescenta só `packages: read`. Nenhum job escreve no repositório,
+# comenta em PR ou publica nada.
 #
 # Actions fixadas por SHA de commit completo (comentário `# vX.Y.Z` ao lado)
 # e Supabase CLI em versão fixa — nada de tag móvel/`latest` (AUD-10). O
@@ -85,6 +88,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: fast
+    # packages: read — só para o `docker login ghcr.io` abaixo. Leitura apenas.
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -104,7 +111,19 @@ jobs:
       - name: Instalar navegadores do Playwright (Chromium)
         run: npx playwright install --with-deps chromium
 
+      # As imagens do Supabase vêm do ghcr.io (padrão do setup-cli v3). Pull
+      # ANÔNIMO divide a cota com todos os runners do GitHub: em 2026-09-23 o
+      # `supabase start` falhou 3 vezes seguidas em ~16 min com
+      # `toomanyrequests` — antes de qualquer teste — sem incidente declarado
+      # no GitHub Status. Pull autenticado conta na cota do token do repo.
+      # Passo de shell de propósito: nenhuma action de terceiro nova (AUD-10).
+      - name: Autenticar pull de imagens no ghcr.io
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
       - name: Subir Supabase local (supabase start)
+        id: supabase_start
         run: supabase start
 
       - name: Resetar banco local (migrations + seed determinístico)
@@ -139,8 +158,11 @@ jobs:
       - name: Testes de navegador (Playwright/Chromium, cenários críticos)
         run: npm run test:e2e
 
+      # Só quando o Supabase subiu: se o `supabase start` falhou, o container
+      # não existe e esta checagem acusava "Sobraram  usuário(s)" com contagem
+      # VAZIA — um segundo erro enganoso por cima da causa real.
       - name: Verificação de limpeza — zero fixtures e2e-13a- remanescentes
-        if: always()
+        if: always() && steps.supabase_start.outcome == 'success'
         run: |
           docker exec supabase_db_synapsemed psql -U postgres -t -A -c \
             "select count(*) from auth.users where email like 'e2e-13a-%';" | tee /tmp/e2e-leftover-count.txt
