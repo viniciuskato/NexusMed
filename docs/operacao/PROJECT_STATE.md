@@ -39,7 +39,7 @@ escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
   transversais, começando pelo piloto de antibióticos/β-lactâmicos.
 - **Estado**: implementada e validada somente na branch local
   `work/antibioticos-taxonomia-fase1`, baseada em `origin/main` @ `bf65036`;
-  ainda sem commit, push, PR, migration remota ou deploy.
+  commit local `e09ae06`; ainda sem push, PR, migration remota ou deploy.
 - **Impacto**: `materials` recebe pai opcional e ordem entre irmãos; a tabela
   legada `material_dependencies` é transformada, preservando linhas, em
   `material_links` (`prerequisite`/`related`); ciclos de árvore e de
