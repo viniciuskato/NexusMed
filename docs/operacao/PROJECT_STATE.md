@@ -95,11 +95,46 @@ escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
 - **Evidência local**: Vitest 23 arquivos/218 testes (13 novos em
   `materialTree.test.ts`); typecheck limpo; lint 0 erros/5 warnings da
   baseline; build ok; `git diff --check` limpo.
-- **Pendente**: Fase 3 (árvore na biblioteca, breadcrumb no leitor, cartões
-  `Aprofunde-se`, caixas `Estude antes`/`Veja também` visíveis ao estudante) —
-  ainda não autorizada. Ver `docs/operacao/standards/taxonomia-materiais.md`
-  §7 para o que fica desenhado, mas não implementado, antes dela: escopo de
-  questões por nó (bloqueado por vinculação editorial) e leitura sob demanda.
+- **Fase 3 concluída e publicada** — ver bloco abaixo.
+
+## Taxonomia, Fase 3 — navegação do estudante (2026-09-23)
+
+- **Objetivo**: tornar a árvore navegável para o estudante, fechando o ciclo
+  aberto pela fundação (Fase 1/1.5) e pelo Admin (Fase 2).
+- **Estado**: **concluída e publicada** — PR #60 mesclado em `main`
+  (`612b72d`), deploy confirmado em produção (bundle carrega o SHA do merge
+  commit, sem instrumentação de teste). CI verde (fast + full) nas duas
+  rodadas. **Sem migration** — só frontend contra o schema já em produção.
+- **Entrega**: trilha de navegação clicável no leitor (colapsa para
+  "… › pai › atual" quando há mais de um ancestral; usa `nav_short_title`),
+  cartões `Aprofunde-se` derivados dos filhos, caixas `Estude antes`/`Veja
+  também` visualmente distintas, e terceiro modo de exibição da biblioteca
+  (árvore recolhível) construído sobre o resultado já filtrado. Tudo em
+  `src/components/compendium/MaterialNavigation.tsx`, derivando do utilitário
+  puro da Fase 2 — nenhuma travessia de árvore reimplementada.
+- **Regra de segurança da UI**: destino ausente da lista carregada é omitido
+  em silêncio (para o estudante significa rascunho), nunca renderizado como
+  link quebrado.
+- **Evidência**: Vitest 24 arquivos/231 testes (13 novos de componente);
+  Playwright 4/4 no spec novo contra Supabase local, com ausência de fixture
+  residual conferida por query; typecheck limpo; lint 0 erros/5 warnings da
+  baseline; build ok.
+- **Dois achados corrigidos no caminho**: `deleteE2EMaterials()` falhava com
+  link `prerequisite` (`material_links_target_fkey` é `on delete restrict` de
+  propósito, e o trigger só limpa `related`) e deixava resíduo — havia 60
+  materiais acumulados; e o `aria-label` do botão de expandir da árvore usava
+  o título completo enquanto o item visível usava o rótulo curto.
+- **Achado pré-existente registrado, não corrigido**: em ~390px o widget
+  "Plantão de Foco" cobre o primeiro item do menu Recursos do dock inferior
+  (TASK-2026-09-23-02).
+
+## Taxonomia — o que segue fora de escopo
+
+- **Questões por nó da árvore**: bloqueado por vinculação editorial, não por
+  código — só 9/420 questões têm `material_id`. Ver
+  `docs/operacao/standards/taxonomia-materiais.md` §7.
+- **Leitura sob demanda**: `getCompendiums()` continua baixando todo o acervo
+  (~1 MB) a cada login. Não foi alterado em nenhuma das fases.
 
 ## Criar Tema direto na UI do Admin (2026-09-22) — PR #55 mesclado em `main` (`88a0fb7`)
 
