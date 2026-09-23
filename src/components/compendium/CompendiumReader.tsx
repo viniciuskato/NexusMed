@@ -33,9 +33,18 @@ import { readingProgressRepository } from '../../repositories/ReadingProgressRep
 import { SafeMarkdown, parseInline } from '../common/SafeMarkdown';
 import { ContextualFeedbackPopover } from '../feedback/ContextualFeedbackPopover';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
+import { MaterialBreadcrumb, MaterialChildrenCards, MaterialLinkBoxes } from './MaterialNavigation';
 
 interface CompendiumReaderProps {
   compendium: Compendium;
+  /**
+   * Acervo visível para este leitor — usado só para navegação da árvore
+   * (trilha, filhos, destinos de ligação). A RLS já filtra: se um material
+   * não está aqui, é porque o leitor não pode vê-lo, e a navegação o omite
+   * em vez de renderizar link quebrado.
+   */
+  compendiums: Compendium[];
+  onOpenCompendium: (id: string) => void;
   disciplines: Discipline[];
   themes: Theme[];
   onBack: () => void;
@@ -62,6 +71,8 @@ interface CompendiumReaderProps {
 
 export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   compendium,
+  compendiums,
+  onOpenCompendium,
   disciplines,
   themes,
   onBack,
@@ -516,6 +527,19 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
         </div>
       </div>
 
+      {/* ── Trilha de navegação da árvore ──────────────────────────────
+          Fora da faixa sticky de propósito: seis níveis não cabem lá no
+          celular. Só aparece quando o material tem ancestral visível. */}
+      <div className="px-4 sm:px-6 pt-3">
+        <div className="max-w-6xl mx-auto">
+          <MaterialBreadcrumb
+            compendium={compendium}
+            compendiums={compendiums}
+            onOpenCompendium={onOpenCompendium}
+          />
+        </div>
+      </div>
+
       {/* ── Drawer / Lateral Index (Mobile: Drawer | Desktop: Overlay or Slide) ── */}
       {isIndexOpen && (
         <>
@@ -835,6 +859,20 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
             )}
           </div>
         </div>
+
+        {/* ── Navegação da árvore: filhos e ligações ──────────────────
+            "Aprofunde-se" é derivado dos materiais-filhos, não é um tipo de
+            ligação cadastrável. Vem antes das referências (plano §10.2). */}
+        <MaterialChildrenCards
+          compendium={compendium}
+          compendiums={compendiums}
+          onOpenCompendium={onOpenCompendium}
+        />
+        <MaterialLinkBoxes
+          compendium={compendium}
+          compendiums={compendiums}
+          onOpenCompendium={onOpenCompendium}
+        />
 
         {/* ── References ───────────────────────────────────────────── */}
         {compendium.references && compendium.references.length > 0 && (

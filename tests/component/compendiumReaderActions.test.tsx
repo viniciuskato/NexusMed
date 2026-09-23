@@ -105,6 +105,8 @@ describe('CompendiumReader — ações de cada tópico', () => {
     const { container } = render(
       <CompendiumReader
         compendium={compendium}
+        compendiums={[compendium]}
+        onOpenCompendium={vi.fn()}
         disciplines={[discipline]}
         themes={[theme]}
         onBack={vi.fn()}

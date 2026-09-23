@@ -304,9 +304,62 @@ export function insertPublishedMaterial(title: string, seed: SeedIds = getSeedId
   return materialId;
 }
 
-/** Remove todos os materiais criados por esta suíte (cascade nas seções). */
+/**
+ * Remove todos os materiais criados por esta suíte (cascade nas seções).
+ *
+ * As ligações são apagadas ANTES dos materiais porque
+ * `material_links_target_fkey` é `on delete restrict` de propósito: no produto,
+ * apagar um material que é `Estude antes` de outro deve ser bloqueado para o
+ * admin realocar primeiro (ver 20260922120000_material_taxonomy.sql). O
+ * trigger `clear_symmetric_material_links` só limpa `related` automaticamente,
+ * então um fixture com `prerequisite` fazia esta limpeza falhar e deixava
+ * material residual — achado ao escrever o spec da Fase 3, com 60 materiais
+ * acumulados de runs anteriores.
+ */
 export function deleteE2EMaterials(): void {
+  psqlLocal(
+    `delete from public.material_links where source_material_id in ` +
+      `(select id from public.materials where title like '${MATERIAL_PREFIX}%') ` +
+      `or target_material_id in (select id from public.materials where title like '${MATERIAL_PREFIX}%');`
+  );
   psqlLocal(`delete from public.materials where title like '${MATERIAL_PREFIX}%';`);
+}
+
+// ── Helpers da taxonomia (Fase 3) ───────────────────────────────────────────
+// A árvore e as ligações são gravadas aqui por SQL direto (psqlLocal conecta
+// como `postgres`, o único role que os triggers de guarda liberam para escrever
+// posição/status fora das RPCs). Um teste que precise exercitar as RPCs em si
+// deve chamá-las autenticado, não usar estes helpers.
+
+/** Posiciona um material como filho de outro, com ordem entre irmãos. */
+export function setMaterialParent(materialId: string, parentId: string | null, sortOrder = 0): void {
+  const parent = parentId ? `'${parentId}'` : 'null';
+  psqlLocal(
+    `update public.materials set parent_material_id = ${parent}, tree_sort_order = ${sortOrder} where id = '${materialId}';`
+  );
+}
+
+/** Define o rótulo curto de navegação (usado na trilha em vez do título completo). */
+export function setMaterialNavShortTitle(materialId: string, navShortTitle: string): void {
+  psqlLocal(`update public.materials set nav_short_title = '${navShortTitle.replace(/'/g, "''")}' where id = '${materialId}';`);
+}
+
+/** Cria uma ligação transversal entre dois materiais. `related` é normalizado pelo trigger. */
+export function insertMaterialLink(
+  sourceId: string,
+  targetId: string,
+  linkType: 'prerequisite' | 'related',
+  sortOrder = 0
+): void {
+  psqlLocal(
+    `insert into public.material_links (source_material_id, target_material_id, link_type, sort_order) ` +
+      `values ('${sourceId}', '${targetId}', '${linkType}', ${sortOrder});`
+  );
+}
+
+/** Despublica um material por SQL direto (para provar que o estudante deixa de vê-lo). */
+export function unpublishMaterialDirect(materialId: string): void {
+  psqlLocal(`update public.materials set status = 'draft' where id = '${materialId}';`);
 }
 
 /** Cria um flashcard PRÓPRIO do usuário de teste (com flashcard_srs_state inicial) para exercitar submit_flashcard_review em concorrência real. */
