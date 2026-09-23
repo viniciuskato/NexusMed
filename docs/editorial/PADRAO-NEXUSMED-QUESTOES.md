@@ -285,7 +285,7 @@ sessão de estudo), "Importar questões" é o caminho certo.
 ## Passo 2 — Revisão e atestação (obrigatória, por questão)
 
 O mesmo gate de proveniência do conteúdo
-(`content_revisions`/`content_reviews`, ver Passo 2 de
+(`content_revisions`/`content_reviews`, ver seção 2.3 de
 `PADRAO-NEXUSMED-CONTEUDOS.md`) vale para questão — é literalmente o
 mesmo par de tabelas e o mesmo painel de UI, só que cada questão tem a
 sua própria revisão. **Não existe atestação em lote**: publicar um
