@@ -415,7 +415,9 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
   }
 
   async unpublishCompendium(id: string): Promise<void> {
-    const { error } = await supabase.from('materials').update({ status: 'draft' }).eq('id', id);
+    // A RPC impede que a despublicação deixe um descendente publicado sem pai
+    // visível ou quebre o pré-requisito de outro material publicado.
+    const { error } = await supabase.rpc('unpublish_material', { p_material_id: id });
     if (error) throw error;
   }
 

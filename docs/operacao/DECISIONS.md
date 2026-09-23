@@ -6,6 +6,28 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-22 — Materiais usam uma árvore canônica e apenas dois tipos de ligação transversal
+
+Cada material pode ter no máximo um pai, que precisa pertencer à mesma
+disciplina e ao mesmo tema. A profundidade não é fixada: visão geral, classe,
+subclasse e fármaco são materiais comuns ligados pela mesma árvore. Filhos são
+ordenados por número; `Aprofunde-se` será derivado dos filhos, não cadastrado.
+
+Fora da árvore existem somente `prerequisite` (`Estude antes`, direcionado) e
+`related` (`Veja também`, simétrico). Tanto a árvore quanto o grafo de
+pré-requisitos são acíclicos. Um estudante só enxerga ligações cujas duas
+pontas estão publicadas. Filho exige ancestrais publicados; material exige seus
+pré-requisitos publicados; despublicação que quebraria uma dessas garantias é
+bloqueada, nunca propagada em cascata.
+
+**Como aplicar**: imports continuam criando raízes sem links; reorganização do
+acervo legado é tarefa editorial explícita. Posição e ligações são salvas junto
+com o compêndio pela RPC transacional. A primeira validação de produto fica
+limitada ao caminho piloto dos β-lactâmicos; não criar grafo visual, novos tipos
+de ligação ou páginas individuais para todo fármaco antes de validar o piloto.
+
+---
+
 ## 2026-09-22 — `work/integracao-estabilizacao-11b` fica pendente de decisão, não é lixo de repositório
 
 Auditoria de organização do repositório (limpeza de branches locais/remotas

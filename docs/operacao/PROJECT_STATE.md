@@ -33,6 +33,34 @@ git log --oneline -10 origin/main
 Qualquer hash citado neste documento é **baseline histórica de quando foi
 escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
 
+## Taxonomia hierárquica de materiais — Fase 1 local (2026-09-22)
+
+- **Objetivo**: criar a fundação de banco para materiais em árvore e ligações
+  transversais, começando pelo piloto de antibióticos/β-lactâmicos.
+- **Estado**: implementada e validada somente na branch local
+  `work/antibioticos-taxonomia-fase1`, baseada em `origin/main` @ `bf65036`;
+  ainda sem commit, push, PR, migration remota ou deploy.
+- **Impacto**: `materials` recebe pai opcional e ordem entre irmãos; a tabela
+  legada `material_dependencies` é transformada, preservando linhas, em
+  `material_links` (`prerequisite`/`related`); ciclos de árvore e de
+  pré-requisitos são bloqueados; publicação/despublicação respeitam ancestrais
+  e pré-requisitos; `save_compendium` salva navegação atomicamente; o
+  repositório usa a nova RPC segura `unpublish_material`.
+- **Compatibilidade**: materiais existentes continuam raízes (`parent = null`,
+  ordem `0`). Snapshots sem hierarquia nem links mantêm o formato anterior e,
+  portanto, não perdem a aprovação apenas pela migration. A importação continua
+  criando rascunhos sem posição na árvore.
+- **Segurança**: estudante ativo só lê links quando ambas as pontas estão
+  publicadas; `anon` não recebe privilégios; Admin grava links/posição pela RPC
+  transacional, não por DML direto.
+- **Evidência local**: três resets integrais do Supabase; pgTAP final com 13
+  arquivos/351 testes; Vitest com 22 arquivos/201 testes; typecheck limpo;
+  lint com 0 erros/5 warnings da baseline; build de produção concluído.
+- **Pendente antes de publicar**: revisão independente; inventário somente
+  leitura de `material_dependencies` no Supabase remoto; commit/PR; aplicação
+  da migration remota antes do merge, seguida de confirmação direta do schema.
+  Nenhuma tela de Admin/estudante foi criada nesta fase.
+
 ## Criar Tema direto na UI do Admin (2026-09-22) — PR #55 mesclado em `main` (`88a0fb7`)
 
 - **Objetivo**: usuário tentou importar um compêndio de Endocardite e o

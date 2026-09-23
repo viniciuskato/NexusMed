@@ -554,10 +554,10 @@ select throws_ok(
   'admin não publica material com UPDATE direto (só via publish_material())'
 );
 
--- Edição invalida a aprovação: muda o conteúdo, volta a draft, tenta
--- publicar de novo sem nova revisão/atestação — falha.
+-- Edição invalida a aprovação: muda o conteúdo, despublica pela RPC segura,
+-- tenta publicar de novo sem nova revisão/atestação — falha.
 update public.material_sections set content = 'Conteúdo editado depois da aprovação.' where id = :'v_section_id';
-update public.materials set status = 'draft' where id = :'v_material_id';
+select public.unpublish_material(:'v_material_id');
 
 select is(
   public.get_provenance_status(:'v_material_id', null),
