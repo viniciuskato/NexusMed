@@ -23,9 +23,9 @@ Viável, com ressalva de formato:
 
 **Para a checagem valer como auditoria de verdade** (não só "parece bom"),
 peça ao NotebookLM para avaliar contra um critério concreto, não uma
-impressão geral. O mais alinhado ao padrão do NexusMed é colar o "Checklist
-de completude" de `docs/editorial/PADRAO-NEXUSMED-CONTEUDOS.md` (seção
-"Padrão de completude e profundidade") como parte da pergunta — ele já cobre
+impressão geral. O mais alinhado ao padrão do NexusMed é colar o checklist
+de `docs/editorial/PADRAO-NEXUSMED-CONTEUDOS.md` (seção 1.9, "Checklist
+antes de entregar") como parte da pergunta — ele já cobre
 saturação de conceito central, distinção etiologia/mecanismo/manifestação,
 grau de evidência, DCI, siglas, referência órfã etc. Sem isso o NotebookLM só
 vai avaliar coerência interna do texto, não se ele cobre o que o NexusMed

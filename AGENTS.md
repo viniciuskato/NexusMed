@@ -38,9 +38,11 @@ comentadas, flashcards com SRS, simulados, caderno de erros. Produção
 real, em uso por um grupo fechado de amigos do dono do projeto (não é
 protótipo).
 
-- **Produzir conteúdo (compêndio) do zero até publicado** — formulário
-  do Admin vs. YAML, e o gate de revisão/atestação obrigatório antes de
-  publicar: [`docs/editorial/PADRAO-NEXUSMED-CONTEUDOS.md`](docs/editorial/PADRAO-NEXUSMED-CONTEUDOS.md).
+- **Produzir conteúdo (compêndio) do zero até publicado** — Parte 1
+  (autocontida, entregue a quem escreve, pessoa ou IA: níveis da árvore,
+  profundidade, citações, formato `.md`) e Parte 2 (importar, posicionar,
+  revisar/atestar, publicar):
+  [`docs/editorial/PADRAO-NEXUSMED-CONTEUDOS.md`](docs/editorial/PADRAO-NEXUSMED-CONTEUDOS.md).
 - **Produzir questão comentada do zero até publicada** — formulário do
   Admin (unitário) ou import em lote por arquivo `.md` (botão "Importar
   questões", RPC `import_question_draft`, desde 2026-09-21), mesmo gate
@@ -157,6 +159,14 @@ seção "Armadilhas já descobertas".
     revisão/atestação precisa limpá-las ANTES de apagar o usuário autor
     (`content_revisions`/`content_reviews` têm FK restrict para ele) — a
     ordem invertida deixa usuário residual no banco local.
+19. **`docs/editorial/PADRAO-NEXUSMED-CONTEUDOS.md` é entregue a uma IA sem
+    contexto** para gerar o `.md` do material — é autocontido: nada de
+    caminho de arquivo, nome de função, RPC ou jargão interno dentro dele. As
+    regras de formato (seção 1.7) descrevem o que o importador
+    (`src/utils/compendiumMarkdownImport.ts`) e o leitor
+    (`src/components/common/SafeMarkdown.tsx`) fazem hoje; mudou um dos dois,
+    atualize o padrão no mesmo PR e rode o exemplo do bloco de formato pelo
+    importador para conferir.
 
 ## Convenções de trabalho
 

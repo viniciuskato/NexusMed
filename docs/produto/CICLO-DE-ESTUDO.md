@@ -83,7 +83,11 @@ dar sozinha.
   aceito como equivalente de `### Tags`.
 - O padrão editorial (`docs/editorial/PADRAO-NEXUSMED-CONTEUDOS.md`) descreve
   o formulário novo — quem produz não pode encontrar instrução de preencher
-  campo que sumiu.
+  campo que sumiu. Desde 2026-09-23 o padrão já manda **não preencher** os três
+  campos congelados (seção 2.2) e já trata tags como palavras-chave (1.6);
+  aqui basta tirar o aviso de "vão sair da tela" e descrever o pai que define
+  disciplina e tema. O padrão é autocontido — sem caminho de arquivo, nome de
+  função ou jargão interno.
 
 **Restrições.**
 - **Congelar não é apagar.** Um material que já tem "Estude antes", "Veja
@@ -114,6 +118,8 @@ questões sem vínculo e ter de revisitá-las depois.
   lote"** vale para todas as questões do arquivo. Ajuste por questão, depois,
   pela edição do vínculo.
 - Os 9 vínculos existentes continuam valendo.
+- O padrão editorial de conteúdos (seção 2.6) deixa de dizer "um material por
+  questão" e passa a descrever a escolha no lote.
 
 **Aceite — o estudante vê:**
 - "Resolver questões" a partir de um material traz as questões que cobram
