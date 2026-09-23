@@ -33,33 +33,70 @@ git log --oneline -10 origin/main
 Qualquer hash citado neste documento é **baseline histórica de quando foi
 escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
 
-## Taxonomia hierárquica de materiais — Fase 1 local (2026-09-22)
+## Taxonomia hierárquica de materiais — Fase 1 + 1.5 publicadas (2026-09-22/23)
 
-- **Objetivo**: criar a fundação de banco para materiais em árvore e ligações
+- **Objetivo**: fundação de banco para materiais em árvore e ligações
   transversais, começando pelo piloto de antibióticos/β-lactâmicos.
-- **Estado**: implementada e validada somente na branch local
-  `work/antibioticos-taxonomia-fase1`, baseada em `origin/main` @ `bf65036`;
-  commit local `e09ae06`; ainda sem push, PR, migration remota ou deploy.
-- **Impacto**: `materials` recebe pai opcional e ordem entre irmãos; a tabela
-  legada `material_dependencies` é transformada, preservando linhas, em
-  `material_links` (`prerequisite`/`related`); ciclos de árvore e de
-  pré-requisitos são bloqueados; publicação/despublicação respeitam ancestrais
-  e pré-requisitos; `save_compendium` salva navegação atomicamente; o
-  repositório usa a nova RPC segura `unpublish_material`.
-- **Compatibilidade**: materiais existentes continuam raízes (`parent = null`,
-  ordem `0`). Snapshots sem hierarquia nem links mantêm o formato anterior e,
-  portanto, não perdem a aprovação apenas pela migration. A importação continua
-  criando rascunhos sem posição na árvore.
-- **Segurança**: estudante ativo só lê links quando ambas as pontas estão
-  publicadas; `anon` não recebe privilégios; Admin grava links/posição pela RPC
-  transacional, não por DML direto.
-- **Evidência local**: três resets integrais do Supabase; pgTAP final com 13
-  arquivos/351 testes; Vitest com 22 arquivos/201 testes; typecheck limpo;
-  lint com 0 erros/5 warnings da baseline; build de produção concluído.
-- **Pendente antes de publicar**: revisão independente; inventário somente
-  leitura de `material_dependencies` no Supabase remoto; commit/PR; aplicação
-  da migration remota antes do merge, seguida de confirmação direta do schema.
-  Nenhuma tela de Admin/estudante foi criada nesta fase.
+- **Estado**: **concluída e publicada** — PR #57 mesclado em `main`
+  (`8d1232e`); migrations `20260922120000` e `20260922130000` aplicadas no
+  Supabase remoto (junto com uma pendência anterior, `20260921130000`);
+  deploy confirmado em produção (bundle carrega o SHA do merge commit, sem
+  instrumentação de teste). Schema remoto verificado ponta a ponta por
+  leitura direta, não só pela mensagem de sucesso do CLI.
+- **Impacto**: `materials` tem pai opcional (mesma disciplina, teto de 8
+  níveis), ordem entre irmãos, `nav_short_title` e `taxonomy_kind`. A tabela
+  legada `material_dependencies` virou `material_links`
+  (`prerequisite`/`related`, um vínculo por par), preservando as 14 linhas
+  existentes. Ciclos (árvore e pré-requisitos) bloqueados com guarda `CYCLE`.
+  Publicação/despublicação respeitam ancestrais e pré-requisitos, nunca em
+  cascata. `save_compendium` grava navegação atomicamente; hash de atestação
+  cobre só conteúdo (decisão revisada no mesmo dia — navegação no hash
+  invalidava revisões aprovadas de material que ninguém editou). RPCs
+  `unpublish_material`/`set_material_position` dedicadas.
+- **Revisão ultra (multi-agente)** rodada sobre a branch antes do merge: 2
+  achados reais corrigidos (ordem do ancestral bloqueador em
+  `publish_material`; contador de `sort_order` misturado entre tipos de link
+  em `save_compendium`).
+- **Inventário remoto** (somente leitura, antes do merge): zero pares
+  bidirecionais em `material_dependencies` (a migration não falhava); só
+  9/420 questões (2,1%) têm `material_id` — trava editorial documentada para
+  o escopo de "questões por nó", não pendência de código; ~1 MB de
+  `material_sections.content` hoje — mantém leitura sob demanda como item de
+  Fase 3.
+- **Regras completas**: `docs/operacao/standards/taxonomia-materiais.md`.
+- **Evidência**: pgTAP 13 arquivos/375 testes; Vitest 22 arquivos/205 testes;
+  typecheck limpo; lint 0 erros/5 warnings da baseline; build ok; CI verde
+  (fast + full) nas duas rodadas do PR.
+
+## Taxonomia, Fase 2 — bloco "Navegação do conteúdo" no Admin (2026-09-23)
+
+- **Objetivo**: dar ao Admin uma interface estruturada para posicionar
+  materiais na árvore e cadastrar `Estude antes`/`Veja também`, substituindo
+  o campo de texto livre "Nós de Conexão/Pré-requisitos" (nunca persistido).
+- **Estado**: implementada e validada localmente, branch
+  `work/taxonomia-fase2-admin` a partir de `main`@`8d1232e` (pós-merge da
+  Fase 1.5). **Nenhuma migration nova** — usa `save_compendium` já publicada.
+  Ainda sem PR/merge/deploy.
+- **Impacto**: `Compendium` ganha `parentMaterialId`/`treeSortOrder`/
+  `navShortTitle`/`taxonomyKind`/`navigationLinks`; `SupabaseMaterialsRepository`
+  passa a ler `material_links` e a sempre enviar os campos de navegação ao
+  salvar (o formulário do Admin é agora a fonte de verdade — omitir a chave
+  faria a RPC preservar o valor anterior, contrato pensado para cliente
+  antigo). Utilitário puro novo `src/utils/materialTree.ts` (árvore,
+  ancestrais, descendentes, trilha — espelha as travessias do banco, mas só
+  para UX; o Postgres continua a autoridade final). Formulário: seletor de
+  pai (exclui self/descendente/outra disciplina), ordem entre irmãos, rótulo
+  curto, tipo do nó, dois multi-seletores por busca com aviso de rascunho,
+  trilha resultante, bloqueio client-side de redundância (ancestral como
+  pré-requisito) antes de chamar o servidor.
+- **Por desenho, o estudante ainda NÃO recebe a nova navegação** — é a
+  condição de parada da Fase 2 no plano técnico (§12); fica para a Fase 3.
+- **Evidência local**: Vitest 23 arquivos/218 testes (13 novos em
+  `materialTree.test.ts`); typecheck limpo; lint 0 erros/5 warnings da
+  baseline; build ok; `git diff --check` limpo.
+- **Pendente antes de publicar**: revisão, PR, CI verde, merge — sem
+  migration remota nem aplicação de schema, é só frontend contra RPCs já em
+  produção.
 
 ## Criar Tema direto na UI do Admin (2026-09-22) — PR #55 mesclado em `main` (`88a0fb7`)
 

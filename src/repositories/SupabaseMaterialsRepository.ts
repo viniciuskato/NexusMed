@@ -78,6 +78,18 @@ interface MaterialRow {
   tags: string[];
   updated_at: string;
   status: string;
+  parent_material_id: string | null;
+  tree_sort_order: number;
+  nav_short_title: string | null;
+  taxonomy_kind: string | null;
+}
+
+interface MaterialLinkRow {
+  id: string;
+  source_material_id: string;
+  target_material_id: string;
+  link_type: 'prerequisite' | 'related';
+  sort_order: number;
 }
 
 interface MaterialSectionRow {
@@ -219,11 +231,31 @@ function rowToSection(row: MaterialSectionRow): CompendiumSection {
 // sem importar de lá para não acoplar módulos de compêndio a questão) —
 // nunca inventa DOI/URL para uma fonte que não os tem.
 
+// A convenção de app.build_material_snapshot (RPC de navegação/hash) é
+// sempre devolver "o outro lado" do vínculo: material_id = target quando o
+// material é source, e vice-versa para related (simétrico, armazenado uma
+// única vez em ordem canônica de uuid — ver material_taxonomy.sql). Mantida
+// aqui para que Compendium.navigationLinks já venha pronto pro seletor.
+function linksForMaterial(materialId: string, links: MaterialLinkRow[]): Compendium['navigationLinks'] {
+  const own = links.filter(
+    (l) => l.source_material_id === materialId || (l.link_type === 'related' && l.target_material_id === materialId)
+  );
+  if (own.length === 0) return undefined;
+  return own
+    .map((l) => ({
+      materialId: l.source_material_id === materialId ? l.target_material_id : l.source_material_id,
+      linkType: l.link_type,
+      sortOrder: l.sort_order,
+    }))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
 function buildCompendium(
   material: MaterialRow,
   sections: MaterialSectionRow[],
   references: MaterialReferenceRow[],
-  sourcesById: Map<string, SourceRow>
+  sourcesById: Map<string, SourceRow>,
+  links: MaterialLinkRow[]
 ): Compendium {
   const materialRefs = references.filter((r) => r.material_id === material.id).sort((a, b) => a.sort_order - b.sort_order);
   return {
@@ -240,6 +272,11 @@ function buildCompendium(
     studyLens: (material.study_lens as Compendium['studyLens']) ?? undefined,
     publicationStatus: (material.status as Compendium['publicationStatus']) ?? 'draft',
     tags: material.tags ?? [],
+    parentMaterialId: material.parent_material_id ?? null,
+    treeSortOrder: material.tree_sort_order ?? 0,
+    navShortTitle: material.nav_short_title ?? undefined,
+    taxonomyKind: (material.taxonomy_kind as Compendium['taxonomyKind']) ?? undefined,
+    navigationLinks: linksForMaterial(material.id, links),
     sections: sections
       .filter((s) => s.material_id === material.id)
       .sort((a, b) => a.sort_order - b.sort_order)
@@ -285,15 +322,24 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
   }
 
   async getCompendiums(): Promise<Compendium[]> {
-    const [{ data: materials, error: mErr }, { data: sections, error: sErr }, { data: refs, error: rErr }] =
-      await Promise.all([
-        supabase.from('materials').select('*'),
-        supabase.from('material_sections').select('*').order('sort_order'),
-        supabase.from('material_references').select('*').order('sort_order'),
-      ]);
+    const [
+      { data: materials, error: mErr },
+      { data: sections, error: sErr },
+      { data: refs, error: rErr },
+      { data: links, error: lErr },
+    ] = await Promise.all([
+      supabase.from('materials').select('*'),
+      supabase.from('material_sections').select('*').order('sort_order'),
+      supabase.from('material_references').select('*').order('sort_order'),
+      // RLS de material_links já filtra pro estudante (só as duas pontas
+      // publicadas); admin ativo enxerga tudo, inclusive rascunho — ver
+      // policy material_links_select_published.
+      supabase.from('material_links').select('*'),
+    ]);
     if (mErr) throw mErr;
     if (sErr) throw sErr;
     if (rErr) throw rErr;
+    if (lErr) throw lErr;
 
     // sources só é buscado para os ids realmente referenciados (hoje, tipicamente
     // nenhum — material_references.source_id é null para os 33 compêndios
@@ -310,7 +356,7 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
       sourcesById = new Map((sources ?? []).map((s) => [s.id as string, s as SourceRow]));
     }
 
-    return (materials ?? []).map((m) => buildCompendium(m, sections ?? [], refs ?? [], sourcesById));
+    return (materials ?? []).map((m) => buildCompendium(m, sections ?? [], refs ?? [], sourcesById, links ?? []));
   }
 
   async saveCompendiums(compendiums: Compendium[]): Promise<void> {
@@ -364,6 +410,14 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
     // alunos, histórico de versões, imagens e vínculos de questões com a
     // seção sobrevivem ao salvar. Só as seções removidas do formulário são
     // apagadas. Referências preservam source_id/url quando já vinculadas.
+    //
+    // parent_material_id/tree_sort_order/nav_short_title/taxonomy_kind/
+    // navigation_links vão SEMPRE (mesmo null/[]), porque desde a Fase 2 o
+    // formulário do Admin é a fonte de verdade da navegação: omitir a chave
+    // faria a RPC preservar o valor anterior (contrato pensado pra cliente
+    // ANTIGO que não conhece esses campos — ver 20260922130000, bloco 10).
+    // Quem ainda não conhece navegação é só importCompendiumDraft, que usa
+    // outra RPC (import_compendium_draft) e não passa por aqui.
     const { error } = await supabase.rpc('save_compendium', {
       p_material: {
         id: compendium.id,
@@ -377,6 +431,15 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
         estimated_read_time_minutes: compendium.estimatedReadTimeMinutes ?? null,
         author: compendium.author || null,
         tags: compendium.tags ?? [],
+        parent_material_id: compendium.parentMaterialId ?? null,
+        tree_sort_order: compendium.treeSortOrder ?? 0,
+        nav_short_title: compendium.navShortTitle?.trim() || null,
+        taxonomy_kind: compendium.taxonomyKind ?? null,
+        navigation_links: (compendium.navigationLinks ?? []).map((l) => ({
+          material_id: l.materialId,
+          link_type: l.linkType,
+          sort_order: l.sortOrder,
+        })),
       },
       p_sections: compendium.sections.map((s) => ({
         id: s.id,
