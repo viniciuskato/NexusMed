@@ -204,14 +204,24 @@ test.describe('CMS — fluxo humano de revisão (21-D)', () => {
     expect(after).toBe(before);
 
     // Remover o vínculo ("Sem material") também limpa material_section_id.
+    //
+    // O aviso do salvamento ANTERIOR tem o mesmo texto e fica 3,5 s na tela.
+    // Sem esperar ele sumir, o toBeVisible() abaixo passava na hora, olhando o
+    // aviso velho, e a leitura do banco corria antes de o segundo salvamento
+    // terminar — falhou assim no CI em 2026-09-23 (passava na máquina local,
+    // mais rápida). Esperar sumir + ler o banco com expect.poll fecha a corrida.
+    await expect(page.getByText('Vínculo com material atualizado.')).toBeHidden();
     await row.getByRole('button', { name: 'Vínculo' }).click();
     await row.locator(`#link-material-${questionId}`).selectOption({ label: 'Sem material' });
     await row.getByRole('button', { name: 'Salvar vínculo' }).click();
     await expect(page.getByText('Vínculo com material atualizado.')).toBeVisible();
-    stored = psqlLocal(
-      `select coalesce(material_id::text, '') || '|' || coalesce(material_section_id::text, '') from public.questions where id = '${questionId}';`
-    );
-    expect(stored).toBe('|');
+    await expect
+      .poll(() =>
+        psqlLocal(
+          `select coalesce(material_id::text, '') || '|' || coalesce(material_section_id::text, '') from public.questions where id = '${questionId}';`
+        )
+      )
+      .toBe('|');
   });
 
   test('vínculo bloqueado com erro visível quando a questão já está publicada', async ({ page }) => {
