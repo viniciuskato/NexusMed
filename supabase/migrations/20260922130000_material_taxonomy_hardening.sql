@@ -402,10 +402,13 @@ begin
     raise exception 'publicação bloqueada: não há revisão aprovada cujo conteúdo atual recomputado bata com o hash aprovado';
   end if;
 
+  -- depth asc: reporta o ancestral MAIS PRÓXIMO (o pai, não a raiz). Publicação
+  -- é bottom-up — o admin precisa publicar o pai antes do avô, então apontar
+  -- o avô primeiro só faria a mesma ação ser tentada e barrada de novo.
   select a.title into v_blocker
   from app.material_ancestors(p_material_id) a
   where a.status <> 'published'
-  order by a.depth desc
+  order by a.depth asc
   limit 1;
   if v_blocker is not null then
     raise exception 'publicação bloqueada: o ancestral "%" ainda não está publicado', v_blocker;
@@ -543,6 +546,8 @@ declare
   v_link_target uuid;
   v_link_type text;
   v_idx int := 0;
+  v_prerequisite_idx int := 0;
+  v_related_idx int := 0;
 begin
   if not app.is_admin_active(auth.uid()) then
     raise exception 'apenas administradores ativos podem salvar materiais';
@@ -640,6 +645,8 @@ begin
     where source_material_id = v_id or (link_type = 'related' and target_material_id = v_id);
 
     v_idx := 0;
+    v_prerequisite_idx := 0;
+    v_related_idx := 0;
     for v_link in select * from jsonb_array_elements(p_material->'navigation_links') loop
       v_link_target := nullif(v_link->>'material_id', '')::uuid;
       v_link_type := v_link->>'link_type';
@@ -647,12 +654,27 @@ begin
          or v_link_type not in ('prerequisite', 'related') then
         raise exception 'ligação % inválida', v_idx + 1;
       end if;
-      -- Passos de 10 por padrão: dá espaço para inserir entre dois vizinhos
-      -- sem renumerar a lista inteira.
+      -- Passos de 10 por padrão, contados por tipo: "Estude antes" e "Veja
+      -- também" são renderizados como duas listas separadas, então um
+      -- contador único (compartilhado entre os dois tipos) deixava buracos
+      -- na ordem de cada lista quando o array vinha intercalado.
       insert into public.material_links
         (source_material_id, target_material_id, link_type, sort_order)
-      values (v_id, v_link_target, v_link_type,
-              coalesce((v_link->>'sort_order')::int, v_idx * 10));
+      values (
+        v_id, v_link_target, v_link_type,
+        coalesce(
+          (v_link->>'sort_order')::int,
+          case v_link_type
+            when 'prerequisite' then v_prerequisite_idx * 10
+            else v_related_idx * 10
+          end
+        )
+      );
+      if v_link_type = 'prerequisite' then
+        v_prerequisite_idx := v_prerequisite_idx + 1;
+      else
+        v_related_idx := v_related_idx + 1;
+      end if;
       v_idx := v_idx + 1;
     end loop;
   end if;

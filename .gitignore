@@ -55,3 +55,4 @@ load-questoes.*.report.txt
 recover-question-references.*.report.txt
 
 .vercel
+review_full.diff

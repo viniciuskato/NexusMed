@@ -3,7 +3,7 @@
 -- ============================================================================
 
 create extension if not exists pgtap;
-select plan(51);
+select plan(55);
 
 select has_column('public', 'materials', 'parent_material_id', 'materials tem pai opcional');
 select has_column('public', 'materials', 'tree_sort_order', 'materials tem ordem na árvore');
@@ -351,6 +351,69 @@ select is(
   (select tree_sort_order from public.materials where id = :'v_hash_child_id'),
   30,
   'set_material_position grava a ordem entre irmãos'
+);
+
+-- publish_material aponta o ancestral MAIS PRÓXIMO como bloqueador, não o mais
+-- distante: publicação é bottom-up, então apontar o avô primeiro faria o
+-- admin tentar publicá-lo, ser barrado de novo (agora pelo pai, ainda em
+-- draft) e só então chegar ao pai — dois ciclos de erro em vez de um.
+insert into public.materials (discipline_id, theme_id, title)
+values (:'v_discipline_id', :'v_theme_id', 'Avô') returning id as v_grandparent_id \gset
+insert into public.materials (discipline_id, theme_id, title)
+values (:'v_discipline_id', :'v_theme_id', 'Pai próximo') returning id as v_near_parent_id \gset
+insert into public.materials (discipline_id, theme_id, title)
+values (:'v_discipline_id', :'v_theme_id', 'Neto') returning id as v_grandchild_id \gset
+select public.set_material_position(:'v_near_parent_id', :'v_grandparent_id', 0);
+select public.set_material_position(:'v_grandchild_id', :'v_near_parent_id', 0);
+select tests.approve_material_revision(:'v_grandchild_id');
+select throws_like(
+  format($$ select public.publish_material(%L) $$, :'v_grandchild_id'),
+  '%"Pai próximo"%',
+  'bloqueador de publicação é o ancestral mais próximo, não o mais distante'
+);
+
+-- save_compendium conta sort_order por tipo de link: um array intercalado
+-- (related, prerequisite, related) não pode deixar buracos na ordem de cada
+-- lista renderizada separadamente ("Estude antes" / "Veja também").
+insert into public.materials (discipline_id, theme_id, title)
+values (:'v_discipline_id', :'v_theme_id', 'Alvo related 1') returning id as v_rel1_id \gset
+insert into public.materials (discipline_id, theme_id, title)
+values (:'v_discipline_id', :'v_theme_id', 'Alvo prerequisite') returning id as v_prereq2_id \gset
+insert into public.materials (discipline_id, theme_id, title)
+values (:'v_discipline_id', :'v_theme_id', 'Alvo related 2') returning id as v_rel2_id \gset
+select tests.approve_material_revision(:'v_prereq2_id');
+select public.publish_material(:'v_prereq2_id');
+select lives_ok(
+  format($sql$
+    select public.save_compendium(
+      jsonb_build_object(
+        'id', %L, 'discipline_id', %L, 'theme_id', %L,
+        'title', 'Sort order intercalado', 'tags', '[]'::jsonb,
+        'navigation_links', jsonb_build_array(
+          jsonb_build_object('material_id', %L, 'link_type', 'related'),
+          jsonb_build_object('material_id', %L, 'link_type', 'prerequisite'),
+          jsonb_build_object('material_id', %L, 'link_type', 'related')
+        )
+      ),
+      '[]'::jsonb,
+      '[]'::jsonb
+    )
+  $sql$, :'v_grandchild_id', :'v_discipline_id', :'v_theme_id',
+         :'v_rel1_id', :'v_prereq2_id', :'v_rel2_id'),
+  'save_compendium grava navigation_links intercalado entre os dois tipos'
+);
+select is(
+  (select sort_order from public.material_links
+   where link_type = 'prerequisite' and source_material_id = :'v_grandchild_id'),
+  0,
+  'prerequisite único fica em sort_order 0 (contador próprio, não o índice global)'
+);
+select is(
+  (select array_agg(sort_order order by sort_order) from public.material_links
+   where link_type = 'related'
+     and (source_material_id = :'v_grandchild_id' or target_material_id = :'v_grandchild_id')),
+  ARRAY[0, 10],
+  'os dois related ficam em 0 e 10, sem o buraco que o índice global deixava'
 );
 
 select tests.authenticate_as(:'v_student');

@@ -157,7 +157,7 @@ $$;
 grant usage on schema tests to anon, authenticated;
 grant execute on function tests.clear_auth() to anon, authenticated;
 
-select plan(45);
+select plan(46);
 
 -- ----------------------------------------------------------------------------
 -- Fixtures
@@ -557,7 +557,14 @@ select throws_ok(
 -- Edição invalida a aprovação: muda o conteúdo, despublica pela RPC segura,
 -- tenta publicar de novo sem nova revisão/atestação — falha.
 update public.material_sections set content = 'Conteúdo editado depois da aprovação.' where id = :'v_section_id';
-select public.unpublish_material(:'v_material_id');
+-- lives_ok em vez de select solto: se unpublish_material passar a levantar
+-- exceção aqui (ex.: fixture ganhar um descendente publicado em edição
+-- futura deste arquivo), o pgTAP falha esta asserção nomeada em vez de
+-- abortar o script inteiro com um erro não diagnóstico.
+select lives_ok(
+  format($$ select public.unpublish_material(%L) $$, :'v_material_id'),
+  'despublica material sem descendente/pré-requisito publicado dependendo dele'
+);
 
 select is(
   public.get_provenance_status(:'v_material_id', null),
