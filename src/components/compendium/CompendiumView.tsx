@@ -11,6 +11,7 @@ import {
   Compass,
   Activity,
   LayoutGrid,
+  Network,
   List,
   Highlighter,
   MessageSquare,
@@ -28,6 +29,8 @@ import { notesRepository } from '../../repositories/NotesRepository';
 import { readingProgressRepository } from '../../repositories/ReadingProgressRepository';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
+import { buildMaterialTree } from '../../utils/materialTree';
+import { MaterialTreeList } from './MaterialNavigation';
 
 interface CompendiumViewProps {
   compendiums: Compendium[];
@@ -128,7 +131,7 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
     initialDisciplineId || 'all'
   );
   const [selectedLens, setSelectedLens] = usePersistedState<string>('library_lens', 'all');
-  const [viewMode, setViewMode] = usePersistedState<'grid' | 'list'>('library_view_mode', 'grid');
+  const [viewMode, setViewMode] = usePersistedState<'grid' | 'list' | 'tree'>('library_view_mode', 'grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | EditorialStatus>('all');
   useScrollMemory('library-list');
@@ -340,6 +343,18 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
               aria-label="Modo lista"
             >
               <List className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('tree')}
+              className={`p-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                viewMode === 'tree'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 elev-xs'
+                  : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+              }`}
+              title="Exibição em Árvore"
+              aria-label="Modo árvore"
+            >
+              <Network className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -620,6 +635,40 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
           >
             Redefinir Filtros
           </button>
+        </div>
+      ) : viewMode === 'tree' ? (
+        /* ── MODO ÁRVORE ───────────────────────────────────────────────
+            Construída a partir do resultado JÁ filtrado: busca e filtros
+            continuam valendo. Material cujo pai foi filtrado fora (ou que o
+            leitor não pode ver) aparece como raiz em vez de desaparecer —
+            garantido por buildMaterialTree, ver materialTree.test.ts. */
+        <div className="space-y-6">
+          {(Object.entries(groupedCompendiums) as [string, Compendium[]][]).map(([discId, items]) => {
+            const disc = disciplines.find((d) => d.id === discId);
+            const roots = buildMaterialTree(items);
+
+            return (
+              <div key={discId} className="space-y-2">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                      {disc?.name || discId.toUpperCase()}
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                      {items.length} {items.length === 1 ? 'material' : 'materiais'}
+                    </span>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827] p-2.5">
+                  <MaterialTreeList
+                    nodes={roots}
+                    activeId={lastReadingSession?.compendiumId}
+                    onOpenCompendium={(id) => onOpenCompendium(id)}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : viewMode === 'grid' ? (
         /* ── MODO CARTÕES (GRID) ──────────────────────────────────── */

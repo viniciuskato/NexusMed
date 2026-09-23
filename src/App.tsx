@@ -712,6 +712,8 @@ function AuthenticatedApp() {
           {activeView === 'compendium-reader' && activeCompendium && (
             <CompendiumReader
               compendium={activeCompendium}
+              compendiums={compendiums}
+              onOpenCompendium={(id) => handleOpenCompendium(id)}
               disciplines={disciplines}
               themes={themes}
               onBack={() => {

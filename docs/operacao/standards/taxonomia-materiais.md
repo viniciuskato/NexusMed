@@ -110,6 +110,37 @@ precisa decidir explicitamente qual dos dois contratos seguir — omitir por
 descuido preserva o valor anterior, o que é surpreendente para quem espera
 "salvar limpa o que não foi preenchido".
 
+## 6.2. Navegação do estudante (Fase 3)
+
+Os três elementos visíveis vivem em
+`src/components/compendium/MaterialNavigation.tsx` e derivam todos do mesmo
+utilitário puro do Admin (`src/utils/materialTree.ts`) — não reimplementar
+travessia de árvore em outro lugar:
+
+- **Trilha de navegação** (`MaterialBreadcrumb`) — colapsa para "… › pai ›
+  atual" quando há mais de um ancestral, com botão para abrir o caminho
+  inteiro. Nenhum controle depende de hover.
+- **`Aprofunde-se`** (`MaterialChildrenCards`) — derivado dos filhos, nunca
+  cadastrado. Coluna única no celular.
+- **`Estude antes` / `Veja também`** (`MaterialLinkBoxes`) — caixas
+  visualmente distintas (âmbar × indigo), cada uma com `role="region"` e nome
+  acessível.
+- **Árvore da biblioteca** (`MaterialTreeList`) — terceiro modo de exibição,
+  ao lado de cartões e lista; construída sobre o resultado **já filtrado**,
+  então busca e filtros continuam valendo.
+
+**Destino ausente da lista carregada é omitido em silêncio.** Para o
+estudante, um material fora de `compendiums` significa "ainda em rascunho"
+(a policy `material_links_select_published` já esconde a ligação e a RLS de
+`materials` esconde o material): a UI nunca renderiza link que levaria a
+lugar nenhum. Coberto por
+`tests/component/materialNavigation.test.tsx` e pelo E2E
+`tests/e2e/specs/taxonomia-navegacao-fase3.spec.ts`.
+
+**O rótulo do botão de expandir acompanha o rótulo visível** (curto quando
+existe), não o título completo — senão o leitor de tela anuncia dois nomes
+diferentes para a mesma linha da árvore.
+
 ## 7. Pendente para as Fases 2 e 3
 
 - **Questões por nó da árvore — bloqueado por vinculação editorial, não por
