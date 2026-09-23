@@ -201,5 +201,13 @@ Estado presente, decisões e fila vivem em `PROJECT_STATE.md`,
 Toda sessão de diretoria deve ler e seguir
 [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md)
 e consultar [`docs/diretoria/registro.md`](docs/diretoria/registro.md)
-para o histórico de prompts. Preserve os identificadores de prompts já
-emitidos ao continuar esse histórico.
+para o histórico. Preserve os identificadores já emitidos ao continuar
+esse histórico.
+
+**Desde 2026-09-23 o trabalho é encaminhado por fichas de etapa, não por
+prompts.** Cada iniciativa tem um documento vivo em `docs/produto/` com o
+objetivo, a decisão de modelo e uma ficha por etapa (por quê, critério de
+aceite, restrições, dependências). A ficha diz o quê e por quê; o como é
+derivado lendo o código na hora. Iniciativa ativa:
+[`docs/produto/CICLO-DE-ESTUDO.md`](docs/produto/CICLO-DE-ESTUDO.md).
+`docs/diretoria/prompts/` é histórico — nada novo entra lá.

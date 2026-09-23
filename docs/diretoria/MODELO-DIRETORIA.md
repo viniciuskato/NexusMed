@@ -38,11 +38,48 @@ A unidade de acompanhamento é a entrega, com número estável (01, 02 etc.). Ca
 Mantenha três perspectivas: fila priorizada do que pode executar agora; acompanhamento do que está em execução, voltou ou exige decisão; histórico de instruções, retornos e aprovações.
 
 ## Encaminhamentos
-Um bloco de código independente por prompt, número e título dentro do bloco. Inclua objetivo, contexto necessário, escopo, restrições, critérios de conclusão, dependências e formato de retorno. Discussão fica fora dos blocos. Não exija que o usuário monte contexto copiando vários trechos.
+**Desde 2026-09-23 o encaminhamento é uma ficha de etapa, não um prompt** — ver a seção "Fichas de etapa" logo abaixo. A executiva encerra com o bloco de retorno descrito em `docs/operacao/EXECUTOR_PROTOCOL.md`.
 
-Evite emitir prompts completos muito antes da liberação: registre a entrega planejada e finalize a instrução quando houver informações suficientes. Não invente tarefas para encerrar uma conversa exploratória.
+Não detalhe o *como* com antecedência: arquivos, SQL, comandos e ordem de passos mudam a cada entrega mesclada e são derivados por quem executa, lendo o código naquele momento. Registre na ficha só o que não envelhece. Não invente tarefas para encerrar uma conversa exploratória.
 
 A executiva encerra com um bloco copiável: RETORNO: 01-B; Resultado; Alterações; Validações; Pendências; Estado de publicação. Aceite retornos legados e linguagem natural.
+
+## Fichas de etapa (desde 2026-09-23)
+
+Substituem os prompts persistidos em `docs/diretoria/prompts/`. Motivo: os prompts
+envelheciam antes de serem executados — o 42-C ainda apontava para um caminho de
+repositório que não existe mais; planos detalhados eram desmentidos por decisões
+tomadas horas depois; e os achados que mais importam (ex.: o hash de atestação da
+questão incluir o vínculo com material) só aparecem lendo o código na hora de
+executar. `docs/diretoria/prompts/` fica como histórico; nada novo entra lá.
+
+**Onde mora.** Um documento vivo por iniciativa em `docs/produto/` (ex.:
+[`CICLO-DE-ESTUDO.md`](../produto/CICLO-DE-ESTUDO.md)), com o objetivo, a decisão
+de modelo, as fichas e uma tabela de registro das etapas. A fila de trabalho
+continua em `docs/operacao/TASKS.md`, apontando para a ficha.
+
+**O que uma ficha contém — só o que não envelhece:**
+- **Por quê** — o problema de quem estuda ou de quem produz.
+- **Aceite** — comportamento observável, como a pessoa vê a tela. É a parte que
+  diz quando está pronto; sem ela a ficha é só uma ideia, e ideia solta não é
+  executável.
+- **Restrições e armadilhas conhecidas** — decisões e riscos que valem, com
+  *onde conferir* no código em vez de copiar o código.
+- **Fora de escopo**, **Depende de**, **Estado**.
+
+**O que a ficha NÃO contém:** nomes de arquivo como instrução, linhas, SQL,
+comandos, hashes, branches, caminhos de máquina, passo a passo. Isso é derivado
+por quem executa; o *como* genérico já vive em `AGENTS.md`, `RUNBOOK.md` e
+`EXECUTOR_PROTOCOL.md`.
+
+**Como encaminhar.** O encaminhamento vira uma linha: *"Execute a etapa 43-A de
+`docs/produto/CICLO-DE-ESTUDO.md` seguindo `docs/operacao/EXECUTOR_PROTOCOL.md`."*
+Autorizações específicas (push, abrir PR, escrita remota) vão na mesma mensagem,
+porque dependem do momento.
+
+**Ao voltar o retorno.** O RETORNO vai na descrição do PR (o diário da mudança);
+a ficha só ganha estado e link na tabela de registro. Se a execução mostrar que o
+aceite estava errado ou incompleto, corrija a ficha — ela é viva.
 
 ## Estados e evidência
 Planejado; Preparado (envio não confirmado); Em execução (usuário confirmou envio); Retorno recebido/em análise; Concluído (critérios atendidos). Publicação é informação separada: implementação local não significa entrega publicada.
@@ -55,12 +92,12 @@ Avalie separadamente: há informações suficientes para enviar? Pode executar j
 A tabela final deve conter: Entrega | Etapa/ID atual | Estado | Próxima ação / dependência. Diga explicitamente “Pode enviar”, “Aguarda retorno de NN — motivo”, “Definir isolamento antes de enviar” ou “Já enviado; aguardar retorno”. Indique prioridade quando útil. Mostre apenas o histórico necessário na conversa.
 
 ## Persistência
-Use docs/diretoria/registro.md como painel atual, fila e decisões. Guarde instruções emitidas em docs/diretoria/prompts/ e retornos em docs/diretoria/retornos/, identificados por etapa/versão. Não fabrique transcrições completas a partir de resumos; rotule resumos. Atualize o acompanhamento quando houver envio confirmado, retorno ou decisão, preservando trabalho concorrente e fatos anteriores.
+Use docs/diretoria/registro.md como painel atual, fila e decisões. Fichas de etapa ficam no documento da iniciativa em `docs/produto/`; retornos, na descrição do PR da etapa (desde 2026-09-23 — antes, prompts em docs/diretoria/prompts/ e retornos em docs/diretoria/retornos/, mantidos como histórico). Não fabrique transcrições completas a partir de resumos; rotule resumos. Atualize o acompanhamento quando houver envio confirmado, retorno ou decisão, preservando trabalho concorrente e fatos anteriores.
 
 Ao retomar uma sessão, leia AGENTS.md, este modelo e registro.md. Reconcilie divergências com a última confirmação do usuário e mantenha incertezas explícitas.
 
 ## Independência de sessão
-Todo prompt, inclusive complemento, deve poder ser executado por uma sessão nova sem acesso à conversa anterior. Inclua o caminho do projeto, leituras necessárias, decisões, estado conhecido e verificações pendentes. Oriente a inspecionar e aproveitar alterações existentes, sem exigir continuidade na mesma sessão. Confirme ausência de escritores concorrentes nos mesmos arquivos antes da edição. Esta regra substitui recomendações anteriores de encaminhamento obrigatório à mesma executiva.
+Toda ficha deve poder ser executada por uma sessão nova sem acesso à conversa anterior — com o documento da iniciativa, `AGENTS.md` e o código daquele momento. Inclua as decisões e restrições que valem e o estado conhecido — o caminho do projeto e o estado do repositório quem executa lê de `AGENTS.md` e do próprio git. Oriente a inspecionar e aproveitar alterações existentes, sem exigir continuidade na mesma sessão. Confirme ausência de escritores concorrentes nos mesmos arquivos antes da edição. Esta regra substitui recomendações anteriores de encaminhamento obrigatório à mesma executiva.
 
 ## Eficiência de execução
 Por padrão, diretoria e executiva resolvem cada passo com ferramentas diretas (ler arquivo, rodar comando, editar) — não delegam a subagentes a menos que a tarefa exija pesquisa genuinamente paralela ou isolamento de contexto que a própria sessão não consegue fazer sozinha. Um passo único e prescrito (rodar um teste, conferir um diff, aplicar uma correção) nunca justifica abrir um subagente. Ao formular um encaminhamento para a executiva, inclua essa restrição quando o escopo for fechado.
