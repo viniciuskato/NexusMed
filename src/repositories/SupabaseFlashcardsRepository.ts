@@ -3,6 +3,7 @@ import { Flashcard, FlashcardSRS, Question } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { calculateNextSRS, createInitialSRS } from '../services/srsAlgorithm';
 import { FlashcardsRepository } from './FlashcardsRepository';
+import { fetchAllRows, fetchAllRowsByIds } from './supabasePaging';
 
 // ============================================================================
 // Fase 4-5 wiring — Supabase-backed FlashcardsRepository
@@ -153,38 +154,53 @@ function srsToRow(flashcardId: string, srs: FlashcardSRS) {
 
 export class SupabaseFlashcardsRepository implements FlashcardsRepository {
   async getFlashcards(): Promise<Flashcard[]> {
-    const [{ data: cards, error: cErr }, { data: srsStates, error: sErr }, { data: reviews, error: rErr }] =
-      await Promise.all([
-        supabase.from('flashcards').select('*'),
-        supabase.from('flashcard_srs_state').select('*'),
-        supabase.from('flashcard_reviews').select('flashcard_id, reviewed_at, rating').order('reviewed_at'),
-      ]);
-    if (cErr) throw cErr;
-    if (sErr) throw sErr;
-    if (rErr) throw rErr;
+    // Leitura completa (45-C): as revisões vêm em ordem crescente, então o
+    // corte em 1000 linhas descartava justamente as mais recentes.
+    const [cards, srsStates, reviews] = await Promise.all([
+      fetchAllRows<FlashcardRow>((from, to) =>
+        supabase.from('flashcards').select('*').order('id', { ascending: true }).range(from, to)
+      ),
+      fetchAllRows<SRSStateRow>((from, to) =>
+        supabase.from('flashcard_srs_state').select('*').order('flashcard_id', { ascending: true }).range(from, to)
+      ),
+      fetchAllRows<ReviewRow>((from, to) =>
+        supabase
+          .from('flashcard_reviews')
+          .select('flashcard_id, reviewed_at, rating')
+          .order('reviewed_at', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to)
+      ),
+    ]);
 
-    const srsById = new Map(((srsStates ?? []) as SRSStateRow[]).map((s) => [s.flashcard_id, s]));
+    const srsById = new Map(srsStates.map((s) => [s.flashcard_id, s]));
 
     // Fonte bibliográfica herdada da questão de origem (distinta do material
     // de origem, que já vem em material_id/compendiumRefId) — só busca para
     // as question_origin_id realmente presentes nesta leva de flashcards.
     const questionIds = [
-      ...new Set(((cards ?? []) as FlashcardRow[]).map((c) => c.question_origin_id).filter((id): id is string => !!id)),
+      ...new Set(cards.map((c) => c.question_origin_id).filter((id): id is string => !!id)),
     ];
     let bibliographicSourcesByQuestionId: Map<string, BibliographicSource[]> | undefined;
     if (questionIds.length > 0) {
-      const { data: refs, error: refErr } = await supabase
-        .from('question_references')
-        .select('question_id, source_id, sort_order, sources(citation_text, identificadores, verificacao)')
-        .in('question_id', questionIds)
-        .order('sort_order');
-      if (refErr) throw refErr;
-      bibliographicSourcesByQuestionId = new Map();
-      for (const r of (refs ?? []) as unknown as {
+      // Em lotes (45-C): um card por questão errada — com milhares de cards, o
+      // `.in` com todos os ids estoura a URL.
+      const refs = (await fetchAllRowsByIds<unknown>(questionIds, (chunk, from, to) =>
+        supabase
+          .from('question_references')
+          .select('question_id, source_id, sort_order, sources(citation_text, identificadores, verificacao)')
+          .in('question_id', chunk)
+          .order('question_id', { ascending: true })
+          .order('sort_order', { ascending: true })
+          .order('source_id', { ascending: true })
+          .range(from, to)
+      )) as {
         question_id: string;
         source_id: string;
         sources: { verificacao: string; citation_text: string; identificadores: Record<string, string> | null } | null;
-      }[]) {
+      }[];
+      bibliographicSourcesByQuestionId = new Map();
+      for (const r of refs) {
         const ids = r.sources?.identificadores;
         const url = sourceUrl(ids);
         const list = bibliographicSourcesByQuestionId.get(r.question_id) ?? [];
@@ -193,9 +209,7 @@ export class SupabaseFlashcardsRepository implements FlashcardsRepository {
       }
     }
 
-    return ((cards ?? []) as FlashcardRow[]).map((c) =>
-      rowToFlashcard(c, srsById.get(c.id), (reviews ?? []) as ReviewRow[], bibliographicSourcesByQuestionId)
-    );
+    return cards.map((c) => rowToFlashcard(c, srsById.get(c.id), reviews, bibliographicSourcesByQuestionId));
   }
 
   async saveFlashcards(flashcards: Flashcard[]): Promise<void> {

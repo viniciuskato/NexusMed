@@ -407,7 +407,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
   `SupabaseQuestionsRepository.ts` como modelo; os repositórios `Supabase*`
   citados. Onde a lista inteira não é necessária, preferir agregação no
   servidor (RPC).
-- **Estado**: Aberto
+- **Estado**: Concluído (unidade 45-C, parte 1 — leituras completas)
 
 ### AUD-22 — Excluir um compêndio apaga em cascata dados de alunos e a trilha de atestação editorial
 - **Registrado em**: 2026-09-19 pela sessão de auditoria

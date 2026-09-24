@@ -1,6 +1,7 @@
 import { SimuladoSessionData } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { SimuladosRepository } from './SimuladosRepository';
+import { fetchAllRows, fetchAllRowsByIds } from './supabasePaging';
 
 // ============================================================================
 // Fase 4-5 wiring — Supabase-backed SimuladosRepository
@@ -97,34 +98,41 @@ function buildSession(
 
 export class SupabaseSimuladosRepository implements SimuladosRepository {
   async getSimulados(): Promise<SimuladoSessionData[]> {
-    const [
-      { data: sims, error: sErr },
-      { data: sqs, error: sqErr },
-      { data: sas, error: saErr },
-    ] = await Promise.all([
-      supabase.from('simulations').select('*').order('started_at', { ascending: false }),
-      supabase.from('simulation_questions').select('*').order('position'),
-      supabase.from('simulation_answers').select('*'),
+    // Leitura completa (45-C): 20 simulados de 50 questões já são 1000 linhas
+    // de simulation_questions — o corte fazia simulados antigos voltarem
+    // incompletos.
+    const [sims, sqs, answerRows] = await Promise.all([
+      fetchAllRows<SimulationRow>((from, to) =>
+        supabase
+          .from('simulations')
+          .select('*')
+          .order('started_at', { ascending: false })
+          .order('id', { ascending: false })
+          .range(from, to)
+      ),
+      fetchAllRows<SimulationQuestionRow>((from, to) =>
+        supabase
+          .from('simulation_questions')
+          .select('*')
+          .order('position', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to)
+      ),
+      fetchAllRows<SimulationAnswerRow>((from, to) =>
+        supabase.from('simulation_answers').select('*').order('id', { ascending: true }).range(from, to)
+      ),
     ]);
-    if (sErr) throw sErr;
-    if (sqErr) throw sqErr;
-    if (saErr) throw saErr;
 
-    const answerRows = (sas ?? []) as SimulationAnswerRow[];
     let letterById = new Map<string, string>();
     const optionIds = Array.from(new Set(answerRows.map((a) => a.selected_option_id)));
     if (optionIds.length > 0) {
-      const { data: options, error: optErr } = await supabase
-        .from('question_options')
-        .select('id, letter')
-        .in('id', optionIds);
-      if (optErr) throw optErr;
-      letterById = new Map((options ?? []).map((o) => [o.id, o.letter]));
+      const options = await fetchAllRowsByIds<{ id: string; letter: string }>(optionIds, (chunk, from, to) =>
+        supabase.from('question_options').select('id, letter').in('id', chunk).order('id', { ascending: true }).range(from, to)
+      );
+      letterById = new Map(options.map((o) => [o.id, o.letter]));
     }
 
-    return ((sims ?? []) as SimulationRow[]).map((sim) =>
-      buildSession(sim, (sqs ?? []) as SimulationQuestionRow[], answerRows, letterById)
-    );
+    return sims.map((sim) => buildSession(sim, sqs, answerRows, letterById));
   }
 
   async saveSimuladoSession(session: SimuladoSessionData): Promise<void> {
