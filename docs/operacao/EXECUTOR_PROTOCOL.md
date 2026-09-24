@@ -72,19 +72,30 @@ própria migration contra um banco montado com as migrations de outra branch.
 
 Regra: **o bloco `db reset` → pgTAP → E2E é feito com a vez em mãos.**
 
-- Pegar a vez é criar a pasta de trava, operação atômica, compartilhada por
-  todas as worktrees e fora do que é versionado:
+- Pegar a vez é criar a pasta de trava, compartilhada por todas as worktrees e
+  fora do que é versionado. **Toda trilha usa a trava, em qualquer ferramenta
+  e shell** (Claude Code, Codex; bash ou PowerShell) — as duas formas abaixo
+  criam a mesma pasta:
   ```
-  LOCK="$(git rev-parse --git-common-dir)/supabase-local.lock"
+  # bash (Git Bash)
+  LOCK="$(git rev-parse --path-format=absolute --git-common-dir)/supabase-local.lock"
   mkdir "$LOCK" && echo "<trilha> <unidade> $(date -Iseconds)" > "$LOCK/quem"
   ```
-  Se o `mkdir` falhar, outra trilha está com a vez: leia `$LOCK/quem`, siga
-  com o que não depende do banco (código, testes unitários) e tente de novo
-  depois. Trava com mais de 90 minutos: pergunte ao dono antes de removê-la.
+  ```
+  # PowerShell
+  $LOCK = Join-Path (git rev-parse --path-format=absolute --git-common-dir) 'supabase-local.lock'
+  New-Item -ItemType Directory -Path $LOCK -ErrorAction Stop | Out-Null
+  Set-Content -Encoding utf8 (Join-Path $LOCK 'quem') "<trilha> <unidade> $(Get-Date -Format o)"
+  ```
+  Se a criação falhar, outra trilha está com a vez: leia o arquivo `quem`,
+  siga com o que não depende do banco (código, testes unitários) e tente de
+  novo depois. Trava com mais de 90 minutos: pergunte ao dono antes de
+  removê-la.
 - Com a vez, **sempre começar por `supabase db reset`** — nunca confiar no
   estado deixado por outra trilha.
-- Devolver a vez assim que o bloco terminar (`rm -rf "$LOCK"`), inclusive
-  quando um teste falhar.
+- Devolver a vez assim que o bloco terminar — `rm -rf "$LOCK"` (bash) ou
+  `Remove-Item -Recurse -Force $LOCK` (PowerShell) —, inclusive quando um
+  teste falhar.
 - Não rodar `supabase stop` nem apagar contêineres: outra trilha pode estar
   esperando a vez com o banco de pé.
 

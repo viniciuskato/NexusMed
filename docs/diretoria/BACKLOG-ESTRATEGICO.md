@@ -144,9 +144,9 @@ autocontido (#6), code splitting + botão voltar (#7), processo via PR
 - **Contexto mínimo pra puxar**: migrations `20260909130000_*`,
   `20260910120000_*`; seguir o padrão de validação de
   `submit_question_attempt`.
-- **Estado**: Aberto (2026-09-19: pior que o descrito — as tabelas
-  `simulations`, `reading_progress` e `feedback` aceitam escrita direta
-  pela API, contornando as RPCs; ver AUD-31)
+- **Estado**: Aberto — o item da nota de simulado calculada no cliente foi
+  concluído na unidade 45-A; validação de leitura/feedback/avatar e escrita
+  direta nas tabelas seguem para a 45-H (ver AUD-31)
 
 ### AUD-07 — Modo demonstração alcançável em build de produção
 - **Registrado em**: 2026-09-18 pela sessão de auditoria
@@ -344,7 +344,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
   `enqueueAndTry` em `src/services/syncQueue.ts`. Correção provável: um
   estado `submitting` que desativa o botão, mais um `client_op_id` estável
   por ação.
-- **Estado**: Aberto — o clique duplo em "Finalizar Prova" foi resolvido na unidade 45-A, parte 1; "Confirmar Resposta" e a nota do flashcard seguem abertos (45-A, parte 2)
+- **Estado**: Concluído (unidade 45-A)
 
 ### AUD-19 — A fila de sincronização reordena gravações: uma edição antiga pode sobrescrever a nova
 - **Registrado em**: 2026-09-19 pela sessão de auditoria
@@ -387,7 +387,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
   `save_simulado_session`. Correção provável: mostrar "correção pendente"
   quando o servidor não respondeu, e calcular o score no servidor a partir
   das tentativas.
-- **Estado**: Aberto
+- **Estado**: Concluído (unidade 45-A)
 
 ### AUD-21 — Leituras sem paginação são cortadas em silêncio em 1000 linhas
 - **Registrado em**: 2026-09-19 pela sessão de auditoria
@@ -723,4 +723,6 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
   pelo dono do projeto, e podem ir junto com a AUD-03.
 - **Contexto mínimo pra puxar**: `docs/operacao/RUNBOOK.md` (seções 3 e 4),
   `supabase/config.toml` para comparar e AUD-03 e AUD-13.
-- **Estado**: Aberto — precisa da conta dona do projeto (itens 1 a 4)
+- **Estado**: Aberto — precisa da conta dona do projeto (itens 1 a 4). Do
+  item 1, a paridade de migrations virou gate de CI na unidade 46-E (24/09,
+  depois do INC-2026-004); grants e RLS seguem na P-1.

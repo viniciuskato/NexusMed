@@ -105,6 +105,7 @@ const handlers = new Map<string, Handler>();
 const flushPromises = new Map<string, Promise<void>>();
 const listeners = new Map<string, Set<() => void>>();
 const knownUserIds = new Set<string>();
+const enqueueVersions = new Map<string, number>();
 let periodicTimerStarted = false;
 
 function queueKey(userId: string): string {
@@ -302,6 +303,7 @@ export function enqueue<TPayload>(userId: string, category: string, payload: TPa
   const ops = loadQueue(userId);
   ops.push(op);
   saveQueue(userId, ops);
+  enqueueVersions.set(userId, (enqueueVersions.get(userId) ?? 0) + 1);
   void flush(userId);
   return op;
 }
@@ -332,16 +334,34 @@ export async function enqueueAndTry<TPayload>(
   clientOpId?: string,
   timeoutMs = 20_000
 ): Promise<unknown | null> {
+  const tracked = await enqueueAndTryTracked(userId, category, payload, clientOpId, timeoutMs);
+  return tracked.result;
+}
+
+/**
+ * Variante rastreável de `enqueueAndTry`: além do resultado imediato, devolve
+ * a identidade estável da operação que ficou na fila. Telas que dependem de
+ * confirmação autoritativa (gabarito e nota de simulado) usam esse id para
+ * continuar observando a MESMA ação depois de timeout/offline, sem criar uma
+ * segunda tentativa ao voltar a rede.
+ */
+export async function enqueueAndTryTracked<TPayload>(
+  userId: string,
+  category: string,
+  payload: TPayload,
+  clientOpId?: string,
+  timeoutMs = 20_000
+): Promise<{ op: SyncOp<TPayload>; result: unknown | null }> {
   const op = enqueue(userId, category, payload, clientOpId);
-  if (!op.id || op.state === 'failed') return null; // client_op_id não pôde ser gerado — nada a esperar
+  if (!op.id || op.state === 'failed') return { op, result: null };
 
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     await flush(userId);
     const settled = loadQueue(userId).find((o) => o.id === op.id);
-    if (!settled) return null; // não deveria acontecer (pruneSynced preserva até synced ler o result) — defensivo
-    if (settled.state === 'synced') return settled.result ?? null;
-    if (settled.state === 'failed') return null; // falha permanente (validation/permission/schema) — não insistir
+    if (!settled) return { op, result: null }; // defensivo: prune preserva synced recentes
+    if (settled.state === 'synced') return { op: settled as SyncOp<TPayload>, result: settled.result ?? null };
+    if (settled.state === 'failed') return { op: settled as SyncOp<TPayload>, result: null };
     // 'pending'/'syncing' aqui significa: offline, aguardando backoff, ou um
     // flush concorrente ainda processando outra operação antes da nossa —
     // continuar tentando até o prazo, sem busy-loop apertado.
@@ -350,7 +370,8 @@ export async function enqueueAndTry<TPayload>(
     }
     await new Promise((r) => setTimeout(r, 50));
   }
-  return null; // timeout/offline — fila preserva a operação para reconciliação posterior
+  const current = loadQueue(userId).find((o) => o.id === op.id) as SyncOp<TPayload> | undefined;
+  return { op: current ?? op, result: null }; // timeout/offline — fila preserva a operação
 }
 
 /** UID autenticado no Supabase agora, ou `null` (sem sessão, sessão expirada, ou erro ao consultar). */
@@ -390,8 +411,18 @@ export function flush(userId: string, force = false): Promise<void> {
   if (!userId) return Promise.resolve();
   const existing = flushPromises.get(userId);
   if (existing) return existing;
+  const enqueueVersionAtStart = enqueueVersions.get(userId) ?? 0;
   const p = runFlush(userId, force).finally(() => {
     flushPromises.delete(userId);
+    // Uma operação pode nascer em um listener acionado pelo `saveQueue` que
+    // conclui a operação anterior (ex.: tentativa confirmada gera o flashcard
+    // do erro). Nesse instante o flush antigo ainda está registrado e o
+    // `enqueue()` recebe a Promise já em encerramento, cuja lista inicial não
+    // contém a nova operação. Uma passagem subsequente garante envio imediato
+    // sem depender de heartbeat, reload ou outro evento `online`.
+    if ((enqueueVersions.get(userId) ?? 0) > enqueueVersionAtStart) {
+      return flush(userId, force);
+    }
   });
   flushPromises.set(userId, p);
   return p;

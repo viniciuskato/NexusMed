@@ -30,6 +30,7 @@ Use `resolved` somente quando a prevenção executável estiver validada.
 | [INC-2026-001](INC-2026-001-fixtures-e2e-residuais.md) | 2026-09-18 | média | E2E/CI | resolved | Teardown deixou três usuários `e2e-13a-*` no Supabase local |
 | [INC-2026-002](INC-2026-002-safemarkdown-conteudo-real.md) | 2026-09-20 | média | compendium-render | verifying | `SafeMarkdown` deixava heading/tabela/lista sem linha em branco, negrito com itálico aninhado, e Pontos-Chave/Pérola Clínica/flashcards sem passar por nenhum parser — todos como texto/Markdown cru na tela |
 | [INC-2026-003](INC-2026-003-import-questoes-schema-cache-remoto.md) | 2026-09-21 | alta | questoes-import | verifying | Feature já em produção (PR #49 mesclada) falhava 100% com `PGRST202` — `import_question_draft()` nunca aplicada ao Supabase remoto; migration aplicada nesta sessão, falta confirmação do usuário |
+| [INC-2026-004](INC-2026-004-migration-45a-depois-do-merge.md) | 2026-09-24 | alta | publicacao-migration | mitigated | Recorrência do 003: PR #76 (45-A parte 2) mesclado com a migration fora do remoto por ~10 min — erro não virava flashcard, simulado fechava com nota vazia. Prevenção: 46-E (CI confere o remoto) |
 
 ## Regra de consolidação
 

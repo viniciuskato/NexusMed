@@ -32,7 +32,14 @@ import {
 } from 'lucide-react';
 import { Discipline, Theme, Question, Compendium, Flashcard, CompendiumSection, UserFeedback } from '../../types';
 import { MaterialNavigationFields } from './MaterialNavigationFields';
-import { MaterialNavigationValue, emptyNavigationValue, validateNavigationValue, publishPrerequisitesInOrder } from '../../utils/materialNavigation';
+import {
+  MaterialNavigationValue,
+  emptyNavigationValue,
+  validateNavigationValue,
+  publishPrerequisitesInOrder,
+  disciplineAndThemeForParent,
+  frozenPrerequisiteIds,
+} from '../../utils/materialNavigation';
 import { getBreadcrumbTrail, breadcrumbLabel } from '../../utils/materialTree';
 import { formStateFromCompendium, compendiumFromFormState, linkedReferencesThatWillBeLost } from '../../utils/compendiumForm';
 import { StorageService } from '../../services/storage';
@@ -516,6 +523,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       compendiums,
       selfId: editingCompId,
       disciplineId: compDisciplineId,
+      frozenPrerequisiteIds: frozenPrerequisiteIds(editingOriginal),
     });
     if (navProblem) {
       showToast(navProblem);
@@ -1166,10 +1174,14 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                   <label className="font-bold text-stone-700 dark:text-slate-300 block mb-1" htmlFor="admincmsview-disciplina-4">
                     Disciplina
                   </label>
+                  {/* 43-A: com pai, a disciplina é a dele (o banco exige pai e
+                      filho na mesma disciplina) — escolhida pelo "Material-pai". */}
                   <select id="admincmsview-disciplina-4"
                     value={compDisciplineId}
                     onChange={(e) => setCompDisciplineId(e.target.value)}
-                    className="w-full p-2.5 rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 text-xs"
+                    disabled={!!compNavigation.parentId}
+                    aria-describedby={compNavigation.parentId ? 'admincmsview-disciplina-do-pai' : undefined}
+                    className="w-full p-2.5 rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 text-xs disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {disciplines.map((d) => (
                       <option key={d.id} value={d.id}>
@@ -1177,6 +1189,11 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                       </option>
                     ))}
                   </select>
+                  {compNavigation.parentId && (
+                    <p id="admincmsview-disciplina-do-pai" className="text-[11px] text-stone-500 dark:text-slate-400 mt-1">
+                      Definida pelo material-pai.
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -1250,16 +1267,20 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="font-bold text-stone-700 dark:text-slate-300 block mb-1" htmlFor="admincmsview-tags-clinicas-separadas-por-9">
-                    Tags Clínicas (separadas por vírgula)
+                  <label className="font-bold text-stone-700 dark:text-slate-300 block mb-1" htmlFor="admincmsview-palavras-chave-9">
+                    Palavras-chave (sinônimos, siglas, nomes comerciais)
                   </label>
-                  <input id="admincmsview-tags-clinicas-separadas-por-9"
+                  <input id="admincmsview-palavras-chave-9"
                     type="text"
                     value={compTagsStr}
                     onChange={(e) => setCompTagsStr(e.target.value)}
-                    placeholder="Ex: Cardiologia, Eletrofisiologia, Anticoagulação, Emergência"
+                    placeholder="Ex: β-lactâmico, beta-lactâmico, ATB, Rocefin"
+                    aria-describedby="admincmsview-palavras-chave-ajuda"
                     className="w-full p-2.5 rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 text-xs"
                   />
+                  <p id="admincmsview-palavras-chave-ajuda" className="text-[11px] text-stone-500 dark:text-slate-400 mt-1">
+                    Separadas por vírgula. É por elas que a busca acha o material por outros nomes.
+                  </p>
                 </div>
 
               </div>
@@ -1268,14 +1289,44 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                   Mesmo componente do modal "Importar material". */}
               <div className="pt-4 border-t border-stone-200 dark:border-[#243452]">
                 <MaterialNavigationFields
+                  key={editingCompId ?? 'novo'}
                   value={compNavigation}
                   onChange={setCompNavigation}
+                  onParentChange={(parent) => {
+                    const next = disciplineAndThemeForParent({
+                      parent,
+                      current: { disciplineId: compDisciplineId, themeId: compThemeId },
+                      original: editingOriginal,
+                    });
+                    setCompDisciplineId(next.disciplineId);
+                    setCompThemeId(next.themeId);
+                  }}
                   compendiums={compendiums}
+                  disciplines={disciplines}
                   disciplineId={compDisciplineId}
                   selfId={editingCompId}
+                  frozenPrerequisiteIds={frozenPrerequisiteIds(editingOriginal)}
                   currentTitle={compTitle}
                   idPrefix="admincmsview"
                 />
+                {/* Disciplina e tema entram no hash de atestação: reposicionar
+                    dentro da disciplina não os muda, mas um pai de outra
+                    disciplina (ou a troca à mão) muda — e a pessoa precisa
+                    saber antes de salvar. */}
+                {editingOriginal &&
+                  (compDisciplineId !== editingOriginal.disciplineId || compThemeId !== editingOriginal.themeId) && (
+                    <p
+                      role="status"
+                      data-testid="admincmsview-aviso-atestacao"
+                      className="mt-3 flex items-start gap-2 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 text-xs text-amber-800 dark:text-amber-300"
+                    >
+                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>
+                        Disciplina ou tema mudaram. Eles fazem parte do conteúdo atestado: se este material tem revisão
+                        aprovada, ela deixa de valer ao salvar e ele precisa ser revisado de novo.
+                      </span>
+                    </p>
+                  )}
               </div>
 
               {/* ── SECTIONS BUILDER ───────────────────────────────────── */}

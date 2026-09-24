@@ -16,16 +16,20 @@ import type { Question, SimuladoConfig } from '../../src/types';
 
 const recordAnswerMock = vi.fn();
 const saveSimuladoSessionMock = vi.fn();
+const subscribeToCorrectionMock = vi.fn();
+const subscribeToResultMock = vi.fn();
 
 vi.mock('../../src/repositories/AnswersRepository', () => ({
   answersRepository: {
     recordAnswer: (...args: unknown[]) => recordAnswerMock(...args),
     getAnswers: vi.fn().mockResolvedValue({}),
+    subscribeToCorrection: (...args: unknown[]) => subscribeToCorrectionMock(...args),
   },
 }));
 vi.mock('../../src/repositories/SimuladosRepository', () => ({
   simuladosRepository: {
     saveSimuladoSession: (...args: unknown[]) => saveSimuladoSessionMock(...args),
+    subscribeToResult: (...args: unknown[]) => subscribeToResultMock(...args),
   },
 }));
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }));
@@ -88,11 +92,22 @@ function renderSession(cfg: SimuladoConfig) {
 }
 
 const review = (isCorrect: boolean) => ({ isCorrect, correctOption: 'A', options: [], generalCommentary: '' });
+const confirmed = (isCorrect: boolean, clientOpId = 'answer-op') => ({
+  status: 'confirmed' as const,
+  clientOpId,
+  serverClientOpId: clientOpId,
+  review: review(isCorrect),
+});
+const savedResult = (score = 50) => ({
+  status: 'confirmed' as const,
+  clientOpId: 'simulation-op',
+  result: { score, correctCount: Math.round((score / 100) * questions.length), totalCount: questions.length },
+});
 
 beforeEach(() => {
   localStorage.clear();
   Element.prototype.scrollIntoView = vi.fn();
-  saveSimuladoSessionMock.mockResolvedValue(undefined);
+  saveSimuladoSessionMock.mockResolvedValue(savedResult());
 });
 
 afterEach(() => {
@@ -104,7 +119,7 @@ afterEach(() => {
 describe('45-A — tempo esgotado no Modo Prova', () => {
   it('grava as respostas marcadas, e a nota e o tempo correspondem a elas', async () => {
     vi.useFakeTimers();
-    recordAnswerMock.mockResolvedValue(review(true));
+    recordAnswerMock.mockResolvedValue(confirmed(true));
     renderSession(config());
 
     // Marca "A" na primeira questão (atalho de teclado do simulado).
@@ -121,7 +136,8 @@ describe('45-A — tempo esgotado no Modo Prova', () => {
     expect(saveSimuladoSessionMock).toHaveBeenCalledTimes(1);
     const saved = saveSimuladoSessionMock.mock.calls[0][0];
     expect(saved.answers).toEqual({ q1: expect.objectContaining({ selectedOption: 'A' }) });
-    expect(saved.score).toBe(50); // 1 certa de 2
+    expect(saved.score).toBeUndefined(); // a nota não é mais aceita do cliente
+    expect(saved.answers.q1.clientOpId).toBe('answer-op');
     expect(saved.totalTimeSeconds).toBe(60);
   });
 });
@@ -132,7 +148,7 @@ describe('45-A — "Finalizar Prova" grava uma vez só', () => {
     recordAnswerMock.mockImplementation(
       () =>
         new Promise((resolve) => {
-          resolveRecord = resolve;
+          resolveRecord = (value) => resolve(confirmed(value.isCorrect));
         })
     );
     renderSession(config({ timeLimitMinutes: 30 }));
@@ -155,7 +171,7 @@ describe('45-A — "Finalizar Prova" grava uma vez só', () => {
   });
 
   it('se a gravação falhar, o rascunho fica e dá para tentar de novo', async () => {
-    recordAnswerMock.mockRejectedValueOnce(new Error('rede caiu')).mockResolvedValue(review(true));
+    recordAnswerMock.mockRejectedValueOnce(new Error('rede caiu')).mockResolvedValue(confirmed(true));
     renderSession(config({ timeLimitMinutes: 30 }));
     fireEvent.keyDown(window, { key: 'C' });
 
@@ -173,5 +189,27 @@ describe('45-A — "Finalizar Prova" grava uma vez só', () => {
     expect(saveSimuladoSessionMock).toHaveBeenCalledTimes(1);
     expect(saveSimuladoSessionMock.mock.calls[0][0].answers).toEqual({ q1: expect.objectContaining({ selectedOption: 'C' }) });
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('sem resposta do servidor, mostra correção pendente e nunca exibe nota zero', async () => {
+    recordAnswerMock.mockResolvedValue({
+      status: 'pending',
+      clientOpId: 'answer-pending',
+      serverClientOpId: 'answer-pending',
+    });
+    saveSimuladoSessionMock.mockResolvedValue({ status: 'pending', clientOpId: 'simulation-pending' });
+    subscribeToCorrectionMock.mockReturnValue(vi.fn());
+    subscribeToResultMock.mockReturnValue(vi.fn());
+    renderSession(config({ timeLimitMinutes: 30 }));
+    fireEvent.keyDown(window, { key: 'A' });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Finalizar Prova/ }));
+    });
+
+    expect(screen.getByText(/correção pendente/i)).toBeTruthy();
+    expect(screen.queryByText('0%')).toBeNull();
+    expect(subscribeToCorrectionMock).toHaveBeenCalledWith('answer-pending', expect.any(Function));
+    expect(subscribeToResultMock).toHaveBeenCalledWith('simulation-pending', expect.any(Function));
   });
 });
