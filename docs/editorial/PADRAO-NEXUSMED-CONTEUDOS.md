@@ -243,8 +243,8 @@ parcimônia dentro do texto da seção:
 
 ## 1.6 Palavras-chave
 
-O bloco de palavras-chave (chamado `### Tags` no arquivo) é o que a busca da
-plataforma usa para achar o material por outros nomes. Inclua:
+O bloco `### Palavras-chave` é o que a busca da plataforma usa para achar o
+material por outros nomes. Inclua:
 
 - **sinônimos** e grafias alternativas: `β-lactâmico`, `beta-lactâmico`,
   `betalactâmico`;
@@ -294,7 +294,7 @@ Mais texto. Frase que introduz a tabela abaixo [2](#ref-2).
 
 Texto da segunda seção [1](#ref-1).
 
-### Tags
+### Palavras-chave
 `palavra-chave 1` `sigla` `sinônimo` `nome comercial`
 
 ### Referências Bibliográficas
@@ -328,9 +328,9 @@ Texto da segunda seção [1](#ref-1).
 7. **Pérola Clínica e Alerta de Armadilha:** cada um numa citação própria
    (`> `), com o rótulo em negrito exatamente como no modelo. Deixe uma linha
    em branco entre os dois.
-8. **O bloco de palavras-chave se chama exatamente `### Tags`**, com cada
-   palavra-chave entre crases (`` ` ``). Qualquer outro nome vira uma seção
-   de conteúdo.
+8. **O bloco de palavras-chave se chama exatamente `### Palavras-chave`**
+   (o nome antigo, `### Tags`, também é aceito), com cada palavra-chave entre
+   crases (`` ` ``). Qualquer outro nome vira uma seção de conteúdo.
 9. **O bloco de referências se chama `### Referências Bibliográficas`**, com
    uma referência por item numerado (`1.`, `2.`...). Cada referência termina
    com o tipo de evidência entre colchetes. A numeração é a que as citações
@@ -402,7 +402,7 @@ Citações e formato, no arquivo inteiro:
   abertura citada?
 - [ ] Dentro das seções, só `####` como subtítulo? Nenhum texto antes da
   primeira seção?
-- [ ] `### Tags` com palavras-chave (sinônimos, siglas, nomes comerciais)?
+- [ ] `### Palavras-chave` com sinônimos, siglas e nomes comerciais?
 - [ ] Linha `**Versão do padrão:** 2` nos metadados?
 - [ ] Nada de LaTeX, `<=`, `>=`, imagem, HTML ou lista dentro de lista?
 - [ ] Cada parágrafo numa linha só? Linha em branco antes e depois de
@@ -456,18 +456,20 @@ plataforma. Para mudar um material, parta sempre do que está publicado nela.
 mostra, em ordem:
 
 1. **Prévia** — título, disciplina, tema, número de seções e de referências,
-   e campos faltando. Se a disciplina ou o tema do arquivo não baterem com o
-   catálogo, a tela pede para escolher.
-2. **Posição na árvore** — escolha o **material-pai** e, se o título for
-   longo, um **rótulo curto** (até 40 caracteres) para o caminho de
-   navegação: "Terceira geração" em vez de "Cefalosporinas de terceira
-   geração". O **Caminho resultante** mostra onde o material vai aparecer. A
-   ordem entre irmãos pode ficar como está. Sem pai, o material entra como
-   raiz e pode ser posicionado depois.
-
-   **Não preencha "Tipo do nó", "Estude antes" nem "Veja também".** Esses
-   campos foram congelados e vão sair da tela em breve. A conexão entre
-   materiais passa a vir das questões (ver 2.6).
+   palavras-chave e campos faltando. Se a disciplina ou o tema do arquivo não
+   baterem com o catálogo, a tela pede para escolher — ou escolha o
+   material-pai, que resolve os dois.
+2. **Posição na árvore** — escolha o **material-pai**. A lista traz materiais
+   de todas as disciplinas, agrupados por disciplina, e **o pai define a
+   disciplina e o tema do material**: os do arquivo são trocados pelos do pai.
+   O tema ainda pode ser trocado na prévia; a disciplina, não (pai e filho
+   ficam sempre na mesma). O material entra **no fim dos irmãos**; mexa na
+   ordem só se quiser outra posição. Se o título for longo, preencha um
+   **rótulo curto** (até 40 caracteres) para o caminho de navegação:
+   "Terceira geração" em vez de "Cefalosporinas de terceira geração". O
+   **Caminho resultante** mostra onde o material vai aparecer. Sem pai, o
+   material entra como raiz, com a disciplina e o tema do arquivo, e pode ser
+   posicionado depois.
 3. **Salvar rascunho** — grava tudo de uma vez. Se algo violar uma regra da
    árvore (por exemplo, pai de outra disciplina), nada é criado, a tela
    mostra o motivo, e **Voltar e corrigir** retorna à prévia sem reenviar o
@@ -482,7 +484,10 @@ abre um formulário para digitar ou colar o texto, com os mesmos campos e a
 mesma posição na árvore. O botão final é **Salvar rascunho**.
 
 **Para reabrir um material:** na lista de conteúdos, **Editar → Metadados e
-posição na árvore**.
+posição na árvore**. Na edição, trocar o pai por outro **da mesma
+disciplina** não mexe no tema. Um pai **de outra disciplina** leva o material
+para ela, com o tema do pai — e a tela avisa que a atestação vai cair (ver
+2.3). Um material que tem outros abaixo dele não muda de disciplina por aqui.
 
 ## 2.3 Revisar e atestar
 
@@ -513,9 +518,11 @@ referências (inclusive vincular uma referência a uma fonte curada). Aí é
 preciso criar uma revisão nova e atestar de novo — por isso, faça esses
 ajustes antes de atestar.
 
-**O que não invalida:** mudar a posição na árvore, o rótulo curto ou a ordem,
-e abrir o material e salvar sem mudar nada. Posicionar antes ou depois de
-atestar tanto faz.
+**O que não invalida:** mudar a posição na árvore dentro da mesma disciplina,
+o rótulo curto ou a ordem, e abrir o material e salvar sem mudar nada.
+Posicionar antes ou depois de atestar tanto faz. A exceção é escolher um pai
+de outra disciplina: isso muda a disciplina e o tema do material, e aí a
+atestação cai.
 
 **Referência vinculada a fonte curada** (feito no painel de referências): o
 vínculo sobrevive a qualquer salvamento enquanto o texto da referência não

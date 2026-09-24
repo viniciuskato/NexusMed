@@ -1,15 +1,21 @@
-import { Compendium, MaterialNavigationLink, TaxonomyKind } from '../types';
+import { Compendium } from '../types';
 import { getAncestors, getDescendantIds } from './materialTree';
 
 // ============================================================================
-// Estado do bloco "Navegação do conteúdo" — compartilhado entre o formulário
-// de edição do Admin e o modal "Importar material".
+// Estado do bloco "Posição na árvore" — compartilhado entre o formulário de
+// edição do Admin e o modal "Importar material".
 // ============================================================================
 // Antes, a posição na árvore só podia ser definida pelo formulário de edição,
 // então todo material importado exigia um segundo passo (abrir, posicionar,
 // salvar). Agora os dois lugares usam o mesmo estado, a mesma validação e o
 // mesmo componente (MaterialNavigationFields), e a importação já nasce na
 // posição certa.
+//
+// Desde a 43-A, "Tipo do nó", "Estude antes" e "Veja também" estão
+// CONGELADOS: saíram da tela e da importação, e o que já existe continua
+// valendo. Por isso eles não fazem parte deste valor — o formulário não tem
+// como alterá-los, e eles atravessam o "Salvar" pelo material original
+// (ver compendiumForm.ts).
 //
 // A validação aqui é só UX — responde antes da viagem de rede com a mesma
 // regra que o banco aplica. O Postgres continua a autoridade final (ciclo,
@@ -21,58 +27,103 @@ export interface MaterialNavigationValue {
   parentId: string;
   treeSortOrder: number;
   navShortTitle: string;
-  taxonomyKind: TaxonomyKind | '';
-  prerequisiteIds: string[];
-  relatedIds: string[];
 }
 
 export function emptyNavigationValue(): MaterialNavigationValue {
-  return { parentId: '', treeSortOrder: 0, navShortTitle: '', taxonomyKind: '', prerequisiteIds: [], relatedIds: [] };
+  return { parentId: '', treeSortOrder: 0, navShortTitle: '' };
 }
 
 export function navigationValueFromCompendium(c: Compendium): MaterialNavigationValue {
-  const links = c.navigationLinks ?? [];
   return {
     parentId: c.parentMaterialId ?? '',
     treeSortOrder: c.treeSortOrder ?? 0,
     navShortTitle: c.navShortTitle ?? '',
-    taxonomyKind: c.taxonomyKind ?? '',
-    prerequisiteIds: links.filter((l) => l.linkType === 'prerequisite').map((l) => l.materialId),
-    relatedIds: links.filter((l) => l.linkType === 'related').map((l) => l.materialId),
   };
 }
 
-/** Ligações no formato do Compendium, em passos de 10 dentro de cada tipo. */
-export function navigationLinksFromValue(value: MaterialNavigationValue): MaterialNavigationLink[] {
-  return [
-    ...value.prerequisiteIds.map((materialId, i) => ({ materialId, linkType: 'prerequisite' as const, sortOrder: i * 10 })),
-    ...value.relatedIds.map((materialId, i) => ({ materialId, linkType: 'related' as const, sortOrder: i * 10 })),
-  ];
-}
-
-/** Os campos do Compendium que a navegação controla. */
-export function navigationFieldsFromValue(value: MaterialNavigationValue): Pick<
-  Compendium,
-  'parentMaterialId' | 'treeSortOrder' | 'navShortTitle' | 'taxonomyKind' | 'navigationLinks'
-> {
+/** Os campos do Compendium que o bloco de posição controla. */
+export function navigationFieldsFromValue(
+  value: MaterialNavigationValue
+): Pick<Compendium, 'parentMaterialId' | 'treeSortOrder' | 'navShortTitle'> {
   return {
     parentMaterialId: value.parentId || null,
     treeSortOrder: Number(value.treeSortOrder) || 0,
     navShortTitle: value.navShortTitle.trim() || undefined,
-    taxonomyKind: value.taxonomyKind || undefined,
-    navigationLinks: navigationLinksFromValue(value),
   };
 }
 
+/** "Estude antes" já cadastrados de um material — congelados, mas o banco ainda os confere ao mudar o pai. */
+export function frozenPrerequisiteIds(c: Compendium | null): string[] {
+  return (c?.navigationLinks ?? []).filter((l) => l.linkType === 'prerequisite').map((l) => l.materialId);
+}
+
 /**
- * Materiais que podem ser pai: mesma disciplina, e nunca o próprio material
- * nem um descendente dele (isso criaria ciclo).
+ * Materiais que podem ser pai: de QUALQUER disciplina (escolher o pai define
+ * a disciplina do material), nunca o próprio material nem um descendente dele
+ * (isso criaria ciclo).
  */
-export function parentCandidates(compendiums: Compendium[], disciplineId: string, selfId: string | null): Compendium[] {
+export function parentCandidates(compendiums: Compendium[], selfId: string | null): Compendium[] {
   const blocked = selfId ? getDescendantIds(compendiums, selfId) : new Set<string>();
   return compendiums
-    .filter((c) => c.id !== selfId && c.disciplineId === disciplineId && !blocked.has(c.id))
+    .filter((c) => c.id !== selfId && !blocked.has(c.id))
     .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
+}
+
+/** Ordem que põe o material depois do último irmão, em passos de 10 (o primeiro filho fica em 10). */
+export function endOfSiblingsOrder(compendiums: Compendium[], parentId: string, selfId: string | null): number {
+  const orders = compendiums
+    .filter((c) => c.parentMaterialId === parentId && c.id !== selfId)
+    .map((c) => c.treeSortOrder ?? 0);
+  return (orders.length > 0 ? Math.max(...orders) : 0) + 10;
+}
+
+/**
+ * Ordem entre irmãos depois de a pessoa escolher outro pai. A ordem deixou de
+ * ser decisão obrigatória: sem ela ter sido tocada, o material vai para o fim
+ * dos irmãos. Duas exceções — ordem digitada pela pessoa é respeitada, e
+ * voltar ao pai com que o formulário abriu devolve a ordem original (senão um
+ * "vai e volta" no seletor gravaria uma ordem nova sem ninguém querer).
+ */
+export function orderAfterParentChange(args: {
+  compendiums: Compendium[];
+  selfId: string | null;
+  /** Valor com que o bloco abriu. */
+  initial: MaterialNavigationValue;
+  current: MaterialNavigationValue;
+  nextParentId: string;
+  orderTouched: boolean;
+}): number {
+  const { compendiums, selfId, initial, current, nextParentId, orderTouched } = args;
+  if (orderTouched) return current.treeSortOrder;
+  if (nextParentId === initial.parentId) return initial.treeSortOrder;
+  if (!nextParentId) return current.treeSortOrder;
+  return endOfSiblingsOrder(compendiums, nextParentId, selfId);
+}
+
+/**
+ * Disciplina e tema do material depois de a pessoa escolher o pai (43-A).
+ *
+ * Material novo (importação, "Novo conteúdo"): os dois passam a ser os do pai.
+ * Material que já existe: disciplina e tema entram no hash de atestação, então
+ * reposicionar dentro da mesma disciplina NÃO mexe no tema — mover não pode
+ * derrubar a revisão aprovada (decisão do dono, 24/09). O tema só acompanha o
+ * pai quando a disciplina muda, porque o banco exige pai e filho na mesma
+ * disciplina; voltar para a disciplina original recupera o tema original.
+ */
+export function disciplineAndThemeForParent(args: {
+  parent: Compendium | null;
+  current: { disciplineId: string; themeId: string };
+  /** O material como está no banco; null quando ainda não existe. */
+  original: Compendium | null;
+}): { disciplineId: string; themeId: string } {
+  const { parent, current, original } = args;
+  if (!parent) return current;
+  if (!original) return { disciplineId: parent.disciplineId, themeId: parent.themeId };
+  if (parent.disciplineId === current.disciplineId) return current;
+  if (parent.disciplineId === original.disciplineId) {
+    return { disciplineId: original.disciplineId, themeId: original.themeId };
+  }
+  return { disciplineId: parent.disciplineId, themeId: parent.themeId };
 }
 
 /**
@@ -81,9 +132,15 @@ export function parentCandidates(compendiums: Compendium[], disciplineId: string
  */
 export function validateNavigationValue(
   value: MaterialNavigationValue,
-  ctx: { compendiums: Compendium[]; selfId: string | null; disciplineId: string }
+  ctx: {
+    compendiums: Compendium[];
+    selfId: string | null;
+    disciplineId: string;
+    /** "Estude antes" antigos do material (ver frozenPrerequisiteIds). */
+    frozenPrerequisiteIds?: string[];
+  }
 ): string | null {
-  const { compendiums, selfId, disciplineId } = ctx;
+  const { compendiums, selfId, disciplineId, frozenPrerequisiteIds = [] } = ctx;
   const byId = new Map(compendiums.map((c) => [c.id, c]));
 
   if (value.parentId) {
@@ -97,22 +154,21 @@ export function validateNavigationValue(
     }
   }
 
-  // Ancestral já é "Estude antes" implícito: a trilha mostra o caminho.
-  const ancestorIds = new Set<string>();
-  if (value.parentId) {
-    ancestorIds.add(value.parentId);
-    for (const a of getAncestors(compendiums, value.parentId)) ancestorIds.add(a.id);
-  }
-  const redundant = value.prerequisiteIds.find((id) => ancestorIds.has(id));
-  if (redundant) {
-    const title = byId.get(redundant)?.title ?? redundant;
-    return `"${title}" já está acima deste material na árvore — a trilha mostra esse caminho, não precisa de "Estude antes".`;
+  // Pai de outra disciplina leva o material junto; o banco recusa se ele tiver
+  // filhos, porque o ramo inteiro teria de mudar de disciplina.
+  if (selfId && compendiums.some((c) => c.parentMaterialId === selfId && c.disciplineId !== disciplineId)) {
+    return 'Este material tem outros abaixo dele na árvore, e um ramo inteiro não muda de disciplina por aqui — escolha um pai da disciplina atual.';
   }
 
-  const both = value.prerequisiteIds.find((id) => value.relatedIds.includes(id));
-  if (both) {
-    const title = byId.get(both)?.title ?? both;
-    return `"${title}" está em "Estude antes" e em "Veja também" ao mesmo tempo — escolha um dos dois.`;
+  // Um "Estude antes" antigo não pode ficar acima do material na árvore (o
+  // banco recusa). Com o campo congelado, a saída é escolher outro pai.
+  if (value.parentId && frozenPrerequisiteIds.length > 0) {
+    const ancestorIds = new Set<string>([value.parentId, ...getAncestors(compendiums, value.parentId).map((a) => a.id)]);
+    const redundant = frozenPrerequisiteIds.find((id) => ancestorIds.has(id));
+    if (redundant) {
+      const title = byId.get(redundant)?.title ?? redundant;
+      return `"${title}" é "Estude antes" deste material e ficaria acima dele na árvore — escolha outro pai.`;
+    }
   }
 
   if (value.navShortTitle.trim().length > 40) return 'O rótulo curto tem no máximo 40 caracteres.';

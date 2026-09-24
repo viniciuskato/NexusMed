@@ -25,6 +25,11 @@ import {
 // A garantia fica em tests/unit/compendiumForm.test.ts: para qualquer
 // material, compendiumFromFormState(formStateFromCompendium(c), c) preserva
 // todo campo que chega ao banco.
+//
+// "Tipo do nó", "Estude antes" e "Veja também" estão congelados desde a 43-A:
+// não estão no formulário, então atravessam pelo original como qualquer campo
+// que o formulário não edita — inclusive a ordem gravada das ligações, que o
+// formulário antigo renumerava em passos de 10.
 
 export interface CompendiumFormState {
   title: string;
@@ -94,7 +99,7 @@ function parseReferences(referencesStr: string): string[] {
 /**
  * Monta o Compendium a gravar. Com `original` (edição), parte dele: todo
  * campo que o formulário não edita (studyLens, vínculos de referência,
- * status de publicação...) atravessa intacto.
+ * status de publicação, tipo do nó, ligações...) atravessa intacto.
  */
 export function compendiumFromFormState(
   state: CompendiumFormState,
