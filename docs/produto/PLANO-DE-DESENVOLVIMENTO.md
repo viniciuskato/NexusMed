@@ -357,7 +357,7 @@ ligação que ninguém consegue remover (olhar na 45-D), e um "Estude antes"
 antigo impede pôr o material abaixo do alvo dele (o formulário avisa). O
 seletor de vários materiais das ligações ficou sem uso; a 43-B pode
 reaproveitá-lo.
-**Estado.** Concluída — PR #NN.
+**Estado.** Concluída — PR #79.
 
 ---
 
