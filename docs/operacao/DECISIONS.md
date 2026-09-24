@@ -6,6 +6,88 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-23 — Execução em trilhas, com o modelo mais capaz e revisão antes do merge
+
+1. **A execução é organizada em três trilhas**, cada uma uma sessão de vida
+   longa, dona de uma área do código (dados do estudante; material e Área
+   Editorial; descoberta e casca do app), num worktree próprio. A trilha
+   desenha e implementa as unidades da sua área, uma por PR; o contexto de uma
+   unidade serve à próxima. Áreas separadas evitam conflito entre trilhas
+   paralelas.
+2. **Trilhas e revisões usam o modelo mais capaz disponível.** Modelo mais
+   barato só em tarefa mecânica em que errar é barato e conferir é trivial
+   (PR do Dependabot, ajuste de texto).
+3. **Todo PR passa por revisão em sessão nova antes do merge**
+   (`/code-review high <PR>`); as correções voltam para a trilha, que tem o
+   contexto. Só o dono mescla e aplica migration no remoto.
+4. **A diretoria é sob demanda, não por unidade:** decisão de produto, frente
+   nova, correção de unidade, atualização do plano em lote. A trilha pergunta
+   ao dono direto, na própria sessão, quando uma escolha muda o que o usuário
+   vê ou contradiz uma decisão.
+5. **Leitura obrigatória curta:** a trilha lê `AGENTS.md`,
+   `EXECUTOR_PROTOCOL.md` e a unidade; o resto só quando precisar. No PR, a
+   trilha atualiza só a linha "Estado" da unidade; o registro do plano é da
+   diretoria, em lote.
+
+**Por quê**: o dono observou que o trabalho do modelo mais capaz, mesmo mais
+caro por token, sai mais barato no total, porque não precisa ser refeito. A
+análise do processo confirmou onde estava o custo: cada sessão nova lia cerca
+de 250 KB de documentos antes de tocar em código; diretoria e executiva liam o
+mesmo código duas vezes; o entendimento se perdia na passagem de uma para a
+outra; e a revisão só acontecia depois do merge.
+
+**Considerado e descartado**: a diretoria escrever, na hora de encaminhar, um
+briefing de execução (arquivos, desenho, passos) para um executor menos capaz.
+Duplica a leitura do código e perde contexto na passagem; só compensaria se a
+execução continuasse num modelo mais fraco.
+
+**Como aplicar**: `EXECUTOR_PROTOCOL.md` (protocolo da trilha e da revisão),
+`MODELO-DIRETORIA.md` ("Trilhas e revisão"), `SESSION_PROTOCOL.md` (leitura
+por papel) e as seções 0 e 5 do plano canônico.
+
+---
+
+## 2026-09-23 — Edição de publicado vira rascunho à parte; sem leitura offline por ora; 46-A em duas janelas
+
+Decisões D-1 a D-3 do plano canônico, tomadas pelo dono do produto, todas
+conforme a recomendação da diretoria.
+
+1. **D-1 — Editar material publicado gera uma edição pendente à parte.** O
+   estudante continua lendo a versão atestada — leitor, biblioteca, árvore,
+   busca — até a edição ser atestada; aí ela entra de uma vez, e o hash
+   atestado é o do que passa a ser lido. O que fica fora do hash (posição,
+   ordem, rótulo curto, "também aparece em") vale na hora, sem edição
+   pendente — coerente com a decisão do hash de 2026-09-22/23. Anotações de
+   seção removida são preservadas e continuam visíveis para o aluno. Material
+   não publicado continua sendo editado direto.
+2. **D-2 — Leitura offline não é requisito, por ora.** Sem rede, a tela diz
+   "sem conexão"; a gravação offline (responder, anotar, favoritar, marcar
+   leitura) continua e sobe quando a rede volta. Pode voltar como unidade
+   própria se o uso pedir.
+3. **D-3 — A decomposição do componente raiz (46-A) vai em duas janelas:**
+   passos 1 a 4 (rede de segurança e arrumação) antes das telas novas do
+   ciclo; passos 5 a 12 (camada de dados e roteador) depois da 45-G.
+4. **Escopo do produto: todo o conhecimento médico, construído por partes.**
+   Um ramo de cada vez, com piloto validando a forma antes de escalar.
+   Consequência imediata: a P-3 (pendências de 18/09) sai; o material de
+   Equilíbrio Ácido-Base vai para a fila editorial, sem prazo.
+
+**Por quê**: (1) despublicar para editar tira o material do ar durante a
+revisão, e editar direto muda conteúdo médico sem revisão (AUD-24). A
+diretoria conferiu o custo: o snapshot que o revisor atesta já guarda a versão
+atestada inteira, com os ids das seções; a tabela de versões de seção é só um
+registro de edições já gravadas. (2) A leitura offline incoerente já causa
+bugs online (AUD-05, AUD-29), e sustentá-la complica a camada de dados da
+46-A. (3) Fazer os 12 passos antes atrasa o "testar o que li"; deixar tudo
+para depois encarece cada tela nova.
+
+**Como aplicar**: unidades 45-D (proteções, sem a edição pendente), 45-K
+(nova: edição pendente), 45-G (reescrita pela D-2) e 46-A (o passo 5 do plano
+de 18/09 presumia leitura offline e precisa de ajuste) em
+[`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](../produto/PLANO-DE-DESENVOLVIMENTO.md).
+
+---
+
 ## 2026-09-23 — Plano canônico único do desenvolvimento
 
 Um único documento,
