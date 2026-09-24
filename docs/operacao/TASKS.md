@@ -16,12 +16,17 @@
 
 | ID | Prioridade | Estado | Dependência | Impacto em produção | Próxima ação |
 |---|---|---|---|---|---|
-| TASK-2026-09-23-09 — Destino da branch `work/integracao-estabilizacao-11b` (correção de duplicação de SRS de flashcard, nunca mesclada) | P2 | pendente — decisão aberta desde 2026-09-22 | Nenhuma | Nenhum enquanto não mesclada | A trilha 1, ao executar a 45-A ou a 45-E (duplicação de revisões), verifica se o bug ainda reproduz e propõe ao dono: (a) destravar a reconciliação e mesclar, ou (b) apagar a branch registrando o motivo em `DECISIONS.md` |
-| TASK-2026-09-23-08 — Branch `work/carga-conteudo-nativo-yaml` ainda existe no remoto, embora o `DECISIONS.md` de 2026-09-22 a dê como apagada | P2 | pendente | Nenhuma | Nenhum | Dono confirma e apaga a branch remota (superada pela importação de questões) |
+| TASK-2026-09-24-01 — Simulados finalizados na janela do INC-2026-004 podem ter ficado com nota vazia | P2 | pendente | Nenhuma | Nota exibida como 0 para quem finalizou simulado entre 19:03 e 19:15 UTC de 24/09 | Dono roda no SQL Editor, só leitura: simulados com `completed_at` nessa janela e `score` nulo. Nenhum → encerrar; havendo → a trilha 1 recalcula a nota a partir das tentativas gravadas |
 | AS1 — primeira onda editorial: auditoria científica e conversão dos temas 12 (Dispneia) e 19 (Endocardite Infecciosa); decidir a duplicata da Endocardite antes de fechar o tema 19 | P2 | pendente | Nenhuma | Nenhum até publicação | A prova de 21/09 passou; o conteúdo continua valendo (cobertura de todo o conhecimento médico, por partes — `DECISIONS.md`, 2026-09-23). Entra na produção editorial (seção 12 do plano) quando a diretoria ordenar os ramos |
 | AS1 — segunda onda editorial: auditoria dos materiais dos temas 1 (Avaliação da Função Renal), 8 a 11 (Hemograma/Anemias) e 16 (Semiologia Cardíaca); decidir as duplicatas de Função Renal e de Semiologia Cardíaca | P2 | pendente | Nenhuma | Nenhum até publicação | Idem à primeira onda |
 
-Encerradas desde a última revisão: **TASK-2026-09-23-07** (decisões D-1 a
+Encerradas em 2026-09-24, pela diretoria: **TASK-2026-09-23-09** (destino
+da `work/integracao-estabilizacao-11b`: correção reaproveitada na 45-A parte
+2, PR #76; restos viraram aceite da 45-G e da 45-H; branch apagada) e
+**TASK-2026-09-23-08** (`work/carga-conteudo-nativo-yaml` apagada do remoto) —
+`DECISIONS.md`, 2026-09-24.
+
+Encerradas antes: **TASK-2026-09-23-07** (decisões D-1 a
 D-3, trilhas e enxugamento destes documentos — PRs #68 e #69, mesclados em
 2026-09-24). Sem execução, na limpeza de 2026-09-23: **TASK-2026-09-17-06**
 (worktree órfão `agent-abf9bcb34c941c5ba`) — a pasta não existe mais

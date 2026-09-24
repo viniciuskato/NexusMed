@@ -107,7 +107,11 @@ seção "Armadilhas já descobertas".
    críticos abertos relacionados.
 6. **Merge em `main` ≠ schema aplicado no Supabase remoto.** São dois
    passos independentes; aplicar migration faz parte do merge, não é
-   opcional depois — sempre confirmar com query direta no remoto.
+   opcional depois — sempre confirmar com query direta no remoto. Já falhou
+   duas vezes em três dias
+   ([INC-2026-003](docs/operacao/incidents/INC-2026-003-import-questoes-schema-cache-remoto.md),
+   [INC-2026-004](docs/operacao/incidents/INC-2026-004-migration-45a-depois-do-merge.md));
+   a unidade 46-E põe o CI para conferir o remoto antes do merge.
 7. **`service_role`/service role key não é o mesmo que o usuário Postgres
    `postgres`.** Alguns triggers só liberam alteração para
    `current_user = 'postgres'`; para bootstrapping local, conectar via
