@@ -681,7 +681,7 @@ confirmada; revisão de flashcard feita offline num card que a reconciliação
 removeu sobe para o card mantido (migration); reenviar uma operação já
 sincronizada não trava mais na fila.
 **Estado.** Parte 1 concluída — PR #74. Parte 2 concluída — PR #76.
-Correções da revisão — PR desta correção (ver registro).
+Correções da revisão — PR #81.
 
 ---
 
