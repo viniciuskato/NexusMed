@@ -342,7 +342,22 @@ dar sozinha.
 
 **Fora de escopo.** Busca, questões, tela inicial.
 **Depende de.** 45-B (mesma Área Editorial; pequena).
-**Estado.** Pronta.
+**Achados da execução.** Disciplina e tema entram no hash de atestação. Por
+decisão do dono (24/09), na edição de um material que já existe um pai da
+mesma disciplina não muda o tema, e um pai de outra disciplina leva disciplina
+e tema, com aviso de que a atestação cai; em material novo e na importação, o
+pai define os dois (registrar em `DECISIONS.md`). Bugs antigos, fora do
+escopo: tempo de leitura desconhecido aparece como 0 num campo de mínimo 1, e
+o navegador recusa salvar o material sem mudar o tempo — o que muda o hash
+(provado no E2E); trocar a disciplina à mão não troca o tema, e a gravação
+pela edição, ao contrário da importação, não confere se o tema é da
+disciplina (lido no código). Com as ligações congeladas, nada as remove pela
+tela: o aviso de exclusão bloqueada por "Estude antes" manda remover uma
+ligação que ninguém consegue remover (olhar na 45-D), e um "Estude antes"
+antigo impede pôr o material abaixo do alvo dele (o formulário avisa). O
+seletor de vários materiais das ligações ficou sem uso; a 43-B pode
+reaproveitá-lo.
+**Estado.** Concluída — PR #NN.
 
 ---
 
