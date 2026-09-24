@@ -10,6 +10,8 @@ import confetti from 'canvas-confetti';
 import { Question, SimuladoConfig, Discipline, Theme, SimuladoSessionData, QuestionReviewResult, Compendium } from '../../types';
 import { answersRepository } from '../../repositories/AnswersRepository';
 import { simuladosRepository } from '../../repositories/SimuladosRepository';
+import type { SimuladoServerResult } from '../../repositories/SimuladosRepository';
+import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { getStorageUser } from '../../services/storage';
 import { QuestionCard } from './QuestionCard';
 
@@ -111,10 +113,11 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
   const [elapsedStudySeconds, setElapsedStudySeconds] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
   const [sessionResults, setSessionResults] = useState<{
-    correctCount: number;
+    correctCount?: number;
     totalCount: number;
-    scorePercent: number;
+    scorePercent?: number;
     timeSpentSeconds: number;
+    correctionPending: boolean;
   } | null>(null);
   const [reviewResults, setReviewResults] = useState<Record<string, QuestionReviewResult>>({});
   // Gravação em andamento (45-A, AUD-18): desativa "Finalizar Prova" enquanto
@@ -123,6 +126,43 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const finishingRef = useRef(false);
   const [finishError, setFinishError] = useState<string | null>(null);
+  const correctionUnsubscribesRef = useRef<Array<() => void>>([]);
+  const appliedQuestionCorrectionsRef = useRef(new Set<string>());
+
+  useEffect(
+    () => () => {
+      for (const unsubscribe of correctionUnsubscribesRef.current) unsubscribe();
+      correctionUnsubscribesRef.current = [];
+    },
+    []
+  );
+
+  const applyQuestionCorrection = useCallback((question: Question, review: QuestionReviewResult) => {
+    if (appliedQuestionCorrectionsRef.current.has(question.id)) return;
+    appliedQuestionCorrectionsRef.current.add(question.id);
+    setReviewResults((previous) => ({ ...previous, [question.id]: review }));
+    if (!review.isCorrect) {
+      // A correção já foi confirmada; só agora o erro pode gerar SRS.
+      void flashcardsRepository.createFlashcardFromQuestion(question);
+    }
+  }, []);
+
+  const applySimulationResult = useCallback((result: SimuladoServerResult, totalTimeSpent: number) => {
+    setSessionResults({
+      correctCount: result.correctCount,
+      totalCount: result.totalCount,
+      scorePercent: result.score,
+      timeSpentSeconds: totalTimeSpent,
+      correctionPending: false,
+    });
+    if (result.score >= 70) {
+      try {
+        confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+      } catch {
+        // Decorativo; não interfere na confirmação do servidor.
+      }
+    }
+  }, []);
 
   // Timer: só faz contagem regressiva se for Modo Prova; se for Modo Estudos,
   // conta tempo decorrido sem limite. O cronômetro só conta: quem finaliza a
@@ -212,7 +252,10 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
     const sessionAnswersRecord: SimuladoSessionData['answers'] = {};
     // isCorrect é calculado pelo servidor (RPC submit_question_attempt);
     // o valor aqui é só um placeholder ignorado pela API.
-    const pendingRecordings: Promise<[string, QuestionReviewResult]>[] = [];
+    const pendingRecordings: Promise<{
+      question: Question;
+      submission: Awaited<ReturnType<typeof answersRepository.recordAnswer>>;
+    }>[] = [];
 
     questions.forEach((q) => {
       const selected = answers[q.id];
@@ -230,21 +273,31 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
             isCorrect: false,
             timestamp: new Date().toISOString(),
             timeSpentSeconds: 45,
+            errorReason: 'lacuna_teorica',
           })
-          .then((review) => [q.id, review] as [string, QuestionReviewResult])
+          .then((submission) => ({ question: q, submission }))
       );
     });
 
-    const recordedReviews = await Promise.all(pendingRecordings);
+    const recordedSubmissions = await Promise.all(pendingRecordings);
     const newReviewResults: Record<string, QuestionReviewResult> = {};
-    let correct = 0;
-    for (const [questionId, review] of recordedReviews) {
-      newReviewResults[questionId] = review;
-      if (review.isCorrect) correct += 1;
+    for (const { question: answeredQuestion, submission } of recordedSubmissions) {
+      // `clientOpId` identifica a tentativa no Postgres. Em navegadores sem
+      // crypto, a fila ainda tem um id local para observação, mas omitimos o
+      // placeholder do payload UUID e a RPC usa a compatibilidade por
+      // questão/alternativa.
+      sessionAnswersRecord[answeredQuestion.id].clientOpId = submission.serverClientOpId;
+      if (submission.status === 'confirmed') {
+        newReviewResults[answeredQuestion.id] = submission.review;
+        applyQuestionCorrection(answeredQuestion, submission.review);
+      } else {
+        const unsubscribe = answersRepository.subscribeToCorrection(submission.clientOpId, (review) => {
+          applyQuestionCorrection(answeredQuestion, review);
+        });
+        correctionUnsubscribesRef.current.push(unsubscribe);
+      }
     }
-    setReviewResults(newReviewResults);
-
-    const scorePct = Math.round((correct / Math.max(1, questions.length)) * 100);
+    setReviewResults((previous) => ({ ...previous, ...newReviewResults }));
 
     const sessionData: SimuladoSessionData = {
       id: config.id,
@@ -253,35 +306,28 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
       answers: sessionAnswersRecord,
       startedAt: new Date(Date.now() - totalTimeSpent * 1000).toISOString(),
       completedAt: new Date().toISOString(),
-      score: scorePct,
       totalTimeSeconds: totalTimeSpent,
     };
 
-    await simuladosRepository.saveSimuladoSession(sessionData);
+    const saved = await simuladosRepository.saveSimuladoSession(sessionData);
     clearDraftAnswers(config.id);
-
-    setSessionResults({
-      correctCount: correct,
-      totalCount: questions.length,
-      scorePercent: scorePct,
-      timeSpentSeconds: totalTimeSpent,
-    });
     setIsFinished(true);
 
-    if (scorePct >= 70) {
-      try {
-        confetti({
-          particleCount: 80,
-          spread: 70,
-          origin: { y: 0.6 },
-        });
-      } catch {
-        // Confete é só um efeito decorativo — falhar aqui não deve
-        // impedir o encerramento real do simulado.
-      }
+    if (saved.status === 'confirmed') {
+      applySimulationResult(saved.result, totalTimeSpent);
+    } else {
+      setSessionResults({
+        totalCount: questions.length,
+        timeSpentSeconds: totalTimeSpent,
+        correctionPending: true,
+      });
+      const unsubscribe = simuladosRepository.subscribeToResult(saved.clientOpId, (result) => {
+        applySimulationResult(result, totalTimeSpent);
+      });
+      correctionUnsubscribesRef.current.push(unsubscribe);
     }
   
-  }, [config, questions, answers, secondsRemaining, elapsedStudySeconds]);
+  }, [config, questions, answers, secondsRemaining, elapsedStudySeconds, applyQuestionCorrection, applySimulationResult]);
 
   const handleFinishExam = useCallback(async () => {
     if (isFinished || finishingRef.current) return;
@@ -418,7 +464,7 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
                 const isSelected = answers[q.id] !== undefined;
                 const isCurrent = currentIdx === idx;
                 const isCor = isFinished && !!reviewResults[q.id]?.isCorrect;
-                const isWrong = isFinished && isSelected && !isCor;
+                const isWrong = isFinished && isSelected && !!reviewResults[q.id] && !isCor;
 
                 let btnClass = 'bg-slate-100 dark:bg-[#142038] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700';
                 if (isFinished) {
@@ -465,17 +511,28 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
               </div>
 
               <div className="text-center py-2">
-                <span className="text-4xl font-extrabold text-white">
-                  {sessionResults.scorePercent}%
-                </span>
-                <p className="text-xs text-slate-300 mt-1">
-                  Você acertou {sessionResults.correctCount} de {sessionResults.totalCount} questões
-                </p>
+                {sessionResults.correctionPending ? (
+                  <div role="status" className="space-y-1">
+                    <span className="text-lg font-extrabold text-amber-300">Correção pendente</span>
+                    <p className="text-xs text-slate-300">A nota aparecerá quando o servidor confirmar as respostas.</p>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-4xl font-extrabold text-white">
+                      {sessionResults.scorePercent}%
+                    </span>
+                    <p className="text-xs text-slate-300 mt-1">
+                      Você acertou {sessionResults.correctCount} de {sessionResults.totalCount} questões
+                    </p>
+                  </>
+                )}
               </div>
 
               <div className="pt-3 border-t border-white/10 space-y-2 text-xs">
                 <p className="text-slate-300">
-                  Todas as questões erradas foram enviadas para o seu <strong>Caderno de Erros</strong> e ganharam flashcards recomendados para revisão espaçada.
+                  {sessionResults.correctionPending
+                    ? 'Nenhuma resposta será tratada como erro antes da confirmação.'
+                    : <>Todas as questões erradas foram enviadas para o seu <strong>Caderno de Erros</strong> e ganharam flashcards recomendados para revisão espaçada.</>}
                 </p>
                 <button
                   onClick={onFinishSession}

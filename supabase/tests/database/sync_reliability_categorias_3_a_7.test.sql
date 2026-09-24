@@ -177,6 +177,13 @@ select is(
 select tests.authenticate_as(:'v_user_a');
 
 select gen_random_uuid() as v_sim_id \gset
+-- Desde a 45-A a nota da sessão é derivada de uma tentativa real já gravada;
+-- o payload antigo sem client_op_id continua compatível pela tentativa mais
+-- recente da mesma questão/alternativa.
+select gen_random_uuid() as v_sim_attempt_op \gset
+select public.submit_question_attempt(
+  :'v_question_id', :'v_opt_a', 30, null, null, null, null, :'v_sim_attempt_op'
+);
 
 -- `completed_at` é capturado UMA VEZ e reutilizado nas duas chamadas abaixo —
 -- reflete o comportamento real do cliente (SimuladoSession.tsx congela
@@ -332,8 +339,8 @@ select throws_ok(
 
 select is(
   (select score from public.simulations where id = :'v_sim_id'),
-  80::numeric,
-  'score original (80) preservado — o reenvio atrasado (score 10) não foi aplicado'
+  100::numeric,
+  'score autoritativo original (100 para a resposta correta) preservado — o reenvio atrasado (score 10) não foi aplicado'
 );
 
 -- Tentar "reabrir" a sessão (completed_at nulo) depois de finalizada também

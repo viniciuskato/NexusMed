@@ -304,7 +304,7 @@ export interface SimuladoSessionData {
   id: string;
   config: SimuladoConfig;
   questionIds: string[];
-  answers: Record<string, { selectedOption: string; timeSpent: number }>;
+  answers: Record<string, { selectedOption: string; timeSpent: number; clientOpId?: string }>;
   startedAt: string;
   completedAt?: string;
   score?: number;

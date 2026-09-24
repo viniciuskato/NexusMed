@@ -289,7 +289,7 @@ test.describe('Revisão de flashcard (SRS) — concorrência real e idempotênci
       .toBe(1); // exatamente 1, nunca 2 — mesmo client_op_id reenviado pela fila até o servidor confirmar
   });
 
-  test('flashcard que NUNCA passou por saveFlashcard local (só existe no servidor) tem a revisão gravada mesmo assim', async ({ page }) => {
+  test('duplo clique na nota de flashcard server-only grava uma revisão e mantém os quatro botões bloqueados durante o envio', async ({ page }) => {
     // Regressão do achado pós-13-B: `flashcardsRepository.reviewFlashcard`
     // dependia de encontrar o card no cache local antes de decidir chamar a
     // RPC; um flashcard de conteúdo real (nunca criado via `saveFlashcard`
@@ -301,7 +301,19 @@ test.describe('Revisão de flashcard (SRS) — concorrência real e idempotênci
     await openReviewSession(page);
     await expect(page.getByRole('button', { name: 'Revelar Resposta' })).toBeVisible({ timeout: 15_000 });
 
-    await flipAndRate(page, /3\. Bom/);
+    await page.route('**/rest/v1/rpc/submit_flashcard_review', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+      await route.continue();
+    });
+    await page.getByRole('button', { name: 'Revelar Resposta' }).click();
+    const goodButton = page.getByRole('button', { name: /3\. Bom/ });
+    await goodButton.evaluate((element: HTMLButtonElement) => {
+      element.click();
+      element.click();
+    });
+    for (const rating of [/1\. Errei/, /2\. Difícil/, /3\. Bom/, /4\. Fácil/]) {
+      await expect(page.getByRole('button', { name: rating })).toBeDisabled();
+    }
 
     await expect
       .poll(() => countFlashcardReviews(flashcardId), { timeout: 20_000, message: 'revisão não foi gravada no servidor' })
@@ -343,6 +355,7 @@ test.describe('Simulado — rascunho local e finalização idempotente', () => {
   });
 
   test('finalização com falha de rede retenta automaticamente e converge para exatamente 1 sessão gravada (nunca duplica)', async ({ page }) => {
+    test.setTimeout(75_000);
     await login(page, user);
     await startExpressSimulado(page);
     await page.getByText('A', { exact: true }).first().click();
@@ -361,7 +374,8 @@ test.describe('Simulado — rascunho local e finalização idempotente', () => {
     });
 
     await page.getByRole('button', { name: 'Finalizar Prova' }).click();
-    await expect(page.getByText('Voltar ao Painel Geral')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Correção pendente')).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByText('0%', { exact: true })).toHaveCount(0);
 
     await page.waitForTimeout(500);
     expect(capturedSimulationId).not.toBeNull();
@@ -374,6 +388,7 @@ test.describe('Simulado — rascunho local e finalização idempotente', () => {
     await expect
       .poll(() => countSimulationRows(simId).simulations, { timeout: 20_000, message: 'aguardando retry do save_simulado_session convergir' })
       .toBe(1);
+    await expect(page.getByText('Voltar ao Painel Geral')).toBeVisible({ timeout: 15_000 });
     const finalCounts = countSimulationRows(simId);
     expect(finalCounts.questions).toBe(1); // 1 única questão elegível no seed local
     expect(finalCounts.answers).toBe(1);

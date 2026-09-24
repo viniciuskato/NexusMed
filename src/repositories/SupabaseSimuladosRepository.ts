@@ -1,6 +1,6 @@
 import { SimuladoSessionData } from '../types';
 import { supabase } from '../lib/supabaseClient';
-import { SimuladosRepository } from './SimuladosRepository';
+import { SimuladosRepository, SimuladoSaveOutcome } from './SimuladosRepository';
 import { fetchAllRows, fetchAllRowsByIds } from './supabasePaging';
 
 // ============================================================================
@@ -135,65 +135,68 @@ export class SupabaseSimuladosRepository implements SimuladosRepository {
     return sims.map((sim) => buildSession(sim, sqs, answerRows, letterById));
   }
 
-  async saveSimuladoSession(session: SimuladoSessionData): Promise<void> {
-    const { data: userData, error: userErr } = await supabase.auth.getUser();
-    if (userErr) throw userErr;
-
-    const simRow = {
-      id: session.id,
-      user_id: userData.user?.id,
-      name: session.config.name,
-      config: session.config,
-      started_at: session.startedAt,
-      completed_at: session.completedAt ?? null,
-      score: session.score ?? null,
-      total_time_seconds: session.totalTimeSeconds,
-    };
-    const { error: upErr } = await supabase.from('simulations').upsert(simRow);
-    if (upErr) throw upErr;
-
-    const { error: delErr } = await supabase.from('simulation_questions').delete().eq('simulation_id', session.id);
-    if (delErr) throw delErr;
-
-    if (session.questionIds.length === 0) return;
-
-    const sqRows = session.questionIds.map((qid, i) => ({
-      simulation_id: session.id,
-      question_id: qid,
-      position: i,
-    }));
-    const { data: insertedSQ, error: insErr } = await supabase
-      .from('simulation_questions')
-      .insert(sqRows)
-      .select('*');
-    if (insErr) throw insErr;
-
+  async saveSimuladoSession(session: SimuladoSessionData): Promise<SimuladoSaveOutcome> {
     const answerEntries = Object.entries(session.answers);
-    if (answerEntries.length === 0) return;
-
     const questionIdsWithAnswers = answerEntries.map(([qid]) => qid);
-    const { data: options, error: optErr } = await supabase
-      .from('question_options')
-      .select('id, question_id, letter')
-      .in('question_id', questionIdsWithAnswers);
-    if (optErr) throw optErr;
+    let options: Array<{ id: string; question_id: string; letter: string }> = [];
+    if (questionIdsWithAnswers.length > 0) {
+      const { data, error } = await supabase
+        .from('question_options')
+        .select('id, question_id, letter')
+        .in('question_id', questionIdsWithAnswers);
+      if (error) throw error;
+      options = data ?? [];
+    }
 
-    const answerRows: { simulation_question_id: string; selected_option_id: string; time_spent_seconds: number }[] =
-      [];
-    for (const [questionId, ans] of answerEntries) {
-      const sq = (insertedSQ ?? []).find((row: SimulationQuestionRow) => row.question_id === questionId);
-      const opt = (options ?? []).find((o) => o.question_id === questionId && o.letter === ans.selectedOption);
-      if (!sq || !opt) continue;
-      answerRows.push({
-        simulation_question_id: sq.id,
-        selected_option_id: opt.id,
-        time_spent_seconds: ans.timeSpent,
-      });
-    }
-    if (answerRows.length > 0) {
-      const { error: saErr } = await supabase.from('simulation_answers').insert(answerRows);
-      if (saErr) throw saErr;
-    }
+    const optionIdByQuestionAndLetter = new Map(
+      options.map((option) => [`${option.question_id}:${option.letter}`, option.id])
+    );
+    const answers = answerEntries
+      .map(([questionId, answer]) => ({
+        question_id: questionId,
+        selected_option_id: optionIdByQuestionAndLetter.get(`${questionId}:${answer.selectedOption}`),
+        time_spent_seconds: answer.timeSpent,
+        client_op_id: answer.clientOpId ?? null,
+      }))
+      .filter((answer) => !!answer.selected_option_id);
+
+    // Mesmo o caminho direto usa a RPC transacional e nunca envia `score`:
+    // a nota é derivada das tentativas confirmadas no servidor.
+    const { error } = await supabase.rpc('save_simulado_session', {
+      p_session: {
+        id: session.id,
+        name: session.config.name,
+        config: session.config,
+        started_at: session.startedAt,
+        completed_at: session.completedAt ?? null,
+        total_time_seconds: session.totalTimeSeconds,
+        questions: session.questionIds.map((questionId, position) => ({ question_id: questionId, position })),
+        answers,
+      },
+    });
+    if (error) throw error;
+
+    const { data: saved, error: readError } = await supabase
+      .from('simulations')
+      .select('score')
+      .eq('id', session.id)
+      .single();
+    if (readError) throw readError;
+
+    const totalCount = session.questionIds.length;
+    const score = Number(saved.score ?? 0);
+    return {
+      status: 'confirmed',
+      result: {
+        score,
+        correctCount: Math.round((score / 100) * totalCount),
+        totalCount,
+      },
+    };
+  }
+
+  subscribeToResult(): () => void {
+    return () => undefined;
   }
 
   async getSimuladoHistory(): Promise<SimuladoSessionData[]> {

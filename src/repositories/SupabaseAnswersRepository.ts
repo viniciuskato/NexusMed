@@ -1,6 +1,6 @@
-import { QuestionAnswerRecord, QuestionReviewResult } from '../types';
+import { QuestionAnswerRecord } from '../types';
 import { supabase } from '../lib/supabaseClient';
-import { AnswersRepository } from './AnswersRepository';
+import { AnswersRepository, QuestionAnswerSubmission } from './AnswersRepository';
 import { mapQuestionReviewPayload } from './questionReviewMapper';
 import { fetchAllRows } from './supabasePaging';
 
@@ -90,7 +90,7 @@ export class SupabaseAnswersRepository implements AnswersRepository {
     return result;
   }
 
-  async recordAnswer(record: QuestionAnswerRecord): Promise<QuestionReviewResult> {
+  async recordAnswer(record: QuestionAnswerRecord): Promise<QuestionAnswerSubmission> {
     const { data: option, error: optErr } = await supabase
       .from('question_options')
       .select('id')
@@ -109,7 +109,11 @@ export class SupabaseAnswersRepository implements AnswersRepository {
       p_answer_strategy: record.answerStrategy ?? null,
     });
     if (error) throw error;
-    return mapQuestionReviewPayload(data);
+    return { status: 'confirmed', review: mapQuestionReviewPayload(data) };
+  }
+
+  subscribeToCorrection(): () => void {
+    return () => undefined;
   }
 }
 
