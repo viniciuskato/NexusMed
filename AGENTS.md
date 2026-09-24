@@ -9,6 +9,12 @@ mais a porta de entrada abaixo.
 
 ## Leia primeiro, nesta ordem
 
+**Se você é uma trilha de execução** (implementa unidades do plano): este
+arquivo, [`docs/operacao/EXECUTOR_PROTOCOL.md`](docs/operacao/EXECUTOR_PROTOCOL.md)
+e, a cada unidade, a própria unidade no plano e os achados que ela cita. O
+resto da lista abaixo só quando a unidade apontar ou faltar um fato — leitura
+desnecessária custa tokens em toda sessão. A lista completa é da diretoria.
+
 1. [`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](docs/produto/PLANO-DE-DESENVOLVIMENTO.md)
    — plano canônico: o que está sendo construído, por quê, em que ordem e
    em que estado; todas as unidades de implementação.
@@ -185,9 +191,11 @@ seção "Armadilhas já descobertas".
 - **Incidente documenta falha relevante; standard guarda regra
   generalizável; runbook guarda procedimento; teste/CI torna a prevenção
   executável.** Não duplicar a mesma narrativa entre camadas.
-- **Modelo "sessão de auditoria / sessão diretoria / sessão executiva"**:
-  mudanças maiores são planejadas por diretoria, implementadas e
-  verificadas por executiva, sem mesclar em `main` sozinha. Modelo:
+- **Modelo "auditoria / diretoria / trilhas"** (trilhas desde
+  2026-09-23): a diretoria decide produto e mantém o plano, sob demanda; três
+  trilhas de execução, cada uma dona de uma área do código, implementam as
+  unidades uma por PR; toda PR passa por revisão em sessão nova antes do
+  merge, e só o dono mescla. Modelo:
   [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md).
 - **Testar contra Supabase LOCAL** antes de considerar qualquer mudança
   de schema/RPC pronta. Nunca validar escrita direto no remoto.
@@ -225,9 +233,9 @@ esse histórico.
 canônico, não por prompts:**
 [`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](docs/produto/PLANO-DE-DESENVOLVIMENTO.md).
 Um documento só, com a visão, o estado verificado, as decisões em vigor, as
-frentes, a sequência, as decisões em aberto, as unidades (por quê, critério
-de aceite, restrições, dependências) e o registro. A unidade diz o quê e
-por quê; o como é derivado lendo o código na hora. A diretoria planeja
-nele; a execução atualiza o estado da unidade e o registro no mesmo PR da
-implementação. `docs/diretoria/prompts/` e `registro.md` são histórico —
-nada novo entra lá.
+frentes, as trilhas e a ordem, as decisões em aberto, as unidades (por quê,
+critério de aceite, restrições, dependências) e o registro. A unidade diz o
+quê e por quê; o como é derivado lendo o código na hora, pela trilha dona da
+área. A diretoria planeja nele; a trilha atualiza só a linha "Estado" da
+unidade no mesmo PR da implementação. `docs/diretoria/prompts/` e
+`registro.md` são histórico — nada novo entra lá.
