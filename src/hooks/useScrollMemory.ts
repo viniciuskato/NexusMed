@@ -14,14 +14,22 @@ const scrollMemory = new Map<string, number>();
 // window é suficiente para todas as views.
 export function useScrollMemory(key: string, ready: boolean = true): void {
   const rafId = useRef<number | null>(null);
+  // Chave que começou "não pronta" nesta montagem = houve um pulo intencional
+  // (ex.: resultado da busca abrindo numa seção). Quando o chamador libera
+  // `ready` depois do pulo, restaurar a posição antiga desfaria o pulo — a
+  // rolagem voltava para o topo no quadro seguinte (achado na 43-D).
+  const jumpedKey = useRef<string | null>(null);
+  if (!ready) jumpedKey.current = key;
 
   useEffect(() => {
     if (!ready) return;
 
-    const savedY = scrollMemory.get(key) ?? 0;
-    // rAF duplo: dá tempo do conteúdo (às vezes assíncrono) ocupar a altura
-    // final da página antes de tentar rolar até savedY.
-    requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, savedY)));
+    if (jumpedKey.current !== key) {
+      const savedY = scrollMemory.get(key) ?? 0;
+      // rAF duplo: dá tempo do conteúdo (às vezes assíncrono) ocupar a altura
+      // final da página antes de tentar rolar até savedY.
+      requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, savedY)));
+    }
 
     const onScroll = () => {
       if (rafId.current !== null) return;
