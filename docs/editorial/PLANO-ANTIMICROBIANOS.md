@@ -92,11 +92,11 @@ Novas combinações; Carbapenêmicos; Monobactâmicos.
 
 ## 4. O rascunho existente
 
-`Conteúdos/antimicrobianos-betalactamicos.md` ("Antimicrobianos I:
-Betalactâmicos", 25 min, em Infectologia) cobre a classe inteira num material
-só e tem numeração no título — não segue a v2. **Não importar como está.**
-Serve de matéria-prima: entregue à IA a seção correspondente junto com o bloco
-do material.
+`docs/conteúdos/antimicrobianos/rascunho-antigo-completo.md` ("Antimicrobianos I:
+Betalactâmicos", 25 min, em Infectologia; só na cópia local do dono, pasta
+ignorada pelo git) cobre a classe inteira num material só e tem numeração no
+título — não segue a v2. **Não importar como está.** Serve de matéria-prima:
+entregue à IA a seção correspondente junto com o bloco do material.
 
 | Seção do rascunho | Vai para |
 |---|---|
@@ -114,7 +114,9 @@ qualquer mudança — pode haver questões ligadas a ele.
 ## 5. Como pedir cada material à IA
 
 Anexe três coisas: o padrão (`PADRAO-NEXUSMED-CONTEUDOS.md`), as fontes e o
-bloco do material (seção 6). Mensagem sugerida:
+bloco do material (seção 6). Desde 24/09 quem escreve é o Gemini, e cada
+arquivo passa por checagem e revisão cruzada antes de importar — fluxo na
+seção 12 de `docs/produto/PLANO-DE-DESENVOLVIMENTO.md` (D-5). Mensagem sugerida:
 
 ```text
 Siga o documento anexo (padrão NexusMed de conteúdos, versão 2) e produza o

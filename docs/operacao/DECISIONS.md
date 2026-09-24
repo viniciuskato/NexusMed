@@ -6,6 +6,33 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-24 — Produção de conteúdo em paralelo, com o Gemini como redator (D-5)
+
+1. **D-5 — O NexusMed evolui em duas frentes simultâneas: sistema e
+   conteúdo.** O sistema segue nas trilhas. O conteúdo é operado pelo dono,
+   com o Gemini como redator: ele recebe o padrão de conteúdos, as fontes e o
+   bloco do material e entrega o `.md`. A interface entre as frentes é o
+   padrão e o arquivo — o Gemini não opera no repositório nem no código
+   (AGENTS.md, risco 5).
+2. **Fluxo de cada material:** Gemini escreve → checagem mecânica do padrão
+   sobre o arquivo → revisão cruzada por outro modelo (Claude: fato contra
+   referência, referência que existe, escopo do nível), com os achados
+   voltando ao Gemini → o dono importa, atesta e publica. A atestação humana
+   continua o único portão; a revisão cruzada aplica a regra de verificação
+   por modelo diferente de `MODELO-DIRETORIA.md` a conteúdo médico.
+3. **A 44-C foi dividida.** A checagem mecânica sobre o arquivo (44-C1) sai
+   da dependência da 44-B e entra na trilha 2 logo depois da 43-A, porque a
+   produção começou agora e o rascunho de IA existente mostra o custo de não
+   ter: 30 trechos em LaTeX e 3 citações com link quebrado, que só
+   apareceriam na tela depois de importar. Selo, filtros e versão na Área
+   Editorial seguem como 44-C2, depois da 44-B.
+4. **Rascunhos, pedidos e fontes ficam fora do git**, em `docs/conteúdos/`
+   (ignorada): o repositório é público e fontes de livro-texto têm direito
+   autoral. A fonte da verdade do conteúdo é a plataforma; a lista do que
+   produzir é o plano editorial do ramo.
+5. **No máximo uma leva produzida à frente da revisão.** O gargalo é a
+   atestação humana, não a escrita.
+
 ## 2026-09-24 — O CI confere a migration no remoto (D-4); destino das branches antigas
 
 1. **D-4 — Merge de PR com migration passa a depender de um check que lê o
