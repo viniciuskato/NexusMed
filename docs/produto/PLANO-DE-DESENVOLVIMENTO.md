@@ -893,7 +893,7 @@ chega ao destino.
 **Aceite — o estudante vê:** em tela estreita, nenhum item do menu inferior
 fica coberto, e o widget continua acessível.
 **Depende de.** Nada.
-**Estado.** Pronta.
+**Estado.** Concluída — PR #72.
 
 ---
 

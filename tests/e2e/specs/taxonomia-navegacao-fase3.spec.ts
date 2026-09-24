@@ -202,21 +202,17 @@ test.describe('Taxonomia — navegação do estudante (Fase 3)', () => {
     const { titles, classeShort } = seedTree();
     cleanup.push(() => deleteE2EMaterials());
     const user = await setupStudent('e2e-fase3-mobile');
+    // Tudo em 390px, desde o login: a biblioteca é aberta pelo dock inferior.
+    // Até a 45-J, a navegação era feita em largura de desktop e o viewport só
+    // era reduzido depois, porque o widget "Plantão de Foco" cobria o item
+    // "Biblioteca" do menu Recursos em tela estreita.
+    await page.setViewportSize({ width: 390, height: 844 });
     await login(page, user);
 
-    // A navegação até o material é feita em largura de desktop de propósito:
-    // em 390px o widget flutuante "Plantão de Foco" (fixed bottom-20 left-4
-    // z-40) cobre o primeiro item do menu de Recursos do dock inferior, e o
-    // clique não chega. É sobreposição PRÉ-EXISTENTE, em componentes que a
-    // Fase 3 não toca — não vamos mascarar com `force: true` nem deixar este
-    // teste falhar por ela. O que este teste mede é a navegação da árvore em
-    // tela estreita, então reduzimos o viewport DEPOIS de chegar no material.
     await openTree(page);
     await page.getByRole('button', { name: `Expandir ${titles.raiz}`, exact: true }).click();
     await page.getByRole('button', { name: `Expandir ${classeShort}`, exact: true }).click();
     await page.getByRole('button', { name: titles.folha, exact: true }).click();
-
-    await page.setViewportSize({ width: 390, height: 844 });
 
     const trilha = page.getByRole('navigation', { name: 'Trilha de navegação' });
     await expect(trilha).toBeVisible();

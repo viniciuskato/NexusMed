@@ -127,10 +127,17 @@ export const ClinicalPomodoroWidget: React.FC<ClinicalPomodoroWidgetProps> = () 
   const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   const progressPercent = Math.min(100, Math.max(0, 100 - (timeLeft / (durationMinutes * 60)) * 100));
 
+  // Posição e camada nos três estados (45-J): o dock inferior (MobileBottomNav,
+  // z-40) aparece em todas as larguras e empilha, de baixo para cima, a barra,
+  // o menu "Recursos" e a pílula "Retomar". O widget fica em z-30 — abaixo do
+  // dock, que assim nunca é coberto — e, abaixo de `lg`, a 112px da base,
+  // acima da barra e da pílula com o menu fechado. Em `lg`+ o dock centralizado
+  // não alcança o canto esquerdo e o widget volta para perto da base.
+
   // Não aberto de todo: botão gatilho sutil no canto inferior esquerdo
   if (!isOpen) {
     return (
-      <aside aria-label="Plantão de Foco" className="fixed bottom-20 sm:bottom-6 left-4 z-40">
+      <aside aria-label="Plantão de Foco" className="fixed bottom-28 lg:bottom-6 left-4 z-30">
         <button
           type="button"
           onClick={() => {
@@ -162,7 +169,7 @@ export const ClinicalPomodoroWidget: React.FC<ClinicalPomodoroWidgetProps> = () 
   // Modo Minimized (pill discreto)
   if (isMinimized) {
     return (
-      <aside aria-label="Plantão de Foco" className="fixed bottom-20 sm:bottom-6 left-4 z-40">
+      <aside aria-label="Plantão de Foco" className="fixed bottom-28 lg:bottom-6 left-4 z-30">
         <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border border-teal-500/50 shadow-xl elev-md text-slate-800 dark:text-slate-200">
           <button
             type="button"
@@ -203,7 +210,7 @@ export const ClinicalPomodoroWidget: React.FC<ClinicalPomodoroWidgetProps> = () 
 
   // Modo Completo (Card Expandido)
   return (
-    <aside aria-label="Plantão de Foco" className="fixed bottom-20 sm:bottom-6 left-4 z-40 w-72 sm:w-80 animate-in fade-in slide-in-from-bottom-3">
+    <aside aria-label="Plantão de Foco" className="fixed bottom-28 lg:bottom-6 left-4 z-30 w-72 sm:w-80 animate-in fade-in slide-in-from-bottom-3">
       <div className="p-5 rounded-3xl bg-white/95 dark:bg-[#0E1726]/95 backdrop-blur-xl border border-teal-500/40 dark:border-teal-500/30 elev-lg shadow-2xl text-slate-800 dark:text-slate-100 space-y-4">
         {/* Header do Widget */}
         <div className="flex items-center justify-between">
