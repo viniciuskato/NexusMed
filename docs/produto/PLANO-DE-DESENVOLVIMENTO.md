@@ -4,8 +4,8 @@
 e em que estado está cada parte. Substitui a antiga sequência de prompts e os
 documentos por iniciativa.
 
-**Última revisão da diretoria:** 23/09/2026.
-**Estado verificado no código:** 23/09/2026.
+**Última revisão da diretoria:** 24/09/2026.
+**Estado verificado no código:** 24/09/2026.
 
 Como ler, conforme o que você procura:
 - **Entender o plano:** seções 1 a 4.
@@ -128,7 +128,7 @@ escalar. A ordem dos ramos é da produção editorial (seção 12).
 - **A plataforma é a fonte da verdade.** Arquivos locais são só formato de
   troca.
 
-## 2. Onde o sistema está (verificado em 23/09/2026)
+## 2. Onde o sistema está (verificado em 24/09/2026)
 
 ### O ciclo de estudo
 
@@ -153,17 +153,15 @@ escalar. A ordem dos ramos é da produção editorial (seção 12).
 
 ### Confiabilidade
 
-A auditoria de 19/09 deixou **26 achados abertos**. Conferido em 23/09:
-nenhum foi corrigido desde então. Os mais graves:
-- no simulado em Modo Prova, quando o tempo acaba, as respostas se perdem e a
-  nota fica 0;
-- clique duplo duplica tentativas;
+Em 24/09 foram publicadas as correções do tempo esgotado no simulado, do
+corte em 1000 linhas e da revisão que atestava o item errado (45-A parte 1,
+45-B, 45-C). Seguem **23 achados abertos** da auditoria. Os mais graves:
+- clique duplo em "Confirmar Resposta" e na nota do flashcard duplica
+  tentativas e revisões (no simulado já não duplica);
 - com rede lenta, resposta certa conta como errada;
-- leituras com mais de 1000 linhas são cortadas em silêncio (afeta alunos
-  ativos em semanas);
 - excluir um material apaga dados de todos os alunos e a trilha de
   atestação;
-- o painel de revisão pode atestar o item errado.
+- editar material publicado muda na hora o que o estudante lê, sem revisão.
 
 ### Base técnica
 
@@ -259,9 +257,12 @@ dado e forma de produzir conteúdo) e a 3 depois.
 
 | Trilha | Área do código | Unidades, na ordem | Espera outra trilha |
 |---|---|---|---|
-| **1 — Dados do estudante** | Respostas, flashcards, simulados, caderno de erros, sincronização; leitura e gravação nos repositórios | 45-A e 45-C (a que o prazo da 45-C pedir primeiro — P-1; sem a medida, 45-A) → 45-E → 45-G → 45-I | — |
-| **2 — Material e Área Editorial** | Formulário, importação, gravação e revisão de material e de questão | 45-B → 43-A → 45-D → 43-B → 45-K → 44-B → 44-A → 44-C | — |
-| **3 — Descoberta e casca do app** | Busca, conta e sessão, menu, componente raiz, telas novas do ciclo | 45-J → 43-D → 45-F → 45-H → 46-A passos 1 a 4 → 43-C → 43-E | 45-H espera a 45-A (trilha 1); 43-C espera a 43-B (trilha 2) |
+| **1 — Dados do estudante** | Respostas, flashcards, simulados, caderno de erros, sincronização; leitura e gravação nos repositórios | 45-A parte 2 → 45-E → 45-G → 45-I | — |
+| **2 — Material e Área Editorial** | Formulário, importação, gravação e revisão de material e de questão | 43-A → 45-D → 43-B → 45-K → 44-B → 44-A → 44-C | — |
+| **3 — Descoberta e casca do app** | Busca, conta e sessão, menu, componente raiz, telas novas do ciclo | 43-D → 45-F → 45-H → 46-A passos 1 a 4 → 43-C → 43-E | 45-H espera a 45-A parte 2 (trilha 1); 43-C espera a 43-B (trilha 2) |
+
+Já concluídas e publicadas em 24/09, fora das listas: 45-B, 45-J, 45-C e a
+parte 1 da 45-A.
 
 Notas de ordem:
 - **Trilha 2:** a 43-B vem antes da 45-K porque está no caminho do "testar o
@@ -341,7 +342,7 @@ dar sozinha.
 
 **Fora de escopo.** Busca, questões, tela inicial.
 **Depende de.** 45-B (mesma Área Editorial; pequena).
-**Estado.** Pronta assim que a 45-B for mesclada.
+**Estado.** Pronta.
 
 ---
 
@@ -701,13 +702,12 @@ erros perde itens — sem nenhum erro na tela.
 remoto não foi conferido (P-1): tratar como 1000. Teste com mais de 1000
 linhas.
 **Depende de.** Nada.
-**Achados da execução.** A parte 1 (leituras completas) resolve a perda de
-dado da AUD-21. A parte 2 (números calculados no servidor) é desempenho, não
-perda de dado — recomendação: mover para a 46-D. Em 22/09 a produção tinha
-836 seções de material: sem a parte 1, o acervo cortaria para todos os
-estudantes ao passar de 1000.
-**Estado.** Parte 1 concluída — PR #73. Parte 2 pendente de decisão da
-diretoria.
+**Achados da execução.** As leituras completas resolvem a perda de dado da
+AUD-21. Em 22/09 a produção tinha 836 seções de material: sem a correção, o
+acervo cortaria para todos os estudantes ao passar de 1000. O segundo item do
+aceite ("números calculados no servidor") é desempenho, não perda de dado, e
+foi movido para a 46-D pela diretoria em 24/09.
+**Estado.** Concluída — PR #73.
 
 ---
 
@@ -1042,6 +1042,9 @@ reclama, e uma migration errada não tem caminho de volta ensaiado.
 - Procedimento de rollback de migration escrito e ensaiado no local.
 - O login deixa de baixar todos os materiais com as seções completas, e o
   caderno de erros deixa de fazer uma chamada por questão.
+- Onde a tela só precisa de números (contagens, acertos, XP), eles vêm
+  calculados no servidor, sem baixar a lista inteira. *(Veio da 45-C em 24/09:
+  depois das leituras completas, é só desempenho.)*
 
 **Depende de.** P-1 (limites do plano).
 **Estado.** Planejada.
@@ -1105,7 +1108,7 @@ trilhas paralelas não conflitam aqui. "Publicado" significa em produção
 
 | Unidade | Estado | PR | Publicado |
 |---|---|---|---|
-| 43-A | Pronta após 45-B | — | — |
+| 43-A | Pronta | — | — |
 | 43-B | Planejada | — | — |
 | 43-C | Planejada | — | — |
 | 43-D | Pronta | — | — |
@@ -1113,16 +1116,16 @@ trilhas paralelas não conflitam aqui. "Publicado" significa em produção
 | 44-A | Planejada | — | — |
 | 44-B | Planejada | — | — |
 | 44-C | Planejada | — | — |
-| 45-A | Pronta | — | — |
-| 45-B | Pronta | — | — |
-| 45-C | Pronta | — | — |
+| 45-A | Parte 1 concluída; parte 2 pronta (TASK-2026-09-23-09) | #74 | parte 1 em 24/09 |
+| 45-B | Concluída | #71 | 24/09 |
+| 45-C | Concluída (item de desempenho movido para a 46-D) | #73 | 24/09 |
 | 45-D | Pronta | — | — |
 | 45-E | Planejada | — | — |
 | 45-F | Pronta | — | — |
 | 45-G | Planejada | — | — |
 | 45-H | Planejada | — | — |
 | 45-I | Planejada | — | — |
-| 45-J | Pronta | — | — |
+| 45-J | Concluída | #72 | 24/09 |
 | 45-K | Planejada (após 45-D) | — | — |
 | 46-A | Planejada | — | — |
 | 46-B | Em andamento | vários (Dependabot) | parcial |

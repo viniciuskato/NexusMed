@@ -12,7 +12,7 @@
 > reconfira antes de agir. Este arquivo cabe numa tela: atualize o fato, não
 > acrescente narrativa (a narrativa é o PR).
 
-**Última atualização:** 2026-09-23, pela diretoria.
+**Última atualização:** 2026-09-24, pela diretoria.
 
 ## Fonte de verdade
 
@@ -41,20 +41,20 @@ supabase migration list --linked
 
 | Ambiente | Estado | Conferido em |
 |---|---|---|
-| **Produção** | `https://synapse-med-firebase-auth.vercel.app`. Último deploy com mudança de app: PR #62 (`6d1f71d`), confirmado pelo SHA no bundle, sem instrumentação de teste. Depois dele, só CI (#63) e documentação (#64 a #67); `main` em `fcc5421`. | 2026-09-23 |
+| **Produção** | `https://synapse-med-firebase-auth.vercel.app`. Último deploy: `main` em `912fb2d` (merge do PR #74), confirmado pelo SHA no bundle (`__APP_RELEASE__` = `912fb2d20ca3`), sem instrumentação de teste. Publicadas em 24/09: 45-B (#71), 45-J (#72), 45-C (#73), 45-A parte 1 (#74) — nenhuma com migration. | 2026-09-24 |
 | **Supabase remoto** | Projeto `synapsemed`, ref `jfvhwwvixwvgjfqzlkkb`, `sa-east-1`. 29 migrations, igual ao repositório; a última, `20260923120000_salvar_sem_perda_e_importar_na_arvore`, aplicada antes do merge do #62 e verificada por leitura direta. | 2026-09-23 |
 | **Conteúdo em produção** | 38 materiais (todos com `mode` nulo); 420 questões, 9 ligadas a material. | 2026-09-23 |
-| **CI** | GitHub Actions, `fast` e `full`; o `full` baixa as imagens do Supabase do ECR Public desde o PR #63 (o ghcr.io passou a recusar). | 2026-09-23 |
-| **Local** | Supabase via CLI (`supabase start` / `db reset` / `test db`), onde toda mudança de schema é testada. Última suíte completa: pgTAP 398/398, Vitest 257/257, E2E do fluxo de importação 7/7. | 2026-09-23 (PR #62) |
+| **CI** | GitHub Actions, `fast` e `full`, em todo PR, no push do `main` e à mão (desde o PR #70; antes, rodava duas vezes por push de PR). O `full` baixa as imagens do Supabase do ECR Public desde o PR #63. | 2026-09-24 |
+| **Local** | Supabase via CLI (`supabase start` / `db reset` / `test db`), onde toda mudança de schema é testada — um só banco para todas as worktrees; ver a trava em `EXECUTOR_PROTOCOL.md`. Última suíte completa, com os PRs #69 a #74 juntos: Vitest 271/271, E2E 49/49, lint 3 avisos (teto 3). | 2026-09-24 |
 
 Painel do Supabase (cadastro, URLs de retorno, limite de linhas da API,
 PKCE, limites do plano): **não verificado** — pendência P-1 do plano.
 
 ## Riscos abertos
 
-- **26 achados da auditoria de 19/09 continuam abertos**, todos agendados em
-  unidades do plano (frentes 45 e 46); os mais graves estão na seção 2 do
-  plano. Detalhe técnico em `docs/diretoria/BACKLOG-ESTRATEGICO.md`.
+- **23 achados da auditoria continuam abertos** (de 26; em 24/09 fecharam
+  AUD-17, AUD-21 e AUD-23), todos agendados em unidades do plano (frentes 45
+  e 46); os mais graves estão na seção 2 do plano. Detalhe técnico em `docs/diretoria/BACKLOG-ESTRATEGICO.md`.
 - **Sem backup fora do Supabase** (AUD-13) — unidade 46-C, espera a P-2.
 - **Leitura de dados de produção por sessão de IA:** em 2026-09-23 o
   classificador do Claude Code bloqueou uma consulta só de leitura no remoto
