@@ -37,6 +37,14 @@ e ficam como histórico (mesma lógica de preservação já usada em
 
 ## Itens
 
+> **Desde 2026-09-23, todo item aberto está agendado numa unidade do plano
+> canônico** ([`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](../produto/PLANO-DE-DESENVOLVIMENTO.md),
+> frentes 45 e 46, e pendências do dono P-1 a P-3). Este arquivo continua
+> sendo o detalhe técnico de cada achado; a ordem e o estado de execução
+> estão no plano. Ao concluir uma unidade, a execução muda aqui o estado dos
+> achados que ela resolve para "Concluído (unidade NN-X)". Conferido em
+> 2026-09-23: nenhum achado aberto foi corrigido desde a 3ª rodada.
+
 Itens da auditoria técnica de 2026-09-18 (arquitetura, qualidade,
 segurança e negócio). O que já virou PR não está aqui: RPCs de gabarito
 (#1), `saveCompendium` sem cascata (#2), mocks fora de produção (#3),
@@ -104,7 +112,7 @@ autocontido (#6), code splitting + botão voltar (#7), processo via PR
 - **Contexto mínimo pra puxar**: `src/App.tsx`, PR #7; decidir entre
   react-router (ou TanStack Router) e uma camada de dados por tela
   (ex.: TanStack Query) antes de começar.
-- **Estado**: Em andamento — plano aprovado para execução em PR #14 (`docs/diretoria/PLANO-AUD-04-APP-TSX.md`, 12 PRs pequenos); pré-requisito de testes cumprido (#13 mesclado)
+- **Estado**: Aberto — plano aprovado em PR #14 (`docs/diretoria/PLANO-AUD-04-APP-TSX.md`, 12 PRs pequenos) e pré-requisito de testes cumprido (#13), mas nenhum dos 12 passos foi executado (conferido em 2026-09-23: `App.tsx` com ~970 linhas, sem roteador nem camada de dados). Agendado como unidade 46-A do plano canônico
 
 ### AUD-05 — Leitura offline incoerente
 - **Registrado em**: 2026-09-18 pela sessão de auditoria
@@ -118,7 +126,7 @@ autocontido (#6), code splitting + botão voltar (#7), processo via PR
   é requisito de produto. Se não for, remover o fallback de leitura e
   simplificar.
 - **Contexto mínimo pra puxar**: `src/repositories/Resilient*`,
-  `src/services/storage.ts`, `docs/SINCRONIZACAO-CONFIAVEL.md`.
+  `src/services/storage.ts`, `docs/archive/SINCRONIZACAO-CONFIAVEL.md`.
 - **Estado**: Aberto (reconfirmado em 2026-09-19; o cache vazio já causa
   bugs visíveis online — ver AUD-29 e AUD-20)
 
@@ -348,7 +356,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
 - **Prioridade relativa**: alta. Mexe no núcleo da sincronização, então
   exige cuidado e testes.
 - **Contexto mínimo pra puxar**: `syncQueue.ts` (`runFlush` e
-  `retryAllFailed`), `syncHandlers.ts`, `docs/SINCRONIZACAO-CONFIAVEL.md` e
+  `retryAllFailed`), `syncHandlers.ts`, `docs/archive/SINCRONIZACAO-CONFIAVEL.md` e
   a armadilha #8 do `AGENTS.md`. Correção provável: serializar por alvo
   (categoria + id), ou fazer operações do tipo "set" substituírem as
   pendentes do mesmo alvo ao enfileirar.

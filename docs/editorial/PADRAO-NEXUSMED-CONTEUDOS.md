@@ -1,5 +1,7 @@
 # Como produzir material para o NexusMed
 
+**Versão 2 do padrão — 23/09/2026**
+
 O NexusMed é uma plataforma de estudo para medicina. O estudante escolhe um
 assunto, lê o material, aprofunda até onde achar necessário, testa o que leu
 com questões, e o que errar vira flashcard revisado pela própria plataforma
@@ -17,7 +19,9 @@ material está aqui, sem depender de nenhum outro arquivo. Ele tem duas partes:
 **Se você é uma IA recebendo este documento:** sua tarefa é a Parte 1 —
 entregar **um arquivo `.md` por material**, no formato da seção 1.7. A Parte 2
 é feita por uma pessoa dentro da plataforma; leia só para entender o contexto
-e **não** produza nada dela.
+e **não** produza nada dela. Se receber junto o texto de um material antigo,
+sua tarefa é reescrevê-lo neste padrão, aproveitando o conteúdo e as
+referências que ainda valem.
 
 ---
 
@@ -59,7 +63,11 @@ pergunte antes de escrever — não invente.**
    plataforma. O Tema é uma categoria ampla e fixa do currículo (por exemplo,
    `Clínica` ou `Básica`), não um resumo do assunto — nunca crie um Tema novo
    para combinar com o título. Você não tem acesso ao catálogo: use
-   exatamente os nomes que receber.
+   exatamente os nomes que receber. A Disciplina é a "casa" do material — onde
+   o conceito é definido (um fármaco mora em Farmacologia mesmo sendo muito
+   usado em Infectologia). Escreva a partir dessa casa: um material de
+   Farmacologia sobre um antibiótico não vira tratado sobre as infecções que
+   ele trata.
 3. **Lugar na árvore:** qual material fica acima (o pai), quais ficam ao
    lado (os irmãos) e quais virão abaixo (os filhos previstos). É isso que
    diz o que este material deve cobrir e o que ele deve deixar para os
@@ -75,13 +83,16 @@ pergunte antes de escrever — não invente.**
 2. qual é o mecanismo compartilhado;
 3. como os subgrupos se diferenciam;
 4. quais mecanismos de resistência ou complicações são centrais;
-5. quais materiais abaixo aprofundam cada ramo.
+5. quais ramos existem abaixo e o que distingue cada um — descreva os ramos
+   como conteúdo ("as cefalosporinas se organizam em gerações..."), sem citar
+   títulos de materiais.
 
 **Subclasse** — deve responder:
 1. o que diferencia a subclasse dentro da classe;
 2. quais fármacos ou entidades ela contém;
 3. quais diferenças entre eles mudam o raciocínio clínico;
-4. o que merece material próprio abaixo dela.
+4. quais fármacos têm particularidades que serão aprofundadas mais abaixo —
+   nomeie-os e diga em uma frase o que os distingue, sem remeter a páginas.
 
 **Fármaco ou entidade individual** — contém **somente o que é distintivo**:
 farmacocinética, espectro, indicações, segurança, resistência, pontos de
@@ -255,6 +266,7 @@ Entregue **um arquivo `.md` por material**, exatamente nesta estrutura:
 **Tema:** Nome exato do tema no catálogo
 **Autor:** Nome de quem assina
 **Tempo estimado de leitura:** 18 minutos
+**Versão do padrão:** 2
 
 ### Título da primeira seção
 **Tag de Mecanismo:** Mecanismo de ação
@@ -296,7 +308,10 @@ Texto da segunda seção [1](#ref-1).
 2. **Os metadados vêm logo abaixo do título**, um por linha, no formato
    `**Rótulo:** valor`, com os rótulos exatamente como no modelo. O tempo de
    leitura é um número seguido de "minutos". Autor é opcional: sem autor,
-   omita a linha inteira.
+   omita a linha inteira. **Versão do padrão** é sempre `2` — a versão deste
+   documento; ela diz, no futuro, contra qual padrão o material foi escrito.
+   O título não leva numeração ("Antimicrobianos I", "Módulo 2"): a ordem
+   entre materiais é dada pela plataforma.
 3. **Não escreva nada entre os metadados e a primeira seção.** Todo texto
    ali é descartado.
 4. **Cada `###` inicia uma seção nova.** Por isso, **dentro de uma seção,
@@ -355,6 +370,12 @@ Texto da segunda seção [1](#ref-1).
   nomeie e deixe o aprofundamento para ele.
 - Não escreva introdução solta antes da primeira seção.
 - Não use formatação fora da lista da seção 1.7.
+- **Não cite outros materiais como navegação**: nada de "veja o material
+  X", "no próximo módulo", "como vimos na aula anterior", "nas páginas
+  seguintes". Mencionar um assunto é normal ("a meningite bacteriana exige
+  penetração liquórica"); remeter a uma página, não. Quem liga os materiais
+  é a plataforma — assim, criar, mover ou dividir um material nunca obriga a
+  editar o texto de outro.
 
 ## 1.9 Checklist antes de entregar
 
@@ -372,6 +393,8 @@ Conteúdo, por seção:
 - [ ] Pontos-Chave, Pérola e Alerta preenchidos onde havia material real?
 - [ ] Nada repete o material de cima, e nada invade o que é de um material
   abaixo?
+- [ ] Nenhuma remissão a outro material ou página ("veja o material",
+  "próximo módulo")? Título sem numeração?
 
 Citações e formato, no arquivo inteiro:
 - [ ] Toda citação no formato `[N](#ref-N)`, com N certo? Nenhum `[N]` solto?
@@ -380,6 +403,7 @@ Citações e formato, no arquivo inteiro:
 - [ ] Dentro das seções, só `####` como subtítulo? Nenhum texto antes da
   primeira seção?
 - [ ] `### Tags` com palavras-chave (sinônimos, siglas, nomes comerciais)?
+- [ ] Linha `**Versão do padrão:** 2` nos metadados?
 - [ ] Nada de LaTeX, `<=`, `>=`, imagem, HTML ou lista dentro de lista?
 - [ ] Cada parágrafo numa linha só? Linha em branco antes e depois de
   subtítulos, listas, tabelas e caixas `> `?
@@ -406,6 +430,25 @@ Para os nomes exatos de Disciplina e Tema: Área Editorial → **Novo
 Conteúdo / Mecanismo** e veja as opções dos dois menus (não precisa criar
 nada). Mande junto a lista dos materiais que já existem naquele ramo da
 árvore, para ela saber o que não repetir.
+
+**Onde o material mora (a Disciplina).** Cada material tem uma casa só, e o
+ramo inteiro da árvore mora na mesma. Regra: **o material mora onde o
+conceito é definido.**
+
+- Fármaco e classe de fármaco → Farmacologia.
+- Doença e síndrome → a especialidade clínica (Infectologia, Cardiologia...).
+- Mecanismo e fisiologia → a ciência básica (Fisiologia, Imunologia...).
+
+Exemplo: "Ceftriaxona" mora em Farmacologia; "Meningite bacteriana" mora em
+Infectologia e menciona a ceftriaxona sem reexplicá-la. Nunca copie um
+material para ele aparecer em outra disciplina. Hoje o material aparece na
+biblioteca só da casa, e a busca o encontra de qualquer lugar; a plataforma
+vai ganhar a opção de mostrar um ramo inteiro em outras disciplinas, sem
+cópia.
+
+**A plataforma é a referência, não a pasta.** Arquivos `.md` guardados no
+computador envelhecem: depois de importado, o material pode ser corrigido na
+plataforma. Para mudar um material, parta sempre do que está publicado nela.
 
 ## 2.2 Importar o material
 
@@ -512,3 +555,34 @@ Na prática, hoje:
   na lista de questões. A plataforma aceita hoje **um** material por
   questão; em breve aceitará vários e permitirá escolher os materiais do
   lote inteiro já na importação.
+
+## 2.7 Versões do padrão e materiais antigos
+
+Este padrão tem número de versão. Quando mudar, o novo documento diz aqui o
+que mudou e se os materiais antigos precisam ser refeitos.
+
+Nem toda mudança exige refazer material:
+- **Aparência** (como uma fórmula ou tabela aparece na tela) é resolvida
+  pela plataforma e vale para todos os materiais, antigos e novos.
+- **Formato do arquivo** só afeta o que ainda vai ser importado.
+- **Editorial** (profundidade, o que cabe em cada nível, dividir um material)
+  é a única que pede reescrita.
+
+**v2 — 23/09/2026.** O que muda em relação aos materiais anteriores:
+- o material tem um lugar na árvore e segue as regras do seu nível (1.3):
+  não repete o material de cima nem invade o de baixo;
+- um material por objetivo, entre 8 e 25 minutos — material que cobre uma
+  classe inteira com todas as subclasses precisa ser dividido;
+- a Disciplina é a casa do material (fármaco em Farmacologia);
+- o texto não remete a outros materiais, e o título não tem numeração;
+- palavras-chave com sinônimos, siglas e nomes comerciais;
+- a linha `**Versão do padrão:** 2`.
+
+**Como atualizar um material antigo hoje:** peça à IA que reescreva o
+material para a v2, entregando junto este documento e o texto atual do
+material. Para dividir um material grande, peça um arquivo para cada parte,
+seguindo a árvore; importe as partes novas como filhos e coloque a parte que
+fica no material original (Editar, substituindo o texto das seções). A
+atestação do original cai e ele precisa ser revisado de novo. A plataforma vai
+ganhar botões para exportar um material como arquivo e para atualizá-lo a
+partir de um arquivo, preservando posição e questões.

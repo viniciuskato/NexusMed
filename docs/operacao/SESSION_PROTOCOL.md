@@ -31,10 +31,11 @@
 3. Se houver divergência entre o que `PROJECT_STATE.md` descreve e o que
    os comandos acima mostram — **parar e relatar a divergência antes de
    agir**, não presumir qual dos dois está certo.
-4. Definir (ou confirmar, se veio de uma ficha de etapa) **um único
-   objetivo principal** para a sessão. Duas sessões não devem escrever nos
-   mesmos arquivos ao mesmo tempo — checar `TASKS.md` e perguntar se
-   houver qualquer dúvida de sobreposição.
+4. Definir (ou confirmar, se veio de uma unidade do plano canônico,
+   `docs/produto/PLANO-DE-DESENVOLVIMENTO.md`) **um único objetivo
+   principal** para a sessão. Duas sessões não devem escrever nos mesmos
+   arquivos ao mesmo tempo — checar o estado das unidades no plano e
+   `TASKS.md`, e perguntar se houver qualquer dúvida de sobreposição.
 5. Chats e memória do usuário nunca substituem os passos 1-3 — são, no
    máximo, um resumo a ser verificado, não uma fonte.
 

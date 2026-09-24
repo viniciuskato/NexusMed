@@ -24,17 +24,25 @@ resultado está correto.
 - Leia o encaminhamento até o fim antes de começar. Se alguma parte for
   ambígua ou incompleta demais para executar sem inventar uma decisão,
   pare e reporte a ambiguidade em vez de assumir uma escolha.
-- **Desde 2026-09-23 o encaminhamento é uma ficha de etapa** num documento de
-  iniciativa em `docs/produto/` (ver `docs/diretoria/MODELO-DIRETORIA.md`,
-  "Fichas de etapa"). A ficha diz o quê, por quê, o critério de aceite e as
-  restrições — **não** diz o como. Você deriva o plano lendo o código atual:
-  quais arquivos, que migration, em que ordem. Antes de implementar,
-  confira as "armadilhas conhecidas" da ficha no código (elas dizem onde
-  olhar). Critério de aceite da ficha é o que define "pronto" — cada item
-  precisa de evidência no retorno (teste, consulta ou passo no navegador).
-- Se o código mostrar que o aceite da ficha está errado, contradiz uma
+- **Desde 2026-09-23 o encaminhamento é uma unidade do plano canônico**,
+  `docs/produto/PLANO-DE-DESENVOLVIMENTO.md` (ver também
+  `docs/diretoria/MODELO-DIRETORIA.md`, "Plano canônico e unidades"). A
+  unidade diz o quê, por quê, o critério de aceite e as restrições —
+  **não** diz o como. Você deriva o plano lendo o código atual: quais
+  arquivos, que migration, em que ordem. Antes de implementar, confira as
+  "armadilhas conhecidas" da unidade no código (elas dizem onde olhar) e,
+  se ela resolve achados da auditoria (AUD-nn), leia o detalhe deles em
+  `docs/diretoria/BACKLOG-ESTRATEGICO.md`. Critério de aceite da unidade é o
+  que define "pronto" — cada item precisa de evidência no retorno (teste,
+  consulta ou passo no navegador).
+- Se o código mostrar que o aceite da unidade está errado, contradiz uma
   decisão registrada ou é impossível sem ferir uma restrição, pare e
   reporte com a evidência. Não reescreva o aceite por conta própria.
+- **No mesmo PR da implementação**, atualize no plano: o estado da unidade,
+  a linha dela no registro (seção 13) e, se a execução revelou algo que a
+  diretoria precisa saber, uma linha "Achados da execução" na unidade. Se
+  ela resolve achados da auditoria, mude o estado deles no backlog para
+  "Concluído (unidade NN-X)". Não mexa na sequência nem em outras unidades.
 - Leia `PROJECT_STATE.md`, `TASKS.md` e `AGENTS.md` (raiz) para o estado
   atual antes de tocar código, mesmo que o encaminhamento pareça
   autocontido — reconfirme drift real com `git fetch`/`git status`, nunca
@@ -69,7 +77,7 @@ com o formato de retorno já usado em `docs/diretoria/registro.md`):
 RETORNO: <identificador da etapa, ex.: 43-A>
 - Resultado
 - Alterações (arquivos, dados, comportamento visível)
-- Aceite (cada critério da ficha, com a evidência que o comprova)
+- Aceite (cada critério da unidade, com a evidência que o comprova)
 - Validações (comandos rodados, saída real — não resumo vago)
 - Pendências
 - Estado de publicação (local / branch remota / mesclado em main / produção)

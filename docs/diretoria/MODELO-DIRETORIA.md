@@ -38,13 +38,13 @@ A unidade de acompanhamento é a entrega, com número estável (01, 02 etc.). Ca
 Mantenha três perspectivas: fila priorizada do que pode executar agora; acompanhamento do que está em execução, voltou ou exige decisão; histórico de instruções, retornos e aprovações.
 
 ## Encaminhamentos
-**Desde 2026-09-23 o encaminhamento é uma ficha de etapa, não um prompt** — ver a seção "Fichas de etapa" logo abaixo. A executiva encerra com o bloco de retorno descrito em `docs/operacao/EXECUTOR_PROTOCOL.md`.
+**Desde 2026-09-23 o encaminhamento é uma unidade do plano canônico, não um prompt** — ver a seção "Plano canônico e unidades" logo abaixo. A executiva encerra com o bloco de retorno descrito em `docs/operacao/EXECUTOR_PROTOCOL.md`.
 
-Não detalhe o *como* com antecedência: arquivos, SQL, comandos e ordem de passos mudam a cada entrega mesclada e são derivados por quem executa, lendo o código naquele momento. Registre na ficha só o que não envelhece. Não invente tarefas para encerrar uma conversa exploratória.
+Não detalhe o *como* com antecedência: arquivos, SQL, comandos e ordem de passos mudam a cada entrega mesclada e são derivados por quem executa, lendo o código naquele momento. Registre na unidade só o que não envelhece. Não invente tarefas para encerrar uma conversa exploratória.
 
 A executiva encerra com um bloco copiável: RETORNO: 01-B; Resultado; Alterações; Validações; Pendências; Estado de publicação. Aceite retornos legados e linguagem natural.
 
-## Fichas de etapa (desde 2026-09-23)
+## Plano canônico e unidades (desde 2026-09-23)
 
 Substituem os prompts persistidos em `docs/diretoria/prompts/`. Motivo: os prompts
 envelheciam antes de serem executados — o 42-C ainda apontava para um caminho de
@@ -53,33 +53,46 @@ tomadas horas depois; e os achados que mais importam (ex.: o hash de atestação
 questão incluir o vínculo com material) só aparecem lendo o código na hora de
 executar. `docs/diretoria/prompts/` fica como histórico; nada novo entra lá.
 
-**Onde mora.** Um documento vivo por iniciativa em `docs/produto/` (ex.:
-[`CICLO-DE-ESTUDO.md`](../produto/CICLO-DE-ESTUDO.md)), com o objetivo, a decisão
-de modelo, as fichas e uma tabela de registro das etapas. A fila de trabalho
-continua em `docs/operacao/TASKS.md`, apontando para a ficha.
+**Onde mora.** Um único documento:
+[`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](../produto/PLANO-DE-DESENVOLVIMENTO.md).
+Nele estão a visão, o estado verificado do sistema, as decisões de modelo em
+vigor, as frentes, a sequência, as decisões em aberto, todas as unidades e o
+registro. É o painel da diretoria e o que o dono do produto lê para entender o
+planejamento. Não há mais documento por iniciativa. Os achados da auditoria
+continuam descritos em `BACKLOG-ESTRATEGICO.md`; a unidade que resolve cada um
+mora no plano.
 
-**O que uma ficha contém — só o que não envelhece:**
+**O que uma unidade contém — só o que não envelhece:**
 - **Por quê** — o problema de quem estuda ou de quem produz.
 - **Aceite** — comportamento observável, como a pessoa vê a tela. É a parte que
-  diz quando está pronto; sem ela a ficha é só uma ideia, e ideia solta não é
+  diz quando está pronto; sem ela a unidade é só uma ideia, e ideia solta não é
   executável.
 - **Restrições e armadilhas conhecidas** — decisões e riscos que valem, com
   *onde conferir* no código em vez de copiar o código.
 - **Fora de escopo**, **Depende de**, **Estado**.
 
-**O que a ficha NÃO contém:** nomes de arquivo como instrução, linhas, SQL,
+**O que a unidade NÃO contém:** nomes de arquivo como instrução, linhas, SQL,
 comandos, hashes, branches, caminhos de máquina, passo a passo. Isso é derivado
 por quem executa; o *como* genérico já vive em `AGENTS.md`, `RUNBOOK.md` e
 `EXECUTOR_PROTOCOL.md`.
 
-**Como encaminhar.** O encaminhamento vira uma linha: *"Execute a etapa 43-A de
-`docs/produto/CICLO-DE-ESTUDO.md` seguindo `docs/operacao/EXECUTOR_PROTOCOL.md`."*
-Autorizações específicas (push, abrir PR, escrita remota) vão na mesma mensagem,
-porque dependem do momento.
+**Quem atualiza o quê** (detalhe na seção 0 do plano):
+- **A diretoria** cria, corrige e descarta unidades, muda a sequência, registra
+  e resolve decisões em aberto e mantém "Onde o sistema está". Decisão durável
+  também entra em `DECISIONS.md`.
+- **A execução**, no mesmo PR da implementação, atualiza o estado da unidade, a
+  linha do registro e, se for o caso, uma linha "Achados da execução". Não
+  reescreve aceite nem sequência.
 
-**Ao voltar o retorno.** O RETORNO vai na descrição do PR (o diário da mudança);
-a ficha só ganha estado e link na tabela de registro. Se a execução mostrar que o
-aceite estava errado ou incompleto, corrija a ficha — ela é viva.
+**Como encaminhar.** Uma linha: *"Execute a unidade 43-A de
+`docs/produto/PLANO-DE-DESENVOLVIMENTO.md` seguindo
+`docs/operacao/EXECUTOR_PROTOCOL.md`."* Autorizações específicas (push, abrir
+PR, escrita remota) vão na mesma mensagem, porque dependem do momento.
+
+**Ao voltar o retorno.** O RETORNO vai na descrição do PR (o diário da mudança).
+Depois do merge, a diretoria confere o registro do plano e ajusta a sequência se
+algo mudou. Se a execução mostrou que o aceite estava errado ou incompleto, a
+diretoria corrige a unidade — ela é viva.
 
 ## Estados e evidência
 Planejado; Preparado (envio não confirmado); Em execução (usuário confirmou envio); Retorno recebido/em análise; Concluído (critérios atendidos). Publicação é informação separada: implementação local não significa entrega publicada.
@@ -92,12 +105,12 @@ Avalie separadamente: há informações suficientes para enviar? Pode executar j
 A tabela final deve conter: Entrega | Etapa/ID atual | Estado | Próxima ação / dependência. Diga explicitamente “Pode enviar”, “Aguarda retorno de NN — motivo”, “Definir isolamento antes de enviar” ou “Já enviado; aguardar retorno”. Indique prioridade quando útil. Mostre apenas o histórico necessário na conversa.
 
 ## Persistência
-Use docs/diretoria/registro.md como painel atual, fila e decisões. Fichas de etapa ficam no documento da iniciativa em `docs/produto/`; retornos, na descrição do PR da etapa (desde 2026-09-23 — antes, prompts em docs/diretoria/prompts/ e retornos em docs/diretoria/retornos/, mantidos como histórico). Não fabrique transcrições completas a partir de resumos; rotule resumos. Atualize o acompanhamento quando houver envio confirmado, retorno ou decisão, preservando trabalho concorrente e fatos anteriores.
+Use o plano canônico (`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`) como painel atual: sequência, estados, decisões em aberto e registro. Retornos vão na descrição do PR da unidade. Desde 2026-09-23; antes, o painel era docs/diretoria/registro.md, com prompts em docs/diretoria/prompts/ e retornos em docs/diretoria/retornos/ — todos mantidos como histórico. Não fabrique transcrições completas a partir de resumos; rotule resumos. Atualize o acompanhamento quando houver envio confirmado, retorno ou decisão, preservando trabalho concorrente e fatos anteriores.
 
-Ao retomar uma sessão, leia AGENTS.md, este modelo e registro.md. Reconcilie divergências com a última confirmação do usuário e mantenha incertezas explícitas.
+Ao retomar uma sessão, leia AGENTS.md, este modelo e o plano canônico. Reconcilie divergências com a última confirmação do usuário e mantenha incertezas explícitas.
 
 ## Independência de sessão
-Toda ficha deve poder ser executada por uma sessão nova sem acesso à conversa anterior — com o documento da iniciativa, `AGENTS.md` e o código daquele momento. Inclua as decisões e restrições que valem e o estado conhecido — o caminho do projeto e o estado do repositório quem executa lê de `AGENTS.md` e do próprio git. Oriente a inspecionar e aproveitar alterações existentes, sem exigir continuidade na mesma sessão. Confirme ausência de escritores concorrentes nos mesmos arquivos antes da edição. Esta regra substitui recomendações anteriores de encaminhamento obrigatório à mesma executiva.
+Toda unidade deve poder ser executada por uma sessão nova sem acesso à conversa anterior — com o plano canônico, `AGENTS.md` e o código daquele momento. Inclua as decisões e restrições que valem e o estado conhecido — o caminho do projeto e o estado do repositório quem executa lê de `AGENTS.md` e do próprio git. Oriente a inspecionar e aproveitar alterações existentes, sem exigir continuidade na mesma sessão. Confirme ausência de escritores concorrentes nos mesmos arquivos antes da edição. Esta regra substitui recomendações anteriores de encaminhamento obrigatório à mesma executiva.
 
 ## Eficiência de execução
 Por padrão, diretoria e executiva resolvem cada passo com ferramentas diretas (ler arquivo, rodar comando, editar) — não delegam a subagentes a menos que a tarefa exija pesquisa genuinamente paralela ou isolamento de contexto que a própria sessão não consegue fazer sozinha. Um passo único e prescrito (rodar um teste, conferir um diff, aplicar uma correção) nunca justifica abrir um subagente. Ao formular um encaminhamento para a executiva, inclua essa restrição quando o escopo for fechado.
