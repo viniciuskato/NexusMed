@@ -63,6 +63,31 @@ quando precisar de um fato que o código não mostra.
    corrigir, rodar os gates de novo, atualizar o PR.
 9. Depois do merge, seguir para a próxima unidade.
 
+## O Supabase local é um só para todas as trilhas
+
+O `project_id` e as portas do Supabase local são fixos (`supabase/config.toml`),
+então todas as worktrees usam **os mesmos contêineres e o mesmo banco**. Sem
+coordenação, uma trilha roda `db reset` no meio do E2E de outra, ou testa a
+própria migration contra um banco montado com as migrations de outra branch.
+
+Regra: **o bloco `db reset` → pgTAP → E2E é feito com a vez em mãos.**
+
+- Pegar a vez é criar a pasta de trava, operação atômica, compartilhada por
+  todas as worktrees e fora do que é versionado:
+  ```
+  LOCK="$(git rev-parse --git-common-dir)/supabase-local.lock"
+  mkdir "$LOCK" && echo "<trilha> <unidade> $(date -Iseconds)" > "$LOCK/quem"
+  ```
+  Se o `mkdir` falhar, outra trilha está com a vez: leia `$LOCK/quem`, siga
+  com o que não depende do banco (código, testes unitários) e tente de novo
+  depois. Trava com mais de 90 minutos: pergunte ao dono antes de removê-la.
+- Com a vez, **sempre começar por `supabase db reset`** — nunca confiar no
+  estado deixado por outra trilha.
+- Devolver a vez assim que o bloco terminar (`rm -rf "$LOCK"`), inclusive
+  quando um teste falhar.
+- Não rodar `supabase stop` nem apagar contêineres: outra trilha pode estar
+  esperando a vez com o banco de pé.
+
 ## Pare e pergunte ao dono, na própria sessão, quando
 
 - a mudança alteraria o que o estudante ou quem produz vê de um jeito que o

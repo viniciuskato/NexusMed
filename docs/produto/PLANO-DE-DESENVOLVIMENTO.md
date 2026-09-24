@@ -279,7 +279,10 @@ Notas de ordem:
   serve); 46-C (espera P-2); 46-D (espera P-1; quando destravar, a trilha dona
   de cada parte a executa).
 
-**Duas regras para trilhas em paralelo:**
+**Três regras para trilhas em paralelo:**
+- **O Supabase local é um só para todas as worktrees.** Banco de teste,
+  pgTAP e E2E são feitos um por vez, com a trava descrita em
+  `EXECUTOR_PROTOCOL.md`.
 - **A segunda a mesclar se atualiza sobre o `main`** e roda de novo todos os
   gates antes do merge; nenhuma reorganiza arquivos fora da própria área.
 - **Migration de uma trilha pode ficar "antes" da última já aplicada no
