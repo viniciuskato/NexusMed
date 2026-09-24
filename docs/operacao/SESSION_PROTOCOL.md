@@ -1,26 +1,29 @@
 # SESSION_PROTOCOL.md — contrato de abertura e fechamento de sessão
 
 > Vale para qualquer sessão de IA que trabalhe neste repositório —
-> auditoria, diretoria ou executiva, Claude, Codex ou outra ferramenta.
-> Três papéis desde 2026-09-18, ver
+> auditoria, diretoria ou execução (trilha), Claude, Codex ou outra
+> ferramenta. Papéis em
 > [`../diretoria/MODELO-DIRETORIA.md`](../diretoria/MODELO-DIRETORIA.md):
 > a sessão de auditoria é esporádica e só sob pedido explícito do
-> usuário; diretoria e executiva seguem exatamente como antes.
+> usuário; desde 2026-09-23 a execução é feita por trilhas.
 
 ## Abertura obrigatória
 
-1. Ler, nesta ordem: [`PROJECT_STATE.md`](PROJECT_STATE.md) →
-   [`DECISIONS.md`](DECISIONS.md) → [`TASKS.md`](TASKS.md) → `AGENTS.md`
-   (raiz do repositório). Se a sessão for de diretoria, ler também
-   [`../diretoria/BACKLOG-ESTRATEGICO.md`](../diretoria/BACKLOG-ESTRATEGICO.md)
-   para ver se há item estratégico pendente relevante à entrega. Ler
-   [`RUNBOOK.md`](RUNBOOK.md) quando a sessão for executar algo (build,
-   teste, publicação), não só planejar. Se a sessão for a executiva de
-   um encaminhamento (não a diretoria), ler também
-   [`EXECUTOR_PROTOCOL.md`](EXECUTOR_PROTOCOL.md) antes de começar. Se a
-   sessão for de auditoria, ler o projeto inteiro conforme escopo
-   descrito em `MODELO-DIRETORIA.md` — este checklist de abertura ainda
-   vale como piso mínimo.
+1. Ler conforme o papel — a leitura é curta de propósito: documento lido
+   sem necessidade custa tokens em toda sessão e dilui o que importa.
+   - **Trilha (execução):** `AGENTS.md` (raiz) e
+     [`EXECUTOR_PROTOCOL.md`](EXECUTOR_PROTOCOL.md); depois, a cada
+     unidade, a própria unidade no plano e os achados que ela cita. O resto
+     só quando a unidade apontar ou faltar um fato. [`RUNBOOK.md`](RUNBOOK.md)
+     quando for testar ou publicar.
+   - **Diretoria:** `AGENTS.md` → o plano canônico
+     (`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`) →
+     [`DECISIONS.md`](DECISIONS.md) (entradas recentes) →
+     [`PROJECT_STATE.md`](PROJECT_STATE.md) quando o assunto tocar
+     ambientes → [`../diretoria/BACKLOG-ESTRATEGICO.md`](../diretoria/BACKLOG-ESTRATEGICO.md)
+     quando for mexer em unidade que resolve achado.
+   - **Auditoria:** o projeto inteiro, conforme `MODELO-DIRETORIA.md` —
+     esta lista vale como piso mínimo.
 2. Reconfirmar estado real, nunca assumir a partir de memória de
    conversa anterior:
    ```
@@ -28,7 +31,7 @@
    git status --short --branch
    git rev-parse origin/main
    ```
-3. Se houver divergência entre o que `PROJECT_STATE.md` descreve e o que
+3. Se houver divergência entre o que os documentos lidos descrevem e o que
    os comandos acima mostram — **parar e relatar a divergência antes de
    agir**, não presumir qual dos dois está certo.
 4. Definir (ou confirmar, se veio de uma unidade do plano canônico,
@@ -44,7 +47,9 @@
 Toda sessão encerra devolvendo um relatório em linguagem executiva —
 alguém sem contexto técnico profundo precisa conseguir decidir "posso
 confiar nisso, e o que fazer a seguir" só lendo o relatório. Checklist
-mínimo, todos os itens:
+mínimo, todos os itens. **Na trilha, o relatório é o bloco RETORNO na
+descrição do PR** (`EXECUTOR_PROTOCOL.md`), que já cobre estes itens; fora do
+PR, basta dizer em que unidade a trilha está e o que espera.
 
 - [ ] **Objetivo**: o que a sessão tentou fazer (uma frase).
 - [ ] **Impacto**: o que de fato mudou — arquivos, dados, comportamento
@@ -70,7 +75,10 @@ mínimo, todos os itens:
       generalizável; se houve, vincular incidente, regra e prevenção
       executável.
 
-Depois de reportar, **atualizar os documentos**, não só a conversa:
+Depois de reportar, **atualizar os documentos**, não só a conversa. A
+trilha atualiza só o que `EXECUTOR_PROTOCOL.md` manda (a linha "Estado" da
+unidade, achados, backlog) e, se for o caso, `AGENTS.md` e `incidents/`; o
+resto é da diretoria:
 
 - `TASKS.md`: estado real da(s) tarefa(s) tocada(s).
 - `DECISIONS.md`: se alguma decisão durável nova foi tomada (não tarefas,
