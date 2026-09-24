@@ -316,7 +316,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
   `handleFinishExam` e `clearDraftAnswers`. Correção provável: guardar
   `answers` e o tempo em refs, ou `useCallback` com as dependências
   certas. Escrever o teste de expiração do timer antes (TDD).
-- **Estado**: Aberto
+- **Estado**: Concluído (unidade 45-A, parte 1)
 
 ### AUD-18 — Clique duplo em "Finalizar Prova", "Confirmar Resposta" ou nota de flashcard duplica o registro
 - **Registrado em**: 2026-09-19 pela sessão de auditoria
@@ -340,7 +340,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
   `enqueueAndTry` em `src/services/syncQueue.ts`. Correção provável: um
   estado `submitting` que desativa o botão, mais um `client_op_id` estável
   por ação.
-- **Estado**: Aberto
+- **Estado**: Aberto — o clique duplo em "Finalizar Prova" foi resolvido na unidade 45-A, parte 1; "Confirmar Resposta" e a nota do flashcard seguem abertos (45-A, parte 2)
 
 ### AUD-19 — A fila de sincronização reordena gravações: uma edição antiga pode sobrescrever a nova
 - **Registrado em**: 2026-09-19 pela sessão de auditoria

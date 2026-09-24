@@ -13,7 +13,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint . --max-warnings 5",
+    "lint": "eslint . --max-warnings 3",
     "test": "node scripts/run-db-tests.mjs",
     "test:optional": "node scripts/run-db-tests.mjs --optional",
     "test:unit": "vitest run",
