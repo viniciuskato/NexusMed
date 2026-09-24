@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { Flashcard, QuestionAnswerRecord, UserFeedback } from '../../src/types';
+import type { Flashcard, Question, QuestionAnswerRecord, UserFeedback } from '../../src/types';
 
 // Cobertura dos wrappers `Resilient*Repository` (src/repositories/*Repository.ts)
 // antes da refatoração do App.tsx. Prova o comportamento OBSERVÁVEL do padrão
@@ -250,7 +250,9 @@ describe('Resilient*Repository — escrita local e enfileiramento', () => {
 
   it('com Supabase e usuário, cada repositório enfileira a categoria e o payload esperados', async () => {
     const { queue } = await setup({ configured: true });
-    // Nenhum handler registrado: a fila guarda a operação como pendente e não a trava.
+    // Só o simulado precisa de resposta autoritativa para concluir a chamada;
+    // as demais categorias sem handler continuam pendentes neste teste.
+    queue.registerHandler('simulado_save', async () => ({ score: 0, correctCount: 0, totalCount: 0 }));
     const { notesRepository } = await import('../../src/repositories/NotesRepository');
     const { errorNotebookRepository } = await import('../../src/repositories/ErrorNotebookRepository');
     const { simuladosRepository } = await import('../../src/repositories/SimuladosRepository');
@@ -278,7 +280,7 @@ describe('Resilient*Repository — escrita local e enfileiramento', () => {
     expect(ops.map((o) => [o.category, o.state])).toEqual([
       ['note_upsert', 'pending'],
       ['error_notebook_update', 'pending'],
-      ['simulado_save', 'pending'],
+      ['simulado_save', 'synced'],
       ['reaction_set', 'pending'],
       ['reaction_set', 'pending'],
       ['flashcard_delete', 'pending'],
@@ -448,6 +450,30 @@ describe('Resilient*Repository — falha de rede e retentativa', () => {
     ]);
     expect(queue.getOps(UID).map((o) => o.state)).toEqual(['synced', 'synced']);
   });
+
+  it('operação criada pelo callback de conclusão de um flush ganha uma nova passagem automaticamente', async () => {
+    const { queue } = await setup({ configured: true });
+    const handler = vi.fn().mockResolvedValue({ ok: true });
+    queue.registerHandler('derived_after_confirmation', handler);
+    let derivedEnqueued = false;
+    const unsubscribe = queue.subscribe(UID, () => {
+      const source = queue.getOps(UID).find((op) => op.category === 'source_confirmation');
+      if (source?.state === 'synced' && !derivedEnqueued) {
+        derivedEnqueued = true;
+        queue.enqueue(UID, 'derived_after_confirmation', { sourceId: source.id });
+      }
+    });
+    queue.registerHandler('source_confirmation', async () => ({ confirmed: true }));
+
+    queue.enqueue(UID, 'source_confirmation', { value: 1 });
+
+    await vi.waitFor(() => {
+      const derived = queue.getOps(UID).find((op) => op.category === 'derived_after_confirmation');
+      expect(derived?.state).toBe('synced');
+    });
+    expect(handler).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -535,6 +561,25 @@ function makeCard(id: string): Flashcard {
   };
 }
 
+function makeQuestionForFlashcard(): Question {
+  return {
+    id: 'q-flashcard-duplicado',
+    disciplineId: 'd-1',
+    themeId: 't-1',
+    compendiumRefId: '',
+    cycle: 'clinico',
+    institution: 'NexusMed',
+    year: 2026,
+    clinicalVignette: 'Vinheta',
+    questionStem: 'Qual é a alternativa correta?',
+    options: [{ letter: 'A', text: 'Alternativa A', isCorrect: true, explanation: 'Correta' }],
+    highYieldSummary: 'Resumo de alto rendimento',
+    generalCommentary: 'Comentário',
+    tags: [],
+    difficulty: 'medio',
+  } as Question;
+}
+
 describe('AnswersRepository.recordAnswer', () => {
   it('sucesso no servidor: devolve o gabarito do servidor e a resposta também fica gravada localmente', async () => {
     const { StorageService, queue } = await setup({ configured: true });
@@ -549,14 +594,18 @@ describe('AnswersRepository.recordAnswer', () => {
 
     const result = await answersRepository.recordAnswer(makeAnswer());
 
-    expect(result.correctOptionId).toBe('C');
-    expect(result.generalCommentary).toBe('comentário do servidor');
-    expect(StorageService.getAnswers()['q-1'].selectedOption).toBe('B');
+    expect(result.status).toBe('confirmed');
+    if (result.status !== 'confirmed') throw new Error('resultado deveria estar confirmado');
+    expect(result.review.correctOptionId).toBe('C');
+    expect(result.review.generalCommentary).toBe('comentário do servidor');
+    // O handler real persiste a cópia local depois da correção; este teste
+    // injeta um handler mínimo e prova que o repositório não inventa estado.
+    expect(StorageService.getAnswers()['q-1']).toBeUndefined();
     expect(queue.getOps(UID)).toHaveLength(1);
     expect(queue.getOps(UID)[0].state).toBe('synced');
   });
 
-  it('offline: devolve o resultado local otimista, mantém a resposta e a operação pendente para reenvio', async () => {
+  it('offline: devolve correção pendente, não grava falso erro local e mantém a operação para reenvio', async () => {
     setOnline(false);
     const { StorageService, queue } = await setup({ configured: true });
     const handler = vi.fn().mockRejectedValue(networkError());
@@ -565,9 +614,9 @@ describe('AnswersRepository.recordAnswer', () => {
 
     const result = await answersRepository.recordAnswer(makeAnswer());
 
-    expect(result.isCorrect).toBe(false);
-    expect(result.references).toEqual([]);
-    expect(StorageService.getAnswers()['q-1']).toBeDefined();
+    expect(result.status).toBe('pending');
+    expect(StorageService.getAnswers()['q-1']).toBeUndefined();
+    expect(StorageService.getErrorLogs()).toEqual([]);
     const ops = queue.getOps(UID);
     expect(ops).toHaveLength(1);
     expect(ops[0]).toMatchObject({ category: 'question_attempt', state: 'pending', attempts: 1 });
@@ -585,7 +634,7 @@ describe('AnswersRepository.recordAnswer', () => {
     const result = await answersRepository.recordAnswer(makeAnswer({ isCorrect: true }));
 
     expect(Date.now() - started).toBeLessThan(5_000);
-    expect(result.isCorrect).toBe(true);
+    expect(result.status).toBe('pending');
     expect(queue.getOps(UID)[0]).toMatchObject({ state: 'failed', lastError: { kind: 'validation' } });
   });
 
@@ -593,7 +642,9 @@ describe('AnswersRepository.recordAnswer', () => {
     const { StorageService, queue } = await setup({ configured: false });
     const { answersRepository } = await import('../../src/repositories/AnswersRepository');
     const result = await answersRepository.recordAnswer(makeAnswer());
-    expect(result.isCorrect).toBe(false);
+    expect(result.status).toBe('confirmed');
+    if (result.status !== 'confirmed') throw new Error('resultado deveria estar confirmado');
+    expect(result.review.isCorrect).toBe(false);
     expect(StorageService.getAnswers()['q-1']).toBeDefined();
     expect(queue.getOps(UID)).toEqual([]);
   });
@@ -638,6 +689,20 @@ describe('FlashcardsRepository.reviewFlashcard', () => {
     expect(StorageService.getFlashcards()[0].srs.reviewHistory).toHaveLength(1);
     expect(queue.getOps(UID)).toHaveLength(1);
     expect(queue.getOps(UID)[0]).toMatchObject({ category: 'flashcard_review', state: 'pending' });
+  });
+});
+
+describe('FlashcardsRepository.createFlashcardFromQuestion', () => {
+  it('duas criações para a mesma questão convergem para um único flashcard local', async () => {
+    const { StorageService } = await setup({ configured: false });
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+    const question = makeQuestionForFlashcard();
+
+    const first = await flashcardsRepository.createFlashcardFromQuestion(question);
+    const second = await flashcardsRepository.createFlashcardFromQuestion(question);
+
+    expect(second.id).toBe(first.id);
+    expect(StorageService.getFlashcards().filter((card) => card.questionOriginId === question.id)).toHaveLength(1);
   });
 });
 

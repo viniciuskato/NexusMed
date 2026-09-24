@@ -94,11 +94,16 @@ afterEach(() => {
 describe('QuestionCard - atalhos de teclado sobrevivem a rerender (41-B)', () => {
   it('Enter chama o onAnswerRecorded ATUAL após rerender, nunca o closure antigo', async () => {
     recordAnswerMock.mockResolvedValue({
-      isCorrect: true,
-      generalCommentary: '',
-      highYieldSummary: '',
-      options: [],
-      references: [],
+      status: 'confirmed',
+      clientOpId: 'op-keyboard',
+      review: {
+        isCorrect: true,
+        correctOptionId: 'B',
+        generalCommentary: '',
+        highYieldSummary: '',
+        options: [],
+        references: [],
+      },
     });
 
     const onAnswerRecordedOld = vi.fn();

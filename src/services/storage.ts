@@ -252,6 +252,12 @@ export const StorageService = {
   },
 
   createFlashcardFromQuestion(question: Question): Flashcard {
+    // Idempotência local: repetir o mesmo erro ou dar clique duplo não cria
+    // dois cards no aparelho. A RPC/índice da 45-A fornece a mesma garantia
+    // entre abas e dispositivos.
+    const existing = this.getFlashcards().find((card) => card.questionOriginId === question.id);
+    if (existing) return existing;
+
     const template = question.flashcardTemplate || {
       front: `[${question.institution} ${question.year}] ${question.questionStem.slice(0, 180)}...`,
       back: `Resposta Correta:\n${question.options.find((o) => o.isCorrect)?.text || ''}\n\nExplicação:\n${question.highYieldSummary}`,

@@ -30,6 +30,12 @@ function countAttemptsForUser(userId: string): number {
   );
 }
 
+function countQuestionFlashcardsForUser(userId: string): number {
+  return Number(
+    psqlLocal(`select count(*) from public.flashcards where user_id = '${userId}' and question_origin_id is not null;`)
+  );
+}
+
 test.describe('Fila offline / reconexão / idempotência', () => {
   let user: CreatedTestUser;
 
@@ -46,7 +52,8 @@ test.describe('Fila offline / reconexão / idempotência', () => {
     await deleteTestUser(user.id);
   });
 
-  test('resposta enviada offline fica pendente sem travar a UI, e sincroniza sozinha ao reconectar (exatamente 1 tentativa)', async ({ page }) => {
+  test('duplo clique offline mantém correção pendente sem efeitos falsos e reconecta com exatamente 1 tentativa/card', async ({ page }) => {
+    test.setTimeout(75_000);
     await login(page, user);
 
     // Bloqueia só a RPC de envio de tentativa (não o carregamento da página) —
@@ -60,24 +67,30 @@ test.describe('Fila offline / reconexão / idempotência', () => {
     await goToQuestionsBank(page);
     const card = page.locator('[data-answer-origin]').first();
     await expect(card).toBeVisible({ timeout: 15_000 });
-    await card.getByText('A', { exact: true }).first().click();
-    await card.getByRole('button', { name: 'Confirmar Resposta' }).click();
+    await card.getByText('B', { exact: true }).first().click(); // errada no seed
+    await card.getByRole('button', { name: 'Confirmar Resposta' }).evaluate((element: HTMLButtonElement) => {
+      element.click();
+      element.click();
+    });
 
-    // ACHADO REAL desta suíte: `QuestionCard.handleConfirmAnswer` só marca
-    // `isSubmitted`/`answerOrigin` DEPOIS que `AnswersRepository.recordAnswer`
-    // resolve por completo — e `recordAnswer` usa `enqueueAndTry`, que
-    // aguarda até 20s tentando a RPC real antes de desistir e cair no
-    // resultado local otimista (ver src/repositories/AnswersRepository.ts).
-    // Ou seja: a UI NÃO fica travada indefinidamente (converge sozinha), mas
-    // também não é "otimista imediata" — offline, o card só sai de
-    // 'unanswered' depois desse timeout completo (~20s), não instantaneamente
-    // como o comentário do próprio código em syncQueue.ts sugere para outros
-    // consumidores de `enqueueAndTry`. Timeout do teste ajustado para refletir
-    // esse comportamento real (documentado aqui, não corrigido — fora do
-    // escopo desta suíte alterar lógica de produto sem autorização da
-    // diretoria).
-    await expect(card).not.toHaveAttribute('data-answer-origin', 'unanswered', { timeout: 25_000 });
-    expect(countAttemptsForUser(user.id)).toBe(0); // nada chegou ao servidor ainda
+    // A espera inicial pela RPC pode levar até 20s. Sem resposta autoritativa,
+    // o card continua sem classificação verde/vermelha e a ação permanece
+    // desabilitada como uma única operação estável.
+    const pendingButton = card.getByRole('button', { name: 'Correção pendente' });
+    await expect(pendingButton).toBeVisible({ timeout: 25_000 });
+    await expect(pendingButton).toBeDisabled();
+    await expect(card).toHaveAttribute('data-answer-origin', 'unanswered');
+    expect(countAttemptsForUser(user.id)).toBe(0);
+    expect(countQuestionFlashcardsForUser(user.id)).toBe(0);
+
+    const pendingLocalState = await page.evaluate((userId) => ({
+      answers: JSON.parse(localStorage.getItem(`synapse_${userId}_answers_v1`) || '{}'),
+      errors: JSON.parse(localStorage.getItem(`synapse_${userId}_error_log_v1`) || '[]'),
+      flashcards: JSON.parse(localStorage.getItem(`synapse_${userId}_flashcards_v1`) || '[]'),
+    }), user.id);
+    expect(Object.keys(pendingLocalState.answers)).toHaveLength(0);
+    expect(pendingLocalState.errors).toHaveLength(0);
+    expect(pendingLocalState.flashcards).toHaveLength(0);
 
     // Reconecta e dispara o sinal forte de retomada (`online`) que o app escuta.
     blocking = false;
@@ -86,13 +99,18 @@ test.describe('Fila offline / reconexão / idempotência', () => {
     await expect
       .poll(() => countAttemptsForUser(user.id), { timeout: 20_000, message: 'aguardando sincronização convergir' })
       .toBe(1);
+    await expect(card).toHaveAttribute('data-answer-origin', 'session', { timeout: 10_000 });
+    await expect
+      .poll(() => countQuestionFlashcardsForUser(user.id), { timeout: 20_000, message: 'aguardando card do erro confirmado convergir' })
+      .toBe(1);
 
     // Reenviar o mesmo client_op_id (reload dispara reconciliação de novo)
-    // nunca duplica — idempotência ponta a ponta via navegador real.
+    // nunca duplica nem a tentativa nem o flashcard derivado.
     await page.reload();
     await goToQuestionsBank(page);
     await page.waitForTimeout(2_000); // reconciliação roda em segundo plano no mount; sem sleep fixo como condição de sucesso — só dá tempo de disparar antes da assertiva abaixo
     expect(countAttemptsForUser(user.id)).toBe(1);
+    expect(countQuestionFlashcardsForUser(user.id)).toBe(1);
   });
 
   test('duas operações em sequência rápida (favoritar/desfavoritar) não perdem a segunda (regressão do bug 07-E2)', async ({ page }) => {

@@ -91,8 +91,8 @@ select throws_ok(
 
 select is(
   (select score from public.simulations where id = :'v_sim_id'),
-  50::numeric,
-  'resultado original (score 50) preservado — a tentativa de sobrescrita acima foi rejeitada'
+  0::numeric,
+  'resultado original calculado no servidor (0 sem respostas) preservado — a tentativa de sobrescrita acima foi rejeitada'
 );
 
 select tests.clear_auth();

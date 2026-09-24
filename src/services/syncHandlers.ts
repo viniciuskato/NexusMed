@@ -21,6 +21,7 @@ export interface QuestionAttemptOpPayload {
   userNotes?: string;
   answerMode?: QuestionAnswerRecord['answerMode'];
   answerStrategy?: QuestionAnswerRecord['answerStrategy'];
+  timestamp: string;
 }
 
 export interface FlashcardReviewOpPayload {
@@ -30,6 +31,10 @@ export interface FlashcardReviewOpPayload {
 
 export interface FlashcardUpsertOpPayload {
   flashcard: Parameters<typeof supabaseFlashcardsRepository.saveFlashcard>[0];
+}
+
+export interface FlashcardCreateFromQuestionOpPayload {
+  flashcard: Parameters<typeof supabaseFlashcardsRepository.createFlashcardFromQuestionAtomic>[0];
 }
 
 export interface FlashcardDeleteOpPayload {
@@ -160,6 +165,22 @@ export function registerSyncHandlers(): void {
       p_client_op_id: clientOpId,
     });
     if (error) throw error;
+    // Só agora existe uma correção autoritativa. O cache local e o caderno de
+    // erros nunca recebem o antigo `false` provisório enquanto a rede está
+    // lenta/offline. Replays são seguros: answers sobrescreve por questionId
+    // e o error log local atualiza a entrada já existente da mesma questão.
+    const confirmed = data as { is_correct: boolean };
+    StorageService.recordAnswer({
+      questionId: payload.questionId,
+      selectedOption: payload.selectedOption,
+      isCorrect: confirmed.is_correct,
+      timestamp: payload.timestamp,
+      timeSpentSeconds: payload.timeSpentSeconds,
+      errorReason: confirmed.is_correct ? undefined : payload.errorReason,
+      userNotes: payload.userNotes,
+      answerMode: payload.answerMode,
+      answerStrategy: payload.answerStrategy,
+    });
     return data;
   });
 
@@ -175,6 +196,13 @@ export function registerSyncHandlers(): void {
 
   registerHandler('flashcard_upsert', async (payload: FlashcardUpsertOpPayload) => {
     return supabaseFlashcardsRepository.saveFlashcard(payload.flashcard);
+  });
+
+  registerHandler('flashcard_create_from_question', async (payload: FlashcardCreateFromQuestionOpPayload) => {
+    const canonical = await supabaseFlashcardsRepository.createFlashcardFromQuestionAtomic(payload.flashcard);
+    if (canonical.id !== payload.flashcard.id) StorageService.deleteFlashcard(payload.flashcard.id);
+    StorageService.saveFlashcard(canonical);
+    return canonical;
   });
 
   registerHandler('flashcard_delete', async (payload: FlashcardDeleteOpPayload) => {
@@ -366,6 +394,7 @@ export function registerSyncHandlers(): void {
         question_id: questionId,
         selected_option_id: optionIdByQuestionAndLetter.get(`${questionId}:${ans.selectedOption}`),
         time_spent_seconds: ans.timeSpent,
+        client_op_id: ans.clientOpId ?? null,
       }))
       .filter((a) => !!a.selected_option_id);
 
@@ -376,14 +405,27 @@ export function registerSyncHandlers(): void {
         config: session.config,
         started_at: session.startedAt,
         completed_at: session.completedAt ?? null,
-        score: session.score ?? null,
         total_time_seconds: session.totalTimeSeconds,
         questions: session.questionIds.map((qid, i) => ({ question_id: qid, position: i })),
         answers,
       },
     });
     if (error) throw error;
-    return null;
+    const { data: saved, error: readError } = await supabase
+      .from('simulations')
+      .select('score')
+      .eq('id', session.id)
+      .single();
+    if (readError) throw readError;
+    const totalCount = session.questionIds.length;
+    const score = Number(saved.score ?? 0);
+    const result = {
+      score,
+      correctCount: Math.round((score / 100) * totalCount),
+      totalCount,
+    };
+    StorageService.saveSimuladoSession({ ...session, score });
+    return result;
   });
 
   // Reações (categoria 8): estado desejado explícito, sempre um "set" —

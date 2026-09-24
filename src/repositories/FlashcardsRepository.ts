@@ -2,7 +2,7 @@ import { Flashcard, FlashcardSRS, Question } from '../types';
 import { StorageService, getStorageUser } from '../services/storage';
 import { SupabaseFlashcardsRepository } from './SupabaseFlashcardsRepository';
 import { enqueue, enqueueAndTry } from '../services/syncQueue';
-import { FlashcardReviewOpPayload } from '../services/syncHandlers';
+import { FlashcardCreateFromQuestionOpPayload, FlashcardReviewOpPayload } from '../services/syncHandlers';
 
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 
@@ -140,7 +140,8 @@ class ResilientFlashcardsRepository implements FlashcardsRepository {
     const localRes = await this.local.createFlashcardFromQuestion(question);
     const userId = getStorageUser();
     if (isSupabaseConfigured && userId) {
-      enqueue(userId, 'flashcard_upsert', { flashcard: localRes });
+      const payload: FlashcardCreateFromQuestionOpPayload = { flashcard: localRes };
+      enqueue(userId, 'flashcard_create_from_question', payload, localRes.id);
     }
     return localRes;
   }

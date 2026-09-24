@@ -1,6 +1,6 @@
 import { formatToAbntCitation } from '../../utils/bibliographicSources';
 import { onActivationKey } from '../../utils/keyboardActivation';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   CheckCircle2,
   XCircle,
@@ -78,6 +78,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   // estudante, pois question_option_keys/question_answer_keys não têm
   // policy de SELECT direto (ver rls_policies.sql).
   const [reviewResult, setReviewResult] = useState<QuestionReviewResult | null>(null);
+  const [isAnswerSubmitting, setIsAnswerSubmitting] = useState(false);
+  const [isCorrectionPending, setIsCorrectionPending] = useState(false);
+  // A ref fecha a janela entre o clique e o re-render: dois cliques no mesmo
+  // tick nunca criam duas operações/client_op_id diferentes.
+  const answerSubmissionRef = useRef(false);
+  const correctionUnsubscribeRef = useRef<(() => void) | null>(null);
+  const correctionAppliedRef = useRef(false);
   const [myReaction, setMyReaction] = useState<QuestionReactionValue | null>(null);
   // Distingue "reidratado de uma tentativa já existente no servidor" de
   // "respondida agora, nesta sessão" — usado só para não confundir os dois
@@ -138,6 +145,12 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     };
 
     setReviewResult(null);
+    setIsCorrectionPending(false);
+    setIsAnswerSubmitting(false);
+    answerSubmissionRef.current = false;
+    correctionAppliedRef.current = false;
+    correctionUnsubscribeRef.current?.();
+    correctionUnsubscribeRef.current = null;
 
     if (hydrated) {
       applyInitialState(hydrated.answer, hydrated.bookmarked, hydrated.reaction);
@@ -172,6 +185,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question.id, hydratedKey]);
+
+  useEffect(
+    () => () => {
+      correctionUnsubscribeRef.current?.();
+      correctionUnsubscribeRef.current = null;
+    },
+    []
+  );
 
   // Confete automático só em marcos reais: ao completar uma sequência de
   // CELEBRATION_STREAK_LENGTH respostas corretas seguidas dentro da mesma
@@ -216,61 +237,100 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   // teclado (useEffect abaixo) sempre chame a versão com o `selectedOption`
   // e `question` atuais — nunca uma closure presa ao render em que o
   // listener foi montado.
-  const handleConfirmAnswer = useCallback(async () => {
-    if (!selectedOption) return;
+  const applyConfirmedReview = useCallback(async (
+    record: QuestionAnswerRecord,
+    review: QuestionReviewResult
+  ) => {
+    if (correctionAppliedRef.current) return;
+    correctionAppliedRef.current = true;
 
-    // isCorrect é calculado pelo servidor (RPC submit_question_attempt); o
-    // valor aqui é só um placeholder ignorado pela API.
-    const record: QuestionAnswerRecord = {
-      questionId: question.id,
-      selectedOption,
-      isCorrect: false,
-      timestamp: new Date().toISOString(),
-      timeSpentSeconds: 45,
-    };
-
-    const review = await answersRepository.recordAnswer(record);
     const isCorrect = review.isCorrect;
     record.isCorrect = isCorrect;
     record.errorReason = isCorrect ? undefined : errorReason;
     setReviewResult(review);
+    setIsCorrectionPending(false);
     setIsSubmitted(true);
     setAnswerOrigin('session');
+    answerSubmissionRef.current = false;
 
     if (onAnswerRecorded) onAnswerRecorded(record);
 
     if (!isCorrect) {
       setShowErrorTagger(true);
-      // Cria automaticamente flashcard SRS relacionado ao erro do usuário para revisão periódica
+      // Só nasce depois que o servidor confirmou o erro. A RPC dedicada de
+      // criação converge concorrência/replay para um único card.
       try {
         await flashcardsRepository.createFlashcardFromQuestion(question);
       } catch {
-        // Falha silenciosa se já existir ou erro de rede pontual
+        // A fila resiliente mantém a criação pendente quando a rede cai.
       }
       showToast('Resposta incorreta. Questão catalogada automaticamente no seu Caderno de Erros!');
     } else {
       showToast('Resposta correta! Excelente raciocínio clínico.');
       await checkStreakCelebration();
     }
-  }, [selectedOption, question, errorReason, onAnswerRecorded, showToast, checkStreakCelebration]);
+  }, [errorReason, onAnswerRecorded, question, showToast, checkStreakCelebration]);
+
+  const handleConfirmAnswer = useCallback(async () => {
+    if (!selectedOption || isSubmitted || isCorrectionPending || answerSubmissionRef.current) return;
+    answerSubmissionRef.current = true;
+    correctionAppliedRef.current = false;
+    setIsAnswerSubmitting(true);
+
+    const record: QuestionAnswerRecord = {
+      questionId: question.id,
+      selectedOption,
+      // Nunca é persistido como correção: o handler só grava o registro
+      // local quando a RPC devolver o booleano autoritativo.
+      isCorrect: false,
+      timestamp: new Date().toISOString(),
+      timeSpentSeconds: 45,
+      errorReason,
+    };
+
+    try {
+      const submission = await answersRepository.recordAnswer(record);
+      if (submission.status === 'confirmed') {
+        await applyConfirmedReview(record, submission.review);
+        return;
+      }
+
+      setIsCorrectionPending(true);
+      setIsAnswerSubmitting(false);
+      correctionUnsubscribeRef.current?.();
+      correctionUnsubscribeRef.current = answersRepository.subscribeToCorrection(
+        submission.clientOpId,
+        (review) => {
+          correctionUnsubscribeRef.current?.();
+          correctionUnsubscribeRef.current = null;
+          setIsAnswerSubmitting(false);
+          void applyConfirmedReview(record, review);
+        }
+      );
+    } catch {
+      answerSubmissionRef.current = false;
+      setIsAnswerSubmitting(false);
+      showToast('Não foi possível enviar a resposta agora. Tente novamente.');
+    }
+  }, [selectedOption, isSubmitted, isCorrectionPending, question, errorReason, applyConfirmedReview, showToast]);
 
   // Deps reais e completas: isSubmitted/isExamMode/onSelectOptionInExam são
   // exatamente os valores lidos pelo corpo da função.
   const handleSelectOption = useCallback(
     (letter: string) => {
-      if (isSubmitted) return;
+      if (isSubmitted || isAnswerSubmitting || isCorrectionPending) return;
       if (isExamMode) {
         if (onSelectOptionInExam) onSelectOptionInExam(letter);
         return;
       }
       setSelectedOption(letter);
     },
-    [isSubmitted, isExamMode, onSelectOptionInExam]
+    [isSubmitted, isAnswerSubmitting, isCorrectionPending, isExamMode, onSelectOptionInExam]
   );
 
   // Atalhos de teclado quando o cursor estiver sobre o card ou quando o card estiver selecionado
   useEffect(() => {
-    if (isSubmitted || !isHovered) return;
+    if (isSubmitted || isAnswerSubmitting || isCorrectionPending || !isHovered) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Evita disparar atalho se o estudante estiver digitando num input/textarea
@@ -298,7 +358,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     // só mudam de identidade quando o que de fato usam muda — o listener é
     // remontado exatamente nesses casos, nunca a cada render, e nunca fica
     // preso a um `selectedOption`/`question` obsoletos.
-  }, [isSubmitted, isHovered, selectedOption, isExamMode, question.options, handleConfirmAnswer, handleSelectOption]);
+  }, [isSubmitted, isAnswerSubmitting, isCorrectionPending, isHovered, selectedOption, isExamMode, question.options, handleConfirmAnswer, handleSelectOption]);
 
   const handleToggleReaction = async (val: 'up' | 'down') => {
     const nextVal = myReaction === val ? null : val;
@@ -533,20 +593,22 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       {!isExamMode && !isSubmitted && (
         <div className="flex items-center justify-between pt-2">
           <p className="text-xs text-slate-400 dark:text-slate-500">
-            {selectedOption
+            {isCorrectionPending
+              ? 'Resposta guardada. Aguardando o servidor confirmar o gabarito.'
+              : selectedOption
               ? `Alternativa (${selectedOption}) selecionada.`
               : 'Selecione uma alternativa para responder.'}
           </p>
           <button
             onClick={handleConfirmAnswer}
-            disabled={!selectedOption}
+            disabled={!selectedOption || isAnswerSubmitting || isCorrectionPending}
             className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all elev-xs ${
-              selectedOption
+              selectedOption && !isAnswerSubmitting && !isCorrectionPending
                 ? 'bg-teal-700 hover:bg-teal-800 active:bg-teal-900 dark:bg-teal-600 dark:hover:bg-teal-500 text-white cursor-pointer shadow-sm active:scale-[0.99]'
                 : 'bg-slate-200/90 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 border border-slate-300/60 dark:border-slate-700/60 cursor-not-allowed'
             }`}
           >
-            Confirmar Resposta
+            {isCorrectionPending ? 'Correção pendente' : isAnswerSubmitting ? 'Corrigindo…' : 'Confirmar Resposta'}
           </button>
         </div>
       )}
