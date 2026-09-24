@@ -271,6 +271,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     }
   }, [errorReason, onAnswerRecorded, question, showToast, checkStreakCelebration]);
 
+  const applyCorrectionFailure = useCallback(() => {
+    setIsCorrectionPending(false);
+    setIsAnswerSubmitting(false);
+    answerSubmissionRef.current = false;
+    correctionAppliedRef.current = false;
+    showToast('Não foi possível confirmar a resposta. Revise a alternativa e tente novamente.');
+  }, [showToast]);
+
   const handleConfirmAnswer = useCallback(async () => {
     if (!selectedOption || isSubmitted || isCorrectionPending || answerSubmissionRef.current) return;
     answerSubmissionRef.current = true;
@@ -294,17 +302,22 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         await applyConfirmedReview(record, submission.review);
         return;
       }
+      if (submission.status === 'failed') {
+        applyCorrectionFailure();
+        return;
+      }
 
       setIsCorrectionPending(true);
       setIsAnswerSubmitting(false);
       correctionUnsubscribeRef.current?.();
       correctionUnsubscribeRef.current = answersRepository.subscribeToCorrection(
         submission.clientOpId,
-        (review) => {
+        (outcome) => {
           correctionUnsubscribeRef.current?.();
           correctionUnsubscribeRef.current = null;
           setIsAnswerSubmitting(false);
-          void applyConfirmedReview(record, review);
+          if (outcome.status === 'confirmed') void applyConfirmedReview(record, outcome.review);
+          else applyCorrectionFailure();
         }
       );
     } catch {
@@ -312,7 +325,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       setIsAnswerSubmitting(false);
       showToast('Não foi possível enviar a resposta agora. Tente novamente.');
     }
-  }, [selectedOption, isSubmitted, isCorrectionPending, question, errorReason, applyConfirmedReview, showToast]);
+  }, [selectedOption, isSubmitted, isCorrectionPending, question, errorReason, applyConfirmedReview, applyCorrectionFailure, showToast]);
 
   // Deps reais e completas: isSubmitted/isExamMode/onSelectOptionInExam são
   // exatamente os valores lidos pelo corpo da função.

@@ -363,7 +363,22 @@ dar sozinha.
 
 **Fora de escopo.** Busca, questões, tela inicial.
 **Depende de.** 45-B (mesma Área Editorial; pequena).
-**Estado.** Pronta.
+**Achados da execução.** Disciplina e tema entram no hash de atestação. Por
+decisão do dono (24/09), na edição de um material que já existe um pai da
+mesma disciplina não muda o tema, e um pai de outra disciplina leva disciplina
+e tema, com aviso de que a atestação cai; em material novo e na importação, o
+pai define os dois (registrar em `DECISIONS.md`). Bugs antigos, fora do
+escopo: tempo de leitura desconhecido aparece como 0 num campo de mínimo 1, e
+o navegador recusa salvar o material sem mudar o tempo — o que muda o hash
+(provado no E2E); trocar a disciplina à mão não troca o tema, e a gravação
+pela edição, ao contrário da importação, não confere se o tema é da
+disciplina (lido no código). Com as ligações congeladas, nada as remove pela
+tela: o aviso de exclusão bloqueada por "Estude antes" manda remover uma
+ligação que ninguém consegue remover (olhar na 45-D), e um "Estude antes"
+antigo impede pôr o material abaixo do alvo dele (o formulário avisa). O
+seletor de vários materiais das ligações ficou sem uso; a 43-B pode
+reaproveitá-lo.
+**Estado.** Concluída — PR #79.
 
 ---
 
@@ -469,7 +484,13 @@ palavras, sem acento, sigla.
 **Fora de escopo.** Sinônimos em dicionário central (as palavras-chave de cada
 material bastam por ora); busca dentro da biblioteca.
 **Depende de.** Nada.
-**Estado.** Pronta.
+**Achados da execução.** Índice próprio fora da API, mantido por gatilhos, sem
+tocar no snapshot de atestação; com 1.200 seções a busca responde em 5 a 190 ms.
+Filtro de disciplina só pela casa (a 44-A precisa estendê-lo) e índice seguindo
+as tabelas que o estudante lê (a 45-K precisa mantê-lo na versão atestada).
+Corrigido de passagem: abrir o leitor numa seção voltava ao topo no quadro
+seguinte.
+**Estado.** Concluída — PR #80.
 
 ---
 
@@ -731,7 +752,14 @@ obsoleta; ela fica preservada até o merge desta parte 2 e pode ser removida
 depois. *(Diretoria, 24/09: removida; três correções menores que só existiam
 nela foram para a 45-G e a 45-H — `DECISIONS.md`, 24/09. A migration da parte 2
 foi aplicada no remoto cerca de 10 minutos depois do merge — INC-2026-004.)*
+Revisão do #76, feita depois do merge, gerou quatro correções: falha
+definitiva ao gravar resposta ou simulado aparece como falha, nunca como
+"correção pendente" eterna; o rascunho do simulado só é apagado depois da nota
+confirmada; revisão de flashcard feita offline num card que a reconciliação
+removeu sobe para o card mantido (migration); reenviar uma operação já
+sincronizada não trava mais na fila.
 **Estado.** Parte 1 concluída — PR #74. Parte 2 concluída — PR #76.
+Correções da revisão — PR #81.
 
 ---
 

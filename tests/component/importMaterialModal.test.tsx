@@ -260,6 +260,111 @@ Texto da seção.
     expect(onImported).not.toHaveBeenCalled();
   });
 
+  describe('43-A — formulário mais curto', () => {
+    const farmaco: Discipline = { ...discipline, id: 'disc-farmaco', name: 'Farmacologia', code: 'FARMACO' };
+    const temaAtb: Theme = { ...theme, id: 'tema-atb', disciplineId: 'disc-farmaco', name: 'Antibióticos' };
+    const temaGeral: Theme = { ...theme, id: 'tema-farmaco-geral', disciplineId: 'disc-farmaco', name: 'Farmacologia geral' };
+    const base = { subtitle: '', estimatedReadTimeMinutes: 10, lastUpdated: '', author: '', sections: [], references: [] };
+    const pai: Compendium = { ...base, id: 'pai-beta', disciplineId: 'disc-farmaco', themeId: 'tema-atb', title: 'β-lactâmicos' };
+    const filhos: Compendium[] = [
+      { ...base, id: 'f1', disciplineId: 'disc-farmaco', themeId: 'tema-atb', title: 'Penicilinas', parentMaterialId: 'pai-beta', treeSortOrder: 10 },
+      { ...base, id: 'f2', disciplineId: 'disc-farmaco', themeId: 'tema-atb', title: 'Cefalosporinas', parentMaterialId: 'pai-beta', treeSortOrder: 20 },
+    ];
+
+    function renderModal() {
+      render(
+        <ImportMaterialModal
+          disciplines={[discipline, farmaco]}
+          themes={[theme, temaAtb, temaGeral]}
+          compendiums={[pai, ...filhos]}
+          onClose={vi.fn()}
+          onImported={vi.fn()}
+        />
+      );
+    }
+
+    async function abrirPrevia() {
+      renderModal();
+      await selectFile(makeYamlFile(validYaml)); // arquivo diz Infectologia / Clínica
+      await waitFor(() => screen.getAllByText('Meningite Bacteriana Aguda'));
+    }
+
+    const parentSelect = () => screen.getByLabelText('Material-pai') as HTMLSelectElement;
+
+    it('não mostra "Tipo do nó", "Estude antes" nem "Veja também"; tags se chamam Palavras-chave', async () => {
+      await abrirPrevia();
+      expect(screen.queryByText(/tipo do nó/i)).toBeNull();
+      expect(screen.queryByText(/estude antes/i)).toBeNull();
+      expect(screen.queryByText(/veja também/i)).toBeNull();
+      expect(screen.getByText('Palavras-chave (sinônimos, siglas, nomes comerciais)')).toBeTruthy();
+    });
+
+    it('pai de outra disciplina: disciplina e tema passam a ser os do pai, e o material vai para o fim dos irmãos', async () => {
+      await abrirPrevia();
+      fireEvent.change(parentSelect(), { target: { value: 'pai-beta' } });
+
+      expect(screen.getByTestId('import-discipline-value').textContent).toContain('Farmacologia');
+      expect((screen.getByTestId('import-theme-select') as HTMLSelectElement).value).toBe('tema-atb');
+      expect((screen.getByLabelText('Ordem entre os irmãos') as HTMLInputElement).value).toBe('30');
+
+      fireEvent.click(screen.getByRole('button', { name: /salvar rascunho/i }));
+      await waitFor(() => expect(importCompendiumDraftMock).toHaveBeenCalledTimes(1));
+      const saved = importCompendiumDraftMock.mock.calls[0][0] as Compendium;
+      expect(saved.disciplineId).toBe('disc-farmaco');
+      expect(saved.themeId).toBe('tema-atb');
+      expect(saved.parentMaterialId).toBe('pai-beta');
+      expect(saved.treeSortOrder).toBe(30);
+      // Campos congelados: a importação não grava nenhum.
+      expect(saved.taxonomyKind).toBeUndefined();
+      expect(saved.navigationLinks ?? []).toEqual([]);
+    });
+
+    it('com pai escolhido, o tema ainda pode ser trocado', async () => {
+      await abrirPrevia();
+      fireEvent.change(parentSelect(), { target: { value: 'pai-beta' } });
+      const themeSelect = screen.getByTestId('import-theme-select') as HTMLSelectElement;
+      // Só temas da disciplina do pai.
+      expect(Array.from(themeSelect.options).map((o) => o.value)).toEqual(
+        expect.arrayContaining(['tema-atb', 'tema-farmaco-geral'])
+      );
+      expect(Array.from(themeSelect.options).map((o) => o.value)).not.toContain('tema-clinica');
+      fireEvent.change(themeSelect, { target: { value: 'tema-farmaco-geral' } });
+
+      fireEvent.click(screen.getByRole('button', { name: /salvar rascunho/i }));
+      await waitFor(() => expect(importCompendiumDraftMock).toHaveBeenCalledTimes(1));
+      const saved = importCompendiumDraftMock.mock.calls[0][0] as Compendium;
+      expect(saved.disciplineId).toBe('disc-farmaco');
+      expect(saved.themeId).toBe('tema-farmaco-geral');
+    });
+
+    it('voltar para "sem pai" devolve a disciplina e o tema do arquivo', async () => {
+      await abrirPrevia();
+      fireEvent.change(parentSelect(), { target: { value: 'pai-beta' } });
+      fireEvent.change(parentSelect(), { target: { value: '' } });
+      expect(screen.getByTestId('import-discipline-value').textContent).toContain('Infectologia');
+
+      fireEvent.click(screen.getByRole('button', { name: /salvar rascunho/i }));
+      await waitFor(() => expect(importCompendiumDraftMock).toHaveBeenCalledTimes(1));
+      const saved = importCompendiumDraftMock.mock.calls[0][0] as Compendium;
+      expect(saved.disciplineId).toBe('disc-infecto');
+      expect(saved.themeId).toBe('tema-clinica');
+      expect(saved.parentMaterialId ?? null).toBeNull();
+    });
+
+    it('disciplina do arquivo fora do catálogo: escolher o pai já resolve disciplina e tema', async () => {
+      renderModal();
+      await selectFile(makeYamlFile(validYaml.replace('disciplineName: Infectologia', 'disciplineName: Inexistente')));
+      await waitFor(() => screen.getAllByText('Meningite Bacteriana Aguda'));
+      fireEvent.change(parentSelect(), { target: { value: 'pai-beta' } });
+
+      fireEvent.click(screen.getByRole('button', { name: /salvar rascunho/i }));
+      await waitFor(() => expect(importCompendiumDraftMock).toHaveBeenCalledTimes(1));
+      const saved = importCompendiumDraftMock.mock.calls[0][0] as Compendium;
+      expect(saved.disciplineId).toBe('disc-farmaco');
+      expect(saved.themeId).toBe('tema-atb');
+    });
+  });
+
   it('cria um tema novo pelo "+ Criar novo tema..." quando o tema do arquivo não bate com o catálogo', async () => {
     const onImported = vi.fn();
     const yamlComTemaInexistente = validYaml.replace('themeName: Clínica', 'themeName: Endocardite Infecciosa');

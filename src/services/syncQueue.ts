@@ -38,9 +38,11 @@ export type SyncOpState = 'pending' | 'syncing' | 'synced' | 'failed';
 export type SyncErrorKind = 'network' | 'auth' | 'permission' | 'validation' | 'schema' | 'crypto_unavailable' | 'conflict' | 'unknown';
 
 export interface SyncOp<TPayload = unknown> {
-  id: string; // chave local (dedupe/UI) — ver `clientOpId` para a chave enviada ao servidor
-  // Chave de idempotência enviada ao servidor. Igual a `id` no caso comum
-  // (uuid gerado com sucesso no momento do enqueue). Fica `undefined` quando
+  // Identidade da entrada local. Em geral nasce igual a `clientOpId`, mas
+  // precisa ser diferente quando a mesma operação idempotente é enfileirada
+  // outra vez enquanto a anterior ainda está retida no histórico local.
+  id: string;
+  // Chave de idempotência enviada ao servidor. Fica `undefined` quando
   // nenhuma fonte criptográfica estava disponível no momento do enqueue —
   // nesse caso `id` é um identificador local (nunca enviado ao servidor) e
   // `runFlush` tenta gerar `clientOpId` de novo a cada flush, antes de
@@ -288,6 +290,21 @@ export function enqueue<TPayload>(userId: string, category: string, payload: TPa
     );
   }
 
+  const ops = loadQueue(userId);
+  // `clientOpId` identifica o efeito remoto e pode ser reutilizado de forma
+  // legítima (replay). `id` identifica a entrada local e nunca pode colidir:
+  // runFlush/subscribers localizam a entrada por ele. Sem esta separação,
+  // [X synced, X pending] fazia todo flush atualizar sempre o primeiro X e
+  // deixava o segundo pendente para sempre.
+  if (ops.some((candidate) => candidate.id === id)) {
+    try {
+      id = uuid();
+    } catch {
+      id = placeholderId();
+    }
+    while (ops.some((candidate) => candidate.id === id)) id = placeholderId();
+  }
+
   const op: SyncOp<TPayload> = {
     id,
     clientOpId: resolvedClientOpId,
@@ -300,7 +317,6 @@ export function enqueue<TPayload>(userId: string, category: string, payload: TPa
     attempts: 0,
     ...(resolvedClientOpId ? {} : { lastError: { kind: 'crypto_unavailable' as SyncErrorKind, message: CRYPTO_UNAVAILABLE_MESSAGE } }),
   };
-  const ops = loadQueue(userId);
   ops.push(op);
   saveQueue(userId, ops);
   enqueueVersions.set(userId, (enqueueVersions.get(userId) ?? 0) + 1);

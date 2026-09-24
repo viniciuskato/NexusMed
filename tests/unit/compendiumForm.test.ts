@@ -104,6 +104,50 @@ describe('formulário ⇄ material, ida e volta', () => {
     expect(persisted(salvo)).toEqual(persisted(original));
   });
 
+  // 43-A: "Congelar não é apagar". Tipo do nó, "Estude antes" e "Veja também"
+  // saíram do formulário; o que já existe atravessa o "Salvar" exatamente como
+  // está — inclusive a ordem gravada, que o formulário antigo renumerava em
+  // passos de 10.
+  it('tipo do nó e ligações congeladas atravessam intactos, com a ordem gravada', () => {
+    const original = importado({
+      parentMaterialId: 'cef3',
+      treeSortOrder: 10,
+      taxonomyKind: 'classe',
+      navigationLinks: [
+        { materialId: 'betalact', linkType: 'prerequisite', sortOrder: 0 },
+        { materialId: 'parede', linkType: 'prerequisite', sortOrder: 5 },
+        { materialId: 'meningite', linkType: 'related', sortOrder: 7 },
+      ],
+    });
+    const salvo = compendiumFromFormState(formStateFromCompendium(original), original, original.id);
+    expect(persisted(salvo)).toEqual(persisted(original));
+  });
+
+  it('mudar o pai não mexe no tipo do nó nem nas ligações congeladas', () => {
+    const original = importado({
+      parentMaterialId: 'cef3',
+      taxonomyKind: 'farmaco',
+      navigationLinks: [{ materialId: 'meningite', linkType: 'related', sortOrder: 0 }],
+    });
+    const form = formStateFromCompendium(original);
+    const salvo = compendiumFromFormState(
+      { ...form, navigation: { ...form.navigation, parentId: 'cef4', treeSortOrder: 30 } },
+      original,
+      original.id
+    );
+    expect(salvo.parentMaterialId).toBe('cef4');
+    expect(salvo.treeSortOrder).toBe(30);
+    expect(salvo.taxonomyKind).toBe('farmaco');
+    expect(salvo.navigationLinks).toEqual(original.navigationLinks);
+  });
+
+  it('conteúdo novo nasce sem tipo do nó e sem ligações', () => {
+    const form = formStateFromCompendium(importado({ taxonomyKind: 'classe' }));
+    const novo = compendiumFromFormState(form, null, 'novo');
+    expect(persisted(novo).taxonomyKind).toBeNull();
+    expect(persisted(novo).navigationLinks).toEqual([]);
+  });
+
   it('o que o formulário edita é aplicado', () => {
     const original = importado();
     const form = formStateFromCompendium(original);

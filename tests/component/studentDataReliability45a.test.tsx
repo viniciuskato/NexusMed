@@ -134,8 +134,8 @@ describe('45-A parte 2 — confirmação de resposta', () => {
   });
 
   it('mostra correção pendente sem marcar erro nem criar flashcard; aplica o resultado quando a mesma operação sincroniza', async () => {
-    let onCorrection!: (review: QuestionReviewResult) => void;
-    subscribeToCorrectionMock.mockImplementation((_opId: string, callback: (review: QuestionReviewResult) => void) => {
+    let onCorrection!: (outcome: { status: 'confirmed'; review: QuestionReviewResult }) => void;
+    subscribeToCorrectionMock.mockImplementation((_opId: string, callback: typeof onCorrection) => {
       onCorrection = callback;
       return vi.fn();
     });
@@ -160,11 +160,64 @@ describe('45-A parte 2 — confirmação de resposta', () => {
     expect(screen.queryByText(/Resposta incorreta/i)).toBeNull();
     expect(subscribeToCorrectionMock).toHaveBeenCalledWith('op-pendente', expect.any(Function));
 
-    await act(async () => onCorrection(incorrectReview));
+    await act(async () => onCorrection({ status: 'confirmed', review: incorrectReview }));
 
     await waitFor(() => expect(screen.getByText(/Resposta incorreta/i)).toBeTruthy());
     expect(createFlashcardMock).toHaveBeenCalledTimes(1);
     expect(onAnswerRecorded).toHaveBeenCalledTimes(1);
+  });
+
+  it('falha definitiva libera a resposta para nova tentativa e nunca fica como correção pendente', async () => {
+    recordAnswerMock.mockResolvedValue({
+      status: 'failed',
+      clientOpId: 'op-falhou',
+      errorKind: 'validation',
+    });
+
+    render(
+      <QuestionCard
+        question={question}
+        onOpenCompendium={vi.fn()}
+        hydrated={{ answer: null, bookmarked: false, reaction: null }}
+      />
+    );
+    fireEvent.click(screen.getByText('Alternativa A'));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar Resposta' }));
+
+    await waitFor(() => {
+      expect((screen.getByRole('button', { name: 'Confirmar Resposta' }) as HTMLButtonElement).disabled).toBe(false);
+    });
+    expect(screen.getByText(/não foi possível confirmar a resposta/i)).toBeTruthy();
+    expect(screen.queryByText(/correção pendente/i)).toBeNull();
+    expect(subscribeToCorrectionMock).not.toHaveBeenCalled();
+    expect(createFlashcardMock).not.toHaveBeenCalled();
+  });
+
+  it('uma operação pendente que termina em falha também libera a resposta', async () => {
+    let onCorrection!: (outcome: { status: 'failed'; errorKind: 'permission' }) => void;
+    subscribeToCorrectionMock.mockImplementation((_opId: string, callback: typeof onCorrection) => {
+      onCorrection = callback;
+      return vi.fn();
+    });
+    recordAnswerMock.mockResolvedValue({ status: 'pending', clientOpId: 'op-pendente-falha' });
+
+    render(
+      <QuestionCard
+        question={question}
+        onOpenCompendium={vi.fn()}
+        hydrated={{ answer: null, bookmarked: false, reaction: null }}
+      />
+    );
+    fireEvent.click(screen.getByText('Alternativa A'));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar Resposta' }));
+    await waitFor(() => expect(screen.getByText(/correção pendente/i)).toBeTruthy());
+
+    await act(async () => onCorrection({ status: 'failed', errorKind: 'permission' }));
+
+    await waitFor(() => {
+      expect((screen.getByRole('button', { name: 'Confirmar Resposta' }) as HTMLButtonElement).disabled).toBe(false);
+    });
+    expect(screen.getByText(/não foi possível confirmar a resposta/i)).toBeTruthy();
   });
 });
 

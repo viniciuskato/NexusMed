@@ -11,7 +11,7 @@ import { supabase } from '../lib/supabaseClient';
 import { registerHandler } from './syncQueue';
 import { supabaseFlashcardsRepository } from '../repositories/SupabaseFlashcardsRepository';
 import { StorageService } from './storage';
-import { QuestionAnswerRecord, ErrorLogItem, SimuladoSessionData, QuestionReactionValue, UserFeedback } from '../types';
+import { QuestionAnswerRecord, ErrorLogItem, SimuladoSessionData, QuestionReactionValue, UserFeedback, Flashcard } from '../types';
 
 export interface QuestionAttemptOpPayload {
   questionId: string;
@@ -191,7 +191,36 @@ export function registerSyncHandlers(): void {
       p_client_op_id: clientOpId,
     });
     if (error) throw error;
-    return data;
+    const confirmed = data as {
+      flashcard_id?: string;
+      interval_days: number;
+      repetition_count: number;
+      ease_factor: number;
+      next_due_date: string;
+      last_reviewed_date: string | null;
+      state: Flashcard['srs']['state'];
+    };
+    const canonicalId = confirmed.flashcard_id ?? payload.flashcardId;
+    const localCards = StorageService.getFlashcards();
+    const localCard = localCards.find((card) => card.id === canonicalId)
+      ?? localCards.find((card) => card.id === payload.flashcardId);
+    if (localCard) {
+      if (canonicalId !== payload.flashcardId) StorageService.deleteFlashcard(payload.flashcardId);
+      StorageService.saveFlashcard({
+        ...localCard,
+        id: canonicalId,
+        srs: {
+          ...localCard.srs,
+          intervalDays: confirmed.interval_days,
+          repetitionCount: confirmed.repetition_count,
+          easeFactor: Number(confirmed.ease_factor),
+          nextDueDate: confirmed.next_due_date,
+          lastReviewedDate: confirmed.last_reviewed_date ?? undefined,
+          state: confirmed.state,
+        },
+      });
+    }
+    return confirmed;
   });
 
   registerHandler('flashcard_upsert', async (payload: FlashcardUpsertOpPayload) => {
