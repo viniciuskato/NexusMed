@@ -155,6 +155,29 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
       ? availableThemes.filter((t) => !state.overrideDisciplineId || t.disciplineId === state.overrideDisciplineId)
       : [];
 
+  // 43-A: o pai define disciplina e tema (o tema ainda pode ser trocado). Sem
+  // pai, valem os do arquivo, como antes. Atualização funcional: o bloco de
+  // posição chama onChange e, em seguida, onParentChange.
+  const handleParentChange = (parent: Compendium | null) => {
+    setState((prev) =>
+      prev.step === 'preview'
+        ? {
+            ...prev,
+            overrideDisciplineId: parent ? parent.disciplineId : prev.preview.disciplineId,
+            overrideThemeId: parent ? parent.themeId : prev.preview.themeId,
+          }
+        : prev
+    );
+  };
+
+  const handleThemeSelect = (value: string) => {
+    if (value === CREATE_NEW_THEME) {
+      setIsCreateThemeOpen(true);
+      return;
+    }
+    setState((prev) => (prev.step === 'preview' ? { ...prev, overrideThemeId: value } : prev));
+  };
+
   const handleThemeCreated = (newTheme: Theme) => {
     setAvailableThemes((prev) => [...prev, newTheme]);
     setIsCreateThemeOpen(false);
@@ -277,8 +300,11 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
             <div>
               <span className="font-bold text-stone-700 dark:text-slate-300 block mb-1">Disciplina</span>
               {state.overrideDisciplineId ? (
-                <p className="text-stone-900 dark:text-slate-100">
+                <p data-testid="import-discipline-value" className="text-stone-900 dark:text-slate-100">
                   {disciplines.find((d) => d.id === state.overrideDisciplineId)?.name ?? state.preview.disciplineName}
+                  {state.navigation.parentId && (
+                    <span className="text-stone-500 dark:text-slate-400"> (do material-pai)</span>
+                  )}
                 </p>
               ) : (
                 <select
@@ -288,7 +314,6 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
                       ...state,
                       overrideDisciplineId: e.target.value,
                       overrideThemeId: null,
-                      navigation: emptyNavigationValue(),
                     })
                   }
                   className="w-full p-2 rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 text-stone-900 dark:text-slate-100 text-xs"
@@ -306,7 +331,22 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
             </div>
             <div>
               <span className="font-bold text-stone-700 dark:text-slate-300 block mb-1">Tema</span>
-              {state.overrideThemeId ? (
+              {state.navigation.parentId ? (
+                <select
+                  data-testid="import-theme-select"
+                  aria-label="Tema"
+                  value={state.overrideThemeId ?? ''}
+                  onChange={(e) => handleThemeSelect(e.target.value)}
+                  className="w-full p-2 rounded-lg border border-stone-200 dark:border-[#243452] bg-stone-50 dark:bg-[#142038] text-stone-900 dark:text-slate-100 text-xs"
+                >
+                  {availableThemesForOverride.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                  <option value={CREATE_NEW_THEME}>+ Criar novo tema...</option>
+                </select>
+              ) : state.overrideThemeId ? (
                 <p className="text-stone-900 dark:text-slate-100">
                   {availableThemes.find((t) => t.id === state.overrideThemeId)?.name ?? state.preview.themeName}
                 </p>
@@ -314,13 +354,7 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
                 <select
                   data-testid="import-theme-override-select"
                   value=""
-                  onChange={(e) => {
-                    if (e.target.value === CREATE_NEW_THEME) {
-                      setIsCreateThemeOpen(true);
-                      return;
-                    }
-                    setState({ ...state, overrideThemeId: e.target.value });
-                  }}
+                  onChange={(e) => handleThemeSelect(e.target.value)}
                   disabled={!state.overrideDisciplineId}
                   className="w-full p-2 rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 text-stone-900 dark:text-slate-100 text-xs disabled:opacity-50"
                 >
@@ -349,7 +383,9 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
               </p>
             </div>
             <div className="sm:col-span-2">
-              <span className="font-bold text-stone-700 dark:text-slate-300 block mb-1">Tags</span>
+              <span className="font-bold text-stone-700 dark:text-slate-300 block mb-1">
+                Palavras-chave (sinônimos, siglas, nomes comerciais)
+              </span>
               <p className="text-stone-900 dark:text-slate-100">
                 {state.preview.tags.length > 0 ? state.preview.tags.join(', ') : '—'}
               </p>
@@ -383,13 +419,15 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
             </div>
           )}
 
-          {state.overrideDisciplineId && !state.preview.isDuplicate && (
+          {!state.preview.isDuplicate && (
             <div className="pt-4 border-t border-stone-200 dark:border-[#243452]">
               <MaterialNavigationFields
                 value={state.navigation}
-                onChange={(navigation) => setState({ ...state, navigation })}
+                onChange={(navigation) => setState((prev) => (prev.step === 'preview' ? { ...prev, navigation } : prev))}
+                onParentChange={handleParentChange}
                 compendiums={compendiums}
-                disciplineId={state.overrideDisciplineId}
+                disciplines={disciplines}
+                disciplineId={state.overrideDisciplineId ?? ''}
                 selfId={null}
                 currentTitle={state.preview.title}
                 idPrefix="import-material"
@@ -449,7 +487,8 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
               <li>Publicar — de cima para baixo: o material acima dele na árvore precisa estar publicado antes.</li>
             </ol>
             <p className="mt-1.5 text-stone-500 dark:text-slate-500">
-              A posição na árvore pode ser ajustada depois, pela edição, sem precisar atestar de novo.
+              A posição na árvore pode ser ajustada depois, pela edição, sem precisar atestar de novo — desde
+              que o novo pai seja da mesma disciplina.
             </p>
           </div>
           <div className="flex justify-end">

@@ -131,7 +131,7 @@ export function buildCompendiumImportResult(
   if (!estimatedReadTimeMinutes) missingFields.push('Tempo estimado de leitura');
 
   const tags = Array.isArray(data.tags) ? data.tags.filter(isNonEmptyString).map((t) => t.trim()) : [];
-  if (tags.length === 0) missingFields.push('Tags');
+  if (tags.length === 0) missingFields.push('Palavras-chave');
 
   const sectionsRaw = Array.isArray(data.sections) ? data.sections : [];
   if (sectionsRaw.length === 0) {

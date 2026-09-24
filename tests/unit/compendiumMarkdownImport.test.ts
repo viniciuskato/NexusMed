@@ -104,6 +104,28 @@ describe('parseCompendiumMarkdownText', () => {
     expect(result.errors.some((e) => /título/i.test(e))).toBe(true);
   });
 
+  // 43-A: o campo passou a se chamar "Palavras-chave" na plataforma; o arquivo
+  // pode usar o mesmo nome. Antes, `### Palavras-chave` virava uma seção de
+  // conteúdo com as crases à mostra.
+  it('aceita `### Palavras-chave` como equivalente de `### Tags`', () => {
+    const md = validMarkdown.replace('### Tags', '### Palavras-chave');
+    const result = parseCompendiumMarkdownText(md, [discipline], [theme], []);
+    expect(result.ok).toBe(true);
+    if (result.ok === false) throw new Error('esperado sucesso');
+    expect(result.tags).toEqual(['espirometria', 'função pulmonar']);
+    expect(result.sections.map((s) => s.title)).not.toContain('Palavras-chave');
+    expect(result.preview.sectionsCount).toBe(2);
+  });
+
+  it('sem palavras-chave, o aviso usa o nome novo do campo', () => {
+    const md = validMarkdown.replace(/### Tags\n.*\n/, '');
+    const result = parseCompendiumMarkdownText(md, [discipline], [theme], []);
+    expect(result.ok).toBe(true);
+    if (result.ok === false) throw new Error('esperado sucesso');
+    expect(result.tags).toEqual([]);
+    expect(result.preview.missingFields).toContain('Palavras-chave');
+  });
+
   it('não sinaliza citação legada quando o link já está correto', () => {
     const md = validMarkdown.replace('Suspenda broncodilatadores antes do exame [268].', 'Suspenda broncodilatadores antes do exame [1](#ref-1).');
     const result = parseCompendiumMarkdownText(md, [discipline], [theme], []);
