@@ -78,7 +78,12 @@ revisão.
    frontend novo depende da migration (RPC nova, coluna nova), aplicar a
    migration ANTES do merge** — o deploy da Vercel é imediato. Conferir
    depois com uma query direta contra o schema remoto — não confiar só na
-   mensagem de sucesso do CLI.
+   mensagem de sucesso do CLI. **Com unidades em paralelo**, a migration de
+   uma pode ter data anterior à última já aplicada no remoto pela outra, e o
+   `db push` recusa. Antes de aplicar, conferir `supabase migration list
+   --linked` e, se preciso, renomear a própria migration para uma data
+   posterior (no branch, antes do merge) — não usar `--include-all` para
+   contornar.
 5. Merge do PR (botão do GitHub) — **isso aciona deploy automático no
    Vercel**. Não há passo de confirmação adicional do lado do Vercel.
 6. Confirmar o deploy: comparar hash/tamanho de bundle publicado com o
