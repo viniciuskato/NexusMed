@@ -671,7 +671,7 @@ atesta o item errado. A atestação humana é a garantia editorial do produto.
 **Restrições.** Teste de componente que troca de item com o painel aberto.
 **Fora de escopo.** Qualquer mudança no fluxo de revisão.
 **Depende de.** Nada.
-**Estado.** Pronta.
+**Estado.** Concluída — PR #71.
 
 ---
 
