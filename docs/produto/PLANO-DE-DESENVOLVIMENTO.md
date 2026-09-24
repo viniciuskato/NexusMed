@@ -448,7 +448,13 @@ palavras, sem acento, sigla.
 **Fora de escopo.** Sinônimos em dicionário central (as palavras-chave de cada
 material bastam por ora); busca dentro da biblioteca.
 **Depende de.** Nada.
-**Estado.** Pronta.
+**Achados da execução.** Índice próprio fora da API, mantido por gatilhos, sem
+tocar no snapshot de atestação; com 1.200 seções a busca responde em 5 a 190 ms.
+Filtro de disciplina só pela casa (a 44-A precisa estendê-lo) e índice seguindo
+as tabelas que o estudante lê (a 45-K precisa mantê-lo na versão atestada).
+Corrigido de passagem: abrir o leitor numa seção voltava ao topo no quadro
+seguinte.
+**Estado.** Concluída — PR #80.
 
 ---
 
