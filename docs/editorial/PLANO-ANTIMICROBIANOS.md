@@ -92,7 +92,7 @@ Novas combinações; Carbapenêmicos; Monobactâmicos.
 
 ## 4. O rascunho existente
 
-`docs/conteúdos/antimicrobianos-betalactamicos.md` ("Antimicrobianos I:
+`docs/conteúdos/antimicrobianos/rascunho-antigo-completo.md` ("Antimicrobianos I:
 Betalactâmicos", 25 min, em Infectologia; só na cópia local do dono, pasta
 ignorada pelo git) cobre a classe inteira num material só e tem numeração no
 título — não segue a v2. **Não importar como está.** Serve de matéria-prima:
