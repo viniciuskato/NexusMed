@@ -905,8 +905,13 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       {/* Posição comum a todas as abas (21-D): antes só existia dentro do */}
       {/* bloco da aba de compêndios, então abrir pela aba de questões não */}
       {/* mostrava nada. */}
+      {/* `key` por tipo e id do alvo (45-B, AUD-23): o painel só carrega */}
+      {/* status, claims e revisão ao montar. Sem a key, abrir "Revisão" de */}
+      {/* outro item com o painel aberto trocava só o título, e "Aprovar" */}
+      {/* atestava a revisão do item anterior. */}
       {provenanceTarget && (
         <ProvenanceReviewPanel
+          key={`${provenanceTarget.kind}:${provenanceTarget.id}`}
           target={provenanceTarget.kind === 'material' ? { materialId: provenanceTarget.id } : { questionId: provenanceTarget.id }}
           title={provenanceTarget.title}
           onClose={closeProvenance}
@@ -919,8 +924,12 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       {editingReferencesCompId && (() => {
         const target = compendiums.find((c) => c.id === editingReferencesCompId);
         if (!target) return null;
+        // `key` pelo material (45-B, AUD-23): a fonte escolhida e ainda não
+        // associada fica guardada por posição da referência; sem a key, ela
+        // passava para a referência de mesma posição do próximo material.
         return (
           <MaterialReferencesPanel
+            key={target.id}
             compendium={target}
             onClose={() => setEditingReferencesCompId(null)}
             onSaved={onRefreshData}
