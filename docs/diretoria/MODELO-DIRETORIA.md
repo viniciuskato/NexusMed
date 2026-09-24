@@ -22,12 +22,41 @@ encaminhamento nenhum. Resumo dos três:
    sem mudança. Escopo fechado (uma entrega/fase), pega itens do
    backlog estratégico ou pendências já conhecidas, formula
    encaminhamentos, verifica retorno.
-3. **Sessão executiva** — sem mudança, ver `EXECUTOR_PROTOCOL.md`.
+3. **Sessão executiva** — desde 2026-09-23, organizada em **trilhas**; ver
+   a seção seguinte e `EXECUTOR_PROTOCOL.md`.
 
 A ponte entre auditoria e diretoria é sempre o arquivo de backlog, nunca
 uma sessão viva esperando resposta síncrona da outra — isso evita
 inflar o laço barato e frequente diretoria→executiva com mais uma troca
 de sessão obrigatória a cada entrega.
+
+## Trilhas e revisão (desde 2026-09-23)
+
+A execução deixou de ser uma sessão por unidade e passou a ser **uma sessão
+por área do código**. Motivo: o custo dominante deste projeto não era o preço
+por token, era a releitura e o retrabalho. Cada sessão nova lia cerca de
+250 KB de documentos antes de tocar em código; diretoria e executiva liam o
+mesmo código duas vezes; o que uma entendia se perdia na passagem; e o
+trabalho de um modelo mais barato voltava para ser refeito.
+
+- **Trilha** — sessão de vida longa, com o modelo mais capaz disponível,
+  dona de uma área do código (a seção 5 do plano diz quais e em que ordem).
+  Desenha e implementa, uma unidade por PR; o contexto de uma unidade serve
+  à próxima. Quando uma escolha muda o que o usuário vê ou contradiz uma
+  decisão registrada, pergunta ao dono na própria sessão, sem passar por uma
+  diretoria. Protocolo: `EXECUTOR_PROTOCOL.md`.
+- **Revisão** — sessão nova, sem o contexto da trilha, **antes do merge**
+  (`/code-review high <PR>`). As correções voltam para a trilha, que ainda
+  tem o contexto.
+- **Diretoria** — sob demanda, não por unidade: decisão de produto, frente
+  nova, correção de unidade, atualização do plano em lote depois de uma
+  leva de merges. Não escreve briefing de execução: com a trilha no modelo
+  mais capaz, o briefing só duplicaria a leitura do código.
+- **Dono** — decide, aplica migration no remoto e mescla. São os dois únicos
+  portões manuais.
+- **Modelo mais barato** só para tarefa mecânica em que errar é barato e
+  conferir é trivial (PR do Dependabot, ajuste de texto). Desenho, banco,
+  atestação, sincronização e revisão ficam com o mais capaz.
 
 ## Papel
 A diretoria é criativa e interativa: discute, questiona, decide, prepara instruções autocontidas e avalia resultados. As executivas implementam e verificam. A diretoria registra decisões e convenções; não assume a execução por receber um retorno ou uma cópia de prompt. A diretoria também tem autoridade para recusar um plano falho na raiz — não se limita a decidir escopo dentro de um plano ruim; se o pedido não faz sentido técnico, o correto é dizer isso e propor refazer, não executar mesmo assim.
@@ -80,19 +109,22 @@ por quem executa; o *como* genérico já vive em `AGENTS.md`, `RUNBOOK.md` e
 - **A diretoria** cria, corrige e descarta unidades, muda a sequência, registra
   e resolve decisões em aberto e mantém "Onde o sistema está". Decisão durável
   também entra em `DECISIONS.md`.
-- **A execução**, no mesmo PR da implementação, atualiza o estado da unidade, a
-  linha do registro e, se for o caso, uma linha "Achados da execução". Não
-  reescreve aceite nem sequência.
+- **A trilha**, no mesmo PR da implementação, atualiza só a linha "Estado" da
+  unidade e, se for o caso, uma linha "Achados da execução". Não reescreve
+  aceite, ordem nem outras unidades. A tabela de registro (seção 13) é da
+  diretoria, atualizada em lote — assim PRs de trilhas paralelas não
+  conflitam nela.
 
-**Como encaminhar.** Uma linha: *"Execute a unidade 43-A de
-`docs/produto/PLANO-DE-DESENVOLVIMENTO.md` seguindo
-`docs/operacao/EXECUTOR_PROTOCOL.md`."* Autorizações específicas (push, abrir
-PR, escrita remota) vão na mesma mensagem, porque dependem do momento.
+**Como abrir uma trilha.** Uma mensagem, uma vez por trilha (modelo na seção 0
+do plano): qual trilha, quais unidades e em que ordem, e as autorizações —
+push de branch, abrir PR, Docker e Supabase local; nunca merge nem escrita
+remota.
 
-**Ao voltar o retorno.** O RETORNO vai na descrição do PR (o diário da mudança).
-Depois do merge, a diretoria confere o registro do plano e ajusta a sequência se
-algo mudou. Se a execução mostrou que o aceite estava errado ou incompleto, a
-diretoria corrige a unidade — ela é viva.
+**Ao voltar o PR.** O RETORNO vai na descrição do PR (o diário da mudança). A
+revisão independente acontece antes do merge; o dono mescla. A diretoria, quando
+aberta, atualiza o registro e ajusta a sequência se algo mudou. Se a execução
+mostrou que o aceite estava errado ou incompleto, a diretoria corrige a unidade
+— ela é viva.
 
 ## Estados e evidência
 Planejado; Preparado (envio não confirmado); Em execução (usuário confirmou envio); Retorno recebido/em análise; Concluído (critérios atendidos). Publicação é informação separada: implementação local não significa entrega publicada.
@@ -102,7 +134,7 @@ Aceite “ENVIEI: 06-B” ou “mandei para rodar”. Só marque Em execução a
 ## Liberação e concorrência
 Avalie separadamente: há informações suficientes para enviar? Pode executar junto das sessões ativas? Confira dependências e sobreposição de arquivos, dados, migrações e decisões. Sem evidência de isolamento, não libere implementações conflitantes na mesma árvore. Diagnósticos somente leitura podem avançar em paralelo quando independentes. Não presuma que branches na mesma pasta isolam executivas.
 
-A tabela final deve conter: Entrega | Etapa/ID atual | Estado | Próxima ação / dependência. Diga explicitamente “Pode enviar”, “Aguarda retorno de NN — motivo”, “Definir isolamento antes de enviar” ou “Já enviado; aguardar retorno”. Indique prioridade quando útil. Mostre apenas o histórico necessário na conversa.
+A tabela final deve conter: Trilha | Unidade atual | Estado | Próxima ação / dependência. Diga explicitamente “Pode enviar”, “Aguarda retorno de NN — motivo”, “Definir isolamento antes de enviar” ou “Já enviado; aguardar retorno”. Indique prioridade quando útil. Mostre apenas o histórico necessário na conversa.
 
 ## Persistência
 Use o plano canônico (`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`) como painel atual: sequência, estados, decisões em aberto e registro. Retornos vão na descrição do PR da unidade. Desde 2026-09-23; antes, o painel era docs/diretoria/registro.md, com prompts em docs/diretoria/prompts/ e retornos em docs/diretoria/retornos/ — todos mantidos como histórico. Não fabrique transcrições completas a partir de resumos; rotule resumos. Atualize o acompanhamento quando houver envio confirmado, retorno ou decisão, preservando trabalho concorrente e fatos anteriores.
@@ -110,7 +142,7 @@ Use o plano canônico (`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`) como painel a
 Ao retomar uma sessão, leia AGENTS.md, este modelo e o plano canônico. Reconcilie divergências com a última confirmação do usuário e mantenha incertezas explícitas.
 
 ## Independência de sessão
-Toda unidade deve poder ser executada por uma sessão nova sem acesso à conversa anterior — com o plano canônico, `AGENTS.md` e o código daquele momento. Inclua as decisões e restrições que valem e o estado conhecido — o caminho do projeto e o estado do repositório quem executa lê de `AGENTS.md` e do próprio git. Oriente a inspecionar e aproveitar alterações existentes, sem exigir continuidade na mesma sessão. Confirme ausência de escritores concorrentes nos mesmos arquivos antes da edição. Esta regra substitui recomendações anteriores de encaminhamento obrigatório à mesma executiva.
+Toda unidade deve poder ser executada por uma sessão nova sem acesso à conversa anterior — com o plano canônico, `AGENTS.md` e o código daquele momento. Inclua as decisões e restrições que valem e o estado conhecido — o caminho do projeto e o estado do repositório quem executa lê de `AGENTS.md` e do próprio git. Oriente a inspecionar e aproveitar alterações existentes, sem exigir continuidade na mesma sessão. Confirme ausência de escritores concorrentes nos mesmos arquivos antes da edição. Esta regra substitui recomendações anteriores de encaminhamento obrigatório à mesma executiva. A trilha (desde 2026-09-23) aproveita o contexto acumulado por economia, não por necessidade: se ela for reiniciada, a próxima unidade continua executável por uma sessão nova.
 
 ## Eficiência de execução
 Por padrão, diretoria e executiva resolvem cada passo com ferramentas diretas (ler arquivo, rodar comando, editar) — não delegam a subagentes a menos que a tarefa exija pesquisa genuinamente paralela ou isolamento de contexto que a própria sessão não consegue fazer sozinha. Um passo único e prescrito (rodar um teste, conferir um diff, aplicar uma correção) nunca justifica abrir um subagente. Ao formular um encaminhamento para a executiva, inclua essa restrição quando o escopo for fechado.

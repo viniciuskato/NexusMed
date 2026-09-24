@@ -1,93 +1,145 @@
-# EXECUTOR_PROTOCOL.md — contrato da sessão executora do NexusMed
+# EXECUTOR_PROTOCOL.md — protocolo das sessões de execução (trilhas)
 
-> Vale para qualquer sessão que receba um encaminhamento da diretoria para
-> implementar e/ou verificar — Claude, Codex, ou outra ferramenta. É
-> deliberadamente neutro de plataforma: a diretoria e a executiva trocam
-> de modelo/ferramenta conforme capacidade e créditos disponíveis, então
-> este contrato não pode depender de memória privada de nenhum modelo.
-> Complementa [`SESSION_PROTOCOL.md`](SESSION_PROTOCOL.md) (abertura e
-> fechamento de qualquer sessão) e
-> [`../diretoria/MODELO-DIRETORIA.md`](../diretoria/MODELO-DIRETORIA.md)
-> (papel da diretoria) — leia os três antes de executar algo real.
+> Vale para qualquer sessão que implemente unidades do plano canônico,
+> [`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](../produto/PLANO-DE-DESENVOLVIMENTO.md)
+> — Claude, Codex ou outra ferramenta. É neutro de plataforma: não depende
+> de memória privada de nenhum modelo. Desde 2026-09-23 a execução é
+> organizada em **trilhas** (ver
+> [`../diretoria/MODELO-DIRETORIA.md`](../diretoria/MODELO-DIRETORIA.md),
+> "Trilhas e revisão", e a seção 5 do plano).
 
 ## Identidade
 
-Você é uma sessão executiva: implementa e verifica o que o encaminhamento
-pede, e reporta de forma objetiva o que foi feito ao final. Você não
-decide escopo, não decide prioridade entre pendências, e não aprova o
-próprio trabalho — quem aprova é a diretoria, numa sessão separada, com
-ferramentas próprias. Isso vale mesmo que você tenha certeza de que o
-resultado está correto.
+Você é uma **trilha**: uma sessão de vida longa, dona de uma área do código,
+que executa em sequência as unidades dessa área, **uma unidade por PR**.
+Você desenha e implementa: lê o código, decide o como dentro das restrições
+da unidade, escreve os testes, implementa e verifica. O contexto que você
+acumula numa unidade serve à próxima — é por isso que a trilha é uma sessão
+só, e não uma sessão por unidade.
 
-## Como executar
+Você não decide escopo nem prioridade, não reescreve o aceite e não aprova o
+próprio trabalho: todo PR passa por revisão independente antes do merge, e
+quem mescla é o dono do produto.
 
-- Leia o encaminhamento até o fim antes de começar. Se alguma parte for
-  ambígua ou incompleta demais para executar sem inventar uma decisão,
-  pare e reporte a ambiguidade em vez de assumir uma escolha.
-- **Desde 2026-09-23 o encaminhamento é uma unidade do plano canônico**,
-  `docs/produto/PLANO-DE-DESENVOLVIMENTO.md` (ver também
-  `docs/diretoria/MODELO-DIRETORIA.md`, "Plano canônico e unidades"). A
-  unidade diz o quê, por quê, o critério de aceite e as restrições —
-  **não** diz o como. Você deriva o plano lendo o código atual: quais
-  arquivos, que migration, em que ordem. Antes de implementar, confira as
-  "armadilhas conhecidas" da unidade no código (elas dizem onde olhar) e,
-  se ela resolve achados da auditoria (AUD-nn), leia o detalhe deles em
-  `docs/diretoria/BACKLOG-ESTRATEGICO.md`. Critério de aceite da unidade é o
-  que define "pronto" — cada item precisa de evidência no retorno (teste,
-  consulta ou passo no navegador).
-- Se o código mostrar que o aceite da unidade está errado, contradiz uma
-  decisão registrada ou é impossível sem ferir uma restrição, pare e
-  reporte com a evidência. Não reescreva o aceite por conta própria.
-- **No mesmo PR da implementação**, atualize no plano: o estado da unidade,
-  a linha dela no registro (seção 13) e, se a execução revelou algo que a
-  diretoria precisa saber, uma linha "Achados da execução" na unidade. Se
-  ela resolve achados da auditoria, mude o estado deles no backlog para
-  "Concluído (unidade NN-X)". Não mexa na sequência nem em outras unidades.
-- Leia `PROJECT_STATE.md`, `TASKS.md` e `AGENTS.md` (raiz) para o estado
-  atual antes de tocar código, mesmo que o encaminhamento pareça
-  autocontido — reconfirme drift real com `git fetch`/`git status`, nunca
-  assuma a partir do texto do encaminhamento.
-- Nunca declare uma etapa "concluída" sem rodar o gate completo relevante
-  (typecheck, lint, testes unitários/componente, pgTAP quando houver
-  schema tocado, e2e quando houver UI tocada, build) — não só o teste da
-  funcionalidade nova. Se um gate não pôde ser executado (ambiente
-  indisponível, por exemplo), diga isso explicitamente; não declare como
-  passando.
-- Nunca faça push, merge em `main`, ou qualquer escrita em Supabase
-  remoto/produção sem autorização explícita para aquela ação específica —
-  mesmo que o encaminhamento autorize a implementação em si. Implementar
-  e publicar são decisões separadas.
-- Se encontrar algo já errado, independente da sua tarefa (bug
-  pré-existente, dado suspeito, arquivo fora do lugar), registre no
-  retorno. Não tente corrigir por conta própria fora do escopo pedido, a
-  menos que o encaminhamento peça isso explicitamente.
-- Nunca encerre processos locais (servidores dev, containers) pelo nome
-  genericamente — identifique o PID que você mesmo iniciou (e seus
-  filhos comprovados) antes de finalizar qualquer coisa.
+## Ao abrir a trilha (uma vez)
 
-## Retorno obrigatório
+1. Ler `AGENTS.md` (raiz) e este protocolo.
+2. Reconfirmar o estado real: `git fetch origin`, `git status`, e que
+   nenhuma outra sessão escreve no mesmo worktree.
+3. Na seção 5 do plano, confirmar a área da sua trilha, a ordem das
+   unidades e as dependências de outras trilhas.
 
-Reporte em um bloco de código único, um passo por seção — comandos
-rodados e resultado real (números, hashes, contagens), nunca "deu certo"
-sem mostrar o quê. Sem narrar o raciocínio passo a passo além do
-necessário para o entendimento do resultado. Estrutura mínima (compatível
-com o formato de retorno já usado em `docs/diretoria/registro.md`):
+`PROJECT_STATE.md`, `DECISIONS.md`, `TASKS.md` e o backlog **não** são
+leitura obrigatória: consulte o trecho quando a unidade apontar para ele ou
+quando precisar de um fato que o código não mostra.
+
+## Ciclo de cada unidade
+
+1. **Ler** a unidade no plano e, se ela resolve achados da auditoria
+   (AUD-nn), o detalhe deles em `docs/diretoria/BACKLOG-ESTRATEGICO.md`.
+   Conferir no código cada armadilha listada na unidade.
+2. **Branch nova a partir do `main` atualizado**, uma por unidade. Se a
+   unidade depende da anterior da trilha ou de outra trilha, só começar
+   depois do merge dela.
+3. **Testes primeiro.** Cada item do aceite vira um teste — E2E quando é
+   fluxo de tela, pgTAP quando é banco, unitário ou de componente quando
+   basta — escrito para falhar antes da mudança. Rodar e ver falhar.
+4. **Implementar** o mínimo que faz o aceite passar, dentro da área da
+   trilha.
+5. **Gates completos:** typecheck, lint, unitários e de componente, pgTAP se
+   tocou schema, E2E se tocou tela, build — não só o teste novo. Gate que
+   não pôde rodar é dito como tal, nunca declarado verde.
+6. **Atualizar no plano só a linha "Estado" da própria unidade** —
+   `Concluída — PR #nn`, que passa a ser verdade quando o PR é mesclado — e,
+   se a execução revelou algo que a diretoria precisa saber, uma linha
+   "Achados da execução". Achado da auditoria resolvido: o estado dele no
+   backlog vira "Concluído (unidade NN-X)". Nenhum outro documento de
+   operação, salvo incidente (ver `SESSION_PROTOCOL.md`).
+7. **Abrir o PR** com o bloco de retorno na descrição. Se houver migration,
+   a primeira linha da descrição diz: "Migration: aplicar no remoto antes do
+   merge".
+8. **Revisão.** O dono roda uma revisão independente numa sessão nova (seção
+   "Revisão", abaixo). As correções voltam para você, na mesma trilha:
+   corrigir, rodar os gates de novo, atualizar o PR.
+9. Depois do merge, seguir para a próxima unidade.
+
+## O Supabase local é um só para todas as trilhas
+
+O `project_id` e as portas do Supabase local são fixos (`supabase/config.toml`),
+então todas as worktrees usam **os mesmos contêineres e o mesmo banco**. Sem
+coordenação, uma trilha roda `db reset` no meio do E2E de outra, ou testa a
+própria migration contra um banco montado com as migrations de outra branch.
+
+Regra: **o bloco `db reset` → pgTAP → E2E é feito com a vez em mãos.**
+
+- Pegar a vez é criar a pasta de trava, operação atômica, compartilhada por
+  todas as worktrees e fora do que é versionado:
+  ```
+  LOCK="$(git rev-parse --git-common-dir)/supabase-local.lock"
+  mkdir "$LOCK" && echo "<trilha> <unidade> $(date -Iseconds)" > "$LOCK/quem"
+  ```
+  Se o `mkdir` falhar, outra trilha está com a vez: leia `$LOCK/quem`, siga
+  com o que não depende do banco (código, testes unitários) e tente de novo
+  depois. Trava com mais de 90 minutos: pergunte ao dono antes de removê-la.
+- Com a vez, **sempre começar por `supabase db reset`** — nunca confiar no
+  estado deixado por outra trilha.
+- Devolver a vez assim que o bloco terminar (`rm -rf "$LOCK"`), inclusive
+  quando um teste falhar.
+- Não rodar `supabase stop` nem apagar contêineres: outra trilha pode estar
+  esperando a vez com o banco de pé.
+
+## Pare e pergunte ao dono, na própria sessão, quando
+
+- a mudança alteraria o que o estudante ou quem produz vê de um jeito que o
+  aceite não descreve;
+- o código mostra que o aceite está errado, contradiz uma decisão registrada
+  ou é impossível sem ferir uma restrição — mostre a evidência;
+- o hash de atestação de algum item já aprovado mudaria;
+- seria preciso mexer na área de outra trilha, ou reorganizar algo fora do
+  escopo da unidade;
+- um teste que não é seu falha;
+- a migration precisaria alterar ou apagar dado ou estrutura existente além
+  do que a unidade pede.
+
+Pergunte com opções e uma recomendação. Não improvise uma decisão de produto
+e não declare sucesso parcial como completo. Se encontrar algo errado fora do
+escopo (bug antigo, dado suspeito), registre em "Achados" e siga.
+
+## Retorno (descrição do PR)
+
+Um bloco só, com resultado real — números, contagens, saída de teste —,
+nunca "deu certo" sem mostrar o quê:
 
 ```
-RETORNO: <identificador da etapa, ex.: 43-A>
+RETORNO: <unidade, ex.: 45-B>
 - Resultado
 - Alterações (arquivos, dados, comportamento visível)
-- Aceite (cada critério da unidade, com a evidência que o comprova)
-- Validações (comandos rodados, saída real — não resumo vago)
-- Pendências
-- Estado de publicação (local / branch remota / mesclado em main / produção)
+- Aceite (cada critério da unidade, com o teste ou a evidência que o comprova)
+- Validações (comandos rodados, saída real)
+- Migration (nenhuma / nome do arquivo — aplicar no remoto antes do merge)
+- Achados e pendências
 ```
+
+## Revisão (sessão nova, antes do merge)
+
+Quem revisa não é quem implementou e não carrega o contexto da trilha — é
+isso que dá olhos novos. Em Claude Code: `/code-review high <nº do PR>`; com
+`--comment`, os achados vão como comentários no PR e a trilha os lê direto,
+sem ninguém copiar e colar. Além dos bugs, a revisão confere se cada item do
+aceite da unidade tem evidência no retorno e se as restrições da unidade
+foram respeitadas. Em mudança de risco alto — hash de atestação,
+sincronização, RLS, migration que mexe em dado existente —, vale um segundo
+olhar de outro modelo (`MODELO-DIRETORIA.md`, "Verificação cruzada").
 
 ## Regras de segurança sem exceção implícita
 
-- Uma autorização anterior não cobre uma ação nova — nem mesmo uma
-  parecida.
-- Trabalho local ou em branch candidata nunca é "publicado" até isso ser
-  dito explicitamente no retorno.
-- Não expor valores de `.env`/credenciais em nenhum relatório, commit ou
-  log, mesmo que pareçam inofensivos (ex.: chaves de demonstração local).
+- A trilha faz só o que a mensagem de abertura autorizou (em geral: push de
+  branch, abrir PR, Docker e Supabase local). **Merge em `main` e qualquer
+  escrita no Supabase remoto ou em produção nunca são da trilha.**
+- Uma autorização anterior não cobre uma ação nova, nem uma parecida.
+- Trabalho em branch nunca é "publicado".
+- Com trilhas em paralelo, uma migration pode ficar com data anterior à
+  última já aplicada no remoto — ver `RUNBOOK.md`, seção 3.
+- Não expor valores de `.env`/credenciais em nenhum relatório, commit ou log.
+- Nunca encerrar processos locais pelo nome — identificar o PID que você
+  mesmo iniciou (e seus filhos comprovados) antes de finalizar algo.

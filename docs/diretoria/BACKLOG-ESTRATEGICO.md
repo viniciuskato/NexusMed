@@ -252,7 +252,11 @@ autocontido (#6), code splitting + botão voltar (#7), processo via PR
   referências) e a primeira leitura de métricas (PR #16,
   `scripts/sql/metricas-semanais.sql`). Nenhuma sessão de IA tem acesso de
   admin/Supabase ao projeto de produção.
-- **Estado**: Aberto — antes da prova de 21/09
+- **Estado**: Encerrado em 2026-09-23 pela diretoria, sem execução. O material
+  de Equilíbrio Ácido-Base foi para a fila editorial do plano canônico
+  (seção 12), sem prazo; o teste autenticado da Área Editorial foi superado
+  pelo uso real dela (PRs #57 a #62); as métricas semanais seguem como
+  rotina no RUNBOOK.
 
 
 ## 3ª rodada — auditoria de 2026-09-19
