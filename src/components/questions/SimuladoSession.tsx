@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Timer,
   AlertTriangle,
@@ -117,20 +117,21 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
     timeSpentSeconds: number;
   } | null>(null);
   const [reviewResults, setReviewResults] = useState<Record<string, QuestionReviewResult>>({});
+  // Gravação em andamento (45-A, AUD-18): desativa "Finalizar Prova" enquanto
+  // grava. A ref é a trava de verdade — dois cliques, ou um clique e o fim do
+  // tempo, chegam no mesmo tick, antes do re-render que desativa o botão.
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const finishingRef = useRef(false);
+  const [finishError, setFinishError] = useState<string | null>(null);
 
-  // Timer: só faz contagem regressiva se for Modo Prova; se for Modo Estudos, conta tempo decorrido sem limite
+  // Timer: só faz contagem regressiva se for Modo Prova; se for Modo Estudos,
+  // conta tempo decorrido sem limite. O cronômetro só conta: quem finaliza a
+  // prova quando o tempo acaba é o efeito logo abaixo.
   useEffect(() => {
     if (isFinished) return;
     if (config.isExamMode) {
       const timer = setInterval(() => {
-        setSecondsRemaining((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            handleFinishExam();
-            return 0;
-          }
-          return prev - 1;
-        });
+        setSecondsRemaining((prev) => Math.max(0, prev - 1));
       }, 1000);
       return () => clearInterval(timer);
     } else {
@@ -141,16 +142,19 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
     }
   }, [isFinished, config.isExamMode]);
 
-  const handleSelectAnswer = (letter: string) => {
-    if (isFinished) return;
-    const currentQ = questions[currentIdx];
-    if (!currentQ) return;
-    setAnswers((prev) => {
-      const next = { ...prev, [currentQ.id]: letter };
-      saveDraftAnswers(config.id, next);
-      return next;
-    });
-  };
+  const handleSelectAnswer = useCallback(
+    (letter: string) => {
+      if (isFinished) return;
+      const currentQ = questions[currentIdx];
+      if (!currentQ) return;
+      setAnswers((prev) => {
+        const next = { ...prev, [currentQ.id]: letter };
+        saveDraftAnswers(config.id, next);
+        return next;
+      });
+    },
+    [isFinished, questions, currentIdx, config.id]
+  );
 
   // Suporte a atalhos de teclado durante o simulado (A-E / 1-5 e setas)
   useEffect(() => {
@@ -196,11 +200,11 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFinished, currentIdx, questions]);
+  }, [isFinished, currentIdx, questions, handleSelectAnswer]);
 
-  const handleFinishExam = async () => {
-    if (isFinished) return;
-
+  // Grava a prova: tentativas (o servidor corrige cada uma), nota, sessão e,
+  // só depois de tudo gravado, apaga o rascunho local.
+  const finishExam = useCallback(async () => {
     const totalTimeSpent = config.isExamMode
       ? config.timeLimitMinutes * 60 - secondsRemaining
       : elapsedStudySeconds;
@@ -276,7 +280,37 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
         // impedir o encerramento real do simulado.
       }
     }
-  };
+  
+  }, [config, questions, answers, secondsRemaining, elapsedStudySeconds]);
+
+  const handleFinishExam = useCallback(async () => {
+    if (isFinished || finishingRef.current) return;
+    finishingRef.current = true;
+    setIsSubmitting(true);
+    setFinishError(null);
+    try {
+      await finishExam();
+    } catch {
+      // Nada foi perdido: o rascunho só é apagado depois de gravar tudo. O
+      // botão volta a funcionar para tentar de novo.
+      setFinishError(
+        'Não foi possível gravar a prova agora. Suas respostas continuam guardadas neste aparelho — tente finalizar de novo.'
+      );
+    } finally {
+      finishingRef.current = false;
+      setIsSubmitting(false);
+    }
+  }, [isFinished, finishExam]);
+
+  // Fim do tempo no Modo Prova (45-A, AUD-17): a finalização roda aqui, com o
+  // estado do render atual. Antes, o cronômetro chamava a versão do primeiro
+  // render — respostas vazias, tempo inicial —, gravava a prova vazia com
+  // nota 0 e apagava o rascunho.
+  useEffect(() => {
+    if (config.isExamMode && secondsRemaining === 0 && !isFinished) {
+      void handleFinishExam();
+    }
+  }, [config.isExamMode, secondsRemaining, isFinished, handleFinishExam]);
 
   const formatTime = (secs: number) => {
     const mins = Math.floor(secs / 60);
@@ -330,15 +364,29 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
 
             {!isFinished && (
               <button
-                onClick={handleFinishExam}
-                className="px-4 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white font-bold text-xs elev-xs transition-colors cursor-pointer"
+                type="button"
+                onClick={() => void handleFinishExam()}
+                disabled={isSubmitting}
+                className="px-4 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white font-bold text-xs elev-xs transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-wait"
               >
-                {config.isExamMode ? 'Finalizar Prova' : 'Concluir Sessão'}
+                {isSubmitting ? 'Gravando…' : config.isExamMode ? 'Finalizar Prova' : 'Concluir Sessão'}
               </button>
             )}
           </div>
         </div>
       </div>
+
+      {finishError && (
+        <div className="max-w-6xl mx-auto px-4 lg:px-0">
+          <div
+            role="alert"
+            className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-xs font-semibold flex items-start gap-2"
+          >
+            <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+            <span>{finishError}</span>
+          </div>
+        </div>
+      )}
 
       {/* Aviso de quantidade indisponível */}
       {typeof requestedCount === 'number' &&

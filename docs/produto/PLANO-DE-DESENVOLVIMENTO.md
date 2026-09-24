@@ -651,7 +651,13 @@ aparecer como errada e virar flashcard e caderno de erros indevidos.
 **Fora de escopo.** Fila de sincronização em geral (45-E); leitura offline
 (45-G).
 **Depende de.** Nada.
-**Estado.** Pronta.
+**Achados da execução.** Parte 1 (tempo esgotado grava as respostas;
+"Finalizar Prova" grava uma vez; falha ao gravar avisa e deixa tentar de
+novo) feita só no simulado, sem migration. Parte 2: clique duplo em
+"Confirmar Resposta" e na nota do flashcard com identificador estável,
+"correção pendente" e nota no servidor.
+**Estado.** Parte 1 concluída — PR #74. Parte 2 pronta, depois da decisão
+sobre a correção antiga de duplicação de flashcard (TASKS).
 
 ---
 
