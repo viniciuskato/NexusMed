@@ -640,6 +640,10 @@ aparecer como errada e virar flashcard e caderno de erros indevidos.
   repetição.
 - Nota no servidor muda a gravação do simulado: migration no remoto antes do
   merge, com a produção funcionando nas duas versões.
+- Existe uma correção antiga, nunca mesclada, de duplicação na criação de
+  flashcards por repetição espaçada (`DECISIONS.md`, 2026-09-22; tarefa
+  aberta em `TASKS.md`). Conferir antes de desenhar o identificador estável
+  e propor ao dono o destino dela: aproveitar ou descartar com motivo.
 
 **Fora de escopo.** Fila de sincronização em geral (45-E); leitura offline
 (45-G).
