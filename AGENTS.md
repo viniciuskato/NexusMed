@@ -166,7 +166,9 @@ seção "Armadilhas já descobertas".
     (`src/utils/compendiumMarkdownImport.ts`) e o leitor
     (`src/components/common/SafeMarkdown.tsx`) fazem hoje; mudou um dos dois,
     atualize o padrão no mesmo PR e rode o exemplo do bloco de formato pelo
-    importador para conferir.
+    importador para conferir. O padrão tem versão (v2 desde 2026-09-23):
+    mudança editorial sobe a versão e ganha entrada na seção 2.7; depois da
+    ficha 44-C, regra mecânica nova vem com a checagem correspondente.
 
 ## Convenções de trabalho
 
@@ -218,6 +220,9 @@ esse histórico.
 prompts.** Cada iniciativa tem um documento vivo em `docs/produto/` com o
 objetivo, a decisão de modelo e uma ficha por etapa (por quê, critério de
 aceite, restrições, dependências). A ficha diz o quê e por quê; o como é
-derivado lendo o código na hora. Iniciativa ativa:
-[`docs/produto/CICLO-DE-ESTUDO.md`](docs/produto/CICLO-DE-ESTUDO.md).
+derivado lendo o código na hora. Iniciativas ativas:
+[`docs/produto/CICLO-DE-ESTUDO.md`](docs/produto/CICLO-DE-ESTUDO.md) (43, o
+que o estudante faz) e
+[`docs/produto/BASE-DE-MATERIAIS.md`](docs/produto/BASE-DE-MATERIAIS.md) (44,
+o banco crescer sem duplicar nem envelhecer).
 `docs/diretoria/prompts/` é histórico — nada novo entra lá.

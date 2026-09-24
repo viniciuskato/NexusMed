@@ -6,6 +6,35 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-23 — Casa e "também aparece em"; padrão versionado
+
+1. **Todo material tem uma única disciplina-casa**, a do ramo inteiro. Regra:
+   o material mora onde o conceito é definido — fármaco em Farmacologia,
+   doença na especialidade clínica, mecanismo na ciência básica.
+   Antimicrobianos moram em Farmacologia.
+2. **Um ramo pode aparecer em outras disciplinas** ("também aparece em"),
+   marcado uma vez no topo e herdado por tudo abaixo. Sem cópia de material,
+   sem vários pais. Não entra no hash de atestação.
+3. **O padrão editorial tem versão** (v2 em 2026-09-23). Mudança de aparência
+   se resolve no leitor; mudança de formato, no importador (aceitando as duas
+   formas por um tempo); só mudança editorial exige reescrever material — e
+   essa é apontada por checagem automática e feita por arquivo, sobre o mesmo
+   material, preservando posição e questões.
+4. **A plataforma é a única fonte da verdade**; `.md` é formato de troca.
+5. **O texto do material não cita a estrutura** (nada de "veja o material X"
+   nem número no título).
+
+**Por quê**: o dono do produto apontou que antimicrobianos são de
+Farmacologia e de Infectologia, e que materiais feitos em padrões antigos
+ficam para trás. Cópia diverge; vários pais tornam o caminho ambíguo; reler
+todo material a cada melhoria do padrão não escala.
+
+**Como aplicar**: iniciativa 44,
+[`docs/produto/BASE-DE-MATERIAIS.md`](../produto/BASE-DE-MATERIAIS.md). O padrão
+v2 e o plano dos antimicrobianos já valem; o resto depende das fichas.
+
+---
+
 ## 2026-09-23 — Ciclo de estudo: a árvore fica, as ligações cadastradas congelam, a conexão passa a ser questão ↔ materiais
 
 O produto é um banco de materiais a serviço de um ciclo: encontrar o assunto →

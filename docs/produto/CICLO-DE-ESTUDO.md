@@ -245,10 +245,15 @@ mostrar necessidade concreta.
 
 ## 7. Relação com o piloto dos β-lactâmicos
 
-`docs/produto/TAXONOMIA-ANTIBIOTICOS-PILOTO.md` e `-PLANO-TECNICO.md`
-existem só na cópia local do dono do produto, fora do repositório. As tabelas
-de "Estude antes"/"Veja também" daqueles documentos ficam superadas por esta
-iniciativa; a árvore e o catálogo de 21 materiais continuam válidos.
+O plano de produção do piloto está em
+[`docs/editorial/PLANO-ANTIMICROBIANOS.md`](../editorial/PLANO-ANTIMICROBIANOS.md)
+(2026-09-23): a árvore e os 21 materiais continuam, a casa é Farmacologia e as
+tabelas de "Estude antes"/"Veja também" saíram. Substitui
+`TAXONOMIA-ANTIBIOTICOS-PILOTO.md`, que nunca entrou no repositório.
+
+Onde um material mora e onde aparece, e como manter materiais atualizados com
+o padrão, é da iniciativa irmã: [`BASE-DE-MATERIAIS.md`](BASE-DE-MATERIAIS.md)
+(44). Ordem conjunta sugerida lá, na seção 5.
 
 ## 8. Registro das etapas
 
