@@ -56,3 +56,7 @@ recover-question-references.*.report.txt
 
 .vercel
 review_full.diff
+
+# Pasta de trabalho da produção de conteúdo: pedidos, rascunhos e fontes
+# (repositório público; fontes de livro-texto têm direito autoral — D-5)
+/docs/conteúdos/

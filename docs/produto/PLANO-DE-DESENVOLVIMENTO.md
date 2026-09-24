@@ -230,17 +230,21 @@ O porquê de cada uma está em `docs/operacao/DECISIONS.md`, na data indicada.
 - **Migration vai para o Supabase remoto antes do merge**, e a produção
   continua funcionando com ela. O CI passa a conferir isso no remoto, com
   credencial só de leitura (46-E). *(24/09, D-4)*
+- **Sistema e conteúdo evoluem em paralelo.** O conteúdo é operado pelo dono,
+  com o Gemini como redator; a interface entre as frentes é o padrão e o
+  arquivo `.md` — o Gemini não opera no repositório. Fluxo e regras na seção
+  12. *(24/09, D-5)*
 
 ## 4. As frentes
 
 | Frente | Objetivo | Unidades |
 |---|---|---|
 | **43 — Ciclo de estudo** | O estudante percorre os cinco passos com um clique cada | 43-A a 43-E |
-| **44 — Base de materiais** | O banco cresce sem duplicar nem envelhecer | 44-A a 44-C |
+| **44 — Base de materiais** | O banco cresce sem duplicar nem envelhecer | 44-A, 44-B, 44-C1, 44-C2 |
 | **45 — Confiabilidade** | O que o estudante faz não se perde; a atestação é sempre do item certo | 45-A a 45-K |
 | **46 — Base técnica e operação** | Código mais barato de mudar; backup e rollback | 46-A a 46-E |
 | **Pendências do dono** | O que só a conta dona do projeto consegue fazer | P-1, P-2 e P-4 |
-| **Produção editorial** | Conteúdo, não código — acompanhada aqui para a ordem fazer sentido | seção 12 |
+| **Produção editorial** | Conteúdo, não código — frente paralela, operada pelo dono com o Gemini (D-5); acompanhada aqui para a ordem fazer sentido | seção 12 |
 
 A numeração continua a sequência histórica de entregas (40, 41, 42…) e não
 muda quando a ordem muda.
@@ -263,7 +267,7 @@ dado e forma de produzir conteúdo) e a 3 depois.
 | Trilha | Área do código | Unidades, na ordem | Espera outra trilha |
 |---|---|---|---|
 | **1 — Dados do estudante** | Respostas, flashcards, simulados, caderno de erros, sincronização; leitura e gravação nos repositórios | 45-E → 45-G → 45-I | — |
-| **2 — Material e Área Editorial** | Formulário, importação, gravação e revisão de material e de questão | 43-A → 45-D → 43-B → 45-K → 44-B → 44-A → 44-C | — |
+| **2 — Material e Área Editorial** | Formulário, importação, gravação e revisão de material e de questão | 43-A → 44-C1 → 45-D → 43-B → 45-K → 44-B → 44-A → 44-C2 | — |
 | **3 — Descoberta e casca do app** | Busca, conta e sessão, menu, componente raiz, telas novas do ciclo | 43-D → 45-F → 45-H → 46-A passos 1 a 4 → 43-C → 43-E | 43-C espera a 43-B (trilha 2) |
 
 Já concluídas e publicadas em 24/09, fora das listas: 45-B, 45-J, 45-C e 45-A
@@ -272,8 +276,11 @@ Já concluídas e publicadas em 24/09, fora das listas: 45-B, 45-J, 45-C e 45-A
 Notas de ordem:
 - **Trilha 1:** antes da 45-E, os achados da revisão do PR #76 (45-A parte
   2), que só foi revisado depois do merge — mesmo caminho de gravação.
-- **Trilha 2:** a 43-B vem antes da 45-K porque está no caminho do "testar o
-  que li" (43-C), o passo do ciclo que ainda não existe.
+- **Trilha 2:** a 44-C1 vem logo depois da 43-A porque a produção de conteúdo
+  começou em paralelo (D-5) e cada arquivo do Gemini precisa ser checado antes
+  de importar; é pequena e não depende de nada. A 43-B vem antes da 45-K
+  porque está no caminho do "testar o que li" (43-C), o passo do ciclo que
+  ainda não existe.
 - **45-H é transversal por natureza** (banco, simulado, referências, repetição
   espaçada): a trilha 3 a divide em PRs pequenos e não reorganiza código das
   outras áreas.
@@ -307,13 +314,15 @@ Notas de ordem:
 
 Cada uma bloqueia unidades. A diretoria recomenda; o dono decide. Resolvida,
 vira entrada em `DECISIONS.md` e sai daqui. A numeração continua (a próxima é
-D-5).
+D-6).
 
 **Nenhuma em aberto.** D-1 (editar material publicado → rascunho à parte), D-2
 (leitura offline → não, por ora) e D-3 (46-A em duas janelas) foram decididas
 pelo dono em 23/09, todas conforme a recomendação; estão na seção 3 e em
 `DECISIONS.md`. D-4 (o CI confere se a migration está no remoto antes do
 merge, com credencial só de leitura) foi levantada e decidida em 24/09 → 46-E.
+D-5 (conteúdo em paralelo, com o Gemini como redator) foi decidida pelo dono em
+24/09 → seção 12 e 44-C1.
 
 ---
 
@@ -579,7 +588,61 @@ editar o `.md` dentro da plataforma.
 
 ---
 
-### 44-C — Versão do padrão e conformidade
+A antiga 44-C (versão do padrão e conformidade) foi dividida em 24/09 (D-5):
+a checagem sobre o arquivo (44-C1) veio para a frente; o que depende da 44-B
+ficou na 44-C2.
+
+### 44-C1 — Checagem do padrão sobre o arquivo, antes de importar
+
+**Origem.** D-5 (24/09): a produção de conteúdo começou em paralelo, com o
+Gemini como redator. Primeira metade da antiga 44-C.
+
+**Por quê.** Cada material chega de uma IA de fora e só uma pessoa atesta. Os
+erros mecânicos do padrão não deveriam gastar a atenção de quem revisa, e hoje
+nada os aponta antes da importação: o rascunho de IA dos β-lactâmicos tem 30
+trechos em LaTeX, 3 citações com link quebrado, nenhuma linha de versão do
+padrão — tudo aceito em silêncio ou visível só na tela depois de importado.
+
+**Aceite — quem produz vê:**
+- Com um comando sobre um arquivo `.md`, sem login nem Supabase, a lista de
+  pendências do arquivo contra o padrão, cada uma com a seção e a linha onde
+  está e o que corrigir. Arquivo sem pendências aparece como **"Conforme"**.
+  Passando uma pasta, uma linha de resultado por arquivo.
+- As pendências cobrem as regras mecânicas do padrão: citação sem link ou
+  malformada (`[N]` solto, `(#ref-N]`); citação para referência inexistente;
+  referência nunca citada; tabela sem frase de abertura citada; LaTeX;
+  `<=`/`>=`; lista dentro de lista; subtítulo dentro de seção que não seja
+  `####`; texto entre os metadados e a primeira seção (a importação
+  descarta); mais de um bloco de Pontos-Chave, Pérola ou Alerta na mesma
+  seção (a importação guarda só um); linha de versão do padrão ausente; tempo
+  fora de 8–25 minutos; sem palavras-chave; título com numeração; texto que
+  remete a outro material ("veja o material", "próximo módulo").
+- Um arquivo que a importação recusaria aparece como erro, com a mesma
+  mensagem que a importação daria.
+- O jeito de rodar fica no RUNBOOK e na seção 12 deste plano — não no padrão,
+  que é autocontido (AGENTS.md, risco 19).
+
+**Restrições.**
+- A checagem lê o arquivo pelo mesmo caminho da importação de material: o que
+  ela aprova a importação aceita, e o que a importação recusa ela aponta.
+  Conferir o importador e o leitor antes de escrever cada regra (AGENTS.md,
+  risco 19).
+- Uma lista só de regras, escrita para ser reusada pela 44-C2 sobre o conteúdo
+  guardado — a 44-C2 não reescreve regra.
+- Pendência orienta, não bloqueia nada. Não corrige o arquivo.
+- Regras de julgamento (profundidade, o que cabe em cada nível) não viram
+  checagem; ficam no checklist do padrão e na revisão.
+- Cada regra com um teste que passa e um que falha; o exemplo do bloco de
+  formato do padrão (seção 1.7) passa sem pendência.
+- Aceite comprovado também sobre um arquivo real feito por IA, fornecido pelo
+  dono, não só sobre os exemplos dos testes.
+
+**Fora de escopo.** Selo, filtros e versão na Área Editorial (44-C2);
+correção automática; nota de qualidade; checagem por IA.
+**Depende de.** Nada.
+**Estado.** Pronta.
+
+### 44-C2 — Versão do padrão e conformidade na Área Editorial
 
 **Por quê.** Saber, a qualquer momento, quais materiais estão atrás do padrão
 e o que falta em cada um — sem reler tudo. Quando o padrão ganhar uma regra
@@ -591,30 +654,24 @@ nova, ver na hora quais materiais ela afeta.
   linha desde a v2); material sem a linha aparece como "sem versão".
   Ajustável na revisão.
 - No cartão do material, um selo **"Conforme"** ou **"N pendências"**, com a
-  lista ao clicar. As pendências vêm de checagens automáticas sobre o
-  conteúdo guardado — as regras mecânicas do padrão: citação sem link;
-  citação para referência inexistente; referência nunca citada; tabela sem
-  frase de abertura citada; LaTeX; `<=`/`>=`; lista dentro de lista;
-  subtítulo que não seja `####`; tempo fora de 8–25 minutos; sem
-  palavras-chave; texto que remete a outro material ("veja o material",
-  "próximo módulo").
+  lista ao clicar. As pendências são as regras da 44-C1, aplicadas ao conteúdo
+  guardado.
 - Filtros na Área Editorial: **"Com pendências"** e **"Em versão antiga do
   padrão"**.
 - A mesma lista de checagens roda na prévia da importação e da atualização por
-  arquivo — uma lista só de regras.
+  arquivo.
 
 **Restrições.**
+- Reusa as regras da 44-C1; nenhuma regra é reescrita.
 - A checagem é calculada, não gravada: regra nova vale na hora para todos, sem
   mudar conteúdo nem hash de atestação.
 - Pendência orienta, não bloqueia publicação — o gate continua sendo a
   atestação.
-- Regras de julgamento (profundidade, o que cabe em cada nível) não viram
-  checagem; ficam no checklist do padrão e na revisão.
 - Daqui em diante, toda regra mecânica nova no padrão vem com a checagem no
   mesmo PR (AGENTS.md, risco 19).
 
 **Fora de escopo.** Correção automática; nota de qualidade; checagem por IA.
-**Depende de.** 44-B.
+**Depende de.** 44-B e 44-C1.
 **Estado.** Planejada.
 
 ---
@@ -1161,13 +1218,37 @@ continua disponível como rotina no RUNBOOK.
 
 ## 12. Produção editorial
 
-Conteúdo não é unidade de implementação, mas depende do que é construído e
-dita prioridades.
+Conteúdo não é unidade de implementação: é uma frente paralela à do sistema,
+operada pelo dono do produto, com o Gemini como redator (D-5, 24/09). Depende
+do que é construído e dita prioridades.
+
+**Fluxo de cada material:**
+1. **Escrever** — o Gemini recebe o padrão de conteúdos, as fontes e o bloco
+   do material (no plano editorial do ramo) e entrega um `.md`.
+2. **Checar o formato** — a checagem do padrão sobre o arquivo (44-C1). Até
+   ela existir, o checklist da seção 1.9 do padrão.
+3. **Revisão cruzada** — outro modelo (Claude), sem editar o arquivo: fato
+   contra referência, referência que existe, escopo do nível. Os achados
+   voltam ao Gemini, que entrega o arquivo corrigido.
+4. **Importar, atestar e publicar** — o dono, na plataforma, de cima para
+   baixo na árvore. A atestação humana continua o único portão.
+
+**Regras da frente:**
+- O Gemini não opera no repositório. A interface é o padrão e o arquivo: se o
+  importador ou o leitor mudar, o padrão muda no mesmo PR (AGENTS.md, risco
+  19) e o dono atualiza a cópia do padrão que o Gemini usa.
+- Pedidos, rascunhos e fontes ficam em `docs/conteúdos/`, ignorada pelo git:
+  o repositório é público e fontes de livro-texto têm direito autoral. O que
+  vale é a plataforma; a lista do que produzir é o plano editorial do ramo.
+- No máximo uma leva produzida à frente da revisão — o gargalo é a atestação,
+  não a escrita.
+- Questões depois dos materiais; ligadas a vários materiais quando a 43-B
+  existir.
 
 | Frente editorial | Plano | Estado | Se beneficia de |
 |---|---|---|---|
-| Antimicrobianos (piloto dos β-lactâmicos) | [`docs/editorial/PLANO-ANTIMICROBIANOS.md`](../editorial/PLANO-ANTIMICROBIANOS.md) | Plano pronto; 7 materiais do piloto a produzir, de cima para baixo | 43-A (pai define disciplina), 43-B (questões ligadas), 44-B (dividir o rascunho antigo), 44-A (aparecer em Infectologia) |
-| Equilíbrio Ácido-Base (Nefrologia, tema Distúrbio Acidobásico) | Material pronto e auditado em 18/09, no formato anterior ao padrão v2 (`docs/editorial/as1/`) | Na fila, sem prazo — não importado; trazer ao padrão vigente antes de publicar | 44-B e 44-C (trazer ao padrão e conferir) |
+| Antimicrobianos (piloto dos β-lactâmicos) | [`docs/editorial/PLANO-ANTIMICROBIANOS.md`](../editorial/PLANO-ANTIMICROBIANOS.md) | Em produção desde 24/09 — primeira leva (7 materiais), de cima para baixo | 44-C1 (checar cada arquivo), 43-A (pai define disciplina), 43-B (questões ligadas), 44-B (dividir o rascunho antigo), 44-A (aparecer em Infectologia) |
+| Equilíbrio Ácido-Base (Nefrologia, tema Distúrbio Acidobásico) | Material pronto e auditado em 18/09, no formato anterior ao padrão v2 (`docs/editorial/as1/`) | Na fila, sem prazo — não importado; trazer ao padrão vigente antes de publicar | 44-C1 (conferir o arquivo) e 44-B (atualizar por arquivo) |
 
 Temas futuros e acervos a migrar: `docs/editorial/BANCO-EDITORIAL-TEMAS-FUTUROS.md`
 e `docs/diretoria/AUDITORIA-BASE-DE-ESTUDOS-2026-09-21.md`.
@@ -1190,7 +1271,8 @@ trilhas paralelas não conflitam aqui. "Publicado" significa em produção
 | 43-E | Planejada | — | — |
 | 44-A | Planejada | — | — |
 | 44-B | Planejada | — | — |
-| 44-C | Planejada | — | — |
+| 44-C1 | Pronta (trilha 2, depois da 43-A) | — | — |
+| 44-C2 | Planejada (antes 44-C) | — | — |
 | 45-A | Concluída (revisão do #76 pendente, depois do merge) | #74, #76 | 24/09 (migration da parte 2 aplicada depois do merge — INC-2026-004) |
 | 45-B | Concluída | #71 | 24/09 |
 | 45-C | Concluída (item de desempenho movido para a 46-D) | #73 | 24/09 |

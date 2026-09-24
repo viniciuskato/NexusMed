@@ -181,7 +181,9 @@ seção "Armadilhas já descobertas".
     atualize o padrão no mesmo PR e rode o exemplo do bloco de formato pelo
     importador para conferir. O padrão tem versão (v2 desde 2026-09-23):
     mudança editorial sobe a versão e ganha entrada na seção 2.7; depois da
-    unidade 44-C, regra mecânica nova vem com a checagem correspondente.
+    unidade 44-C1, regra mecânica nova vem com a checagem correspondente.
+    Desde 24/09 (D-5) quem escreve é o Gemini, fora do repositório: o padrão é
+    a interface entre ele e o sistema.
 
 ## Convenções de trabalho
 
