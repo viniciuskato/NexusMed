@@ -634,7 +634,7 @@ describe('AnswersRepository.recordAnswer', () => {
     const result = await answersRepository.recordAnswer(makeAnswer({ isCorrect: true }));
 
     expect(Date.now() - started).toBeLessThan(5_000);
-    expect(result.status).toBe('pending');
+    expect(result.status).toBe('failed');
     expect(queue.getOps(UID)[0]).toMatchObject({ state: 'failed', lastError: { kind: 'validation' } });
   });
 
@@ -703,6 +703,33 @@ describe('FlashcardsRepository.createFlashcardFromQuestion', () => {
 
     expect(second.id).toBe(first.id);
     expect(StorageService.getFlashcards().filter((card) => card.questionOriginId === question.id)).toHaveLength(1);
+  });
+
+  it('repetir a criação remota preserva o client_op_id sem duplicar a identidade local da fila', async () => {
+    const { queue } = await setup({ configured: true });
+    queue.registerHandler('flashcard_create_from_question', async (payload) =>
+      (payload as { flashcard: Flashcard }).flashcard
+    );
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+    const question = makeQuestionForFlashcard();
+
+    const first = await flashcardsRepository.createFlashcardFromQuestion(question);
+    await vi.waitFor(() => {
+      expect(queue.getOps(UID).find((op) => op.id === first.id)?.state).toBe('synced');
+    });
+
+    const second = await flashcardsRepository.createFlashcardFromQuestion(question);
+    await vi.waitFor(() => {
+      const matching = queue.getOps(UID).filter((op) => op.category === 'flashcard_create_from_question');
+      expect(matching).toHaveLength(2);
+      expect(matching.map((op) => op.state)).toEqual(['synced', 'synced']);
+    });
+
+    expect(second.id).toBe(first.id);
+    const matching = queue.getOps(UID).filter((op) => op.category === 'flashcard_create_from_question');
+    expect(new Set(matching.map((op) => op.id)).size).toBe(2);
+    expect(new Set(matching.map((op) => op.clientOpId))).toEqual(new Set([first.id]));
+    expect(matching.map((op) => op.state)).toEqual(['synced', 'synced']);
   });
 });
 

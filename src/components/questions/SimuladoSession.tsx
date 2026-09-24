@@ -117,7 +117,7 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
     totalCount: number;
     scorePercent?: number;
     timeSpentSeconds: number;
-    correctionPending: boolean;
+    correctionStatus: 'confirmed' | 'pending' | 'failed';
   } | null>(null);
   const [reviewResults, setReviewResults] = useState<Record<string, QuestionReviewResult>>({});
   // Gravação em andamento (45-A, AUD-18): desativa "Finalizar Prova" enquanto
@@ -128,6 +128,7 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
   const [finishError, setFinishError] = useState<string | null>(null);
   const correctionUnsubscribesRef = useRef<Array<() => void>>([]);
   const appliedQuestionCorrectionsRef = useRef(new Set<string>());
+  const failedQuestionCorrectionsRef = useRef(new Set<string>());
 
   useEffect(
     () => () => {
@@ -148,12 +149,13 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
   }, []);
 
   const applySimulationResult = useCallback((result: SimuladoServerResult, totalTimeSpent: number) => {
+    clearDraftAnswers(config.id);
     setSessionResults({
       correctCount: result.correctCount,
       totalCount: result.totalCount,
       scorePercent: result.score,
       timeSpentSeconds: totalTimeSpent,
-      correctionPending: false,
+      correctionStatus: 'confirmed',
     });
     if (result.score >= 70) {
       try {
@@ -162,7 +164,7 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
         // Decorativo; não interfere na confirmação do servidor.
       }
     }
-  }, []);
+  }, [config.id]);
 
   // Timer: só faz contagem regressiva se for Modo Prova; se for Modo Estudos,
   // conta tempo decorrido sem limite. O cronômetro só conta: quem finaliza a
@@ -291,8 +293,14 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
         newReviewResults[answeredQuestion.id] = submission.review;
         applyQuestionCorrection(answeredQuestion, submission.review);
       } else {
-        const unsubscribe = answersRepository.subscribeToCorrection(submission.clientOpId, (review) => {
-          applyQuestionCorrection(answeredQuestion, review);
+        const unsubscribe = answersRepository.subscribeToCorrection(submission.clientOpId, (outcome) => {
+          if (outcome.status === 'confirmed') applyQuestionCorrection(answeredQuestion, outcome.review);
+          else {
+            failedQuestionCorrectionsRef.current.add(answeredQuestion.id);
+            setSessionResults((previous) => previous
+              ? { ...previous, correctionStatus: 'failed' }
+              : previous);
+          }
         });
         correctionUnsubscribesRef.current.push(unsubscribe);
       }
@@ -310,19 +318,31 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
     };
 
     const saved = await simuladosRepository.saveSimuladoSession(sessionData);
-    clearDraftAnswers(config.id);
     setIsFinished(true);
 
     if (saved.status === 'confirmed') {
       applySimulationResult(saved.result, totalTimeSpent);
+    } else if (saved.status === 'failed') {
+      setSessionResults({
+        totalCount: questions.length,
+        timeSpentSeconds: totalTimeSpent,
+        correctionStatus: 'failed',
+      });
     } else {
       setSessionResults({
         totalCount: questions.length,
         timeSpentSeconds: totalTimeSpent,
-        correctionPending: true,
+        correctionStatus: failedQuestionCorrectionsRef.current.size > 0 ? 'failed' : 'pending',
       });
-      const unsubscribe = simuladosRepository.subscribeToResult(saved.clientOpId, (result) => {
-        applySimulationResult(result, totalTimeSpent);
+      const unsubscribe = simuladosRepository.subscribeToResult(saved.clientOpId, (outcome) => {
+        if (outcome.status === 'confirmed') applySimulationResult(outcome.result, totalTimeSpent);
+        else {
+          setSessionResults({
+            totalCount: questions.length,
+            timeSpentSeconds: totalTimeSpent,
+            correctionStatus: 'failed',
+          });
+        }
       });
       correctionUnsubscribesRef.current.push(unsubscribe);
     }
@@ -511,10 +531,17 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
               </div>
 
               <div className="text-center py-2">
-                {sessionResults.correctionPending ? (
+                {sessionResults.correctionStatus === 'pending' ? (
                   <div role="status" className="space-y-1">
                     <span className="text-lg font-extrabold text-amber-300">Correção pendente</span>
                     <p className="text-xs text-slate-300">A nota aparecerá quando o servidor confirmar as respostas.</p>
+                  </div>
+                ) : sessionResults.correctionStatus === 'failed' ? (
+                  <div role="alert" className="space-y-1">
+                    <span className="text-lg font-extrabold text-rose-300">Falha na correção</span>
+                    <p className="text-xs text-slate-300">
+                      Suas respostas continuam guardadas. Use “Tentar novamente” no indicador de sincronização.
+                    </p>
                   </div>
                 ) : (
                   <>
@@ -530,9 +557,11 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
 
               <div className="pt-3 border-t border-white/10 space-y-2 text-xs">
                 <p className="text-slate-300">
-                  {sessionResults.correctionPending
+                  {sessionResults.correctionStatus === 'pending'
                     ? 'Nenhuma resposta será tratada como erro antes da confirmação.'
-                    : <>Todas as questões erradas foram enviadas para o seu <strong>Caderno de Erros</strong> e ganharam flashcards recomendados para revisão espaçada.</>}
+                    : sessionResults.correctionStatus === 'failed'
+                      ? 'A nota não será exibida até o servidor confirmar todas as tentativas.'
+                      : <>Todas as questões erradas foram enviadas para o seu <strong>Caderno de Erros</strong> e ganharam flashcards recomendados para revisão espaçada.</>}
                 </p>
                 <button
                   onClick={onFinishSession}

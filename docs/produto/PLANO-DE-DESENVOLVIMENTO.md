@@ -695,7 +695,14 @@ obsoleta; ela fica preservada até o merge desta parte 2 e pode ser removida
 depois. *(Diretoria, 24/09: removida; três correções menores que só existiam
 nela foram para a 45-G e a 45-H — `DECISIONS.md`, 24/09. A migration da parte 2
 foi aplicada no remoto cerca de 10 minutos depois do merge — INC-2026-004.)*
+Revisão do #76, feita depois do merge, gerou quatro correções: falha
+definitiva ao gravar resposta ou simulado aparece como falha, nunca como
+"correção pendente" eterna; o rascunho do simulado só é apagado depois da nota
+confirmada; revisão de flashcard feita offline num card que a reconciliação
+removeu sobe para o card mantido (migration); reenviar uma operação já
+sincronizada não trava mais na fila.
 **Estado.** Parte 1 concluída — PR #74. Parte 2 concluída — PR #76.
+Correções da revisão — PR #81.
 
 ---
 

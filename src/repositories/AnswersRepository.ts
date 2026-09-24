@@ -3,6 +3,7 @@ import { StorageService, getStorageUser } from '../services/storage';
 import { SupabaseAnswersRepository } from './SupabaseAnswersRepository';
 import { mapQuestionReviewPayload } from './questionReviewMapper';
 import { enqueueAndTryTracked, getOps, subscribe } from '../services/syncQueue';
+import type { SyncErrorKind } from '../services/syncQueue';
 import { QuestionAttemptOpPayload } from '../services/syncHandlers';
 
 import { isSupabaseConfigured } from '../lib/supabaseClient';
@@ -10,12 +11,17 @@ import { isSupabaseConfigured } from '../lib/supabaseClient';
 export interface AnswersRepository {
   getAnswers(): Promise<Record<string, QuestionAnswerRecord>>;
   recordAnswer(record: QuestionAnswerRecord): Promise<QuestionAnswerSubmission>;
-  subscribeToCorrection(clientOpId: string, listener: (review: QuestionReviewResult) => void): () => void;
+  subscribeToCorrection(clientOpId: string, listener: (outcome: QuestionCorrectionOutcome) => void): () => void;
 }
+
+export type QuestionCorrectionOutcome =
+  | { status: 'confirmed'; review: QuestionReviewResult }
+  | { status: 'failed'; errorKind: SyncErrorKind };
 
 export type QuestionAnswerSubmission =
   | { status: 'confirmed'; review: QuestionReviewResult; clientOpId?: string; serverClientOpId?: string }
-  | { status: 'pending'; clientOpId: string; serverClientOpId?: string };
+  | { status: 'pending'; clientOpId: string; serverClientOpId?: string }
+  | { status: 'failed'; clientOpId: string; serverClientOpId?: string; errorKind: SyncErrorKind };
 
 class LocalStorageAnswersRepository implements AnswersRepository {
   async getAnswers(): Promise<Record<string, QuestionAnswerRecord>> {
@@ -88,6 +94,14 @@ class ResilientAnswersRepository implements AnswersRepository {
           review: mapQuestionReviewPayload(result as Parameters<typeof mapQuestionReviewPayload>[0]),
         };
       }
+      if (op.state === 'failed') {
+        return {
+          status: 'failed',
+          clientOpId: op.id,
+          serverClientOpId: op.clientOpId,
+          errorKind: op.lastError?.kind ?? 'unknown',
+        };
+      }
       // A fila já persistiu payload + client_op_id. Não gravamos um
       // `isCorrect=false` provisório no cache: isso contaminava estatísticas,
       // caderno de erros e flashcards antes de existir correção do servidor.
@@ -96,16 +110,27 @@ class ResilientAnswersRepository implements AnswersRepository {
     return this.local.recordAnswer(record);
   }
 
-  subscribeToCorrection(clientOpId: string, listener: (review: QuestionReviewResult) => void): () => void {
+  subscribeToCorrection(clientOpId: string, listener: (outcome: QuestionCorrectionOutcome) => void): () => void {
     const userId = getStorageUser();
     if (!userId) return () => undefined;
     let delivered = false;
     const deliverIfReady = () => {
       if (delivered) return;
       const op = getOps(userId).find((candidate) => candidate.id === clientOpId);
-      if (op?.state !== 'synced' || !op.result) return;
-      delivered = true;
-      listener(mapQuestionReviewPayload(op.result as Parameters<typeof mapQuestionReviewPayload>[0]));
+      if (op?.state === 'synced') {
+        delivered = true;
+        if (op.result) {
+          listener({
+            status: 'confirmed',
+            review: mapQuestionReviewPayload(op.result as Parameters<typeof mapQuestionReviewPayload>[0]),
+          });
+        } else {
+          listener({ status: 'failed', errorKind: 'unknown' });
+        }
+      } else if (op?.state === 'failed') {
+        delivered = true;
+        listener({ status: 'failed', errorKind: op.lastError?.kind ?? 'unknown' });
+      }
     };
     const unsubscribe = subscribe(userId, deliverIfReady);
     deliverIfReady();

@@ -33,6 +33,10 @@ vi.mock('../../src/repositories/SimuladosRepository', () => ({
   },
 }));
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }));
+vi.mock('../../src/services/storage', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/services/storage')>();
+  return { ...actual, getStorageUser: () => 'user-test' };
+});
 // O cartão da questão não entra neste teste: a seleção é feita pelo atalho de
 // teclado, que é tratado pelo próprio simulado.
 vi.mock('../../src/components/questions/QuestionCard', () => ({
@@ -211,5 +215,46 @@ describe('45-A — "Finalizar Prova" grava uma vez só', () => {
     expect(screen.queryByText('0%')).toBeNull();
     expect(subscribeToCorrectionMock).toHaveBeenCalledWith('answer-pending', expect.any(Function));
     expect(subscribeToResultMock).toHaveBeenCalledWith('simulation-pending', expect.any(Function));
+  });
+
+  it('falha definitiva do simulado é informada como falha e preserva o rascunho', async () => {
+    recordAnswerMock.mockResolvedValue(confirmed(true));
+    saveSimuladoSessionMock.mockResolvedValue({
+      status: 'failed',
+      clientOpId: 'simulation-failed',
+      errorKind: 'validation',
+    });
+    renderSession(config({ timeLimitMinutes: 30 }));
+    fireEvent.keyDown(window, { key: 'A' });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Finalizar Prova/ }));
+    });
+
+    expect(screen.getByText(/falha na correção/i)).toBeTruthy();
+    expect(screen.queryByText(/correção pendente/i)).toBeNull();
+    expect(localStorage.getItem('synapse_user-test_simulado_draft_sim-teste')).toContain('"q1":"A"');
+    expect(subscribeToResultMock).not.toHaveBeenCalled();
+  });
+
+  it('resultado pendente que termina em falha troca o estado visível sem apagar o rascunho', async () => {
+    let onResult!: (outcome: { status: 'failed'; errorKind: 'schema' }) => void;
+    recordAnswerMock.mockResolvedValue(confirmed(true));
+    saveSimuladoSessionMock.mockResolvedValue({ status: 'pending', clientOpId: 'simulation-pending-failed' });
+    subscribeToResultMock.mockImplementation((_opId: string, callback: typeof onResult) => {
+      onResult = callback;
+      return vi.fn();
+    });
+    renderSession(config({ timeLimitMinutes: 30 }));
+    fireEvent.keyDown(window, { key: 'A' });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Finalizar Prova/ }));
+    });
+    expect(screen.getByText(/correção pendente/i)).toBeTruthy();
+
+    await act(async () => onResult({ status: 'failed', errorKind: 'schema' }));
+
+    expect(screen.getByText(/falha na correção/i)).toBeTruthy();
+    expect(localStorage.getItem('synapse_user-test_simulado_draft_sim-teste')).toContain('"q1":"A"');
   });
 });
