@@ -660,8 +660,7 @@ novo) feita só no simulado, sem migration. Parte 2: clique duplo em
 antiga de flashcards foi reaproveitada conceitualmente, sem integrar a branch
 obsoleta; ela fica preservada até o merge desta parte 2 e pode ser removida
 depois.
-**Estado.** Parte 1 concluída — PR #74. Parte 2 pronta, depois da decisão
-sobre a correção antiga de duplicação de flashcard (TASKS).
+**Estado.** Parte 1 concluída — PR #74. Parte 2 concluída — PR #76.
 
 ---
 
