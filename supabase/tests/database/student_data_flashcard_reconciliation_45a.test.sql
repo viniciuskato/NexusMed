@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(21);
+select plan(24);
 select tests.clear_auth();
 
 select tests.create_user('u45a.reconcile@test.local', 'student', 'active') as v_user \gset
@@ -172,6 +172,36 @@ select is(
   0,
   'nenhuma revisão permanece ligada aos duplicados'
 );
+
+-- Uma revisão feita offline antes da migration ainda carrega o id do card
+-- removido. O replay posterior precisa usar o mapa privado do backup para
+-- atingir o card canônico, sem perder a ação do estudante.
+select id as v_retired_card_id
+from u45a_duplicate_cards
+where position = 9 \gset
+select id as v_kept_card_id
+from u45a_duplicate_cards
+where position = 3 \gset
+select gen_random_uuid() as v_offline_review_op \gset
+select tests.authenticate_as(:'v_user');
+select lives_ok(
+  format(
+    $$ select public.submit_flashcard_review(%L, 4, %L) $$,
+    :'v_retired_card_id', :'v_offline_review_op'
+  ),
+  'revisão offline do id removido converge depois da reconciliação'
+);
+select is(
+  (select count(*)::int from public.flashcard_reviews where client_op_id = :'v_offline_review_op'),
+  1,
+  'replay offline grava a revisão exatamente uma vez'
+);
+select is(
+  (select flashcard_id from public.flashcard_reviews where client_op_id = :'v_offline_review_op'),
+  :'v_kept_card_id'::uuid,
+  'replay offline aponta para o card canônico mantido'
+);
+select tests.clear_auth();
 
 select is(
   (select count(*)::int from public.notes n

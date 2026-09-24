@@ -3,12 +3,13 @@ import { StorageService, getStorageUser } from '../services/storage';
 import { SupabaseSimuladosRepository } from './SupabaseSimuladosRepository';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { enqueueAndTryTracked, getOps, subscribe } from '../services/syncQueue';
+import type { SyncErrorKind } from '../services/syncQueue';
 import { SimuladoSaveOpPayload } from '../services/syncHandlers';
 
 export interface SimuladosRepository {
   getSimulados(): Promise<SimuladoSessionData[]>;
   saveSimuladoSession(session: SimuladoSessionData): Promise<SimuladoSaveOutcome>;
-  subscribeToResult(clientOpId: string, listener: (result: SimuladoServerResult) => void): () => void;
+  subscribeToResult(clientOpId: string, listener: (outcome: SimuladoTerminalOutcome) => void): () => void;
   getSimuladoHistory(): Promise<SimuladoSessionData[]>;
 }
 
@@ -20,7 +21,12 @@ export interface SimuladoServerResult {
 
 export type SimuladoSaveOutcome =
   | { status: 'confirmed'; result: SimuladoServerResult; clientOpId?: string }
-  | { status: 'pending'; clientOpId: string };
+  | { status: 'pending'; clientOpId: string }
+  | { status: 'failed'; clientOpId: string; errorKind: SyncErrorKind };
+
+export type SimuladoTerminalOutcome =
+  | { status: 'confirmed'; result: SimuladoServerResult }
+  | { status: 'failed'; errorKind: SyncErrorKind };
 
 class LocalStorageSimuladosRepository implements SimuladosRepository {
   async getSimulados(): Promise<SimuladoSessionData[]> {
@@ -76,21 +82,29 @@ class ResilientSimuladosRepository implements SimuladosRepository {
       if (result) {
         return { status: 'confirmed', clientOpId: op.id, result: result as SimuladoServerResult };
       }
+      if (op.state === 'failed') {
+        return { status: 'failed', clientOpId: op.id, errorKind: op.lastError?.kind ?? 'unknown' };
+      }
       return { status: 'pending', clientOpId: op.id };
     }
     return this.local.saveSimuladoSession(session);
   }
 
-  subscribeToResult(clientOpId: string, listener: (result: SimuladoServerResult) => void): () => void {
+  subscribeToResult(clientOpId: string, listener: (outcome: SimuladoTerminalOutcome) => void): () => void {
     const userId = getStorageUser();
     if (!userId) return () => undefined;
     let delivered = false;
     const deliverIfReady = () => {
       if (delivered) return;
       const op = getOps(userId).find((candidate) => candidate.id === clientOpId);
-      if (op?.state !== 'synced' || !op.result) return;
-      delivered = true;
-      listener(op.result as SimuladoServerResult);
+      if (op?.state === 'synced') {
+        delivered = true;
+        if (op.result) listener({ status: 'confirmed', result: op.result as SimuladoServerResult });
+        else listener({ status: 'failed', errorKind: 'unknown' });
+      } else if (op?.state === 'failed') {
+        delivered = true;
+        listener({ status: 'failed', errorKind: op.lastError?.kind ?? 'unknown' });
+      }
     };
     const unsubscribe = subscribe(userId, deliverIfReady);
     deliverIfReady();
