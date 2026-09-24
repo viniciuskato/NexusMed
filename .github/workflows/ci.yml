@@ -1,12 +1,18 @@
 name: CI
 
-# Gate rápido (fast): roda em todo push e todo PR — typecheck, lint, unit,
-# build. Gate completo (full): também roda em todo push/PR (não só antes de
-# merge, já que hoje não há PR obrigatório — ver AGENTS.md "Convenções de
-# trabalho": commits vão direto pra `main`) — sobe Supabase local de verdade
-# (Docker, serviço já presente nos runners `ubuntu-latest`) e roda pgTAP +
-# Playwright contra ele. Nenhum dos dois jobs toca Supabase remoto ou
-# produção — não há segredos de produção neste workflow.
+# Gate rápido (fast): typecheck, lint, unit, build. Gate completo (full): sobe
+# Supabase local de verdade (Docker, serviço já presente nos runners
+# `ubuntu-latest`) e roda pgTAP + Playwright contra ele. Nenhum dos dois jobs
+# toca Supabase remoto ou produção — não há segredos de produção neste
+# workflow.
+#
+# Quando roda: em todo PR (é o que o ruleset do `main` exige), no push do
+# `main` (confere o que foi mesclado) e à mão (`workflow_dispatch`, para uma
+# branch sem PR). NÃO roda no push de outras branches: com PR aberto, cada
+# push disparava o CI duas vezes — pelo push e pelo PR, com `github.ref`
+# diferentes, então o `concurrency` abaixo não cancelava uma pela outra —,
+# dobrando o tempo e os downloads de imagem que batem no limite do registro
+# (uma das duas execuções do PR #69 caiu assim, em 2026-09-23).
 #
 # Segurança: `pull_request` (nunca `pull_request_target`) — roda com o código
 # do PR, mas SEM acesso a segredos de repositório (não há nenhum `secrets.*`
@@ -19,9 +25,10 @@ name: CI
 # Dependabot (`.github/dependabot.yml`) propõe as atualizações por PR.
 on:
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
     branches: ['**']
+  workflow_dispatch:
 
 permissions:
   contents: read

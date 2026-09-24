@@ -9,7 +9,7 @@ documentos por iniciativa.
 
 Como ler, conforme o que você procura:
 - **Entender o plano:** seções 1 a 4.
-- **O que vem agora:** seção 5 (sequência) e seção 6 (decisões em aberto).
+- **O que vem agora:** seção 5 (trilhas e ordem) e seção 6 (decisões em aberto).
 - **O detalhe de uma unidade:** seções 7 a 11, uma por frente.
 - **O que já foi feito:** seção 13 (registro).
 
@@ -54,22 +54,30 @@ branch nem passo a passo.
 
 | Quem | Quando | O que muda aqui |
 |---|---|---|
-| **Sessão de diretoria** | Ao planejar | Cria, corrige ou descarta unidades; muda a sequência (seção 5); registra e resolve decisões em aberto (seção 6); atualiza "Onde o sistema está" (seção 2). Toda decisão durável também vai para `docs/operacao/DECISIONS.md`. |
-| **Sessão de execução** | **No mesmo PR da implementação** | O estado da unidade, a linha dela no registro (seção 13) e uma linha **"Achados da execução"** na unidade, quando a execução revelar algo que a diretoria precisa saber. Não reescreve o aceite nem a sequência: se o aceite estiver errado, para e reporta (`EXECUTOR_PROTOCOL.md`). |
-| **Dono do produto** | Quando quiser | Lê, aprova decisões (seção 6) e faz as pendências que só ele pode fazer (seção 11). |
+| **Sessão de diretoria** | Sob demanda: decisão de produto, frente nova, depois de uma leva de merges | Cria, corrige ou descarta unidades; muda trilhas e ordem (seção 5); registra e resolve decisões em aberto (seção 6); atualiza "Onde o sistema está" (seção 2) e o registro (seção 13), em lote. Toda decisão durável também vai para `docs/operacao/DECISIONS.md`. |
+| **Trilha (execução)** | **No mesmo PR da unidade** | Só a linha "Estado" da unidade (`Concluída — PR #nn`) e, se for o caso, uma linha **"Achados da execução"**. Não reescreve aceite, ordem nem outras unidades: se o aceite estiver errado, pergunta ao dono (`EXECUTOR_PROTOCOL.md`). |
+| **Revisão** | Antes do merge, em sessão nova | Nada aqui — comenta o PR. |
+| **Dono do produto** | Quando quiser | Lê, decide (seção 6), aplica migration no remoto, mescla e faz as pendências que só ele pode fazer (seção 11). |
 
-Depois do merge, a sessão de diretoria confere o registro e atualiza a
-sequência se algo mudou.
+### Como trabalhar uma unidade
 
-### Como encaminhar uma unidade
+Cada unidade é feita pela trilha dona da área dela (seção 5), num PR próprio:
+a trilha implementa com testes e abre o PR → uma sessão nova revisa
+(`/code-review high <PR>`) → a trilha corrige → o dono aplica a migration,
+se houver, e mescla. Protocolo completo: `docs/operacao/EXECUTOR_PROTOCOL.md`.
 
-Uma linha:
+### Como abrir uma trilha
 
-> *Execute a unidade 43-A de `docs/produto/PLANO-DE-DESENVOLVIMENTO.md`
-> seguindo `docs/operacao/EXECUTOR_PROTOCOL.md`.*
+Uma mensagem, uma vez por trilha, numa sessão nova com o modelo mais capaz,
+em worktree próprio:
 
-Autorizações do momento (push, abrir PR, escrita no Supabase remoto) vão na
-mesma mensagem.
+> *Você é a Trilha 2 (Material e Área Editorial) do NexusMed. Leia
+> `AGENTS.md` e siga `docs/operacao/EXECUTOR_PROTOCOL.md`. Execute, uma por
+> PR e na ordem da seção 5 de `docs/produto/PLANO-DE-DESENVOLVIMENTO.md`, as
+> unidades da sua trilha. Autorizo push de branches, abrir PR e usar Docker e
+> Supabase local. Não mesclar; nenhuma escrita no Supabase remoto.*
+
+Uma unidade avulsa, fora de trilha, usa a mesma mensagem com o número dela.
 
 ### Relação com os outros documentos
 
@@ -101,6 +109,10 @@ dono do produto:
    controlando a periodicidade.
 
 Em uso real por um grupo fechado; produção de verdade, não protótipo.
+
+**Escopo:** todo o conhecimento médico, construído por partes — um ramo de
+cada vez, com um piloto (hoje, os β-lactâmicos) validando a forma antes de
+escalar. A ordem dos ramos é da produção editorial (seção 12).
 
 **Princípios** — valem para toda unidade:
 - **Simples e óbvio.** Cada passo do ciclo tem um clique claro a partir do
@@ -175,8 +187,14 @@ O porquê de cada uma está em `docs/operacao/DECISIONS.md`, na data indicada.
   vários materiais; daí saem o "testar o que li", as questões entre
   materiais e, se fizer falta, um "Veja também" calculado. *(23/09)*
 - **Busca no banco, como em base de artigos científicos.** *(23/09)*
+- **Sem leitura offline, por ora.** Sem rede, a tela diz "sem conexão";
+  responder, anotar e marcar leitura offline continuam funcionando e sobem
+  quando a rede volta. Pode voltar como unidade própria se o uso pedir.
+  *(23/09, D-2)*
 
 **Base de materiais**
+- **Cobertura: todo o conhecimento médico, por partes.** Um ramo de cada
+  vez; a ordem é da produção editorial. *(23/09)*
 - **Casa:** cada material tem uma disciplina-casa, a do ramo inteiro — o
   material mora onde o conceito é definido (fármaco em Farmacologia).
   *(23/09)*
@@ -192,11 +210,21 @@ O porquê de cada uma está em `docs/operacao/DECISIONS.md`, na data indicada.
   alcançado: posição na árvore, rótulo curto e "também aparece em" ficam
   fora. *(23/09)*
 - **"Salvar" sem mudança é no-op.** *(23/09)*
+- **Editar material publicado gera um rascunho à parte.** O estudante
+  continua lendo a versão atestada, por todos os caminhos, até a edição ser
+  atestada; aí ela entra de uma vez. O que fica fora do hash (posição,
+  ordem, rótulo curto, "também aparece em") vale na hora, sem rascunho.
+  *(23/09, D-1)*
 
 **Processo**
 - **Toda mudança entra por PR com CI verde**; merge em `main` é deploy.
   *(18/09)*
 - **Unidades com aceite, não prompts.** *(23/09)*
+- **Decomposição do componente raiz em duas janelas:** passos 1 a 4 antes
+  das telas novas do ciclo; passos 5 a 12 depois da 45-G. *(23/09, D-3)*
+- **Execução em trilhas por área do código**, com o modelo mais capaz, uma
+  unidade por PR e revisão em sessão nova antes do merge. Diretoria sob
+  demanda, não por unidade. *(23/09)*
 - **Migration vai para o Supabase remoto antes do merge**, e a produção
   continua funcionando com ela.
 
@@ -206,9 +234,9 @@ O porquê de cada uma está em `docs/operacao/DECISIONS.md`, na data indicada.
 |---|---|---|
 | **43 — Ciclo de estudo** | O estudante percorre os cinco passos com um clique cada | 43-A a 43-E |
 | **44 — Base de materiais** | O banco cresce sem duplicar nem envelhecer | 44-A a 44-C |
-| **45 — Confiabilidade** | O que o estudante faz não se perde; a atestação é sempre do item certo | 45-A a 45-J |
+| **45 — Confiabilidade** | O que o estudante faz não se perde; a atestação é sempre do item certo | 45-A a 45-K |
 | **46 — Base técnica e operação** | Código mais barato de mudar; backup e rollback | 46-A a 46-D |
-| **Pendências do dono** | O que só a conta dona do projeto consegue fazer | P-1 a P-3 |
+| **Pendências do dono** | O que só a conta dona do projeto consegue fazer | P-1 e P-2 |
 | **Produção editorial** | Conteúdo, não código — acompanhada aqui para a ordem fazer sentido | seção 12 |
 
 A numeração continua a sequência histórica de entregas (40, 41, 42…) e não
@@ -221,68 +249,58 @@ com o que muda a forma de *produzir* conteúdo (chegar tarde obriga a refazer
 material pronto); depois o que o estudante ganha de novo; a reestruturação
 interna entra numa janela própria.
 
-Dentro de uma onda, as unidades podem rodar em paralelo, em worktrees
-separados, desde que não mexam na mesma tela. Onde há conflito provável, a
-tabela diz.
+**Trilhas.** A execução corre em três trilhas paralelas, cada uma dona de uma
+área do código e num worktree próprio (`EXECUTOR_PROTOCOL.md`). Dentro da
+trilha, uma unidade por PR, na ordem da tabela; o contexto de uma unidade serve
+à próxima. Como as áreas não se sobrepõem, as trilhas não disputam os mesmos
+arquivos; as poucas dependências entre elas estão na última coluna. Com menos
+atenção disponível para acompanhar, abrir primeiro as trilhas 1 e 2 (perda de
+dado e forma de produzir conteúdo) e a 3 depois.
 
-| Onda | Unidade | Pode começar quando | Observação |
+| Trilha | Área do código | Unidades, na ordem | Espera outra trilha |
 |---|---|---|---|
-| **1 — agora** | 45-A Simulado e respostas que não se perdem | Já | Crítica |
-| | 45-B A revisão atesta o item certo | Já | Pequena; fazer antes de 43-A (mesma Área Editorial) |
-| | 45-C Leituras completas, sem corte em 1000 linhas | Já | Tem prazo |
-| | 43-A Formulário do material mais curto | Depois de 45-B | Destrava 44-A, 44-B e 43-B |
-| | 45-J Plantão de Foco sobre o menu no celular | Já | Pequena |
-| **2** | 45-D Material publicado protegido | Decisão D-1 | Define a regra que a 44-B segue |
-| | 44-B Exportar e atualizar a partir de arquivo | 43-A e 45-D | Destrava a divisão de materiais antigos |
-| | 43-D Busca como base de artigos científicos | Já (qualquer onda) | Independente |
-| | 45-F Conta e sessão | Já | Parte depende da P-1 |
-| **3** | 43-B Questão cobre um ou vários materiais | 43-A | Destrava 43-C |
-| | 44-A Casa e "também aparece em" | 43-A | |
-| | 45-E Sincronização que não perde nem reordena | 45-A | Núcleo da sincronização |
-| **4** | 46-A, passos 1 a 4 | Onda 3 concluída | Arrumação de baixo risco antes das telas novas (D-3) |
-| | 43-C "Testar o que li" | 43-B | |
-| | 44-C Versão do padrão e conformidade | 44-B | |
-| | 45-H Endurecimento do banco e do front | 45-A | |
-| | 45-I Observabilidade e privacidade | 45-E | |
-| **5** | 43-E Tela "Hoje" | 43-C | |
-| | 45-G Leitura offline coerente | Decisão D-2 | |
-| | 46-A, passos 5 a 12 | Decisão D-2 | Camada de dados e roteador |
-| **Contínuo** | 46-B Dependências | — | Dependabot já ativo |
-| | 46-C Backup e ensaio de restauração | P-2 | |
-| | 46-D Monitoramento e rollback de migration | P-1 | |
+| **1 — Dados do estudante** | Respostas, flashcards, simulados, caderno de erros, sincronização; leitura e gravação nos repositórios | 45-A e 45-C (a que o prazo da 45-C pedir primeiro — P-1; sem a medida, 45-A) → 45-E → 45-G → 45-I | — |
+| **2 — Material e Área Editorial** | Formulário, importação, gravação e revisão de material e de questão | 45-B → 43-A → 45-D → 43-B → 45-K → 44-B → 44-A → 44-C | — |
+| **3 — Descoberta e casca do app** | Busca, conta e sessão, menu, componente raiz, telas novas do ciclo | 45-J → 43-D → 45-F → 45-H → 46-A passos 1 a 4 → 43-C → 43-E | 45-H espera a 45-A (trilha 1); 43-C espera a 43-B (trilha 2) |
+
+Notas de ordem:
+- **Trilha 2:** a 43-B vem antes da 45-K porque está no caminho do "testar o
+  que li" (43-C), o passo do ciclo que ainda não existe.
+- **45-H é transversal por natureza** (banco, simulado, referências, repetição
+  espaçada): a trilha 3 a divide em PRs pequenos e não reorganiza código das
+  outras áreas.
+
+**Fora das trilhas:**
+- **Janela de reestruturação — 46-A, passos 5 a 12** (camada de dados e
+  roteador). Mexe em todas as áreas: roda quando as trilhas 1 e 3 tiverem
+  terminado suas listas, com as outras paradas ou só em PR pequeno. Depende dos
+  passos 1 a 4 e da 45-G.
+- **Contínuo:** 46-B (PRs do Dependabot — tarefa mecânica, modelo mais barato
+  serve); 46-C (espera P-2); 46-D (espera P-1; quando destravar, a trilha dona
+  de cada parte a executa).
+
+**Três regras para trilhas em paralelo:**
+- **O Supabase local é um só para todas as worktrees.** Banco de teste,
+  pgTAP e E2E são feitos um por vez, com a trava descrita em
+  `EXECUTOR_PROTOCOL.md`.
+- **A segunda a mesclar se atualiza sobre o `main`** e roda de novo todos os
+  gates antes do merge; nenhuma reorganiza arquivos fora da própria área.
+- **Migration de uma trilha pode ficar "antes" da última já aplicada no
+  remoto por outra.** O CLI do Supabase recusa aplicar migration com data
+  anterior à última do remoto. Quem aplicar depois confere a lista do remoto e,
+  se preciso, dá à sua migration uma data posterior, antes de aplicar
+  (`RUNBOOK.md`, seção 3).
 
 ## 6. Decisões em aberto
 
 Cada uma bloqueia unidades. A diretoria recomenda; o dono decide. Resolvida,
-vira entrada em `DECISIONS.md` e sai daqui.
+vira entrada em `DECISIONS.md` e sai daqui. A numeração continua (a próxima é
+D-4).
 
-**D-1 — Editar material publicado.** Hoje, editar um material publicado muda
-na hora o que o estudante lê, sem revisão, e salvar pode apagar seções com as
-anotações dos alunos nelas (AUD-22, AUD-24).
-- Opção A: para editar, despublica; o material some até ser atestado de novo.
-- Opção B: a edição fica como rascunho; o estudante continua lendo a versão
-  atestada até a nova ser atestada.
-- **Recomendação: B.** Protege o estudante sem tirar o material do ar. Custo:
-  guardar duas versões do conteúdo (conferir o que a tabela de versões de
-  seção já oferece antes de decidir o desenho). Anotações de seção removida
-  são preservadas, não apagadas.
-- Bloqueia: 45-D, e por ela a 44-B.
-
-**D-2 — Leitura offline é requisito?** Hoje a gravação offline é robusta, mas
-a leitura offline é incoerente e causa bugs mesmo online (AUD-05, AUD-29).
-- Opção A: sim — o que já foi aberto fica legível sem rede.
-- Opção B: não por enquanto — sem rede, a tela diz claramente "sem conexão";
-  a gravação offline continua.
-- **Recomendação: B.** Tira uma classe inteira de bugs e simplifica a camada
-  de dados (46-A). Pode voltar como unidade própria se o uso pedir.
-- Bloqueia: 45-G e 46-A (passos 5 a 12).
-
-**D-3 — Quando decompor o componente raiz (46-A).** São 12 PRs; fazer tudo
-antes atrasa o "testar o que li"; deixar para depois encarece cada tela nova.
-- **Recomendação:** passos 1 a 4 (rede de segurança e arrumação, baixo
-  risco) antes de 43-C e 43-E; passos 5 a 12 (camada de dados e roteador)
-  depois da D-2.
-- Já refletida na sequência; o dono pode mudar.
+**Nenhuma em aberto.** D-1 (editar material publicado → rascunho à parte), D-2
+(leitura offline → não, por ora) e D-3 (46-A em duas janelas) foram decididas
+pelo dono em 23/09, todas conforme a recomendação; estão na seção 3 e em
+`DECISIONS.md`.
 
 ---
 
@@ -422,6 +440,8 @@ palavras, sem acento, sigla.
 - RPC nova: `revoke ... from public, anon`.
 - Se a 44-A já estiver mesclada, o filtro de disciplina considera os ramos que
   aparecem naquela disciplina.
+- O estudante nunca encontra a edição pendente de um material publicado
+  (45-K) — só a versão atestada.
 - Questões e flashcards na busca global continuam como estão.
 
 **Fora de escopo.** Sinônimos em dicionário central (as palavras-chave de cada
@@ -522,7 +542,8 @@ do que já está ligado a ele (posição, questões, progresso de leitura).
 - Seções casadas pelo título mantêm as questões ligadas a elas. A prévia avisa
   quantas questões apontam para seções que vão sumir.
 - Referências de texto idêntico mantêm o vínculo com fonte curada.
-- Em material publicado, segue a regra da D-1 (implementada na 45-D). Arquivo
+- Em material publicado, a atualização vira a edição pendente da 45-K: o
+  estudante continua lendo a versão atestada até a nova ser atestada. Arquivo
   idêntico ao atual não muda nada — nem a atestação.
 - O padrão de conteúdos (Parte 2, seção 2.7) troca o passo a passo manual de
   "atualizar um material antigo" e "dividir um material grande" pelos botões
@@ -540,7 +561,7 @@ do que já está ligado a ele (posição, questões, progresso de leitura).
 
 **Fora de escopo.** Exportar em lote; histórico de versões do material;
 editar o `.md` dentro da plataforma.
-**Depende de.** 43-A e 45-D.
+**Depende de.** 43-A e 45-K.
 **Estado.** Planejada.
 
 ---
@@ -622,6 +643,10 @@ aparecer como errada e virar flashcard e caderno de erros indevidos.
   repetição.
 - Nota no servidor muda a gravação do simulado: migration no remoto antes do
   merge, com a produção funcionando nas duas versões.
+- Existe uma correção antiga, nunca mesclada, de duplicação na criação de
+  flashcards por repetição espaçada (`DECISIONS.md`, 2026-09-22; tarefa
+  aberta em `TASKS.md`). Conferir antes de desenhar o identificador estável
+  e propor ao dono o destino dela: aproveitar ou descartar com motivo.
 
 **Fora de escopo.** Fila de sincronização em geral (45-E); leitura offline
 (45-G).
@@ -652,7 +677,7 @@ atesta o item errado. A atestação humana é a garantia editorial do produto.
 **Restrições.** Teste de componente que troca de item com o painel aberto.
 **Fora de escopo.** Qualquer mudança no fluxo de revisão.
 **Depende de.** Nada.
-**Estado.** Pronta.
+**Estado.** Concluída — PR #71.
 
 ---
 
@@ -676,40 +701,52 @@ erros perde itens — sem nenhum erro na tela.
 remoto não foi conferido (P-1): tratar como 1000. Teste com mais de 1000
 linhas.
 **Depende de.** Nada.
-**Estado.** Pronta.
+**Achados da execução.** A parte 1 (leituras completas) resolve a perda de
+dado da AUD-21. A parte 2 (números calculados no servidor) é desempenho, não
+perda de dado — recomendação: mover para a 46-D. Em 22/09 a produção tinha
+836 seções de material: sem a parte 1, o acervo cortaria para todos os
+estudantes ao passar de 1000.
+**Estado.** Parte 1 concluída — PR #73. Parte 2 pendente de decisão da
+diretoria.
 
 ---
 
 ### 45-D — Material publicado protegido
 
-**Achados.** AUD-22, AUD-24.
+**Achados.** AUD-22; AUD-24 na parte da URL da referência (a outra parte,
+conteúdo publicado mudando sem revisão, é da 45-K).
 
 **Por quê.** Um clique errado apaga, sem volta, anotações, favoritos e
 progresso de todos os alunos no material, e a prova de quem o revisou. Salvar
 um material publicado apaga seções (e as anotações nelas) sem checar nada.
-Conteúdo publicado muda sem revisão. Associar uma fonte curada sem URL apaga a
-URL da referência.
+Associar uma fonte curada sem URL apaga a URL da referência.
 
 **Aceite — quem produz vê:**
 - Excluir material publicado, ou com dado de aluno, é recusado com mensagem
   clara.
 - A trilha de revisão e atestação nunca é apagada junto com o material.
-- Editar material publicado segue a D-1.
-- Anotações dos alunos nunca são apagadas por uma edição.
 - Associar referência a fonte curada sem URL mantém a URL original.
+
+**Aceite — o estudante vê:**
+- Anotações dele nunca são apagadas por uma edição. A anotação de uma seção
+  que saiu do material continua aparecendo para ele no próprio material,
+  indicada como de uma seção removida.
 
 **Restrições.**
 - Mesma lógica da guarda que já protege questões contra exclusão (conferir no
   banco).
 - As ligações de navegação e a árvore entram na lista do que não pode ser
   apagado em cascata sem querer.
-- "Salvar" sem mudança continua no-op; a D-1 decide o que a atestação cobre
-  durante a edição.
+- "Salvar" sem mudança continua no-op.
+- Até a 45-K, editar material publicado continua mudando o conteúdo na hora,
+  como hoje — esta unidade não muda isso, só garante que nada de aluno se
+  perde.
 - Migration no remoto antes do merge.
 
-**Fora de escopo.** Lixeira ou restauração de material excluído.
-**Depende de.** D-1.
-**Estado.** Planejada — aguarda D-1.
+**Fora de escopo.** Lixeira ou restauração de material excluído; a edição
+pendente de material publicado (45-K).
+**Depende de.** Nada.
+**Estado.** Pronta.
 
 ---
 
@@ -767,23 +804,38 @@ Supabase (P-1).
 
 ---
 
-### 45-G — Leitura offline coerente
+### 45-G — Sem rede, a tela avisa; com rede, o estado é o do servidor
 
-**Achados.** AUD-05, AUD-29.
+**Achados.** AUD-05, AUD-29. Implementa a D-2 (sem leitura offline, por ora).
 
 **Por quê.** A leitura vinda do servidor não preenche o cache local; offline,
 as telas leem um cache vazio ou velho. Isso já causa bug online: num aparelho
 novo, clicar na estrela preenchida para remover o favorito grava "favoritar".
+A D-2 decidiu não sustentar leitura offline: sem rede, a tela avisa.
 
 **Aceite — o estudante vê:**
 - Favoritar e marcar leitura fazem exatamente o que a tela mostra, em
-  qualquer aparelho.
-- Sem rede: conforme a D-2 — ou o que já foi aberto fica legível (opção A), ou
-  a tela diz claramente "sem conexão" (opção B). Nunca uma tela vazia ou
-  desatualizada sem aviso.
+  qualquer aparelho, inclusive num aparelho novo.
+- Sem rede, a tela que precisa buscar dado diz claramente **"sem conexão"** e
+  carrega sozinha quando a rede volta. Nunca uma tela vazia ou desatualizada
+  sem aviso.
+- O que já estava na tela quando a rede caiu continua ali (o material aberto
+  não some no meio da leitura).
+- Responder, anotar, favoritar e marcar leitura sem rede continuam funcionando
+  e sobem quando a rede volta, como hoje.
 
-**Depende de.** D-2. A correção do favorito pode sair antes, sozinha.
-**Estado.** Planejada — aguarda D-2.
+**Restrições e armadilhas conhecidas.**
+- A leitura deixa de cair numa cópia local quando o servidor falha; é isso que
+  simplifica a camada de dados da 46-A (passos 5 a 12).
+- A fila de gravação offline fica exatamente como está (é da 45-E). Ao limpar
+  as cópias locais de leitura nos aparelhos dos alunos, nunca tocar nas
+  gravações pendentes.
+- Favoritar e marcar leitura enviam o estado desejado, nunca "inverter" a
+  partir de cópia local (AUD-29).
+
+**Depende de.** 45-C e 45-E (mesmos repositórios). A correção do favorito pode
+sair antes, sozinha.
+**Estado.** Planejada.
 
 ---
 
@@ -853,7 +905,66 @@ chega ao destino.
 **Aceite — o estudante vê:** em tela estreita, nenhum item do menu inferior
 fica coberto, e o widget continua acessível.
 **Depende de.** Nada.
-**Estado.** Pronta.
+**Estado.** Concluída — PR #72.
+
+---
+
+### 45-K — Editar material publicado sem mudar o que o estudante lê
+
+**Achados.** AUD-24, na parte do conteúdo publicado que muda sem revisão.
+Implementa a D-1 (23/09).
+
+**Por quê.** Hoje, salvar um material publicado muda na hora o que o
+estudante lê, sem revisão humana — contradiz a garantia central do produto.
+Despublicar para editar tiraria o material do ar durante a revisão. A decisão
+foi a edição ficar à parte até ser atestada.
+
+**Aceite — quem produz vê:**
+- Salvar com mudança de conteúdo um material publicado guarda a edição **à
+  parte**. Na Área Editorial, o material mostra "Edição pendente de atestação
+  — os alunos leem a versão atestada".
+- Reabrir o material mostra a edição pendente, que pode ser continuada,
+  enviada à revisão ou **descartada** — descartar volta ao atestado, sem
+  mudar nada.
+- A revisão mostra a edição pendente. Aprovar faz a edição entrar de uma vez:
+  o material continua publicado e atestado, sem nenhum momento em que o
+  estudante leia algo não atestado.
+- Mudança só no que fica fora do hash (posição na árvore, ordem, rótulo curto,
+  "também aparece em") vale na hora, sem edição pendente.
+- Material não publicado continua sendo editado direto, como hoje.
+
+**Aceite — o estudante vê:**
+- Enquanto há edição pendente, nada muda para ele: leitor, biblioteca, árvore
+  e busca mostram a versão atestada.
+- Quando a edição é atestada, ele passa a ver a versão nova. Anotações,
+  favoritos e progresso continuam; as de seção removida, como na 45-D.
+
+**Restrições e armadilhas conhecidas.**
+- **Nenhum caminho de leitura do estudante pode mostrar a edição pendente** —
+  leitor, biblioteca, árvore, "Aprofunde-se", busca (43-D), "também aparece
+  em" (44-A). O desenho de menor superfície é a edição pendente morar fora das
+  tabelas que o estudante lê; guardá-la nas mesmas tabelas obriga a ensinar
+  cada caminho de leitura, inclusive os que ainda vão existir, a ignorá-la.
+- Achado da diretoria (23/09): a tabela de versões de seção registra edições
+  **já gravadas** (antes e depois, só para admin); não serve para guardar
+  edição pendente. O snapshot que o revisor atesta já contém a versão
+  atestada inteira, com os ids das seções. Conferir os dois no banco antes de
+  criar tabela nova.
+- O hash atestado da edição pendente tem de ser igual ao hash do material
+  depois que ela entra. Um teste prova isso.
+- Seção que continua na edição mantém o id; anotações e progresso dependem
+  disso. O salvamento já preserva ids: manter.
+- "Salvar" sem mudança continua no-op e não cria edição pendente
+  (AGENTS.md, risco 17).
+- Migration no remoto antes do merge; a produção continua funcionando com o
+  front antigo enquanto o novo não sai.
+
+**Fora de escopo.** Comparação lado a lado entre versões; mais de uma edição
+pendente por material; histórico de versões; o mesmo mecanismo para questões
+(questão publicada já é imutável).
+**Depende de.** 45-D (mesma gravação do material; a proteção das anotações
+vem de lá).
+**Estado.** Planejada — pronta assim que a 45-D for mesclada.
 
 ---
 
@@ -878,9 +989,14 @@ nova mexe nele e aumenta o risco de regressão.
 Cada passo do plano é um PR com o próprio teste; o plano diz quais.
 
 **Restrições.** O plano foi escrito em 18/09: reconferir cada passo contra o
-código atual (a árvore de materiais e a importação mudaram desde então). Os
-passos 5 em diante dependem da D-2.
-**Depende de.** Passos 1–4: onda 3 concluída. Passos 5–12: D-2.
+código atual (a árvore de materiais e a importação mudaram desde então).
+- **O plano de 18/09 presume leitura offline, e a D-2 decidiu o contrário.**
+  O passo 5 prevê que, sem rede, a leitura "resolve do local sem pausar", e
+  traz um teste disso. Com a D-2 e a 45-G, sem rede a leitura sinaliza "sem
+  conexão"; só a fila de gravação offline continua. Ajustar o passo 5 e o
+  teste dele antes de executar.
+**Depende de.** Passos 1–4: na trilha 3, antes da 43-C. Passos 5–12: passos
+1–4 e 45-G, na janela própria da seção 5.
 **Estado.** Planejada — nenhum dos 12 passos executado (conferido em 23/09).
 
 ---
@@ -942,20 +1058,26 @@ a 4):
 - cadastro aberto ou fechado; exigência de confirmação de e-mail;
 - URLs de retorno liberadas — incluir a da tela de senha nova (45-F);
 - limite de linhas da API (45-C);
+- quantas tentativas, revisões de flashcard e itens de caderno de erros o
+  aluno mais ativo já tem, e quantas tentativas fez nos últimos 7 dias — mede
+  o prazo real da 45-C (uma sessão de IA não lê dado de produção);
 - se o login com Google usa PKCE;
 - limites do plano (conexões, tráfego, limite de login);
 - se as migrations do remoto batem com as do repositório.
 
-Destrava: 45-C (confirmação do limite), 45-F (senha nova em produção), 46-D.
+Destrava: 45-C (confirmação do limite e do prazo), 45-F (senha nova em
+produção), 46-D.
 
 **P-2 — Autorizar o backup** (AUD-13): confirmar o plano do Supabase e criar,
 no GitHub, o segredo com a conexão do banco usada pela rotina de backup.
 Destrava: 46-C.
 
-**P-3 — Pendências de 18/09** (AUD-16): importar o material de Distúrbio
-Acidobásico como rascunho, fazer o teste autenticado da Área Editorial e a
-primeira leitura das métricas semanais. Eram para antes da prova de 21/09 —
-**confirmar se ainda fazem sentido** ou descartar.
+*A P-3 (pendências de 18/09, AUD-16) saiu em 23/09.* O dono definiu que o
+NexusMed cobre todo o conhecimento médico, por partes: o material de
+Equilíbrio Ácido-Base foi para a produção editorial (seção 12), sem prazo. O
+teste autenticado da Área Editorial foi superado pelo uso real dela desde
+então (importações e árvore, PRs #57 a #62). A leitura das métricas semanais
+continua disponível como rotina no RUNBOOK.
 
 ---
 
@@ -967,6 +1089,7 @@ dita prioridades.
 | Frente editorial | Plano | Estado | Se beneficia de |
 |---|---|---|---|
 | Antimicrobianos (piloto dos β-lactâmicos) | [`docs/editorial/PLANO-ANTIMICROBIANOS.md`](../editorial/PLANO-ANTIMICROBIANOS.md) | Plano pronto; 7 materiais do piloto a produzir, de cima para baixo | 43-A (pai define disciplina), 43-B (questões ligadas), 44-B (dividir o rascunho antigo), 44-A (aparecer em Infectologia) |
+| Equilíbrio Ácido-Base (Nefrologia, tema Distúrbio Acidobásico) | Material pronto e auditado em 18/09, no formato anterior ao padrão v2 (`docs/editorial/as1/`) | Na fila, sem prazo — não importado; trazer ao padrão vigente antes de publicar | 44-B e 44-C (trazer ao padrão e conferir) |
 
 Temas futuros e acervos a migrar: `docs/editorial/BANCO-EDITORIAL-TEMAS-FUTUROS.md`
 e `docs/diretoria/AUDITORIA-BASE-DE-ESTUDOS-2026-09-21.md`.
@@ -975,9 +1098,10 @@ e `docs/diretoria/AUDITORIA-BASE-DE-ESTUDOS-2026-09-21.md`.
 
 ## 13. Registro
 
-Atualizado pela sessão de execução no mesmo PR da unidade. "Publicado"
-significa em produção (deploy confirmado e, quando houver, migration aplicada
-no remoto).
+A fonte do estado é a linha "Estado" de cada unidade, que a trilha atualiza no
+PR. Esta tabela é o resumo, atualizado pela diretoria em lote — assim PRs de
+trilhas paralelas não conflitam aqui. "Publicado" significa em produção
+(deploy confirmado e, quando houver, migration aplicada no remoto).
 
 | Unidade | Estado | PR | Publicado |
 |---|---|---|---|
@@ -992,13 +1116,14 @@ no remoto).
 | 45-A | Pronta | — | — |
 | 45-B | Pronta | — | — |
 | 45-C | Pronta | — | — |
-| 45-D | Planejada (D-1) | — | — |
+| 45-D | Pronta | — | — |
 | 45-E | Planejada | — | — |
 | 45-F | Pronta | — | — |
-| 45-G | Planejada (D-2) | — | — |
+| 45-G | Planejada | — | — |
 | 45-H | Planejada | — | — |
 | 45-I | Planejada | — | — |
 | 45-J | Pronta | — | — |
+| 45-K | Planejada (após 45-D) | — | — |
 | 46-A | Planejada | — | — |
 | 46-B | Em andamento | vários (Dependabot) | parcial |
 | 46-C | Planejada (P-2) | — | — |
@@ -1019,6 +1144,6 @@ no remoto).
 Grafo visual da rede de materiais; pré-requisito automático; recomendação
 adaptativa; novos tipos de ligação entre materiais; vários pais por material;
 cópia de material entre disciplinas; sincronização de trechos entre
-materiais; histórico e comparação de versões de conteúdo (além do que a D-1
-exigir); reescrita por IA dentro da plataforma. Só voltam à mesa se o uso
+materiais; histórico e comparação de versões de conteúdo (além da edição
+pendente única da 45-K); reescrita por IA dentro da plataforma. Só voltam à mesa se o uso
 mostrar necessidade concreta.

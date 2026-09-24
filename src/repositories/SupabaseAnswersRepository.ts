@@ -2,6 +2,7 @@ import { QuestionAnswerRecord, QuestionReviewResult } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { AnswersRepository } from './AnswersRepository';
 import { mapQuestionReviewPayload } from './questionReviewMapper';
+import { fetchAllRows } from './supabasePaging';
 
 // ============================================================================
 // Fase 4 — Supabase-backed AnswersRepository
@@ -58,16 +59,21 @@ function extractLetter(joined: QuestionAttemptRow['question_options']): string {
 
 export class SupabaseAnswersRepository implements AnswersRepository {
   async getAnswers(): Promise<Record<string, QuestionAnswerRecord>> {
-    const { data, error } = await supabase
-      .from('question_attempts')
-      .select(
-        'question_id, is_correct, answered_at, time_spent_seconds, error_reason, user_notes, answer_mode, answer_strategy, question_options(letter)'
-      )
-      .order('answered_at', { ascending: false });
-    if (error) throw error;
+    // Todas as tentativas, não só as 1000 mais recentes (45-C): com o corte,
+    // uma questão respondida só antes delas voltava como "não respondida".
+    const rows = await fetchAllRows<QuestionAttemptRow>((from, to) =>
+      supabase
+        .from('question_attempts')
+        .select(
+          'question_id, is_correct, answered_at, time_spent_seconds, error_reason, user_notes, answer_mode, answer_strategy, question_options(letter)'
+        )
+        .order('answered_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, to)
+    );
 
     const result: Record<string, QuestionAnswerRecord> = {};
-    for (const row of (data ?? []) as unknown as QuestionAttemptRow[]) {
+    for (const row of rows) {
       if (result[row.question_id]) continue; // mantém só a tentativa mais recente
       result[row.question_id] = {
         questionId: row.question_id,

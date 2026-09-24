@@ -2,6 +2,7 @@ import { sourceUrl } from '../utils/bibliographicSources';
 import { Discipline, Theme, Compendium, CompendiumSection, CompendiumSectionSnapshot, MaterialSectionVersion } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { MaterialsRepository } from './MaterialsRepository';
+import { fetchAllRows, fetchAllRowsByIds } from './supabasePaging';
 
 // ============================================================================
 // Fase 3 — Supabase-backed MaterialsRepository
@@ -322,41 +323,61 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
   }
 
   async getCompendiums(): Promise<Compendium[]> {
-    const [
-      { data: materials, error: mErr },
-      { data: sections, error: sErr },
-      { data: refs, error: rErr },
-      { data: links, error: lErr },
-    ] = await Promise.all([
-      supabase.from('materials').select('*'),
-      supabase.from('material_sections').select('*').order('sort_order'),
-      supabase.from('material_references').select('*').order('sort_order'),
+    // Leitura completa (45-C): o acervo já passa de 800 seções; acima de
+    // 1000, materiais apareceriam sem as últimas seções para todo mundo.
+    // Materiais em ordem de criação, como o banco devolvia sem ordenação.
+    const [materials, sections, refs, links] = await Promise.all([
+      fetchAllRows<MaterialRow>((from, to) =>
+        supabase
+          .from('materials')
+          .select('*')
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to)
+      ),
+      fetchAllRows<MaterialSectionRow>((from, to) =>
+        supabase
+          .from('material_sections')
+          .select('*')
+          .order('sort_order', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to)
+      ),
+      fetchAllRows<MaterialReferenceRow>((from, to) =>
+        supabase
+          .from('material_references')
+          .select('*')
+          .order('sort_order', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to)
+      ),
       // RLS de material_links já filtra pro estudante (só as duas pontas
       // publicadas); admin ativo enxerga tudo, inclusive rascunho — ver
       // policy material_links_select_published.
-      supabase.from('material_links').select('*'),
+      fetchAllRows<MaterialLinkRow>((from, to) =>
+        supabase.from('material_links').select('*').order('id', { ascending: true }).range(from, to)
+      ),
     ]);
-    if (mErr) throw mErr;
-    if (sErr) throw sErr;
-    if (rErr) throw rErr;
-    if (lErr) throw lErr;
 
     // sources só é buscado para os ids realmente referenciados (hoje, tipicamente
     // nenhum — material_references.source_id é null para os 33 compêndios
     // carregados, ver AGENTS.md — mas a leitura já fica pronta para quando
     // houver curadoria).
-    const sourceIds = [...new Set((refs ?? []).map((r) => r.source_id).filter((id): id is string => !!id))];
+    const sourceIds = [...new Set(refs.map((r) => r.source_id).filter((id): id is string => !!id))];
     let sourcesById = new Map<string, SourceRow>();
     if (sourceIds.length > 0) {
-      const { data: sources, error: srcErr } = await supabase
-        .from('sources')
-        .select('id, citation_text, identificadores, verificacao')
-        .in('id', sourceIds);
-      if (srcErr) throw srcErr;
-      sourcesById = new Map((sources ?? []).map((s) => [s.id as string, s as SourceRow]));
+      const sources = await fetchAllRowsByIds<SourceRow>(sourceIds, (chunk, from, to) =>
+        supabase
+          .from('sources')
+          .select('id, citation_text, identificadores, verificacao')
+          .in('id', chunk)
+          .order('id', { ascending: true })
+          .range(from, to)
+      );
+      sourcesById = new Map(sources.map((s) => [s.id, s]));
     }
 
-    return (materials ?? []).map((m) => buildCompendium(m, sections ?? [], refs ?? [], sourcesById, links ?? []));
+    return materials.map((m) => buildCompendium(m, sections, refs, sourcesById, links));
   }
 
   async saveCompendiums(compendiums: Compendium[]): Promise<void> {
