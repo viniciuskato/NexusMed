@@ -723,4 +723,6 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
   pelo dono do projeto, e podem ir junto com a AUD-03.
 - **Contexto mínimo pra puxar**: `docs/operacao/RUNBOOK.md` (seções 3 e 4),
   `supabase/config.toml` para comparar e AUD-03 e AUD-13.
-- **Estado**: Aberto — precisa da conta dona do projeto (itens 1 a 4)
+- **Estado**: Aberto — precisa da conta dona do projeto (itens 1 a 4). Do
+  item 1, a paridade de migrations virou gate de CI na unidade 46-E (24/09,
+  depois do INC-2026-004); grants e RLS seguem na P-1.
