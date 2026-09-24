@@ -40,7 +40,7 @@ import {
 //   > 💡 **Pérola Clínica:** texto (opcional)
 //   > ⚠️ **Alerta de Armadilha:** texto (opcional)
 //
-//   ### Tags
+//   ### Palavras-chave        (ou `### Tags`, o nome antigo — os dois valem)
 //   `tag1` `tag2`
 //
 //   ### Referências Bibliográficas
@@ -240,8 +240,9 @@ function isReferencesHeader(headerNorm: string): boolean {
   return headerNorm.includes('referencia');
 }
 
+/** `### Palavras-chave` é o nome do campo na plataforma desde a 43-A; `### Tags` segue aceito. */
 function isTagsHeader(headerNorm: string): boolean {
-  return headerNorm === 'tags';
+  return headerNorm === 'tags' || /^palavras[\s-]?chave$/.test(headerNorm);
 }
 
 function isDependenciesHeader(headerNorm: string): boolean {

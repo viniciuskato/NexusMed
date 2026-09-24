@@ -1,26 +1,43 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { Link, AlertTriangle } from 'lucide-react';
-import { Compendium, TaxonomyKind } from '../../types';
+import { Compendium, Discipline } from '../../types';
 import { getBreadcrumbTrail, breadcrumbLabel } from '../../utils/materialTree';
-import { MaterialNavigationValue, parentCandidates, validateNavigationValue } from '../../utils/materialNavigation';
-import { MaterialMultiSelect } from './MaterialMultiSelect';
+import {
+  MaterialNavigationValue,
+  orderAfterParentChange,
+  parentCandidates,
+  validateNavigationValue,
+} from '../../utils/materialNavigation';
 
 // ============================================================================
-// Bloco "Navegação do conteúdo" — usado IGUAL no formulário de edição e no
-// modal "Importar material". Um lugar só para os campos, a validação ao vivo e
-// a trilha resultante: antes o bloco vivia inline no AdminCMSView e a
+// Bloco "Posição na árvore" — usado IGUAL no formulário de edição e no modal
+// "Importar material". Um lugar só para os campos, a validação ao vivo e a
+// trilha resultante: antes o bloco vivia inline no AdminCMSView e a
 // importação não tinha nenhum deles, o que obrigava a abrir cada material
 // importado de novo só para posicioná-lo.
+//
+// 43-A: sem "Tipo do nó", "Estude antes" e "Veja também" (congelados — o que
+// já existe segue valendo e visível para o estudante). O pai pode ser de
+// qualquer disciplina: quem hospeda o bloco recebe o pai escolhido em
+// `onParentChange` e aplica disciplina e tema (disciplineAndThemeForParent).
+// A ordem deixou de ser decisão obrigatória: sem ser tocada, o material vai
+// para o fim dos irmãos.
 // ============================================================================
 
 interface MaterialNavigationFieldsProps {
   value: MaterialNavigationValue;
   onChange: (next: MaterialNavigationValue) => void;
+  /** Pai escolhido pela pessoa (null = raiz) — o host aplica disciplina e tema dele. */
+  onParentChange?: (parent: Compendium | null) => void;
   compendiums: Compendium[];
-  /** Disciplina do material em edição/importação — o pai precisa ser da mesma. */
+  /** Para agrupar a lista de pais por disciplina. */
+  disciplines: Discipline[];
+  /** Disciplina atual do material — o pai precisa ser da mesma. */
   disciplineId: string;
   /** null quando o material ainda não existe (importação, criação). */
   selfId: string | null;
+  /** "Estude antes" antigos do material: não aparecem, mas o banco os confere ao mudar o pai. */
+  frozenPrerequisiteIds?: string[];
   /** Título atual, só para a prévia da trilha. */
   currentTitle: string;
   /** Prefixo dos ids de input — dois blocos na mesma página não podem colidir. */
@@ -35,18 +52,38 @@ const helpClass = 'text-[11px] text-stone-500 dark:text-slate-400 mt-1';
 export const MaterialNavigationFields: React.FC<MaterialNavigationFieldsProps> = ({
   value,
   onChange,
+  onParentChange,
   compendiums,
+  disciplines,
   disciplineId,
   selfId,
+  frozenPrerequisiteIds,
   currentTitle,
   idPrefix,
 }) => {
-  const set = <K extends keyof MaterialNavigationValue>(key: K, v: MaterialNavigationValue[K]) =>
-    onChange({ ...value, [key]: v });
+  // Posição com que o bloco abriu: voltar ao pai original devolve a ordem original.
+  const initial = useRef(value);
+  const [orderTouched, setOrderTouched] = useState(false);
 
-  const candidates = parentCandidates(compendiums, disciplineId, selfId);
-  const linkOptions = compendiums.filter((c) => c.id !== selfId);
-  const problem = validateNavigationValue(value, { compendiums, selfId, disciplineId });
+  const candidates = parentCandidates(compendiums, selfId);
+  const candidateGroups = disciplines
+    .map((d) => ({ discipline: d, items: candidates.filter((c) => c.disciplineId === d.id) }))
+    .filter((g) => g.items.length > 0)
+    .sort((a, b) => a.discipline.name.localeCompare(b.discipline.name, 'pt-BR'));
+  const problem = validateNavigationValue(value, { compendiums, selfId, disciplineId, frozenPrerequisiteIds });
+
+  const chooseParent = (parentId: string) => {
+    const treeSortOrder = orderAfterParentChange({
+      compendiums,
+      selfId,
+      initial: initial.current,
+      current: value,
+      nextParentId: parentId,
+      orderTouched,
+    });
+    onChange({ ...value, parentId, treeSortOrder });
+    onParentChange?.(parentId ? compendiums.find((c) => c.id === parentId) ?? null : null);
+  };
 
   const trail = value.parentId ? getBreadcrumbTrail(compendiums, value.parentId).map(breadcrumbLabel) : [];
   const selfLabel = value.navShortTitle.trim() || currentTitle.trim() || '(este material)';
@@ -59,8 +96,8 @@ export const MaterialNavigationFields: React.FC<MaterialNavigationFieldsProps> =
           <span>Posição na árvore</span>
         </h4>
         <p className="text-[11px] text-stone-500 dark:text-slate-400">
-          Onde este material aparece para o estudante e com quais outros ele se liga. Tudo opcional — sem pai, ele
-          fica como raiz. Pode ser ajustado depois sem precisar reatestar.
+          Onde este material aparece para o estudante. Tudo opcional — sem pai, ele fica como raiz. Mudar de
+          posição não pede nova atestação, salvo quando o pai é de outra disciplina.
         </p>
       </div>
 
@@ -90,18 +127,22 @@ export const MaterialNavigationFields: React.FC<MaterialNavigationFieldsProps> =
           <select
             id={`${idPrefix}-parent`}
             value={value.parentId}
-            onChange={(e) => set('parentId', e.target.value)}
+            onChange={(e) => chooseParent(e.target.value)}
             className={inputClass}
           >
             <option value="">— Nenhum (raiz) —</option>
-            {candidates.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title}
-                {c.publicationStatus !== 'published' ? ' (rascunho)' : ''}
-              </option>
+            {candidateGroups.map((g) => (
+              <optgroup key={g.discipline.id} label={g.discipline.name}>
+                {g.items.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                    {c.publicationStatus !== 'published' ? ' (rascunho)' : ''}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
-          <p className={helpClass}>Só aparecem materiais da mesma disciplina.</p>
+          <p className={helpClass}>De qualquer disciplina — o material passa para a disciplina do pai.</p>
         </div>
 
         <div>
@@ -114,10 +155,15 @@ export const MaterialNavigationFields: React.FC<MaterialNavigationFieldsProps> =
             min={0}
             step={10}
             value={value.treeSortOrder}
-            onChange={(e) => set('treeSortOrder', Number(e.target.value))}
+            onChange={(e) => {
+              setOrderTouched(true);
+              onChange({ ...value, treeSortOrder: Number(e.target.value) });
+            }}
             className={inputClass}
           />
-          <p className={helpClass}>Use 10, 20, 30… para sobrar espaço de inserir entre dois depois.</p>
+          <p className={helpClass}>
+            Ao escolher o pai, o material vai para o fim dos irmãos. Mude só se quiser outra posição (10, 20, 30…).
+          </p>
         </div>
 
         <div>
@@ -129,53 +175,12 @@ export const MaterialNavigationFields: React.FC<MaterialNavigationFieldsProps> =
             type="text"
             maxLength={40}
             value={value.navShortTitle}
-            onChange={(e) => set('navShortTitle', e.target.value)}
+            onChange={(e) => onChange({ ...value, navShortTitle: e.target.value })}
             placeholder="Ex.: Terceira geração"
             className={inputClass}
           />
           <p className={helpClass}>Aparece na trilha no lugar do título completo. Vazio = título completo.</p>
         </div>
-
-        <div>
-          <label className={labelClass} htmlFor={`${idPrefix}-kind`}>
-            Tipo do nó (opcional)
-          </label>
-          <select
-            id={`${idPrefix}-kind`}
-            value={value.taxonomyKind}
-            onChange={(e) => set('taxonomyKind', e.target.value as TaxonomyKind | '')}
-            className={inputClass}
-          >
-            <option value="">— Não classificado —</option>
-            <option value="visao_geral">Visão geral</option>
-            <option value="mecanismo">Mecanismo</option>
-            <option value="classe">Classe</option>
-            <option value="subclasse">Subclasse</option>
-            <option value="farmaco">Fármaco</option>
-            <option value="condicao">Condição</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <MaterialMultiSelect
-          label="Estude antes"
-          helperText="Base necessária que está FORA deste ramo. O que está acima na árvore já aparece na trilha."
-          options={linkOptions}
-          selectedIds={value.prerequisiteIds}
-          onChange={(ids) => set('prerequisiteIds', ids)}
-          excludeIds={value.relatedIds}
-          htmlId={`${idPrefix}-prerequisite`}
-        />
-        <MaterialMultiSelect
-          label="Veja também"
-          helperText="Relacionado, sem ordem obrigatória. Aparece nos dois materiais. Rascunho fica invisível até ser publicado."
-          options={linkOptions}
-          selectedIds={value.relatedIds}
-          onChange={(ids) => set('relatedIds', ids)}
-          excludeIds={value.prerequisiteIds}
-          htmlId={`${idPrefix}-related`}
-        />
       </div>
 
       {problem && (
