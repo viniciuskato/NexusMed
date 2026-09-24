@@ -895,7 +895,7 @@ function AuthenticatedApp() {
       <GlobalSearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
-        compendiums={compendiums}
+        disciplines={disciplines}
         questions={questions}
         flashcards={flashcards}
         onNavigateToCompendium={(cid, sid) => {
