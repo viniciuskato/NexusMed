@@ -465,7 +465,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
   (render do painel e `openProvenance`),
   `src/components/admin/ProvenanceReviewPanel.tsx` e
   `MaterialReferencesPanel.tsx`.
-- **Estado**: Aberto
+- **Estado**: Concluído (unidade 45-B)
 
 ### AUD-24 — Material publicado pode ser editado sem nova atestação, e "Associar" apaga a URL da referência
 - **Registrado em**: 2026-09-19 pela sessão de auditoria
