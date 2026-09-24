@@ -670,7 +670,13 @@ erros perde itens — sem nenhum erro na tela.
 remoto não foi conferido (P-1): tratar como 1000. Teste com mais de 1000
 linhas.
 **Depende de.** Nada.
-**Estado.** Pronta.
+**Achados da execução.** A parte 1 (leituras completas) resolve a perda de
+dado da AUD-21. A parte 2 (números calculados no servidor) é desempenho, não
+perda de dado — recomendação: mover para a 46-D. Em 22/09 a produção tinha
+836 seções de material: sem a parte 1, o acervo cortaria para todos os
+estudantes ao passar de 1000.
+**Estado.** Parte 1 concluída — PR #73. Parte 2 pendente de decisão da
+diretoria.
 
 ---
 
