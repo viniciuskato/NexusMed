@@ -10,8 +10,8 @@
 
 > **Desde 2026-09-23, "Estude antes" e "Veja também" não são mais
 > cadastrados** — decisão "Ciclo de estudo" em [`DECISIONS.md`](../DECISIONS.md);
-> a conexão entre materiais passa a vir das questões (iniciativa 43,
-> [`CICLO-DE-ESTUDO.md`](../../produto/CICLO-DE-ESTUDO.md)). As regras de
+> a conexão entre materiais passa a vir das questões (frente 43 do
+> [plano canônico](../../produto/PLANO-DE-DESENVOLVIMENTO.md)). As regras de
 > ligação abaixo continuam valendo para os vínculos que já existem, que seguem
 > visíveis e intactos. A árvore (pai → filhos) não muda.
 

@@ -26,8 +26,8 @@ Raiz:              Antibióticos — visão geral
   infecção urinária, sepse, escolha empírica por síndrome — e menciona os
   fármacos sem reexplicá-los.
 - **Infectologia, Pediatria e Terapia Intensiva** vão ver o ramo inteiro
-  quando a plataforma ganhar o "também aparece em" (etapa 44-A de
-  `docs/produto/BASE-DE-MATERIAIS.md`). Até lá, o estudante acha tudo pela
+  quando a plataforma ganhar o "também aparece em" (unidade 44-A de
+  `docs/produto/PLANO-DE-DESENVOLVIMENTO.md`). Até lá, o estudante acha tudo pela
   busca. **Nunca copiar material para outra disciplina.**
 - **Tema:** se "Antimicrobianos" ainda não existir em Farmacologia, crie-o na
   própria importação do primeiro material (menu do tema → "+ Criar novo

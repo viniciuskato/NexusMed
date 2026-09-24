@@ -6,6 +6,34 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-23 — Plano canônico único do desenvolvimento
+
+Um único documento,
+[`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](../produto/PLANO-DE-DESENVOLVIMENTO.md),
+passa a ser o plano do sistema: visão, estado verificado, decisões em vigor,
+frentes, sequência, decisões em aberto, todas as unidades de implementação e o
+registro. Absorve os documentos por iniciativa (ciclo de estudo e base de
+materiais) e agenda os achados abertos da auditoria em unidades (frentes 45 e
+46), sem copiar o detalhe técnico, que continua em `BACKLOG-ESTRATEGICO.md`.
+
+- **A diretoria** planeja nele: cria, corrige e descarta unidades, muda a
+  sequência, registra e resolve decisões em aberto.
+- **A execução** atualiza, no mesmo PR da implementação, o estado da unidade,
+  o registro e os achados da execução. Não mexe em aceite nem em sequência.
+- `TASKS.md` fica como fila operacional (incidentes e pendências avulsas) e
+  não repete as unidades; `docs/diretoria/registro.md` vira histórico.
+
+**Por quê**: o dono do produto quer um material único que possa ler para
+entender o planejamento inteiro, organizado por unidades de implementação —
+o papel que a sequência de prompts cumpria. Com um documento por iniciativa,
+mais o backlog da auditoria, mais o `TASKS.md`, não havia lugar que dissesse
+"o que vem agora e por quê" sobre tudo ao mesmo tempo.
+
+**Como aplicar**: seção 0 do próprio plano; `MODELO-DIRETORIA.md`, "Plano
+canônico e unidades"; `EXECUTOR_PROTOCOL.md`.
+
+---
+
 ## 2026-09-23 — Casa e "também aparece em"; padrão versionado
 
 1. **Todo material tem uma única disciplina-casa**, a do ramo inteiro. Regra:
@@ -29,9 +57,10 @@ Farmacologia e de Infectologia, e que materiais feitos em padrões antigos
 ficam para trás. Cópia diverge; vários pais tornam o caminho ambíguo; reler
 todo material a cada melhoria do padrão não escala.
 
-**Como aplicar**: iniciativa 44,
-[`docs/produto/BASE-DE-MATERIAIS.md`](../produto/BASE-DE-MATERIAIS.md). O padrão
-v2 e o plano dos antimicrobianos já valem; o resto depende das fichas.
+**Como aplicar**: frente 44 do plano canônico,
+[`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](../produto/PLANO-DE-DESENVOLVIMENTO.md).
+O padrão v2 e o plano dos antimicrobianos já valem; o resto depende das
+unidades 44-A a 44-C.
 
 ---
 
@@ -65,9 +94,9 @@ o "Aprofunde-se" é calculado), mas as ligações cadastradas envelhecem e não
 servem ao ciclo; o passo que faltava ("testar o que li") depende de outra
 conexão.
 
-**Como aplicar**: iniciativa 43,
-[`docs/produto/CICLO-DE-ESTUDO.md`](../produto/CICLO-DE-ESTUDO.md). Ordem:
-primeiro o que muda a forma de produzir conteúdo, depois o que só lê.
+**Como aplicar**: frente 43 do plano canônico,
+[`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](../produto/PLANO-DE-DESENVOLVIMENTO.md).
+Ordem: primeiro o que muda a forma de produzir conteúdo, depois o que só lê.
 
 ---
 
@@ -94,10 +123,13 @@ duplicava tudo num texto perecível.
 **O que não muda**: autorização específica para push, PR, merge e escrita
 remota; gates completos; verificação independente por outra sessão.
 
-**Como aplicar**: ver `docs/diretoria/MODELO-DIRETORIA.md`, seção "Fichas de
-etapa", e `docs/operacao/EXECUTOR_PROTOCOL.md`. Uma ficha sem critério de
-aceite observável não é executável — "só a ideia" não basta.
-`docs/diretoria/prompts/` fica como histórico.
+**Como aplicar**: ver `docs/diretoria/MODELO-DIRETORIA.md`, seção "Plano
+canônico e unidades", e `docs/operacao/EXECUTOR_PROTOCOL.md`. Uma ficha sem
+critério de aceite observável não é executável — "só a ideia" não basta.
+`docs/diretoria/prompts/` fica como histórico. *O "documento por iniciativa"
+foi substituído no mesmo dia por um plano canônico único — ver a entrada
+"Plano canônico único do desenvolvimento", acima; as fichas passaram a se
+chamar unidades.*
 
 ---
 

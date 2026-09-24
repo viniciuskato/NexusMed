@@ -9,18 +9,21 @@ mais a porta de entrada abaixo.
 
 ## Leia primeiro, nesta ordem
 
-1. [`docs/operacao/PROJECT_STATE.md`](docs/operacao/PROJECT_STATE.md) —
+1. [`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](docs/produto/PLANO-DE-DESENVOLVIMENTO.md)
+   — plano canônico: o que está sendo construído, por quê, em que ordem e
+   em que estado; todas as unidades de implementação.
+2. [`docs/operacao/PROJECT_STATE.md`](docs/operacao/PROJECT_STATE.md) —
    estado presente verificável, ambientes, baseline, riscos abertos.
-2. [`docs/operacao/DECISIONS.md`](docs/operacao/DECISIONS.md) — decisões
+3. [`docs/operacao/DECISIONS.md`](docs/operacao/DECISIONS.md) — decisões
    duráveis da diretoria.
-3. [`docs/operacao/TASKS.md`](docs/operacao/TASKS.md) — fila única de
+4. [`docs/operacao/TASKS.md`](docs/operacao/TASKS.md) — fila única de
    trabalho, com prioridade e próxima ação.
-4. [`docs/operacao/RUNBOOK.md`](docs/operacao/RUNBOOK.md) — como iniciar,
+5. [`docs/operacao/RUNBOOK.md`](docs/operacao/RUNBOOK.md) — como iniciar,
    testar, publicar, reverter e encerrar uma sessão com segurança.
-5. [`docs/operacao/SESSION_PROTOCOL.md`](docs/operacao/SESSION_PROTOCOL.md)
+6. [`docs/operacao/SESSION_PROTOCOL.md`](docs/operacao/SESSION_PROTOCOL.md)
    — contrato obrigatório de abertura e fechamento de sessão, com o
    checklist de relatório executivo.
-6. [`docs/operacao/incidents/index.md`](docs/operacao/incidents/index.md)
+7. [`docs/operacao/incidents/index.md`](docs/operacao/incidents/index.md)
    — falhas operacionais relevantes, causas-raiz e prevenções executáveis.
 
 **Histórico completo** (todo o `AGENTS.md` anterior a esta entrega, com o
@@ -168,7 +171,7 @@ seção "Armadilhas já descobertas".
     atualize o padrão no mesmo PR e rode o exemplo do bloco de formato pelo
     importador para conferir. O padrão tem versão (v2 desde 2026-09-23):
     mudança editorial sobe a versão e ganha entrada na seção 2.7; depois da
-    ficha 44-C, regra mecânica nova vem com a checagem correspondente.
+    unidade 44-C, regra mecânica nova vem com a checagem correspondente.
 
 ## Convenções de trabalho
 
@@ -204,9 +207,11 @@ probabilidade de recorrência deve gerar registro em
 `docs/operacao/standards/` ou `RUNBOOK.md`; somente um resumo curto e um
 link entram aqui quando todo agente precisar conhecê-los.
 
-Estado presente, decisões e fila vivem em `PROJECT_STATE.md`,
-`DECISIONS.md` e `TASKS.md`, conforme `SESSION_PROTOCOL.md`.
-`docs/diretoria/registro.md` continua como painel legado da diretoria.
+O que construir e em que ordem vive no plano canônico
+(`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`); estado dos ambientes,
+decisões e fila operacional, em `PROJECT_STATE.md`, `DECISIONS.md` e
+`TASKS.md`, conforme `SESSION_PROTOCOL.md`. `docs/diretoria/registro.md` é
+o painel legado da diretoria (histórico até 2026-09-17).
 
 ## Comunicação entre diretoria e executivas
 
@@ -216,13 +221,13 @@ e consultar [`docs/diretoria/registro.md`](docs/diretoria/registro.md)
 para o histórico. Preserve os identificadores já emitidos ao continuar
 esse histórico.
 
-**Desde 2026-09-23 o trabalho é encaminhado por fichas de etapa, não por
-prompts.** Cada iniciativa tem um documento vivo em `docs/produto/` com o
-objetivo, a decisão de modelo e uma ficha por etapa (por quê, critério de
-aceite, restrições, dependências). A ficha diz o quê e por quê; o como é
-derivado lendo o código na hora. Iniciativas ativas:
-[`docs/produto/CICLO-DE-ESTUDO.md`](docs/produto/CICLO-DE-ESTUDO.md) (43, o
-que o estudante faz) e
-[`docs/produto/BASE-DE-MATERIAIS.md`](docs/produto/BASE-DE-MATERIAIS.md) (44,
-o banco crescer sem duplicar nem envelhecer).
-`docs/diretoria/prompts/` é histórico — nada novo entra lá.
+**Desde 2026-09-23 o trabalho é encaminhado por unidades do plano
+canônico, não por prompts:**
+[`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](docs/produto/PLANO-DE-DESENVOLVIMENTO.md).
+Um documento só, com a visão, o estado verificado, as decisões em vigor, as
+frentes, a sequência, as decisões em aberto, as unidades (por quê, critério
+de aceite, restrições, dependências) e o registro. A unidade diz o quê e
+por quê; o como é derivado lendo o código na hora. A diretoria planeja
+nele; a execução atualiza o estado da unidade e o registro no mesmo PR da
+implementação. `docs/diretoria/prompts/` e `registro.md` são histórico —
+nada novo entra lá.
