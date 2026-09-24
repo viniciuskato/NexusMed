@@ -1,24 +1,248 @@
 -- Unidade 45-A, parte 2 — idempotência de ações do estudante, criação única
 -- de flashcard derivado de questão e nota de simulado calculada no servidor.
 
--- A produção historicamente teve ao menos um grupo duplicado. Nunca escolher
--- silenciosamente qual histórico/SRS apagar dentro de uma migration: o dono
--- precisa reconciliar os grupos explicitamente antes de aplicar este arquivo.
-do $$
+-- A produção historicamente tem dois grupos duplicados. A reconciliação é
+-- determinística, preserva antes uma cópia exata do card/SRS removido e move
+-- todos os vínculos antes de permitir que o ON DELETE CASCADE apague o card.
+create table app.flashcard_dedup_backup_45a (
+  duplicate_flashcard_id uuid primary key,
+  kept_flashcard_id uuid not null,
+  flashcard_row jsonb not null,
+  flashcard_srs_state_row jsonb,
+  backed_up_at timestamptz not null default pg_catalog.clock_timestamp()
+);
+
+revoke all on table app.flashcard_dedup_backup_45a
+  from public, anon, authenticated;
+
+comment on table app.flashcard_dedup_backup_45a is
+  'Backup imutável dos flashcards removidos pela reconciliação da unidade 45-A.';
+
+create or replace function app.reconcile_duplicate_flashcards_45a()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_duplicate record;
+  v_duplicate_note public.notes%rowtype;
+  v_kept_note public.notes%rowtype;
+  v_bookmark_id uuid;
+  v_changed int;
+  v_duplicate_groups int := 0;
+  v_duplicate_cards_removed int := 0;
+  v_backup_rows int := 0;
+  v_reviews_moved int := 0;
+  v_notes_moved int := 0;
+  v_bookmarks_moved int := 0;
+  v_bookmarks_discarded int := 0;
 begin
-  if exists (
+  -- O lock cobre a seleção do canônico, todas as movimentações e, na chamada
+  -- feita abaixo pela migration, a criação do índice único na mesma transação.
+  lock table
+    public.flashcards,
+    public.flashcard_srs_state,
+    public.flashcard_reviews,
+    public.notes,
+    public.bookmarks
+  in access exclusive mode;
+
+  select count(*)::int
+  into v_duplicate_groups
+  from (
     select 1
     from public.flashcards
     where question_origin_id is not null
     group by user_id, question_origin_id
     having count(*) > 1
-  ) then
-    raise exception '45-A: existem flashcards duplicados por usuário/questão; reconcilie-os antes de aplicar a migration';
-  end if;
-end $$;
+  ) duplicate_groups;
 
-create unique index flashcards_user_question_origin_uq
-  on public.flashcards (user_id, question_origin_id);
+  for v_duplicate in
+    with card_stats as (
+      select
+        f.id,
+        f.user_id,
+        f.question_origin_id,
+        f.created_at,
+        s.last_reviewed_date,
+        (
+          select count(*)::int
+          from public.flashcard_reviews reviews
+          where reviews.flashcard_id = f.id
+        ) as review_count
+      from public.flashcards f
+      left join public.flashcard_srs_state s on s.flashcard_id = f.id
+      where f.question_origin_id is not null
+    ), ranked as (
+      select
+        card_stats.*,
+        first_value(id) over canonical_order as kept_id,
+        row_number() over canonical_order as canonical_position
+      from card_stats
+      window canonical_order as (
+        partition by user_id, question_origin_id
+        order by
+          last_reviewed_date desc nulls last,
+          review_count desc,
+          created_at asc,
+          id asc
+      )
+    )
+    select id as duplicate_id, kept_id, user_id, question_origin_id, canonical_position
+    from ranked
+    where canonical_position > 1
+    order by user_id, question_origin_id, canonical_position
+  loop
+    insert into app.flashcard_dedup_backup_45a (
+      duplicate_flashcard_id,
+      kept_flashcard_id,
+      flashcard_row,
+      flashcard_srs_state_row
+    )
+    select
+      flashcard.id,
+      v_duplicate.kept_id,
+      pg_catalog.to_jsonb(flashcard),
+      case
+        when srs.flashcard_id is null then null
+        else pg_catalog.to_jsonb(srs)
+      end
+    from public.flashcards flashcard
+    left join public.flashcard_srs_state srs on srs.flashcard_id = flashcard.id
+    where flashcard.id = v_duplicate.duplicate_id
+    on conflict (duplicate_flashcard_id) do nothing;
+    get diagnostics v_changed = row_count;
+    v_backup_rows := v_backup_rows + v_changed;
+
+    -- Se uma operação idempotente aparece nos dois cards, manter as duas
+    -- revisões é mais importante que conservar o identificador repetido.
+    update public.flashcard_reviews duplicate_review
+    set client_op_id = null
+    where duplicate_review.flashcard_id = v_duplicate.duplicate_id
+      and duplicate_review.client_op_id is not null
+      and exists (
+        select 1
+        from public.flashcard_reviews kept_review
+        where kept_review.flashcard_id = v_duplicate.kept_id
+          and kept_review.client_op_id = duplicate_review.client_op_id
+      );
+
+    update public.flashcard_reviews
+    set flashcard_id = v_duplicate.kept_id
+    where flashcard_id = v_duplicate.duplicate_id;
+    get diagnostics v_changed = row_count;
+    v_reviews_moved := v_reviews_moved + v_changed;
+
+    select *
+    into v_duplicate_note
+    from public.notes
+    where user_id = v_duplicate.user_id
+      and flashcard_id = v_duplicate.duplicate_id
+    for update;
+
+    if found then
+      select *
+      into v_kept_note
+      from public.notes
+      where user_id = v_duplicate.user_id
+        and flashcard_id = v_duplicate.kept_id
+      for update;
+
+      if found then
+        update public.notes
+        set note_text = v_kept_note.note_text
+              || E'\n\n--- nota reconciliada de flashcard duplicado ---\n\n'
+              || v_duplicate_note.note_text,
+            created_at = least(v_kept_note.created_at, v_duplicate_note.created_at),
+            updated_at = greatest(v_kept_note.updated_at, v_duplicate_note.updated_at)
+        where id = v_kept_note.id;
+
+        -- O conteúdo e as datas já foram incorporados ao registro canônico.
+        delete from public.notes where id = v_duplicate_note.id;
+      else
+        update public.notes
+        set flashcard_id = v_duplicate.kept_id
+        where id = v_duplicate_note.id;
+      end if;
+
+      v_notes_moved := v_notes_moved + 1;
+    end if;
+
+    select id
+    into v_bookmark_id
+    from public.bookmarks
+    where user_id = v_duplicate.user_id
+      and flashcard_id = v_duplicate.duplicate_id
+    for update;
+
+    if found then
+      perform 1
+      from public.bookmarks
+      where user_id = v_duplicate.user_id
+        and flashcard_id = v_duplicate.kept_id;
+
+      if found then
+        delete from public.bookmarks where id = v_bookmark_id;
+        v_bookmarks_discarded := v_bookmarks_discarded + 1;
+      else
+        update public.bookmarks
+        set flashcard_id = v_duplicate.kept_id
+        where id = v_bookmark_id;
+        v_bookmarks_moved := v_bookmarks_moved + 1;
+      end if;
+    end if;
+
+    if exists (
+      select 1 from public.flashcard_reviews where flashcard_id = v_duplicate.duplicate_id
+    ) or exists (
+      select 1 from public.notes where flashcard_id = v_duplicate.duplicate_id
+    ) or exists (
+      select 1 from public.bookmarks where flashcard_id = v_duplicate.duplicate_id
+    ) then
+      raise exception '45-A: vínculo de flashcard não reconciliado para %', v_duplicate.duplicate_id;
+    end if;
+
+    delete from public.flashcards where id = v_duplicate.duplicate_id;
+    v_duplicate_cards_removed := v_duplicate_cards_removed + 1;
+  end loop;
+
+  return pg_catalog.jsonb_build_object(
+    'duplicate_groups', v_duplicate_groups,
+    'duplicate_cards_removed', v_duplicate_cards_removed,
+    'backup_rows', v_backup_rows,
+    'reviews_moved', v_reviews_moved,
+    'notes_moved', v_notes_moved,
+    'bookmarks_moved', v_bookmarks_moved,
+    'bookmarks_discarded', v_bookmarks_discarded
+  );
+end;
+$$;
+
+revoke all on function app.reconcile_duplicate_flashcards_45a()
+  from public, anon, authenticated;
+
+-- O DO inteiro é uma única transação: se qualquer movimentação, backup ou a
+-- criação do índice falhar, nenhuma alteração do grupo é confirmada.
+do $$
+declare
+  v_counts jsonb;
+begin
+  v_counts := app.reconcile_duplicate_flashcards_45a();
+
+  execute 'create unique index flashcards_user_question_origin_uq '
+       || 'on public.flashcards (user_id, question_origin_id)';
+
+  raise notice
+    '45-A flashcards reconciliados: grupos=%, removidos=%, backups=%, revisões=%, notas=%, favoritos movidos=%, favoritos descartados=%',
+    v_counts->>'duplicate_groups',
+    v_counts->>'duplicate_cards_removed',
+    v_counts->>'backup_rows',
+    v_counts->>'reviews_moved',
+    v_counts->>'notes_moved',
+    v_counts->>'bookmarks_moved',
+    v_counts->>'bookmarks_discarded';
+end $$;
 
 create or replace function public.create_flashcard_from_question(
   p_id uuid,
