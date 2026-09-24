@@ -36,6 +36,8 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
   const [isFlipped, setIsFlipped] = useState(false);
   const [sessionCompleted, setSessionCompleted] = useState(false);
   const [reviewedCount, setReviewedCount] = useState(0);
+  const [isRatingSubmitting, setIsRatingSubmitting] = useState(false);
+  const ratingSubmissionRef = useRef(false);
 
   // Gesto de Swipe no Flashcard (Touch e Mouse Drag)
   const [dragStartX, setDragStartX] = useState<number | null>(null);
@@ -58,7 +60,9 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
 
   const handleRate = useCallback(
     async (rating: 1 | 2 | 3 | 4) => {
-      if (!currentCard) return;
+      if (!currentCard || ratingSubmissionRef.current) return;
+      ratingSubmissionRef.current = true;
+      setIsRatingSubmitting(true);
 
       // Caminho atômico/idempotente (RPC submit_flashcard_review, ver
       // FlashcardsRepository.reviewFlashcard): calcula e grava localmente de
@@ -71,32 +75,37 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
       // nunca para o palpite local, evitando a perda de atualização que
       // existia quando duas abas revisavam o mesmo card quase ao mesmo tempo
       // (achado do Prompt 13-B — ver docs/diretoria/registro.md).
-      const reviewedCard = await flashcardsRepository.reviewFlashcard(currentCard, rating);
-      const updatedCard: Flashcard = reviewedCard ?? currentCard;
+      try {
+        const reviewedCard = await flashcardsRepository.reviewFlashcard(currentCard, rating);
+        const updatedCard: Flashcard = reviewedCard ?? currentCard;
 
-      setReviewedCount((prev) => prev + 1);
+        setReviewedCount((prev) => prev + 1);
 
-      // If rating is 1 (Errei), add back to the end of the current session queue for immediate reinforcement
-      if (rating === 1) {
-        setQueue((prev) => [...prev, updatedCard]);
-      }
-
-      setIsFlipped(false);
-
-      if (currentIdx + 1 < queue.length) {
-        setCurrentIdx((prev) => prev + 1);
-      } else {
-        setSessionCompleted(true);
-        try {
-          confetti({
-            particleCount: 80,
-            spread: 70,
-            origin: { y: 0.6 },
-          });
-        } catch {
-          // Confete é só um efeito decorativo — falhar aqui não deve
-          // impedir o fluxo real de revisão do flashcard.
+        // If rating is 1 (Errei), add back to the end of the current session queue for immediate reinforcement
+        if (rating === 1) {
+          setQueue((prev) => [...prev, updatedCard]);
         }
+
+        setIsFlipped(false);
+
+        if (currentIdx + 1 < queue.length) {
+          setCurrentIdx((prev) => prev + 1);
+        } else {
+          setSessionCompleted(true);
+          try {
+            confetti({
+              particleCount: 80,
+              spread: 70,
+              origin: { y: 0.6 },
+            });
+          } catch {
+            // Confete é só um efeito decorativo — falhar aqui não deve
+            // impedir o fluxo real de revisão do flashcard.
+          }
+        }
+      } finally {
+        ratingSubmissionRef.current = false;
+        setIsRatingSubmitting(false);
       }
     },
     [currentCard, currentIdx, queue.length]
@@ -105,7 +114,7 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (sessionCompleted) return;
+      if (sessionCompleted || isRatingSubmitting) return;
 
       if (e.code === 'Space') {
         e.preventDefault();
@@ -120,7 +129,7 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFlipped, handleRate, sessionCompleted]);
+  }, [isFlipped, handleRate, sessionCompleted, isRatingSubmitting]);
 
   const progressPercent = Math.round((currentIdx / Math.max(1, queue.length)) * 100);
 
@@ -214,7 +223,7 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
               }}
               onTouchEnd={() => {
                 lastTouchEndRef.current = Date.now();
-                if (Math.abs(deltaX) > 80 && isFlipped) {
+                if (Math.abs(deltaX) > 80 && isFlipped && !isRatingSubmitting) {
                   if (deltaX < 0) {
                     // Swipe para a esquerda: Errei / Difícil
                     handleRate(1);
@@ -415,6 +424,7 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
                 {/* 1: Errei */}
                 <button
                   onClick={() => handleRate(1)}
+                  disabled={isRatingSubmitting}
                   className="p-3 rounded-2xl bg-rose-50/90 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/70 border border-rose-300 dark:border-rose-700 text-rose-950 dark:text-rose-100 text-left transition-all group cursor-pointer shadow-2xs"
                 >
                   <div className="flex items-center justify-between mb-1">
@@ -429,6 +439,7 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
                 {/* 2: Dificil */}
                 <button
                   onClick={() => handleRate(2)}
+                  disabled={isRatingSubmitting}
                   className="p-3 rounded-2xl bg-amber-50/90 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/70 border border-amber-300 dark:border-amber-700 text-amber-950 dark:text-amber-100 text-left transition-all cursor-pointer shadow-2xs"
                 >
                   <div className="flex items-center justify-between mb-1">
@@ -443,6 +454,7 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
                 {/* 3: Bom */}
                 <button
                   onClick={() => handleRate(3)}
+                  disabled={isRatingSubmitting}
                   className="p-3 rounded-2xl bg-blue-50/90 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/70 border border-blue-300 dark:border-blue-700 text-blue-950 dark:text-blue-100 text-left transition-all cursor-pointer shadow-2xs"
                 >
                   <div className="flex items-center justify-between mb-1">
@@ -457,6 +469,7 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
                 {/* 4: Facil */}
                 <button
                   onClick={() => handleRate(4)}
+                  disabled={isRatingSubmitting}
                   className="p-3 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 border border-emerald-300 dark:border-emerald-700 text-emerald-950 dark:text-emerald-100 text-left transition-all cursor-pointer shadow-2xs"
                 >
                   <div className="flex items-center justify-between mb-1">

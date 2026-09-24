@@ -2,29 +2,39 @@ import { QuestionAnswerRecord, QuestionReviewResult, Question } from '../types';
 import { StorageService, getStorageUser } from '../services/storage';
 import { SupabaseAnswersRepository } from './SupabaseAnswersRepository';
 import { mapQuestionReviewPayload } from './questionReviewMapper';
-import { enqueueAndTry } from '../services/syncQueue';
+import { enqueueAndTryTracked, getOps, subscribe } from '../services/syncQueue';
 import { QuestionAttemptOpPayload } from '../services/syncHandlers';
 
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 
 export interface AnswersRepository {
   getAnswers(): Promise<Record<string, QuestionAnswerRecord>>;
-  recordAnswer(record: QuestionAnswerRecord): Promise<QuestionReviewResult>;
+  recordAnswer(record: QuestionAnswerRecord): Promise<QuestionAnswerSubmission>;
+  subscribeToCorrection(clientOpId: string, listener: (review: QuestionReviewResult) => void): () => void;
 }
+
+export type QuestionAnswerSubmission =
+  | { status: 'confirmed'; review: QuestionReviewResult; clientOpId?: string; serverClientOpId?: string }
+  | { status: 'pending'; clientOpId: string; serverClientOpId?: string };
 
 class LocalStorageAnswersRepository implements AnswersRepository {
   async getAnswers(): Promise<Record<string, QuestionAnswerRecord>> {
     return StorageService.getAnswers();
   }
-  async recordAnswer(record: QuestionAnswerRecord): Promise<QuestionReviewResult> {
-    StorageService.recordAnswer(record);
+  async recordAnswer(record: QuestionAnswerRecord): Promise<QuestionAnswerSubmission> {
     const question: Question | undefined = StorageService.getQuestions().find(
       (q) => q.id === record.questionId
     );
     const options = question?.options ?? [];
     const correct = options.find((o) => o.isCorrect);
-    return {
-      isCorrect: record.isCorrect,
+    const isCorrect = correct?.letter === record.selectedOption;
+    StorageService.recordAnswer({
+      ...record,
+      isCorrect,
+      errorReason: isCorrect ? undefined : record.errorReason,
+    });
+    return { status: 'confirmed', review: {
+      isCorrect,
       correctOptionId: correct?.letter ?? '',
       generalCommentary: question?.generalCommentary ?? '',
       highYieldSummary: question?.highYieldSummary ?? '',
@@ -35,7 +45,11 @@ class LocalStorageAnswersRepository implements AnswersRepository {
         explanation: o.explanation,
       })),
       references: [], // LocalStorage não tem sources/question_references — não inventar.
-    };
+    } };
+  }
+
+  subscribeToCorrection(): () => void {
+    return () => undefined;
   }
 }
 
@@ -52,13 +66,7 @@ class ResilientAnswersRepository implements AnswersRepository {
     }
   }
 
-  async recordAnswer(record: QuestionAnswerRecord): Promise<QuestionReviewResult> {
-    // Grava local primeiro (fonte de verdade otimista imediata — nunca perde a
-    // resposta do estudante mesmo sem rede). O envio ao Supabase passa pela
-    // fila de sincronização (src/services/syncQueue.ts): idempotente por
-    // client_op_id, com retry/backoff e estado visível — não é mais um
-    // catch{} silencioso. Ver docs/SINCRONIZACAO-CONFIAVEL.md.
-    const localResult = await this.local.recordAnswer(record);
+  async recordAnswer(record: QuestionAnswerRecord): Promise<QuestionAnswerSubmission> {
     const userId = getStorageUser();
     if (isSupabaseConfigured && userId) {
       const payload: QuestionAttemptOpPayload = {
@@ -69,11 +77,39 @@ class ResilientAnswersRepository implements AnswersRepository {
         userNotes: record.userNotes,
         answerMode: record.answerMode,
         answerStrategy: record.answerStrategy,
+        timestamp: record.timestamp,
       };
-      const serverResult = await enqueueAndTry(userId, 'question_attempt', payload);
-      if (serverResult) return mapQuestionReviewPayload(serverResult as Parameters<typeof mapQuestionReviewPayload>[0]);
+      const { op, result } = await enqueueAndTryTracked(userId, 'question_attempt', payload);
+      if (result) {
+        return {
+          status: 'confirmed',
+          clientOpId: op.id,
+          serverClientOpId: op.clientOpId,
+          review: mapQuestionReviewPayload(result as Parameters<typeof mapQuestionReviewPayload>[0]),
+        };
+      }
+      // A fila já persistiu payload + client_op_id. Não gravamos um
+      // `isCorrect=false` provisório no cache: isso contaminava estatísticas,
+      // caderno de erros e flashcards antes de existir correção do servidor.
+      return { status: 'pending', clientOpId: op.id, serverClientOpId: op.clientOpId };
     }
-    return localResult;
+    return this.local.recordAnswer(record);
+  }
+
+  subscribeToCorrection(clientOpId: string, listener: (review: QuestionReviewResult) => void): () => void {
+    const userId = getStorageUser();
+    if (!userId) return () => undefined;
+    let delivered = false;
+    const deliverIfReady = () => {
+      if (delivered) return;
+      const op = getOps(userId).find((candidate) => candidate.id === clientOpId);
+      if (op?.state !== 'synced' || !op.result) return;
+      delivered = true;
+      listener(mapQuestionReviewPayload(op.result as Parameters<typeof mapQuestionReviewPayload>[0]));
+    };
+    const unsubscribe = subscribe(userId, deliverIfReady);
+    deliverIfReady();
+    return unsubscribe;
   }
 }
 

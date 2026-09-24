@@ -296,6 +296,33 @@ export class SupabaseFlashcardsRepository implements FlashcardsRepository {
     return this.saveFlashcard(newCard);
   }
 
+  /** Criação real derivada de questão: atômica e idempotente no servidor. */
+  async createFlashcardFromQuestionAtomic(card: Flashcard): Promise<Flashcard> {
+    const { data: row, error } = await supabase.rpc('create_flashcard_from_question', {
+      p_id: card.id,
+      p_discipline_id: card.disciplineId,
+      p_theme_id: card.themeId,
+      p_material_id: card.compendiumRefId || null,
+      p_question_origin_id: card.questionOriginId || null,
+      p_front: card.front,
+      p_back: card.back,
+      p_mechanism_highlight: card.mechanismHighlight || null,
+      p_tags: card.tags ?? [],
+      p_difficulty: card.difficulty,
+      p_is_custom: card.isCustom ?? true,
+    });
+    if (error) throw error;
+    const cardRow = row as FlashcardRow;
+
+    const { data: srsRow, error: srsError } = await supabase
+      .from('flashcard_srs_state')
+      .select('*')
+      .eq('flashcard_id', cardRow.id)
+      .maybeSingle();
+    if (srsError) throw srsError;
+    return rowToFlashcard(cardRow, (srsRow ?? undefined) as SRSStateRow | undefined, []);
+  }
+
   // NOTA (Prompt 07-A): o caminho realmente usado em produção para revisão de
   // flashcard é a RPC `submit_flashcard_review` (via syncQueue/syncHandlers em
   // FlashcardsRepository.ts), que recalcula o SM-2 no servidor de forma
