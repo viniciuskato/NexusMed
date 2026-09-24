@@ -154,14 +154,18 @@ escalar. A ordem dos ramos é da produção editorial (seção 12).
 ### Confiabilidade
 
 Em 24/09 foram publicadas as correções do tempo esgotado no simulado, do
-corte em 1000 linhas e da revisão que atestava o item errado (45-A parte 1,
-45-B, 45-C). Seguem **23 achados abertos** da auditoria. Os mais graves:
-- clique duplo em "Confirmar Resposta" e na nota do flashcard duplica
-  tentativas e revisões (no simulado já não duplica);
-- com rede lenta, resposta certa conta como errada;
+corte em 1000 linhas, da revisão que atestava o item errado e a 45-A inteira:
+clique duplo não duplica mais resposta, revisão de flashcard nem simulado; com
+rede lenta a tela mostra "correção pendente" em vez de contar a resposta como
+errada; a nota do simulado é calculada no servidor. Seguem **21 achados
+abertos** da auditoria. Os mais graves:
 - excluir um material apaga dados de todos os alunos e a trilha de
   atestação;
-- editar material publicado muda na hora o que o estudante lê, sem revisão.
+- editar material publicado muda na hora o que o estudante lê, sem revisão;
+- com a rede oscilando, uma edição antiga pode sobrescrever a nova;
+- um PR com migration pode ser mesclado sem ela estar no remoto — aconteceu
+  duas vezes, em 21/09 e 24/09 (INC-2026-003 e INC-2026-004); a 46-E fecha
+  isso.
 
 ### Base técnica
 
@@ -224,7 +228,8 @@ O porquê de cada uma está em `docs/operacao/DECISIONS.md`, na data indicada.
   unidade por PR e revisão em sessão nova antes do merge. Diretoria sob
   demanda, não por unidade. *(23/09)*
 - **Migration vai para o Supabase remoto antes do merge**, e a produção
-  continua funcionando com ela.
+  continua funcionando com ela. O CI passa a conferir isso no remoto, com
+  credencial só de leitura (46-E). *(24/09, D-4)*
 
 ## 4. As frentes
 
@@ -233,8 +238,8 @@ O porquê de cada uma está em `docs/operacao/DECISIONS.md`, na data indicada.
 | **43 — Ciclo de estudo** | O estudante percorre os cinco passos com um clique cada | 43-A a 43-E |
 | **44 — Base de materiais** | O banco cresce sem duplicar nem envelhecer | 44-A a 44-C |
 | **45 — Confiabilidade** | O que o estudante faz não se perde; a atestação é sempre do item certo | 45-A a 45-K |
-| **46 — Base técnica e operação** | Código mais barato de mudar; backup e rollback | 46-A a 46-D |
-| **Pendências do dono** | O que só a conta dona do projeto consegue fazer | P-1 e P-2 |
+| **46 — Base técnica e operação** | Código mais barato de mudar; backup e rollback | 46-A a 46-E |
+| **Pendências do dono** | O que só a conta dona do projeto consegue fazer | P-1, P-2 e P-4 |
 | **Produção editorial** | Conteúdo, não código — acompanhada aqui para a ordem fazer sentido | seção 12 |
 
 A numeração continua a sequência histórica de entregas (40, 41, 42…) e não
@@ -257,14 +262,16 @@ dado e forma de produzir conteúdo) e a 3 depois.
 
 | Trilha | Área do código | Unidades, na ordem | Espera outra trilha |
 |---|---|---|---|
-| **1 — Dados do estudante** | Respostas, flashcards, simulados, caderno de erros, sincronização; leitura e gravação nos repositórios | 45-A parte 2 → 45-E → 45-G → 45-I | — |
+| **1 — Dados do estudante** | Respostas, flashcards, simulados, caderno de erros, sincronização; leitura e gravação nos repositórios | 45-E → 45-G → 45-I | — |
 | **2 — Material e Área Editorial** | Formulário, importação, gravação e revisão de material e de questão | 43-A → 45-D → 43-B → 45-K → 44-B → 44-A → 44-C | — |
-| **3 — Descoberta e casca do app** | Busca, conta e sessão, menu, componente raiz, telas novas do ciclo | 43-D → 45-F → 45-H → 46-A passos 1 a 4 → 43-C → 43-E | 45-H espera a 45-A parte 2 (trilha 1); 43-C espera a 43-B (trilha 2) |
+| **3 — Descoberta e casca do app** | Busca, conta e sessão, menu, componente raiz, telas novas do ciclo | 43-D → 45-F → 45-H → 46-A passos 1 a 4 → 43-C → 43-E | 43-C espera a 43-B (trilha 2) |
 
-Já concluídas e publicadas em 24/09, fora das listas: 45-B, 45-J, 45-C e a
-parte 1 da 45-A.
+Já concluídas e publicadas em 24/09, fora das listas: 45-B, 45-J, 45-C e 45-A
+(partes 1 e 2).
 
 Notas de ordem:
+- **Trilha 1:** antes da 45-E, os achados da revisão do PR #76 (45-A parte
+  2), que só foi revisado depois do merge — mesmo caminho de gravação.
 - **Trilha 2:** a 43-B vem antes da 45-K porque está no caminho do "testar o
   que li" (43-C), o passo do ciclo que ainda não existe.
 - **45-H é transversal por natureza** (banco, simulado, referências, repetição
@@ -272,6 +279,10 @@ Notas de ordem:
   outras áreas.
 
 **Fora das trilhas:**
+- **46-E agora, antes do próximo merge com migration** — o CI passa a
+  conferir que a migration está no remoto. CI não é área de nenhuma trilha:
+  roda como unidade avulsa. Até ela entrar, o dono confere a lista de
+  migrations do remoto antes de mesclar qualquer PR com migration.
 - **Janela de reestruturação — 46-A, passos 5 a 12** (camada de dados e
   roteador). Mexe em todas as áreas: roda quando as trilhas 1 e 3 tiverem
   terminado suas listas, com as outras paradas ou só em PR pequeno. Depende dos
@@ -296,12 +307,13 @@ Notas de ordem:
 
 Cada uma bloqueia unidades. A diretoria recomenda; o dono decide. Resolvida,
 vira entrada em `DECISIONS.md` e sai daqui. A numeração continua (a próxima é
-D-4).
+D-5).
 
 **Nenhuma em aberto.** D-1 (editar material publicado → rascunho à parte), D-2
 (leitura offline → não, por ora) e D-3 (46-A em duas janelas) foram decididas
 pelo dono em 23/09, todas conforme a recomendação; estão na seção 3 e em
-`DECISIONS.md`.
+`DECISIONS.md`. D-4 (o CI confere se a migration está no remoto antes do
+merge, com credencial só de leitura) foi levantada e decidida em 24/09 → 46-E.
 
 ---
 
@@ -659,7 +671,9 @@ novo) feita só no simulado, sem migration. Parte 2: clique duplo em
 "correção pendente" e nota no servidor. Por decisão do dono, a correção
 antiga de flashcards foi reaproveitada conceitualmente, sem integrar a branch
 obsoleta; ela fica preservada até o merge desta parte 2 e pode ser removida
-depois.
+depois. *(Diretoria, 24/09: removida; três correções menores que só existiam
+nela foram para a 45-G e a 45-H — `DECISIONS.md`, 24/09. A migration da parte 2
+foi aplicada no remoto cerca de 10 minutos depois do merge — INC-2026-004.)*
 **Estado.** Parte 1 concluída — PR #74. Parte 2 concluída — PR #76.
 
 ---
@@ -774,8 +788,8 @@ duplicar tentativas.
 `docs/archive/SINCRONIZACAO-CONFIAVEL.md` antes de mexer. Reproduzir a AUD-28
 antes de corrigir. Testes E2E de recarregar com operação pendente e de login
 novamente com reenvio.
-**Depende de.** 45-A (mesmo caminho de gravação de respostas).
-**Estado.** Planejada.
+**Depende de.** 45-A (mesmo caminho de gravação de respostas) — concluída.
+**Estado.** Pronta.
 
 ---
 
@@ -825,6 +839,9 @@ A D-2 decidiu não sustentar leitura offline: sem rede, a tela avisa.
   não some no meio da leitura).
 - Responder, anotar, favoritar e marcar leitura sem rede continuam funcionando
   e sobem quando a rede volta, como hoje.
+- No caderno de erros, a falha ao carregar o gabarito de uma questão não
+  esconde o gabarito das outras. *(Correção que ficou numa branch antiga
+  nunca mesclada — `DECISIONS.md`, 24/09.)*
 
 **Restrições e armadilhas conhecidas.**
 - A leitura deixa de cair numa cópia local quando o servidor falha; é isso que
@@ -866,11 +883,17 @@ atualização que não gravou nada aparecendo como sucesso).
 - O teto de intervalo da repetição espaçada é igual no cliente e no servidor.
 - Link começando com `//` não é tratado como interno; a política de conteúdo
   só libera o projeto Supabase do NexusMed.
+- Um link para material inexistente ou despublicado mostra "material não
+  encontrado"; nunca abre outro material no lugar.
+- Um DOI no fim de frase vira link sem a pontuação final.
+
+*(Os dois últimos itens são correções que ficaram numa branch antiga nunca
+mesclada — `DECISIONS.md`, 24/09.)*
 
 **Restrições.** Pode ser dividida em 2 ou 3 PRs. Migrations no remoto antes do
 merge.
-**Depende de.** 45-A (a nota no servidor sai de lá).
-**Estado.** Planejada.
+**Depende de.** 45-A (a nota no servidor sai de lá) — concluída.
+**Estado.** Pronta.
 
 ---
 
@@ -1053,6 +1076,50 @@ reclama, e uma migration errada não tem caminho de volta ensaiado.
 
 ---
 
+### 46-E — O CI confere que a migration está no remoto antes do merge
+
+**Origem.** INC-2026-003 (21/09) e INC-2026-004 (24/09); parte do item 1 da
+AUD-34 (paridade com o remoto). Decisão D-4 do dono, 24/09 (`DECISIONS.md`).
+
+**Por quê.** Merge em `main` é deploy imediato. Aplicar a migration no remoto
+antes do merge é um passo manual que falhou duas vezes em três dias, mesmo
+escrito na primeira linha do PR, no RUNBOOK e no `AGENTS.md`: a produção
+passou a chamar funções que não existiam no banco (importação de questões
+parada; erro que não virava flashcard; simulado fechando com nota vazia). Com
+três trilhas produzindo migrations em paralelo, a chance só cresce.
+
+**Aceite — o dono vê:**
+- Um PR que traz migration ainda não aplicada no remoto fica com um check
+  obrigatório vermelho, que diz qual migration falta; o merge fica bloqueado.
+- Depois de aplicar a migration, rodar o check de novo o deixa verde, sem
+  commit novo.
+- PR sem migration, inclusive do Dependabot, não muda em nada.
+- No `main`, o CI avisa se alguma migration do repositório não está no remoto.
+
+**Restrições.**
+- Credencial mínima: um papel do banco que só lê o histórico de migrations do
+  remoto. Nada de token de gerenciamento da conta. Papel novo herda o que
+  `PUBLIC` concede, inclusive executar funções (`AGENTS.md`, risco 14):
+  conferir e fechar.
+- Repositório público: a credencial nunca aparece em log; o CI nunca escreve
+  no remoto.
+- Falha fechado: sem a credencial configurada, PR com migration reprova com
+  mensagem clara, em vez de passar.
+- Entra num check já obrigatório ou vira um novo — o que for mais simples;
+  mudar o ruleset do `main` é passo do dono.
+- O fluxo novo entra no RUNBOOK (seção 3), no mesmo PR.
+- Aceite comprovado com o check vermelho (migration fora do remoto) e verde
+  (depois de aplicada), não só verde.
+
+**Fora de escopo.** Conferir conteúdo, grants e RLS do remoto (resto da
+AUD-34 e 46-D); aplicar migration pelo CI.
+**Depende de.** P-4 — o dono cria o papel e o segredo com os passos que a
+sessão desta unidade entregar; o PR só mescla depois disso.
+**Executa.** Sessão avulsa, fora das trilhas (CI não é área de nenhuma).
+**Estado.** Pronta.
+
+---
+
 ## 11. Pendências do dono do produto
 
 Nenhuma sessão de IA tem acesso de administrador ao Supabase de produção nem
@@ -1076,6 +1143,12 @@ produção), 46-D.
 **P-2 — Autorizar o backup** (AUD-13): confirmar o plano do Supabase e criar,
 no GitHub, o segredo com a conexão do banco usada pela rotina de backup.
 Destrava: 46-C.
+
+**P-4 — Credencial só de leitura para o CI conferir migrations** (46-E):
+criar no Supabase de produção o papel que só lê o histórico de migrations e,
+no GitHub, o segredo com a conexão dele; incluir o check no ruleset do `main`,
+se for um check novo. Os passos exatos vêm da sessão que executar a 46-E.
+Destrava: 46-E.
 
 *A P-3 (pendências de 18/09, AUD-16) saiu em 23/09.* O dono definiu que o
 NexusMed cobre todo o conhecimento médico, por partes: o material de
@@ -1110,22 +1183,22 @@ trilhas paralelas não conflitam aqui. "Publicado" significa em produção
 
 | Unidade | Estado | PR | Publicado |
 |---|---|---|---|
-| 43-A | Pronta | — | — |
+| 43-A | Em execução (trilha 2) | — | — |
 | 43-B | Planejada | — | — |
 | 43-C | Planejada | — | — |
-| 43-D | Pronta | — | — |
+| 43-D | Em execução (trilha 3) | — | — |
 | 43-E | Planejada | — | — |
 | 44-A | Planejada | — | — |
 | 44-B | Planejada | — | — |
 | 44-C | Planejada | — | — |
-| 45-A | Parte 1 concluída; parte 2 pronta (TASK-2026-09-23-09) | #74 | parte 1 em 24/09 |
+| 45-A | Concluída (revisão do #76 pendente, depois do merge) | #74, #76 | 24/09 (migration da parte 2 aplicada depois do merge — INC-2026-004) |
 | 45-B | Concluída | #71 | 24/09 |
 | 45-C | Concluída (item de desempenho movido para a 46-D) | #73 | 24/09 |
 | 45-D | Pronta | — | — |
-| 45-E | Planejada | — | — |
+| 45-E | Pronta | — | — |
 | 45-F | Pronta | — | — |
 | 45-G | Planejada | — | — |
-| 45-H | Planejada | — | — |
+| 45-H | Pronta | — | — |
 | 45-I | Planejada | — | — |
 | 45-J | Concluída | #72 | 24/09 |
 | 45-K | Planejada (após 45-D) | — | — |
@@ -1133,6 +1206,7 @@ trilhas paralelas não conflitam aqui. "Publicado" significa em produção
 | 46-B | Em andamento | vários (Dependabot) | parcial |
 | 46-C | Planejada (P-2) | — | — |
 | 46-D | Planejada | — | — |
+| 46-E | Pronta (P-4 no meio do caminho) | — | — |
 
 **Concluído antes deste plano** (resumo; o detalhe está em
 `docs/operacao/TASKS.md` e nos PRs):

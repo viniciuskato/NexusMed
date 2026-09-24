@@ -6,6 +6,33 @@
 > `docs/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-24 — O CI confere a migration no remoto (D-4); destino das branches antigas
+
+1. **D-4 — Merge de PR com migration passa a depender de um check que lê o
+   remoto.** Depois da segunda ocorrência em três dias de PR mesclado sem a
+   migration aplicada (INC-2026-003, 21/09; INC-2026-004, 24/09), o dono
+   escolheu o gate que confere o remoto de verdade: o CI lê o histórico de
+   migrations do Supabase de produção com um papel que só enxerga essa tabela
+   e reprova o PR enquanto a migration dele não estiver lá. Alternativas
+   recusadas: rótulo obrigatório posto pelo dono (pega esquecimento, mas não
+   confere o remoto) e só reforçar o processo (foi o que se fez em 21/09 e não
+   segurou). Unidade 46-E; pendência do dono P-4 (papel e segredo). Até lá, o
+   dono confere a lista do remoto antes de mesclar PR com migration.
+2. **`work/integracao-estabilizacao-11b` é apagada** — resolve a entrada de
+   2026-09-22 abaixo, opção (a) na forma: a correção de duplicação de
+   flashcards foi reaproveitada conceitualmente na 45-A parte 2 (decisão do
+   dono durante a execução, PR #76: índice único, criação idempotente no
+   banco e reconciliação das duplicatas na migration, com backup). Ao
+   conferir a branch contra o `main` de 24/09, havia mais quatro correções
+   nela: a da paginação de questões já estava no `main` por outro caminho; as
+   outras três (gabarito do caderno de erros com uma falha derrubando todos;
+   link para material inexistente abrindo outro material; DOI no fim de frase
+   com a pontuação no link) viraram itens de aceite da 45-G e da 45-H. Ponta
+   da branch: `cc09bb1`. Apagada depois do merge deste registro.
+3. **`work/carga-conteudo-nativo-yaml` foi apagada do remoto em 24/09.** A
+   entrada de 22/09 a dava como apagada, mas só a cópia local tinha saído.
+   Ponta: `a5dce95`.
+
 ## 2026-09-23 — Execução em trilhas, com o modelo mais capaz e revisão antes do merge
 
 1. **A execução é organizada em três trilhas**, cada uma uma sessão de vida
