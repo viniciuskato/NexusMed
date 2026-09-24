@@ -75,6 +75,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { StorageService } from './storage';
 import { enqueue, getOps, generateClientOpId } from './syncQueue';
 import { QuestionAnswerRecord } from '../types';
+import { fetchAllRows } from '../repositories/supabasePaging';
 
 export interface AmbiguousRecoveryEntry {
   questionId: string;
@@ -420,10 +421,13 @@ export async function recoverLegacyLocalProgress(uid: string): Promise<void> {
     const pendingCards = localCustomCards.filter((f) => !ledger.flashcards.includes(f.id));
 
     if (pendingCards.length > 0) {
-      const { data: remoteCards, error } = await supabase.from('flashcards').select('id');
-      if (error) throw error;
+      // Todos os ids (45-C): com a lista cortada em 1000, um card que já está
+      // no servidor parecia ausente e era reenviado por cima da versão remota.
+      const remoteCards = await fetchAllRows<{ id: string }>((from, to) =>
+        supabase.from('flashcards').select('id').order('id', { ascending: true }).range(from, to)
+      );
 
-      const remoteIds = new Set((remoteCards ?? []).map((r: { id: string }) => r.id));
+      const remoteIds = new Set(remoteCards.map((r) => r.id));
       for (const card of pendingCards) {
         if (!remoteIds.has(card.id)) {
           enqueue(uid, 'flashcard_upsert', { flashcard: card });
