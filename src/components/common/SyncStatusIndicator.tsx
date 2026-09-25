@@ -72,10 +72,10 @@ export const SyncStatusIndicator: React.FC = () => {
           </ul>
           {status.failedNeedsLogin && (
             <p className="mt-2 text-amber-700 dark:text-amber-300">
-              Sua sessão expirou. Saia e entre novamente para reenviar o que ficou pendente — nada foi perdido.
+              Sua sessão expirou. Ao entrar de novo, o que ficou pendente é reenviado sozinho — nada foi perdido.
             </p>
           )}
-          {status.failed > 0 && !status.failedNeedsLogin && (
+          {status.failed > 0 && (
             <button
               type="button"
               onClick={() => user && retryAllFailed(user.id)}

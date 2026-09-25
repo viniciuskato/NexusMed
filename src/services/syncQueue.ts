@@ -110,6 +110,32 @@ const knownUserIds = new Set<string>();
 const enqueueVersions = new Map<string, number>();
 let periodicTimerStarted = false;
 
+// ----------------------------------------------------------------------------
+// Alvo das operações de estado desejado (45-E, AUD-19). Cada uma carrega o
+// estado final inteiro do alvo (texto da nota, favoritado ou não, seção lida
+// ou não...), então só a mais nova importa — e ela nunca pode chegar ao
+// servidor antes de uma mais antiga do mesmo alvo. Duas regras:
+//   - ao enfileirar, a nova substitui as antigas do mesmo alvo que ainda não
+//     saíram (`pending`/`failed`; a que está em voo fica);
+//   - no envio, alvo com operação retida (backoff, falha) segura as
+//     seguintes do mesmo alvo até ela sair.
+// Categorias fora deste mapa (tentativa de questão, revisão de flashcard,
+// simulado...) são eventos que se somam, nunca substituídos.
+// ----------------------------------------------------------------------------
+const SET_TARGETS: Record<string, (payload: Record<string, unknown>) => string> = {
+  note_upsert: (p) => String(p.targetId),
+  bookmark_set: (p) => `${String(p.type)}:${String(p.id)}`,
+  reading_progress_set: (p) => `${String(p.compendiumId)}:${String(p.sectionId)}`,
+  reaction_set: (p) => String(p.questionId),
+  error_notebook_update: (p) => String((p.errorItem as { id?: unknown } | undefined)?.id),
+};
+
+function targetOf(op: Pick<SyncOp, 'category' | 'payload'>): string | null {
+  const key = SET_TARGETS[op.category];
+  if (!key || !op.payload || typeof op.payload !== 'object') return null;
+  return `${op.category}|${key(op.payload as Record<string, unknown>)}`;
+}
+
 function queueKey(userId: string): string {
   return `synapse_${userId}_sync_queue_v1`;
 }
@@ -290,7 +316,10 @@ export function enqueue<TPayload>(userId: string, category: string, payload: TPa
     );
   }
 
-  const ops = loadQueue(userId);
+  const target = targetOf({ category, payload });
+  const ops = loadQueue(userId).filter(
+    (o) => !target || o.state === 'synced' || o.state === 'syncing' || targetOf(o) !== target
+  );
   // `clientOpId` identifica o efeito remoto e pode ser reutilizado de forma
   // legítima (replay). `id` identifica a entrada local e nunca pode colidir:
   // runFlush/subscribers localizam a entrada por ele. Sem esta separação,
@@ -472,14 +501,38 @@ async function runFlush(userId: string, force = false): Promise<void> {
   }
   if (changed) saveQueue(userId, ops);
 
-  for (let i = 0; i < ops.length; i++) {
+  // Alvos com operação retida nesta passagem (45-E): as seguintes do mesmo
+  // alvo esperam, para nunca chegar ao servidor antes da mais antiga.
+  const heldTargets = new Set<string>();
+  const hold = (candidate: SyncOp): void => {
+    const target = targetOf(candidate);
+    if (target) heldTargets.add(target);
+  };
+
+  // Percorre por id, não por índice: a fila é relida depois de cada envio e
+  // pode ter perdido entradas no meio (operação substituída, acima e em
+  // `enqueue`). Operações que nascem durante o flush ficam para a passagem
+  // seguinte (ver `flush`).
+  for (const opId of ops.map((o) => o.id)) {
+    const i = ops.findIndex((o) => o.id === opId);
+    if (i < 0) continue;
     let op = ops[i];
     if (op.state === 'synced') continue;
-    if (op.state === 'failed' && !isRetryable(op.lastError?.kind ?? 'unknown')) continue;
-    if (!force && op.nextRetryAt && new Date(op.nextRetryAt).getTime() > now) continue;
+    const target = targetOf(op);
+    if (target && heldTargets.has(target)) continue;
+    if (
+      (op.state === 'failed' && !isRetryable(op.lastError?.kind ?? 'unknown')) ||
+      (!force && op.nextRetryAt && new Date(op.nextRetryAt).getTime() > now)
+    ) {
+      hold(op);
+      continue;
+    }
 
     const handler = handlers.get(op.category);
-    if (!handler) continue; // categoria sem handler registrado nesta sessão (ex.: código antigo) — não trava a fila
+    if (!handler) {
+      hold(op);
+      continue; // categoria sem handler registrado nesta sessão (ex.: código antigo) — não trava a fila
+    }
 
     // Operação enfileirada sem `clientOpId` (crypto indisponível no momento
     // do enqueue, ver Problema 4) — tenta gerar agora, antes de qualquer
@@ -502,6 +555,7 @@ async function runFlush(userId: string, force = false): Promise<void> {
         };
         changed = true;
         saveQueue(userId, ops);
+        hold(op);
         continue; // próxima operação — esta é retentada num flush futuro
       }
       // Atualiza a referência local de `op` também — os `spread`s abaixo
@@ -569,6 +623,13 @@ async function runFlush(userId: string, force = false): Promise<void> {
           lastError: { kind, message: String((err as { message?: unknown } | null | undefined)?.message || err) },
           updatedAt: new Date().toISOString(),
         };
+        // Enquanto esta estava em voo, o estudante mudou o mesmo alvo de novo
+        // (45-E): a mais nova já carrega o estado final, então esta sai da
+        // fila em vez de ser reenviada depois dela ou prendê-la numa falha.
+        const superseded =
+          target !== null && ops.some((o, j) => j > idx && o.state !== 'synced' && targetOf(o) === target);
+        if (superseded) ops.splice(idx, 1);
+        else hold(ops[idx]);
       }
       // Erro de auth: não adianta continuar tentando as próximas operações agora.
       if (kind === 'auth') {
@@ -648,8 +709,26 @@ export function subscribe(userId: string, listener: () => void): () => void {
 export function onActiveUserChanged(userId: string | null): void {
   if (userId) {
     knownUserIds.add(userId);
+    requeueAuthFailures(userId);
     void flush(userId);
   }
+}
+
+/**
+ * Falha de sessão (`auth`) não é da operação: é o token que venceu. Quando o
+ * usuário entra de novo, ela volta a pendente e sobe sozinha (45-E, AUD-25) —
+ * antes ficava `failed` para sempre, e "faça login novamente" nunca resolvia.
+ */
+function requeueAuthFailures(userId: string): void {
+  const ops = loadQueue(userId);
+  let changed = false;
+  for (let i = 0; i < ops.length; i++) {
+    if (needsLogin(ops[i])) {
+      ops[i] = { ...ops[i], state: 'pending', nextRetryAt: undefined, attempts: 0, updatedAt: new Date().toISOString() };
+      changed = true;
+    }
+  }
+  if (changed) saveQueue(userId, ops);
 }
 
 /**

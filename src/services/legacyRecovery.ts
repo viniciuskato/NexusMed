@@ -242,7 +242,31 @@ async function fetchQuestionStem(questionId: string): Promise<string | null> {
   }
 }
 
-export async function recoverLegacyLocalProgress(uid: string): Promise<void> {
+// Uma execução por UID de cada vez (45-E, AUD-28): o boot chama
+// `setActiveUser` ao menos duas vezes (getSession e INITIAL_SESSION), e duas
+// execuções concorrentes viam o servidor sem a linha e enfileiravam a mesma
+// resposta duas vezes, com `client_op_id` diferentes.
+const inFlight = new Map<string, Promise<void>>();
+
+export function recoverLegacyLocalProgress(uid: string): Promise<void> {
+  const running = inFlight.get(uid);
+  if (running) return running;
+  const run = runRecovery(uid).finally(() => inFlight.delete(uid));
+  inFlight.set(uid, run);
+  return run;
+}
+
+/** A fila já tem tentativa ainda não confirmada para esta questão (ex.: respondida offline). */
+function hasQueuedAttempt(uid: string, questionId: string): boolean {
+  return getOps(uid).some(
+    (o) =>
+      o.category === 'question_attempt' &&
+      o.state !== 'synced' &&
+      (o.payload as { questionId?: unknown } | null)?.questionId === questionId
+  );
+}
+
+async function runRecovery(uid: string): Promise<void> {
   if (!isSupabaseConfigured) return;
 
   try {
@@ -321,6 +345,12 @@ export async function recoverLegacyLocalProgress(uid: string): Promise<void> {
         );
         continue;
       }
+
+      // Resposta que a própria fila ainda vai enviar não é "progresso legado":
+      // o servidor ainda não tem a linha porque a operação não saiu, e
+      // enfileirá-la de novo criaria uma segunda tentativa (AUD-28). A fila
+      // cuida dela; o próximo login a encontra no servidor.
+      if (hasQueuedAttempt(uid, questionId)) continue;
 
       const { data: remoteRows, error } = await supabase
         .from('question_attempts')
