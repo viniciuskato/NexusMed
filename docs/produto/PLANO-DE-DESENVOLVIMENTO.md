@@ -1276,10 +1276,10 @@ do que é construído e dita prioridades.
 | Frente editorial | Plano | Estado | Se beneficia de |
 |---|---|---|---|
 | Antimicrobianos (piloto dos β-lactâmicos) | [`docs/editorial/PLANO-ANTIMICROBIANOS.md`](../editorial/PLANO-ANTIMICROBIANOS.md) | Em produção desde 24/09 — primeira leva (7 materiais), de cima para baixo | 44-C1 (checar cada arquivo), 43-A (pai define disciplina), 43-B (questões ligadas), 44-B (dividir o rascunho antigo), 44-A (aparecer em Infectologia) |
-| Equilíbrio Ácido-Base (Nefrologia, tema Distúrbio Acidobásico) | Material pronto e auditado em 18/09, no formato anterior ao padrão v2 (`docs/editorial/as1/`) | Na fila, sem prazo — não importado; trazer ao padrão vigente antes de publicar | 44-C1 (conferir o arquivo) e 44-B (atualizar por arquivo) |
+| Equilíbrio Ácido-Base (Nefrologia, tema Distúrbio Acidobásico) | Material pronto e auditado em 18/09, no formato anterior ao padrão v2 (`docs/editorial/acervo/as1/`) | Na fila, sem prazo — não importado; trazer ao padrão vigente antes de publicar | 44-C1 (conferir o arquivo) e 44-B (atualizar por arquivo) |
 
 Temas futuros e acervos a migrar: `docs/editorial/BANCO-EDITORIAL-TEMAS-FUTUROS.md`
-e `docs/diretoria/AUDITORIA-BASE-DE-ESTUDOS-2026-09-21.md`.
+e `docs/archive/diretoria/AUDITORIA-BASE-DE-ESTUDOS-2026-09-21.md`.
 
 ---
 

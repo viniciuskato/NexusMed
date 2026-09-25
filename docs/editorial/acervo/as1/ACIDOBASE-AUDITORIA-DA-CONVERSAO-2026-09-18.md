@@ -2,10 +2,10 @@
 
 Missão original: AS1-B3. Sessão executiva de auditoria (não redação, não
 importação, não publicação). Texto integral da missão em
-[`docs/diretoria/prompts/AS1-B3.txt`](../../diretoria/prompts/AS1-B3.txt).
+[`docs/diretoria/prompts/AS1-B3.txt`](../../../archive/diretoria/prompts/AS1-B3.txt).
 
 **Retificado pela missão AS1-B3.1** (sessão executiva, texto integral em
-[`docs/diretoria/prompts/AS1-B3.1.txt`](../../diretoria/prompts/AS1-B3.1.txt)),
+[`docs/diretoria/prompts/AS1-B3.1.txt`](../../../archive/diretoria/prompts/AS1-B3.1.txt)),
 executada no worktree
 `.claude/worktrees/as1-b3-1-retificacao-qa`, branch
 `work/as1-b3-1-retificacao-qa-acidobasico`, a partir do commit-base

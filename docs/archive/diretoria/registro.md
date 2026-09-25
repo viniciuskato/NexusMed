@@ -348,7 +348,7 @@ evidência de que já foi enviado para execução.
 
 
 ## Decisão da diretoria — modelo aprovado em 2026-09-07
-O usuário aprovou o [modelo de operação](MODELO-DIRETORIA.md): acompanhar entregas, identificar encaminhamentos por etapa, separar prontidão de possibilidade de execução simultânea e manter fila, acompanhamento e histórico. Para status de envio, a confirmação do usuário prevalece sobre inferências por arquivos locais. Até esta confirmação, somente o envio do complemento 06 foi explicitamente confirmado nesta conversa; os retornos iniciais 01, 02 e 06 foram recebidos. Observações de atividade em arquivos de outras entregas permanecem como evidência auxiliar, sem confirmar envio ou conclusão. Prompts já emitidos mantêm seus nomes; novos encaminhamentos adotam NN-A/NN-B sem renumerar o histórico.
+O usuário aprovou o [modelo de operação](../../diretoria/MODELO-DIRETORIA.md): acompanhar entregas, identificar encaminhamentos por etapa, separar prontidão de possibilidade de execução simultânea e manter fila, acompanhamento e histórico. Para status de envio, a confirmação do usuário prevalece sobre inferências por arquivos locais. Até esta confirmação, somente o envio do complemento 06 foi explicitamente confirmado nesta conversa; os retornos iniciais 01, 02 e 06 foram recebidos. Observações de atividade em arquivos de outras entregas permanecem como evidência auxiliar, sem confirmar envio ou conclusão. Prompts já emitidos mantêm seus nomes; novos encaminhamentos adotam NN-A/NN-B sem renumerar o histórico.
 
 ## Retorno recebido — 02-B (alias: Prompt 02 — Complemento), 2026-09-07
 

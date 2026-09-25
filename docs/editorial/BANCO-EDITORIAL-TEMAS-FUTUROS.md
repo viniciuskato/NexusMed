@@ -2,7 +2,7 @@
 
 Artefato canônico do prompt executivo `25-A`. Fonte documental para capturar, triar, priorizar e acompanhar temas futuros de conteúdo, **sem** confundi-los com `themes`/`concepts` publicados no produto. Não é CMS, schema Supabase, migration nem interface — é uma tabela versionável (CSV) mais esta especificação.
 
-Dados: [`banco-editorial-temas-futuros.csv`](./banco-editorial-temas-futuros.csv) — 117 linhas, uma por ideia.
+Dados: [`banco-editorial-temas-futuros.csv`](acervo/banco-editorial-temas-futuros.csv) — 117 linhas, uma por ideia.
 
 ## 1. Campos (schema leve)
 

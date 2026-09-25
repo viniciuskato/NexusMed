@@ -13,7 +13,7 @@
 ## Como usar este documento
 Isto é análise, não é o novo estado do protocolo — as mudanças reais de
 processo que resultaram desta análise já foram aplicadas diretamente em
-[`MODELO-DIRETORIA.md`](MODELO-DIRETORIA.md) (seções "Papel", "Eficiência
+[`MODELO-DIRETORIA.md`](../../diretoria/MODELO-DIRETORIA.md) (seções "Papel", "Eficiência
 de execução" e "Verificação cruzada"). Leia este arquivo só se quiser o
 racional completo por trás dessas mudanças, ou se for decidir se um achado
 listado como "não aplicado" deveria ser adotado depois de tudo.

@@ -38,6 +38,11 @@ sem nenhum corte): [`docs/archive/AGENTS-HISTORICO-2026-09-17.md`](docs/archive/
 Consulte-o quando precisar do detalhamento completo de algo só resumido
 abaixo. Não é o estado atual — é arquivo morto, preservado por completo.
 
+**Mapa de `docs/`** ("quero X, abra Y", e a tabela de caminhos antigos para
+novos da reorganização de 25/09, útil quando um comentário no código ou um
+documento antigo citar um caminho que não existe mais):
+[`docs/LEIA-ME.md`](docs/LEIA-ME.md).
+
 ## O que é o projeto
 
 Plataforma de estudos médicos (NexusMed/SynapseMed — o nome de marca é
@@ -224,14 +229,14 @@ link entram aqui quando todo agente precisar conhecê-los.
 O que construir e em que ordem vive no plano canônico
 (`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`); estado dos ambientes,
 decisões e fila operacional, em `PROJECT_STATE.md`, `DECISIONS.md` e
-`TASKS.md`, conforme `SESSION_PROTOCOL.md`. `docs/diretoria/registro.md` é
+`TASKS.md`, conforme `SESSION_PROTOCOL.md`. `docs/archive/diretoria/registro.md` é
 o painel legado da diretoria (histórico até 2026-09-17).
 
 ## Comunicação entre diretoria e executivas
 
 Toda sessão de diretoria deve ler e seguir
 [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md)
-e consultar [`docs/diretoria/registro.md`](docs/diretoria/registro.md)
+e consultar [`docs/archive/diretoria/registro.md`](docs/archive/diretoria/registro.md)
 para o histórico. Preserve os identificadores já emitidos ao continuar
 esse histórico.
 
@@ -243,5 +248,5 @@ frentes, as trilhas e a ordem, as decisões em aberto, as unidades (por quê,
 critério de aceite, restrições, dependências) e o registro. A unidade diz o
 quê e por quê; o como é derivado lendo o código na hora, pela trilha dona da
 área. A diretoria planeja nele; a trilha atualiza só a linha "Estado" da
-unidade no mesmo PR da implementação. `docs/diretoria/prompts/` e
+unidade no mesmo PR da implementação. `docs/archive/diretoria/prompts/` e
 `registro.md` são histórico — nada novo entra lá.

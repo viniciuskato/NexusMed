@@ -2,7 +2,7 @@
 
 Missão: AS1-B2. Sessão executiva editorial de desenvolvimento. Texto integral
 da missão em
-[`docs/diretoria/prompts/AS1-B2.txt`](../../diretoria/prompts/AS1-B2.txt).
+[`docs/diretoria/prompts/AS1-B2.txt`](../../../archive/diretoria/prompts/AS1-B2.txt).
 Base: `work/as1-b1-auditoria-acidobasico` no commit `bfa2d93` (topo confirmado
 antes de qualquer edição). Branch de trabalho:
 `work/as1-b2-conversao-acidobasico`.

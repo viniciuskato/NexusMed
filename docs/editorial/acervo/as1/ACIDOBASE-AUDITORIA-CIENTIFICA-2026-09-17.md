@@ -2,7 +2,7 @@
 
 Missão: AS1-B1. Sessão executiva editorial, somente leitura sobre o PDF de
 origem. Ver texto integral da missão em
-[`docs/diretoria/prompts/AS1-B1.txt`](../../diretoria/prompts/AS1-B1.txt).
+[`docs/diretoria/prompts/AS1-B1.txt`](../../../archive/diretoria/prompts/AS1-B1.txt).
 
 ## Identificação do material
 
