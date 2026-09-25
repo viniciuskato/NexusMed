@@ -671,7 +671,7 @@ padrão — tudo aceito em silêncio ou visível só na tela depois de importado
 **Fora de escopo.** Selo, filtros e versão na Área Editorial (44-C2);
 correção automática; nota de qualidade; checagem por IA.
 **Depende de.** Nada.
-**Estado.** Concluída — PR #nn.
+**Estado.** Concluída — PR #85.
 **Achados da execução.** O rascunho real dos β-lactâmicos também separa
 citações por vírgula (`[1](#ref-1), [2](#ref-2)`) e usa `*` nos Pontos-Chave,
 fora do que o padrão pede mas aceitos pela importação e pelo leitor; não viraram
