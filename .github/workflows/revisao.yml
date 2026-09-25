@@ -1,0 +1,107 @@
+name: revisao
+
+# Trava de revisão (D-6, PR #84). O check `revisado` fica verde quando o PR
+# tem o rótulo "revisado" e o código não mudou desde que o rótulo foi posto.
+# Ao pôr o rótulo, este workflow registra num comentário do PR o commit
+# rotulado. A cada execução, confere que tudo o que veio depois dele são só
+# merges limpos da base (o botão "Update branch", que a regra de branch
+# atualizada do `main` exige a cada merge). Qualquer outro commit, rebase ou
+# rótulo sem registro tira o rótulo. Uso: EXECUTOR_PROTOCOL.md, "Revisão".
+#
+# Por que o estado fica no commit registrado, e não no último push: execução
+# cancelada pela fila, push com o PR fechado ou em conflito (sem execução) e
+# pushes em sequência rápida ficam cobertos, porque a próxima execução confere
+# a cadeia inteira desde o commit rotulado.
+#
+# `pull_request_target` roda a versão deste arquivo que está na base, e não a
+# do PR: um PR não consegue afrouxar a própria trava. É seguro porque o job
+# nunca executa código do PR: só busca os commits como objetos do git e
+# compara árvores. Não acrescentar checkout do PR, `npm` nem script do PR.
+#
+# Limites: o registro é do commit em que o rótulo foi posto, não do que a
+# revisão leu (pôr o rótulo depois de um push não revisado passa); e as
+# sessões usam a conta do dono, então o check não sabe quem pôs o rótulo.
+on:
+  pull_request_target:
+    branches: ['**']
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  issues: write         # comentário que registra o commit rotulado
+  pull-requests: write  # tirar o rótulo
+
+concurrency:
+  group: revisao-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  revisado:
+    name: revisado
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      BASE_REF: ${{ github.event.pull_request.base.ref }}
+      ACTION: ${{ github.event.action }}
+      LABEL: ${{ github.event.label.name }}
+    steps:
+      - name: Confere o rótulo contra o commit rotulado
+        run: |
+          set -euo pipefail
+          reprova() { echo "::error::$1"; exit 1; }
+          tira_rotulo() {
+            gh pr edit "$PR" --remove-label revisado \
+              || echo "::warning::Não consegui tirar o rótulo (token só leitura). Tire à mão."
+            reprova "$1"
+          }
+
+          rotulos=$(gh pr view "$PR" --json labels --jq '[.labels[].name] | join(",")')
+          case ",$rotulos," in
+            *,revisado,*) ;;
+            *) reprova "PR sem o rótulo 'revisado'. Depois da revisão em sessão nova, sem achado pendente, o dono põe o rótulo." ;;
+          esac
+
+          if [ "$ACTION" = labeled ] && [ "$LABEL" = revisado ]; then
+            gh pr comment "$PR" --body "Rótulo \"revisado\" registrado no commit ${HEAD_SHA:0:7}. Commit novo que não seja só \"Update branch\" tira o rótulo.
+
+          <!-- revisao:commit=${HEAD_SHA} -->"
+            echo "Rótulo registrado no commit $HEAD_SHA."
+            exit 0
+          fi
+
+          rotulado=$(gh api "repos/$GH_REPO/issues/$PR/comments" --paginate \
+              --jq '.[] | select(.user.login == "github-actions[bot]") | .body' \
+            | grep -o 'revisao:commit=[0-9a-f]\{40\}' | tail -n 1 | cut -d= -f2 || true)
+          [ -n "$rotulado" ] || tira_rotulo "O rótulo 'revisado' não tem commit registrado (a execução que registra pode ter sido cancelada). Ponha o rótulo de novo."
+
+          git init -q repo && cd repo
+          git remote add origin "https://github.com/$GH_REPO.git"
+          git fetch -q --no-tags --filter=blob:none origin \
+            "+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF" \
+            "+refs/pull/$PR/head:refs/pr/head"
+
+          # Anda pelo primeiro pai, do commit atual até o rotulado. Cada passo
+          # tem de ser um merge do passo anterior com um commit da base, com a
+          # árvore que o git produz sozinho para esse merge.
+          c=$HEAD_SHA
+          for _ in $(seq 1 200); do
+            if [ "$c" = "$rotulado" ]; then
+              echo "Desde ${rotulado:0:7}, só merges limpos da base: o rótulo vale."
+              exit 0
+            fi
+            read -r _ pai1 pai2 extra <<< "$(git rev-list --parents -n 1 "$c" 2>/dev/null)" || true
+            if [ -n "${pai2:-}" ] && [ -z "${extra:-}" ] \
+               && git merge-base --is-ancestor "$pai2" "origin/$BASE_REF"; then
+              arvore=$(git merge-tree --write-tree "$pai1" "$pai2" 2>/dev/null || true)
+              if [ "$arvore" = "$(git rev-parse "$c^{tree}")" ]; then
+                c=$pai1
+                continue
+              fi
+            fi
+            tira_rotulo "Código novo depois do rótulo (commit ${c:0:7}; rotulado: ${rotulado:0:7}). Revise de novo e recoloque o rótulo 'revisado'."
+          done
+          tira_rotulo "Mais de 200 commits desde o rótulo. Revise de novo e recoloque o rótulo 'revisado'."

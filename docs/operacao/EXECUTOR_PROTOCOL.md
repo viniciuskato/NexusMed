@@ -60,8 +60,13 @@ quando precisar de um fato que o código não mostra.
    merge".
 8. **Revisão.** O dono roda uma revisão independente numa sessão nova (seção
    "Revisão", abaixo). As correções voltam para você, na mesma trilha:
-   corrigir, rodar os gates de novo, atualizar o PR.
-9. Depois do merge, seguir para a próxima unidade.
+   corrigir, rodar os gates de novo, atualizar o PR. Seu push tira o rótulo
+   "revisado", se já estiver lá; é esperado.
+9. **Atualizar com o `main`**, quando o PR pedir: botão "Update branch" ou
+   `git merge origin/main`, e push. Nunca rebase nem force-push (ver
+   "Revisão", abaixo).
+10. Depois do merge, seguir para a próxima unidade a partir do `main`
+    atualizado. Não empilhe PRs: cada unidade sai do `main`.
 
 ## O Supabase local é um só para todas as trilhas
 
@@ -134,13 +139,28 @@ RETORNO: <unidade, ex.: 45-B>
 ## Revisão (sessão nova, antes do merge)
 
 Quem revisa não é quem implementou e não carrega o contexto da trilha — é
-isso que dá olhos novos. Em Claude Code: `/code-review high <nº do PR>`; com
-`--comment`, os achados vão como comentários no PR e a trilha os lê direto,
-sem ninguém copiar e colar. Além dos bugs, a revisão confere se cada item do
+isso que dá olhos novos. Em Claude Code: `/code-review high <nº do PR>
+--comment`. Os achados vão como comentários no PR: a trilha os lê direto, sem
+ninguém copiar e colar, e fica o registro de que a revisão aconteceu. Além dos bugs, a revisão confere se cada item do
 aceite da unidade tem evidência no retorno e se as restrições da unidade
 foram respeitadas. Em mudança de risco alto — hash de atestação,
 sincronização, RLS, migration que mexe em dado existente —, vale um segundo
 olhar de outro modelo (`MODELO-DIRETORIA.md`, "Verificação cruzada").
+
+**Rótulo "revisado" e check `revisado` (D-6).** Sem achado pendente, o dono
+põe o rótulo no PR. O workflow `.github/workflows/revisao.yml` registra num
+comentário o commit rotulado; o check fica verde enquanto tudo depois dele
+forem só merges limpos do `main`. Na prática:
+- ponha o rótulo só com o commit revisado como último do PR — o registro é
+  do commit em que o rótulo foi posto, não do que a revisão leu;
+- commit novo, merge com edição à mão (conflito resolvido), rebase ou
+  force-push tiram o rótulo sozinhos; "Update branch" e `git merge
+  origin/main` limpo não tiram;
+- a trilha nunca põe nem tira o rótulo — o check não distingue quem o pôs,
+  porque as sessões usam a conta do dono;
+- o workflow roda a versão do `main` (`pull_request_target`), então só vale
+  depois de mesclado, e só bloqueia o merge depois que o dono o incluir como
+  obrigatório no ruleset do `main`. Até lá, conferir o check à mão.
 
 ## Regras de segurança sem exceção implícita
 

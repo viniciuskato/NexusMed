@@ -6,6 +6,26 @@
 > `docs/archive/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-25 — Travas por mecanismo, menos coisa em paralelo, volta ao produto (D-6, PR #84)
+
+Origem: relatório dos commits de 20 a 24/09 e INC-2026-005; o dono delegou à
+diretoria o que fosse pertinente. As travas que eram só regra escrita
+falharam, e o processo produz mais do que o dono consegue revisar e mesclar.
+
+1. **Travas por mecanismo:** check `revisado` com rótulo (regras de uso em
+   `EXECUTOR_PROTOCOL.md`, "Revisão"); merge só por squash; 46-E antes de
+   qualquer merge com migration.
+2. **No máximo duas trilhas** (agora a 1 e a 2) **e três PRs esperando o
+   dono.**
+3. **Sem PR só de registro;** a diretoria atualiza registro, estado e métricas
+   uma vez por semana. Processo congelado até 09/10.
+4. **Meta até 02/10:** ciclo completo no piloto dos β-lactâmicos (43-B e
+   depois 43-C, antes dos passos 1 a 4 da 46-A). Frentes editoriais novas
+   esperam. Ordem das trilhas: seção 5 do plano.
+5. **Três números por semana:** materiais publicados, questões publicadas
+   ligadas a material publicado, estudantes com cards em 7 dias
+   (`docs/produto/METRICAS.md`).
+
 ## 2026-09-24 — Produção de conteúdo em paralelo, com o Gemini como redator (D-5)
 
 1. **D-5 — O NexusMed evolui em duas frentes simultâneas: sistema e

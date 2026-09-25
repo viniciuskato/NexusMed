@@ -16,6 +16,10 @@ ao projeto `synapsemed`, que hoje só a conta do dono do projeto tem.
 caindo semana a semana, ou `materiais_publicados` parado enquanto o código
 cresce. `estudantes_ativos_cadastrados` inclui admins.
 
-| Data | Cadastrados ativos | Pendentes | Ativos 7d | Ativos 7d ant. | Questões 7d | Acerto 7d | Revisões de cards 7d | Materiais publ./rasc. | Questões publ./rasc. | Observação |
-|---|---|---|---|---|---|---|---|---|---|---|
-| _(primeira leitura: antes da prova AS1 de 21/09)_ | | | | | | | | | | |
+Os três números da D-6 (`DECISIONS.md`, 25/09): **materiais publicados**,
+**questões publicadas ligadas a material publicado** e **estudantes com cards em 7
+dias**.
+
+| Data | Cadastrados ativos | Pendentes | Ativos 7d | Ativos 7d ant. | Questões 7d | Acerto 7d | Revisões de cards 7d | Estudantes com cards 7d | Materiais publ./rasc. | Questões publ./rasc. | Questões publ. ligadas a material publ. | Observação |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-09-25 | 7 | 0 | 2 | 1 | 22 | 14% | 0 | 0 | 36 / 2 | 393 / 27 | 0 | Primeira leitura. A busca ficou fora do ar na noite de 24/09 (INC-2026-005). |

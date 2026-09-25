@@ -199,6 +199,10 @@ seção "Armadilhas já descobertas".
   2026-09-18) — nunca push direto: cada push em `main` é um deploy real.
   Migration da qual o frontend depende é aplicada no remoto **antes** do
   merge. Detalhe em `docs/operacao/RUNBOOK.md`, seção 3.
+- **D-6 (25/09):** revisão com rótulo e check `revisado` (regras em
+  `docs/operacao/EXECUTOR_PROTOCOL.md`, "Revisão"; atualizar branch só com
+  merge, nunca rebase), merge por squash, no máximo duas trilhas e três PRs
+  esperando o dono, processo congelado até 09/10.
 - **O diário de cada mudança é o PR**, não os documentos de operação.
   `PROJECT_STATE.md`/`TASKS.md`/`DECISIONS.md` registram estado presente,
   fila e decisões duráveis em poucas linhas, com link para o PR.
