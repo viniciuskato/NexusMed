@@ -22,15 +22,23 @@ volume as (
   from public.question_attempts
 ),
 cards as (
-  select count(*) as revisoes_cards_7d from public.flashcard_reviews where reviewed_at > now() - interval '7 days'
+  select count(*) as revisoes_cards_7d,
+         count(distinct f.user_id) as estudantes_cards_7d
+  from public.flashcard_reviews r
+  join public.flashcards f on f.id = r.flashcard_id
+  where r.reviewed_at > now() - interval '7 days'
 )
 select now()::date                                                                  as data,
        (select count(*) from public.profiles where status = 'active')               as estudantes_ativos_cadastrados,
        (select count(*) from public.profiles where status = 'pending')              as cadastros_pendentes,
        a.ativos_7d, a.ativos_7d_anterior,
-       v.questoes_7d, v.acerto_pct_7d, c.revisoes_cards_7d,
+       v.questoes_7d, v.acerto_pct_7d, c.revisoes_cards_7d, c.estudantes_cards_7d,
        (select count(*) from public.materials where status = 'published')           as materiais_publicados,
        (select count(*) from public.materials where status = 'draft')               as materiais_rascunho,
        (select count(*) from public.questions where status = 'published')           as questoes_publicadas,
-       (select count(*) from public.questions where status = 'draft')               as questoes_rascunho
+       (select count(*) from public.questions where status = 'draft')               as questoes_rascunho,
+       -- Vínculo de hoje: questions.material_id (um material). Quando a 43-B
+       -- trocar o vínculo, trocar esta linha junto.
+       (select count(*) from public.questions
+         where status = 'published' and material_id is not null)                    as questoes_ligadas_a_material
 from ativos_semana a, volume v, cards c;

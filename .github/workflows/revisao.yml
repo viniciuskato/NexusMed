@@ -1,0 +1,94 @@
+name: revisao
+
+# Trava de revisão (D-6, 2026-09-25): o PR só fica verde neste check com o
+# rótulo "revisado", que o dono põe depois da revisão em sessão nova
+# (EXECUTOR_PROTOCOL.md, "Revisão"). Substitui a regra escrita "revisar antes
+# do merge", que não segurou: de 20 a 24/09, 1 de 40 PRs teve revisão
+# registrada, e o #76 foi mesclado sem revisão (INC-2026-004).
+#
+# Push novo depois da revisão tira o rótulo: a revisão valia para outro
+# código. Exceção: push que só traz o `main` para a branch — o botão "Update
+# branch" do PR, que a regra "branch atualizada" do `main` exige a cada merge.
+# Conferido assim: o commit novo é um merge do commit anterior com um commit
+# que já está na base, e a árvore dele é exatamente a que o git produz sozinho
+# para esse merge (nenhuma edição à mão no meio). "Update with rebase" e
+# rebase local reescrevem os commits e tiram o rótulo.
+#
+# Segurança: `pull_request` (nunca `pull_request_target`), nenhum segredo.
+# `pull-requests: write` só para tirar o rótulo. Em PR de fork e do Dependabot
+# o token é só leitura: o rótulo não sai sozinho, o check fica vermelho e pede
+# para tirar e recolocar. Valores do evento entram no shell só por `env`.
+on:
+  pull_request:
+    branches: ['**']
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: revisao-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  revisado:
+    name: revisado
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number }}
+      BEFORE: ${{ github.event.before }}
+      AFTER: ${{ github.event.after }}
+      BASE_REF: ${{ github.event.pull_request.base.ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event.action == 'synchronize'
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Push novo depois da revisão tira o rótulo
+        if: github.event.action == 'synchronize'
+        run: |
+          set -euo pipefail
+          tem=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json labels \
+            --jq '[.labels[].name] | index("revisado") != null')
+          if [ "$tem" != "true" ]; then
+            echo "Sem o rótulo 'revisado'; nada a tirar."
+            exit 0
+          fi
+
+          so_base=false
+          read -r _ pai1 pai2 extra <<< "$(git rev-list --parents -n 1 "$AFTER")" || true
+          if [ -n "${pai2:-}" ] && [ -z "${extra:-}" ] && [ "$pai1" = "$BEFORE" ] \
+             && git merge-base --is-ancestor "$pai2" "origin/$BASE_REF"; then
+            arvore=$(git merge-tree --write-tree "$BEFORE" "$pai2" 2>/dev/null || true)
+            if [ "$arvore" = "$(git rev-parse "$AFTER^{tree}")" ]; then
+              so_base=true
+            fi
+          fi
+
+          if [ "$so_base" = true ]; then
+            echo "O push só trouxe '$BASE_REF' para a branch; o rótulo 'revisado' continua valendo."
+            exit 0
+          fi
+
+          if gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --remove-label revisado; then
+            echo "::error::Código novo depois da revisão: o rótulo 'revisado' foi retirado. Revise de novo e recoloque o rótulo."
+          else
+            echo "::error::Código novo depois da revisão, e o token não pôde tirar o rótulo (fork ou Dependabot). Tire o rótulo 'revisado', revise e recoloque."
+          fi
+          exit 1
+
+      - name: Exige o rótulo "revisado"
+        run: |
+          set -euo pipefail
+          tem=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json labels \
+            --jq '[.labels[].name] | index("revisado") != null')
+          if [ "$tem" != "true" ]; then
+            echo "::error::PR sem o rótulo 'revisado'. Depois da revisão em sessão nova, sem achado pendente, o dono põe o rótulo."
+            exit 1
+          fi
+          echo "Rótulo 'revisado' presente."

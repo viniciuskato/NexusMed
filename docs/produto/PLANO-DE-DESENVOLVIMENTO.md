@@ -261,22 +261,27 @@ interna entra numa janela própria.
 área do código e num worktree próprio (`EXECUTOR_PROTOCOL.md`). Dentro da
 trilha, uma unidade por PR, na ordem da tabela; o contexto de uma unidade serve
 à próxima. Como as áreas não se sobrepõem, as trilhas não disputam os mesmos
-arquivos; as poucas dependências entre elas estão na última coluna. Com menos
-atenção disponível para acompanhar, abrir primeiro as trilhas 1 e 2 (perda de
-dado e forma de produzir conteúdo) e a 3 depois.
+arquivos; as poucas dependências entre elas estão na última coluna.
+
+**Ritmo (D-6, 25/09):** no máximo duas trilhas ao mesmo tempo — agora a 1 e a
+2; a 3 pausada — e no máximo três PRs esperando o dono (chegando a três, as
+trilhas param ao fim da unidade). Quando a 43-B for mesclada, a trilha 3 volta
+direto na 43-C e a trilha 1 pausa ao fim da unidade em que estiver. Meta até
+02/10: ciclo completo no piloto dos β-lactâmicos (7 materiais publicados e
+questões ligadas, pela 43-B e pela 43-C).
 
 | Trilha | Área do código | Unidades, na ordem | Espera outra trilha |
 |---|---|---|---|
 | **1 — Dados do estudante** | Respostas, flashcards, simulados, caderno de erros, sincronização; leitura e gravação nos repositórios | 45-E → 45-G → 45-I | — |
-| **2 — Material e Área Editorial** | Formulário, importação, gravação e revisão de material e de questão | 43-A → 44-C1 → 45-D → 43-B → 45-K → 44-B → 44-A → 44-C2 | — |
-| **3 — Descoberta e casca do app** | Busca, conta e sessão, menu, componente raiz, telas novas do ciclo | 43-D → 45-F → 45-H → 46-A passos 1 a 4 → 43-C → 43-E | 43-C espera a 43-B (trilha 2) |
+| **2 — Material e Área Editorial** | Formulário, importação, gravação e revisão de material e de questão | ~~43-A~~ → 44-C1 → 45-D → 43-B → 45-K → 44-B → 44-A → 44-C2 | — |
+| **3 — Descoberta e casca do app** | Busca, conta e sessão, menu, componente raiz, telas novas do ciclo | ~~43-D~~ → *pausada* → 43-C → 45-F → 45-H → 46-A passos 1 a 4 → 43-E | 43-C espera a 43-B (trilha 2) |
 
-Já concluídas e publicadas em 24/09, fora das listas: 45-B, 45-J, 45-C e 45-A
-(partes 1 e 2).
+Já concluídas e publicadas, fora das listas: 45-B, 45-J, 45-C e 45-A (partes
+1 e 2, e as correções da revisão do #76 no #81).
 
 Notas de ordem:
-- **Trilha 1:** antes da 45-E, os achados da revisão do PR #76 (45-A parte
-  2), que só foi revisado depois do merge — mesmo caminho de gravação.
+- **Trilha 1:** os achados da revisão do PR #76 foram corrigidos no #81; a
+  próxima é a 45-E.
 - **Trilha 2:** a 44-C1 vem logo depois da 43-A porque a produção de conteúdo
   começou em paralelo (D-5) e cada arquivo do Gemini precisa ser checado antes
   de importar; é pequena e não depende de nada. A 43-B vem antes da 45-K
@@ -292,7 +297,8 @@ Notas de ordem:
   roda como unidade avulsa. Até ela entrar, o dono confere a lista de
   migrations do remoto antes de mesclar qualquer PR com migration. *Não
   segurou: os PRs #80 e #81 foram mesclados em 24/09 sem a 46-E e sem a
-  conferência (INC-2026-005).*
+  conferência (INC-2026-005).* Desde a D-6, até a 46-E entrar, PR com
+  migration só é mesclado numa sessão que confere o remoto antes e depois.
 - **Janela de reestruturação — 46-A, passos 5 a 12** (camada de dados e
   roteador). Mexe em todas as áreas: roda quando as trilhas 1 e 3 tiverem
   terminado suas listas, com as outras paradas ou só em PR pequeno. Depende dos
@@ -448,7 +454,8 @@ data da última leitura). "Hoje" segue o fuso do estudante. Sem tabela nova de
 "sessão", a menos que se prove necessária.
 
 **Fora de escopo.** Recomendação adaptativa, simulado cronometrado.
-**Depende de.** 43-B; idealmente depois de 46-A passos 1 a 4 (D-3).
+**Depende de.** 43-B. A D-6 (25/09) a antecipou para antes dos passos 1 a 4
+da 46-A, que a D-3 preferia antes.
 **Estado.** Planejada.
 
 ---
@@ -1281,6 +1288,7 @@ do que é construído e dita prioridades.
 | Frente editorial | Plano | Estado | Se beneficia de |
 |---|---|---|---|
 | Antimicrobianos (piloto dos β-lactâmicos) | [`docs/editorial/PLANO-ANTIMICROBIANOS.md`](../editorial/PLANO-ANTIMICROBIANOS.md) | Em produção desde 24/09 — primeira leva (7 materiais), de cima para baixo | 44-C1 (checar cada arquivo), 43-A (pai define disciplina), 43-B (questões ligadas), 44-B (dividir o rascunho antigo), 44-A (aparecer em Infectologia) |
+| Clínica: DPOC e Asma (Pneumologia), Injúria Renal Aguda (Nefrologia) | Sem plano ainda — anotadas pelo dono em 25/09 | Em fila: depois do piloto dos β-lactâmicos fechar o ciclo (D-6) | 44-C1, 43-B |
 | Equilíbrio Ácido-Base (Nefrologia, tema Distúrbio Acidobásico) | Material pronto e auditado em 18/09, no formato anterior ao padrão v2 (`docs/editorial/acervo/as1/`) | Na fila, sem prazo — não importado; trazer ao padrão vigente antes de publicar | 44-C1 (conferir o arquivo) e 44-B (atualizar por arquivo) |
 
 Temas futuros e acervos a migrar: `docs/editorial/BANCO-EDITORIAL-TEMAS-FUTUROS.md`

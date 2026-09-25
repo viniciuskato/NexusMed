@@ -60,8 +60,16 @@ quando precisar de um fato que o código não mostra.
    merge".
 8. **Revisão.** O dono roda uma revisão independente numa sessão nova (seção
    "Revisão", abaixo). As correções voltam para você, na mesma trilha:
-   corrigir, rodar os gates de novo, atualizar o PR.
-9. Depois do merge, seguir para a próxima unidade.
+   corrigir, rodar os gates de novo, atualizar o PR. Seu push tira o rótulo
+   "revisado", se já estiver lá; é esperado.
+9. **Atualizar com o `main`**, quando o PR pedir: botão "Update branch" do
+   PR ou `git merge origin/main` sem conflito, e push. Não use rebase nem
+   `--force-with-lease`: reescrever os commits tira o rótulo "revisado" e
+   obriga a revisar de novo. Com conflito, resolva e avise no PR que a
+   resolução precisa de revisão.
+10. Depois do merge (squash), seguir para a próxima unidade a partir do
+    `main` atualizado. Se você deixou uma branch empilhada sobre a mesclada,
+    `git rebase --onto origin/main <branch-mesclada> <sua-branch>`.
 
 ## O Supabase local é um só para todas as trilhas
 
@@ -134,9 +142,12 @@ RETORNO: <unidade, ex.: 45-B>
 ## Revisão (sessão nova, antes do merge)
 
 Quem revisa não é quem implementou e não carrega o contexto da trilha — é
-isso que dá olhos novos. Em Claude Code: `/code-review high <nº do PR>`; com
-`--comment`, os achados vão como comentários no PR e a trilha os lê direto,
-sem ninguém copiar e colar. Além dos bugs, a revisão confere se cada item do
+isso que dá olhos novos. Em Claude Code: `/code-review high <nº do PR>
+--comment`. Os achados vão como comentários no PR: a trilha os lê direto, sem
+ninguém copiar e colar, e fica o registro de que a revisão aconteceu. Sem
+achado pendente, o dono põe o rótulo **"revisado"** no PR. O check
+`revisado` (D-6) é obrigatório no `main` e só fica verde com o rótulo; código
+novo na branch tira o rótulo sozinho. Além dos bugs, a revisão confere se cada item do
 aceite da unidade tem evidência no retorno e se as restrições da unidade
 foram respeitadas. Em mudança de risco alto — hash de atestação,
 sincronização, RLS, migration que mexe em dado existente —, vale um segundo
