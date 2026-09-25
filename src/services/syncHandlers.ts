@@ -364,7 +364,11 @@ export function registerSyncHandlers(): void {
       textToSend = mergeConflictingNoteText(textToSend, data.server_text as string);
       baseUpdatedAt = data.server_updated_at as string;
       StorageService.saveNote(payload.targetId, textToSend);
-      if (data.server_updated_at) StorageService.setNoteBaseVersion(payload.targetId, data.server_updated_at as string);
+      // A base guardada só avança quando o servidor ACEITA (acima). Avançá-la
+      // aqui, com o texto do outro dispositivo ainda fora do servidor, fazia a
+      // próxima edição deste dispositivo — enfileirada antes desta fusão, sem
+      // o texto do outro — passar sem conflito e apagá-lo (45-E, revisão do
+      // #86). Com a base antiga, ela conflita e é fundida também.
     }
 
     // Limite de tentativas de merge esgotado: a concorrência persistiu além

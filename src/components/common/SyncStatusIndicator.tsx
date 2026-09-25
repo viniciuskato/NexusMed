@@ -78,7 +78,7 @@ export const SyncStatusIndicator: React.FC = () => {
           {status.failed > 0 && (
             <button
               type="button"
-              onClick={() => user && retryAllFailed(user.id)}
+              onClick={() => user && void retryAllFailed(user.id)}
               className="mt-2 w-full rounded-md bg-sky-600 text-white py-1.5 font-medium hover:bg-sky-700"
             >
               Tentar novamente

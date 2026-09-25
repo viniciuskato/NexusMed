@@ -78,6 +78,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.doUnmock('../../src/lib/supabaseClient');
   vi.doUnmock('../../src/services/storage');
+  vi.doUnmock('../../src/repositories/SupabaseFlashcardsRepository');
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -104,7 +105,7 @@ describe('AUD-19 — a fila não reordena gravações do mesmo alvo', () => {
     // versao-1 falhou por rede e ficou em backoff; a rede volta e o estudante edita de novo.
     queue.enqueue(UID, 'note_upsert', { targetId: 'q-1', noteText: 'versao-2' });
     await queue.flush(UID);
-    queue.retryAllFailed(UID);
+    await queue.retryAllFailed(UID);
     await queue.flush(UID, true);
     await queue.flush(UID, true);
 
@@ -242,5 +243,213 @@ describe('AUD-28 — recuperação legada não duplica tentativa feita offline',
 
     expect(queue.getOps(UID).filter((o) => o.category === 'question_attempt')).toHaveLength(1);
     expect(remote.attemptQueries).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Achados da revisão do PR #86
+// ---------------------------------------------------------------------------
+describe('45-E, revisão do #86 — alvos além das notas e favoritos', () => {
+  it('apagar um card não sai antes da criação que ficou em backoff (sem ressuscitar o card)', async () => {
+    const remote: Remote = { sessionUid: UID, attempts: [], attemptQueries: 0 };
+    const queue = await loadQueue(remote);
+    const applied: string[] = [];
+    let failUpsert = true;
+    queue.registerHandler('flashcard_upsert', async () => {
+      if (failUpsert) {
+        failUpsert = false;
+        throw networkError();
+      }
+      applied.push('upsert');
+      return null;
+    });
+    queue.registerHandler('flashcard_delete', async () => {
+      applied.push('delete');
+      return null;
+    });
+
+    queue.enqueue(UID, 'flashcard_upsert', { flashcard: { id: 'fc-1' } });
+    await queue.flush(UID);
+    queue.enqueue(UID, 'flashcard_delete', { id: 'fc-1' });
+    await queue.flush(UID);
+    expect(applied).toEqual([]); // o delete espera a criação
+    await queue.flush(UID, true);
+
+    expect(applied).toEqual(['upsert', 'delete']);
+  });
+
+  it('SRS do card não substitui a criação do mesmo card', async () => {
+    const remote: Remote = { sessionUid: null, attempts: [], attemptQueries: 0 };
+    const queue = await loadQueue(remote);
+    queue.enqueue(UID, 'flashcard_upsert', { flashcard: { id: 'fc-1' } });
+    queue.enqueue(UID, 'flashcard_srs_upsert', { flashcardId: 'fc-1', srs: {} });
+    expect(queue.getOps(UID).map((o) => o.category)).toEqual(['flashcard_upsert', 'flashcard_srs_upsert']);
+  });
+
+  it('gravação nova da mesma sessão de simulado substitui a antiga ainda não enviada', async () => {
+    const remote: Remote = { sessionUid: null, attempts: [], attemptQueries: 0 };
+    const queue = await loadQueue(remote);
+    queue.enqueue(UID, 'simulado_save', { session: { id: 'sim-1', score: 1 } });
+    queue.enqueue(UID, 'simulado_save', { session: { id: 'sim-1', score: 2 } });
+    queue.enqueue(UID, 'simulado_save', { session: { id: 'sim-2', score: 1 } });
+    expect(queue.getOps(UID).map((o) => o.payload)).toEqual([
+      { session: { id: 'sim-1', score: 2 } },
+      { session: { id: 'sim-2', score: 1 } },
+    ]);
+  });
+
+  it('payload sem id não vira alvo comum: itens diferentes não se substituem', async () => {
+    const remote: Remote = { sessionUid: null, attempts: [], attemptQueries: 0 };
+    const queue = await loadQueue(remote);
+    queue.enqueue(UID, 'error_notebook_update', { errorItem: { resolved: true } });
+    queue.enqueue(UID, 'error_notebook_update', { errorItem: { resolved: false } });
+    queue.enqueue(UID, 'bookmark_set', { id: 'q-1', desired: true });
+    queue.enqueue(UID, 'bookmark_set', { id: 'q-2', desired: true });
+    expect(queue.getOps(UID)).toHaveLength(4);
+  });
+
+  it('fila antiga com [falha permanente, mais nova do mesmo alvo]: a nova sai sozinha e a antiga não volta depois dela', async () => {
+    const remote: Remote = { sessionUid: UID, attempts: [], attemptQueries: 0 };
+    const queue = await loadQueue(remote);
+    const applied: boolean[] = [];
+    queue.registerHandler<{ desired: boolean }>('bookmark_set', async (p) => {
+      applied.push(p.desired);
+      return null;
+    });
+    const base = { userId: UID, category: 'bookmark_set', createdAt: 't', updatedAt: 't', attempts: 1 };
+    localStorage.setItem(
+      `synapse_${UID}_sync_queue_v1`,
+      JSON.stringify([
+        {
+          ...base,
+          id: 'old',
+          clientOpId: 'old',
+          payload: { type: 'questions', id: 'q-1', desired: true },
+          state: 'failed',
+          lastError: { kind: 'permission', message: 'x' },
+        },
+        { ...base, id: 'new', clientOpId: 'new', payload: { type: 'questions', id: 'q-1', desired: false }, state: 'pending', attempts: 0 },
+      ])
+    );
+
+    await queue.flush(UID);
+    await queue.retryAllFailed(UID);
+    await queue.flush(UID);
+
+    expect(applied).toEqual([false]);
+    expect(queue.getOps(UID).map((o) => o.id)).toEqual(['new']);
+  });
+});
+
+describe('45-E, revisão do #86 — falha de sessão', () => {
+  it('"Tentar novamente" sem sessão válida mantém o aviso de entrar de novo', async () => {
+    const remote: Remote = { sessionUid: UID, attempts: [], attemptQueries: 0 };
+    const queue = await loadQueue(remote);
+    queue.registerHandler('note_upsert', async () => {
+      throw new Error('JWT expired');
+    });
+    queue.enqueue(UID, 'note_upsert', { targetId: 'q-1', noteText: 'texto' });
+    await queue.flush(UID);
+
+    remote.sessionUid = null; // refresh token inválido: não há sessão
+    await queue.retryAllFailed(UID);
+    await queue.flush(UID);
+
+    expect(queue.getSummary(UID)).toMatchObject({ failed: 1, failedNeedsLogin: true });
+  });
+
+  it('entrar de novo durante um flush em andamento reenvia na mesma rodada, sem esperar o heartbeat', async () => {
+    const remote: Remote = { sessionUid: UID, attempts: [], attemptQueries: 0 };
+    const queue = await loadQueue(remote);
+    const applied: string[] = [];
+    let expired = true;
+    let release: () => void = () => {};
+    queue.registerHandler<{ targetId: string; noteText: string }>('note_upsert', async (p) => {
+      if (expired) throw new Error('JWT expired');
+      applied.push(p.noteText);
+      return null;
+    });
+    queue.registerHandler('bookmark_set', async () => {
+      await new Promise<void>((r) => (release = r));
+      return null;
+    });
+    queue.enqueue(UID, 'note_upsert', { targetId: 'q-1', noteText: 'texto' });
+    await queue.flush(UID);
+    expect(queue.getSummary(UID).failedNeedsLogin).toBe(true);
+
+    // Um flush fica em andamento (favorito em voo) quando a sessão nova chega.
+    queue.enqueue(UID, 'bookmark_set', { type: 'questions', id: 'q-9', desired: true });
+    const running = queue.flush(UID);
+    await new Promise((r) => setTimeout(r, 0));
+    expired = false;
+    queue.onActiveUserChanged(UID);
+    release();
+    await running;
+
+    expect(applied).toEqual(['texto']);
+  });
+});
+
+describe('45-E, revisão do #86 — nota em conflito substituída por edição nova', () => {
+  it('o texto do outro dispositivo não se perde quando a edição em voo esgota as fusões e a nova a substitui', async () => {
+    const server = { text: 'outro-0', updatedAt: 't1' };
+    let conflictsLeft = 2; // o outro dispositivo grava nas duas primeiras rodadas da edição A; a terceira só conflita
+    let releaseFirstCall: () => void = () => {};
+    const firstCall = new Promise<void>((r) => (releaseFirstCall = r));
+    let calls = 0;
+    const local = { notes: {} as Record<string, string>, base: { 'q-1': 't0' } as Record<string, string> };
+
+    vi.doMock('../../src/services/storage', () => ({
+      StorageService: {
+        saveNote: (id: string, text: string) => (local.notes[id] = text),
+        getNoteBaseVersion: (id: string) => local.base[id] ?? null,
+        setNoteBaseVersion: (id: string, v: string) => (local.base[id] = v),
+      },
+    }));
+    vi.doMock('../../src/repositories/SupabaseFlashcardsRepository', () => ({ supabaseFlashcardsRepository: {} }));
+    vi.doMock('../../src/lib/supabaseClient', () => ({
+      isSupabaseConfigured: true,
+      supabase: {
+        auth: { getSession: async () => ({ data: { session: { user: { id: UID } } }, error: null }) },
+        from: (table: string) => ({
+          select: () => ({
+            eq: () => ({ maybeSingle: async () => ({ data: table === 'questions' ? { id: 'q-1' } : null, error: null }) }),
+          }),
+        }),
+        // Mesma regra do `upsert_note`: base conhecida mais antiga que a do servidor = conflito, sem gravar.
+        rpc: async (_fn: string, args: { p_note_text: string; p_base_updated_at: string | null }) => {
+          calls += 1;
+          if (calls === 1) await firstCall;
+          if (args.p_base_updated_at && server.updatedAt > args.p_base_updated_at) {
+            const reply = { data: { conflict: true, server_text: server.text, server_updated_at: server.updatedAt }, error: null };
+            if (conflictsLeft > 0) {
+              conflictsLeft -= 1;
+              server.text = `outro-${2 - conflictsLeft}`;
+              server.updatedAt = `t${5 - conflictsLeft}`;
+            }
+            return reply;
+          }
+          server.text = args.p_note_text;
+          server.updatedAt = `t9${calls}`;
+          return { data: { conflict: false, updated_at: server.updatedAt }, error: null };
+        },
+      },
+    }));
+    const queue = await import('../../src/services/syncQueue');
+    const { registerSyncHandlers } = await import('../../src/services/syncHandlers');
+    registerSyncHandlers();
+
+    queue.enqueue(UID, 'note_upsert', { targetId: 'q-1', noteText: 'A' });
+    await new Promise((r) => setTimeout(r, 0));
+    // Edição B enfileirada com A em voo, antes de A fundir o texto do outro dispositivo.
+    queue.enqueue(UID, 'note_upsert', { targetId: 'q-1', noteText: 'A B' });
+    releaseFirstCall();
+    await queue.flush(UID);
+    await queue.flush(UID);
+
+    expect(queue.getOps(UID).filter((o) => o.state !== 'synced')).toEqual([]);
+    expect(server.text).toContain('A B');
+    expect(server.text).toContain('outro-2'); // o que o outro dispositivo gravou por último continua no servidor
+    expect(local.notes['q-1']).toBe(server.text);
   });
 });

@@ -111,29 +111,50 @@ const enqueueVersions = new Map<string, number>();
 let periodicTimerStarted = false;
 
 // ----------------------------------------------------------------------------
-// Alvo das operações de estado desejado (45-E, AUD-19). Cada uma carrega o
-// estado final inteiro do alvo (texto da nota, favoritado ou não, seção lida
-// ou não...), então só a mais nova importa — e ela nunca pode chegar ao
-// servidor antes de uma mais antiga do mesmo alvo. Duas regras:
-//   - ao enfileirar, a nova substitui as antigas do mesmo alvo que ainda não
-//     saíram (`pending`/`failed`; a que está em voo fica);
-//   - no envio, alvo com operação retida (backoff, falha) segura as
-//     seguintes do mesmo alvo até ela sair.
+// Alvo das operações (45-E, AUD-19). Operação de um alvo nunca chega ao
+// servidor antes de uma mais antiga do mesmo alvo: no envio, alvo com operação
+// retida (backoff, sem handler) segura as seguintes do mesmo alvo.
+//
+// `supersedes`: a operação carrega o estado final inteiro do alvo (texto da
+// nota, favoritado ou não, sessão de simulado inteira...), então só a mais
+// nova importa — ao enfileirar, ela substitui as antigas do mesmo alvo que
+// ainda não saíram (`pending`/`failed`; a que está em voo fica).
+//
+// Flashcard é só serializado, nunca substituído: criar, editar, apagar e
+// gravar SRS do mesmo card são operações diferentes (um SRS não pode tomar o
+// lugar da criação do card), mas precisam chegar na ordem.
+//
 // Categorias fora deste mapa (tentativa de questão, revisão de flashcard,
-// simulado...) são eventos que se somam, nunca substituídos.
+// feedback) são eventos que se somam, sem alvo.
 // ----------------------------------------------------------------------------
-const SET_TARGETS: Record<string, (payload: Record<string, unknown>) => string> = {
-  note_upsert: (p) => String(p.targetId),
-  bookmark_set: (p) => `${String(p.type)}:${String(p.id)}`,
-  reading_progress_set: (p) => `${String(p.compendiumId)}:${String(p.sectionId)}`,
-  reaction_set: (p) => String(p.questionId),
-  error_notebook_update: (p) => String((p.errorItem as { id?: unknown } | undefined)?.id),
+type Payload = Record<string, unknown>;
+const TARGETS: Record<string, { group: string; supersedes: boolean; key: (p: Payload) => unknown[] }> = {
+  note_upsert: { group: 'note', supersedes: true, key: (p) => [p.targetId] },
+  bookmark_set: { group: 'bookmark', supersedes: true, key: (p) => [p.type, p.id] },
+  reading_progress_set: { group: 'reading', supersedes: true, key: (p) => [p.compendiumId, p.sectionId] },
+  reaction_set: { group: 'reaction', supersedes: true, key: (p) => [p.questionId] },
+  error_notebook_update: { group: 'error_notebook', supersedes: true, key: (p) => [(p.errorItem as Payload | undefined)?.id] },
+  simulado_save: { group: 'simulado', supersedes: true, key: (p) => [(p.session as Payload | undefined)?.id] },
+  flashcard_upsert: { group: 'flashcard', supersedes: false, key: (p) => [(p.flashcard as Payload | undefined)?.id] },
+  flashcard_create_from_question: { group: 'flashcard', supersedes: false, key: (p) => [(p.flashcard as Payload | undefined)?.id] },
+  flashcard_delete: { group: 'flashcard', supersedes: false, key: (p) => [p.id] },
+  flashcard_srs_upsert: { group: 'flashcard', supersedes: false, key: (p) => [p.flashcardId] },
 };
 
+/** Alvo da operação, ou `null` quando não tem — inclusive quando falta parte da chave (nunca "undefined" como alvo comum). */
 function targetOf(op: Pick<SyncOp, 'category' | 'payload'>): string | null {
-  const key = SET_TARGETS[op.category];
-  if (!key || !op.payload || typeof op.payload !== 'object') return null;
-  return `${op.category}|${key(op.payload as Record<string, unknown>)}`;
+  const spec = TARGETS[op.category];
+  if (!spec || !op.payload || typeof op.payload !== 'object') return null;
+  const parts = spec.key(op.payload as Payload);
+  if (parts.some((part) => (typeof part !== 'string' && typeof part !== 'number') || part === '')) return null;
+  return `${spec.group}|${parts.join(':')}`;
+}
+
+/** `newer` substitui `older`: mesma categoria de estado final e mesmo alvo. */
+function supersedes(newer: Pick<SyncOp, 'category' | 'payload'>, older: SyncOp): boolean {
+  if (!TARGETS[newer.category]?.supersedes || newer.category !== older.category) return false;
+  const target = targetOf(newer);
+  return target !== null && targetOf(older) === target;
 }
 
 function queueKey(userId: string): string {
@@ -316,9 +337,8 @@ export function enqueue<TPayload>(userId: string, category: string, payload: TPa
     );
   }
 
-  const target = targetOf({ category, payload });
   const ops = loadQueue(userId).filter(
-    (o) => !target || o.state === 'synced' || o.state === 'syncing' || targetOf(o) !== target
+    (o) => o.state === 'synced' || o.state === 'syncing' || !supersedes({ category, payload }, o)
   );
   // `clientOpId` identifica o efeito remoto e pode ser reutilizado de forma
   // legítima (replay). `id` identifica a entrada local e nunca pode colidir:
@@ -520,10 +540,19 @@ async function runFlush(userId: string, force = false): Promise<void> {
     if (op.state === 'synced') continue;
     const target = targetOf(op);
     if (target && heldTargets.has(target)) continue;
-    if (
-      (op.state === 'failed' && !isRetryable(op.lastError?.kind ?? 'unknown')) ||
-      (!force && op.nextRetryAt && new Date(op.nextRetryAt).getTime() > now)
-    ) {
+    if (op.state === 'failed' && !isRetryable(op.lastError?.kind ?? 'unknown')) {
+      // Falha permanente só sai por reenvio manual e não segura as seguintes
+      // do mesmo alvo. Se já existe uma mais nova que a substitui (fila
+      // gravada antes da 45-E), ela sai, para o reenvio manual nunca
+      // mandá-la depois da nova.
+      if (ops.some((o, j) => j > i && o.state !== 'synced' && supersedes(o, op))) {
+        ops.splice(i, 1);
+        changed = true;
+        saveQueue(userId, ops);
+      }
+      continue;
+    }
+    if (!force && op.nextRetryAt && new Date(op.nextRetryAt).getTime() > now) {
       hold(op);
       continue;
     }
@@ -626,10 +655,9 @@ async function runFlush(userId: string, force = false): Promise<void> {
         // Enquanto esta estava em voo, o estudante mudou o mesmo alvo de novo
         // (45-E): a mais nova já carrega o estado final, então esta sai da
         // fila em vez de ser reenviada depois dela ou prendê-la numa falha.
-        const superseded =
-          target !== null && ops.some((o, j) => j > idx && o.state !== 'synced' && targetOf(o) === target);
-        if (superseded) ops.splice(idx, 1);
-        else hold(ops[idx]);
+        const failedOp = ops[idx];
+        if (ops.some((o, j) => j > idx && o.state !== 'synced' && supersedes(o, failedOp))) ops.splice(idx, 1);
+        else if (failedOp.state === 'pending') hold(failedOp);
       }
       // Erro de auth: não adianta continuar tentando as próximas operações agora.
       if (kind === 'auth') {
@@ -650,27 +678,41 @@ function pruneSynced(ops: SyncOp[]): SyncOp[] {
   return ops.filter((o) => !toDrop.has(o.id));
 }
 
-/** Marca uma operação com falha permanente para nova tentativa manual (botão "Tentar novamente"). */
-export function retryFailedOp(userId: string, opId: string): void {
-  const ops = loadQueue(userId);
-  const idx = ops.findIndex((o) => o.id === opId);
-  if (idx < 0) return;
-  ops[idx] = { ...ops[idx], state: 'pending', nextRetryAt: undefined, attempts: 0 };
-  saveQueue(userId, ops);
-  void flush(userId);
-}
-
-export function retryAllFailed(userId: string): void {
+/**
+ * Volta a `pending` as falhas que `shouldReset` escolher e dispara o envio.
+ * Conta como enfileiramento (`enqueueVersions`): se um flush já está em
+ * andamento, ele faz mais uma passagem ao terminar, em vez de o reenvio
+ * esperar o próximo heartbeat.
+ */
+function resetFailed(userId: string, shouldReset: (op: SyncOp) => boolean): void {
   const ops = loadQueue(userId);
   let changed = false;
   for (let i = 0; i < ops.length; i++) {
-    if (ops[i].state === 'failed') {
-      ops[i] = { ...ops[i], state: 'pending', nextRetryAt: undefined, attempts: 0 };
+    if (ops[i].state === 'failed' && shouldReset(ops[i])) {
+      ops[i] = { ...ops[i], state: 'pending', nextRetryAt: undefined, attempts: 0, updatedAt: new Date().toISOString() };
       changed = true;
     }
   }
-  if (changed) saveQueue(userId, ops);
+  if (changed) {
+    saveQueue(userId, ops);
+    enqueueVersions.set(userId, (enqueueVersions.get(userId) ?? 0) + 1);
+  }
   void flush(userId);
+}
+
+/** Marca uma operação com falha permanente para nova tentativa manual (botão "Tentar novamente"). */
+export function retryFailedOp(userId: string, opId: string): void {
+  resetFailed(userId, (op) => op.id === opId);
+}
+
+/**
+ * Botão "Tentar novamente". Falha de sessão só volta a pendente se há sessão
+ * ativa deste usuário agora — sem ela, o flush não envia nada, a falha
+ * sumiria da tela e o aviso "faça login novamente" junto (45-E).
+ */
+export async function retryAllFailed(userId: string): Promise<void> {
+  const signedIn = (await getActiveSupabaseUserId()) === userId;
+  resetFailed(userId, (op) => signedIn || !needsLogin(op));
 }
 
 export function getSummary(userId: string | null): SyncQueueSummary {
@@ -709,26 +751,10 @@ export function subscribe(userId: string, listener: () => void): () => void {
 export function onActiveUserChanged(userId: string | null): void {
   if (userId) {
     knownUserIds.add(userId);
-    requeueAuthFailures(userId);
-    void flush(userId);
+    // Falha de sessão (`auth`) não é da operação: é o token que venceu. Ao
+    // entrar de novo, volta a pendente e sobe sozinha (45-E, AUD-25).
+    resetFailed(userId, needsLogin);
   }
-}
-
-/**
- * Falha de sessão (`auth`) não é da operação: é o token que venceu. Quando o
- * usuário entra de novo, ela volta a pendente e sobe sozinha (45-E, AUD-25) —
- * antes ficava `failed` para sempre, e "faça login novamente" nunca resolvia.
- */
-function requeueAuthFailures(userId: string): void {
-  const ops = loadQueue(userId);
-  let changed = false;
-  for (let i = 0; i < ops.length; i++) {
-    if (needsLogin(ops[i])) {
-      ops[i] = { ...ops[i], state: 'pending', nextRetryAt: undefined, attempts: 0, updatedAt: new Date().toISOString() };
-      changed = true;
-    }
-  }
-  if (changed) saveQueue(userId, ops);
 }
 
 /**
