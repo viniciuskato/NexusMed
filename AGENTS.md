@@ -199,12 +199,10 @@ seção "Armadilhas já descobertas".
   2026-09-18) — nunca push direto: cada push em `main` é um deploy real.
   Migration da qual o frontend depende é aplicada no remoto **antes** do
   merge. Detalhe em `docs/operacao/RUNBOOK.md`, seção 3.
-- **Desde 25/09 (D-6), a trava é mecanismo, não regra:** o check `revisado`
-  só fica verde com o rótulo "revisado", que o dono põe depois da revisão em
-  sessão nova. Código novo na branch tira o rótulo, e "Update branch" não
-  tira: atualize com merge, nunca com rebase. O merge é só por squash. No
-  máximo duas trilhas e três PRs esperando o dono. Processo congelado até
-  09/10: nada de documento, protocolo ou PR só de registro.
+- **D-6 (25/09):** revisão com rótulo e check `revisado` (regras em
+  `docs/operacao/EXECUTOR_PROTOCOL.md`, "Revisão"; atualizar branch só com
+  merge, nunca rebase), merge por squash, no máximo duas trilhas e três PRs
+  esperando o dono, processo congelado até 09/10.
 - **O diário de cada mudança é o PR**, não os documentos de operação.
   `PROJECT_STATE.md`/`TASKS.md`/`DECISIONS.md` registram estado presente,
   fila e decisões duráveis em poucas linhas, com link para o PR.

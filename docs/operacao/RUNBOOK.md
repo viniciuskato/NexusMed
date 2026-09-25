@@ -69,10 +69,8 @@ revisão.
    validado, se há migration e a ordem de publicação.
 2. Esperar o CI (`fast` e `full`) **verde**. CI vermelho não se mescla —
    nem "porque a falha já existia": conserte a falha antes ou em PR
-   separado. O terceiro check obrigatório, `revisado` (D-6), fica verde
-   quando o dono põe o rótulo "revisado", depois da revisão em sessão nova
-   (`EXECUTOR_PROTOCOL.md`, "Revisão"). Código novo na branch tira o rótulo;
-   o botão "Update branch" não tira. Não use "Update with rebase".
+   separado. E o check `revisado` verde: rótulo posto depois da revisão em
+   sessão nova (`EXECUTOR_PROTOCOL.md`, "Revisão").
 3. Conferir o *preview* da Vercel (link no próprio PR) quando a mudança
    afeta tela/fluxo de usuário.
 4. Se a mudança inclui migration nova: aplicar no Supabase remoto faz
@@ -89,11 +87,9 @@ revisão.
    --linked` e, se preciso, renomear a própria migration para uma data
    posterior (no branch, antes do merge) — não usar `--include-all` para
    contornar.
-5. Merge do PR pelo botão "Squash and merge" (a única forma habilitada
-   desde a D-6) — **isso aciona deploy automático no Vercel**. Não há passo
-   de confirmação adicional do lado do Vercel. A branch é apagada sozinha; um
-   PR empilhado sobre ela precisa de `git rebase --onto origin/main
-   <branch-mesclada> <branch-de-cima>` antes de seguir.
+5. Merge do PR por "Squash and merge" (D-6) — **isso aciona deploy
+   automático no Vercel**. Não há passo de confirmação adicional do lado do
+   Vercel.
 6. Confirmar o deploy: comparar hash/tamanho de bundle publicado com o
    build local, checar ausência de instrumentação de teste
    (`__syncDebug`, `__setTestBackoffOverride`) no bundle de produção.

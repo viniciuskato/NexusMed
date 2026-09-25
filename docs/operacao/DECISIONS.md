@@ -6,46 +6,25 @@
 > `docs/archive/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
-## 2026-09-25 — Travas por mecanismo, menos coisa em paralelo, volta ao produto (D-6)
+## 2026-09-25 — Travas por mecanismo, menos coisa em paralelo, volta ao produto (D-6, PR #84)
 
-Origem: relatório sobre os commits de 20 a 24/09, pedido pelo dono, e a
-terceira ocorrência de migration fora do remoto (INC-2026-005). O dono
-delegou à diretoria o que fosse pertinente. Diagnóstico: o código é bom; o
-processo produz mais do que o dono consegue revisar, mesclar e aplicar
-sozinho, e as travas que existem só como regra escrita falharam.
+Origem: relatório dos commits de 20 a 24/09 e INC-2026-005; o dono delegou à
+diretoria o que fosse pertinente. As travas que eram só regra escrita
+falharam, e o processo produz mais do que o dono consegue revisar e mesclar.
 
-1. **Trava vira mecanismo, não regra escrita.**
-   - Revisão: check `revisado` no CI (`.github/workflows/revisao.yml`). Fica
-     verde só com o rótulo "revisado", que o dono põe depois da revisão em
-     sessão nova. Código novo na branch tira o rótulo sozinho; trazer o `main`
-     pelo botão "Update branch" não tira. Obrigatório no ruleset do `main`.
-   - Merge só por **squash**, com o título e a descrição do PR. A branch é
-     apagada depois do merge. Sem commits "Merge branch 'main' into…" no
-     `main`, e um PR vira um commit, fácil de reverter.
-   - **46-E** é a próxima unidade, antes de qualquer merge com migration. Até
-     ela entrar, PR com migration só é mesclado numa sessão que roda
-     `migration list --linked` antes e confere o remoto depois.
-2. **Menos coisa em paralelo.** No máximo duas trilhas ao mesmo tempo: agora a
-   1 e a 2, com a 3 pausada. No máximo três PRs esperando o dono. Chegando a
-   três, as trilhas param ao fim da unidade em que estão.
-3. **Menos meta-trabalho.** Nada de PR só para registrar o PR anterior: a
-   linha "Estado" da unidade vai no próprio PR. A diretoria atualiza o
-   registro do plano, o `PROJECT_STATE.md` e as métricas uma vez por semana,
-   ou junto de um PR que já precisa existir. Processo congelado até 09/10:
-   nenhum documento, protocolo ou formato novo. As travas do item 1 são a
-   última mudança.
-4. **Volta ao produto.** Meta até 02/10: o ciclo completo no piloto dos
-   β-lactâmicos, com os 7 materiais da primeira leva publicados e as questões
-   ligadas a eles, pelo caminho 43-B → 43-C ("testar o que li"). Quando a 43-B
-   for mesclada, a trilha 3 volta direto na 43-C, antes dos passos 1 a 4 da
-   46-A (revê o "idealmente" da D-3), e a trilha 1 pausa ao fim da unidade em
-   que estiver. Ferramenta de admin que não sirva a essa meta espera. Frentes
-   editoriais novas (DPOC, Asma, Injúria Renal Aguda, anotadas pelo dono em
-   25/09) esperam o piloto fechar o ciclo.
-5. **Três números por semana** (`scripts/sql/metricas-semanais.sql`,
-   `docs/produto/METRICAS.md`): materiais publicados, questões publicadas
-   ligadas a material e estudantes que revisaram flashcards nos últimos 7
-   dias. A diretoria roda a consulta, que é só leitura, na atualização semanal.
+1. **Travas por mecanismo:** check `revisado` com rótulo (regras de uso em
+   `EXECUTOR_PROTOCOL.md`, "Revisão"); merge só por squash; 46-E antes de
+   qualquer merge com migration.
+2. **No máximo duas trilhas** (agora a 1 e a 2) **e três PRs esperando o
+   dono.**
+3. **Sem PR só de registro;** a diretoria atualiza registro, estado e métricas
+   uma vez por semana. Processo congelado até 09/10.
+4. **Meta até 02/10:** ciclo completo no piloto dos β-lactâmicos (43-B e
+   depois 43-C, antes dos passos 1 a 4 da 46-A). Frentes editoriais novas
+   esperam. Ordem das trilhas: seção 5 do plano.
+5. **Três números por semana:** materiais publicados, questões publicadas
+   ligadas a material publicado, estudantes com cards em 7 dias
+   (`docs/produto/METRICAS.md`).
 
 ## 2026-09-24 — Produção de conteúdo em paralelo, com o Gemini como redator (D-5)
 
