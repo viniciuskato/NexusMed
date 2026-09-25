@@ -4,7 +4,7 @@
 e em que estado está cada parte. Substitui a antiga sequência de prompts e os
 documentos por iniciativa.
 
-**Última revisão da diretoria:** 24/09/2026.
+**Última revisão da diretoria:** 25/09/2026.
 **Estado verificado no código:** 24/09/2026.
 
 Como ler, conforme o que você procura:
@@ -164,8 +164,9 @@ abertos** da auditoria. Os mais graves:
 - editar material publicado muda na hora o que o estudante lê, sem revisão;
 - com a rede oscilando, uma edição antiga pode sobrescrever a nova;
 - um PR com migration pode ser mesclado sem ela estar no remoto — aconteceu
-  duas vezes, em 21/09 e 24/09 (INC-2026-003 e INC-2026-004); a 46-E fecha
-  isso.
+  três vezes, em 21/09, 24/09 e na noite de 24/09 (INC-2026-003 a
+  INC-2026-005; na última, a busca ficou fora do ar até a manhã seguinte); a
+  46-E fecha isso.
 
 ### Base técnica
 
@@ -289,7 +290,9 @@ Notas de ordem:
 - **46-E agora, antes do próximo merge com migration** — o CI passa a
   conferir que a migration está no remoto. CI não é área de nenhuma trilha:
   roda como unidade avulsa. Até ela entrar, o dono confere a lista de
-  migrations do remoto antes de mesclar qualquer PR com migration.
+  migrations do remoto antes de mesclar qualquer PR com migration. *Não
+  segurou: os PRs #80 e #81 foram mesclados em 24/09 sem a 46-E e sem a
+  conferência (INC-2026-005).*
 - **Janela de reestruturação — 46-A, passos 5 a 12** (camada de dados e
   roteador). Mexe em todas as áreas: roda quando as trilhas 1 e 3 tiverem
   terminado suas listas, com as outras paradas ou só em PR pequeno. Depende dos
@@ -1163,14 +1166,16 @@ reclama, e uma migration errada não tem caminho de volta ensaiado.
 
 ### 46-E — O CI confere que a migration está no remoto antes do merge
 
-**Origem.** INC-2026-003 (21/09) e INC-2026-004 (24/09); parte do item 1 da
-AUD-34 (paridade com o remoto). Decisão D-4 do dono, 24/09 (`DECISIONS.md`).
+**Origem.** INC-2026-003 (21/09), INC-2026-004 (24/09) e INC-2026-005 (24/09,
+à noite); parte do item 1 da AUD-34 (paridade com o remoto). Decisão D-4 do
+dono, 24/09 (`DECISIONS.md`).
 
 **Por quê.** Merge em `main` é deploy imediato. Aplicar a migration no remoto
-antes do merge é um passo manual que falhou duas vezes em três dias, mesmo
+antes do merge é um passo manual que falhou três vezes em quatro dias, mesmo
 escrito na primeira linha do PR, no RUNBOOK e no `AGENTS.md`: a produção
 passou a chamar funções que não existiam no banco (importação de questões
-parada; erro que não virava flashcard; simulado fechando com nota vazia). Com
+parada; erro que não virava flashcard; simulado fechando com nota vazia; busca
+de materiais fora do ar a noite toda). Com
 três trilhas produzindo migrations em paralelo, a chance só cresce.
 
 **Aceite — o dono vê:**
@@ -1292,16 +1297,16 @@ trilhas paralelas não conflitam aqui. "Publicado" significa em produção
 
 | Unidade | Estado | PR | Publicado |
 |---|---|---|---|
-| 43-A | Em execução (trilha 2) | — | — |
+| 43-A | Concluída | #79 | 24/09 |
 | 43-B | Planejada | — | — |
 | 43-C | Planejada | — | — |
-| 43-D | Em execução (trilha 3) | — | — |
+| 43-D | Concluída | #80 | 25/09 (migration aplicada ~13h45 depois do merge — INC-2026-005) |
 | 43-E | Planejada | — | — |
 | 44-A | Planejada | — | — |
 | 44-B | Planejada | — | — |
-| 44-C1 | Pronta (trilha 2, depois da 43-A) | — | — |
+| 44-C1 | Pronta (próxima da trilha 2) | — | — |
 | 44-C2 | Planejada (antes 44-C) | — | — |
-| 45-A | Concluída (revisão do #76 pendente, depois do merge) | #74, #76 | 24/09 (migration da parte 2 aplicada depois do merge — INC-2026-004) |
+| 45-A | Concluída; correções da revisão do #76 no #81 | #74, #76, #81 | 24/09 (parte 2: migration depois do merge — INC-2026-004); correções: 25/09 (INC-2026-005) |
 | 45-B | Concluída | #71 | 24/09 |
 | 45-C | Concluída (item de desempenho movido para a 46-D) | #73 | 24/09 |
 | 45-D | Pronta | — | — |

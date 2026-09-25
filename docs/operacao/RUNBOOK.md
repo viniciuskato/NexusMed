@@ -74,7 +74,9 @@ revisão.
    afeta tela/fluxo de usuário.
 4. Se a mudança inclui migration nova: aplicar no Supabase remoto faz
    parte do merge, não é um passo opcional posterior
-   (`supabase db push --linked --yes`, rodado pelo usuário). **Se o
+   (`supabase db push --linked --yes`, rodado pelo usuário; no PowerShell
+   dele, o CLI só roda pelo caminho completo,
+   `C:\Users\vinic\bin\supabase.exe db push --linked --yes`). **Se o
    frontend novo depende da migration (RPC nova, coluna nova), aplicar a
    migration ANTES do merge** — o deploy da Vercel é imediato. Conferir
    depois com uma query direta contra o schema remoto — não confiar só na
