@@ -51,7 +51,7 @@ function stripAccents(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
-function normalize(s: string): string {
+export function normalize(s: string): string {
   return stripAccents(s).toLowerCase().trim();
 }
 
@@ -86,7 +86,7 @@ function extractTitle(text: string): { title: string; rest: string } {
   return { title, rest: lines.slice(idx + 1).join('\n') };
 }
 
-const METADATA_LABELS: Record<string, keyof RawCompendiumInput> = {
+export const METADATA_LABELS: Record<string, keyof RawCompendiumInput> = {
   subtitulo: 'subtitle',
   disciplina: 'disciplineName',
   tema: 'themeName',
@@ -95,7 +95,7 @@ const METADATA_LABELS: Record<string, keyof RawCompendiumInput> = {
 };
 
 /** Lê `**Rótulo:** valor` de cada linha, até o primeiro heading `### `. */
-function extractMetadata(text: string): Partial<RawCompendiumInput> {
+export function extractMetadata(text: string): Partial<RawCompendiumInput> {
   const beforeFirstH3 = text.split(/\r\n|\n/);
   const out: Partial<RawCompendiumInput> = {};
   for (const line of beforeFirstH3) {
@@ -215,7 +215,7 @@ function parseSectionBody(rawBody: string): Omit<ExtractedSection, 'title'> {
 }
 
 /** Junta linhas de continuação de um item de lista numerada (mesma ideia do SafeMarkdown). */
-function extractNumberedList(body: string): string[] {
+export function extractNumberedList(body: string): string[] {
   const lines = body.split(/\r\n|\n/);
   const items: string[] = [];
   for (const raw of lines) {
@@ -231,21 +231,21 @@ function extractNumberedList(body: string): string[] {
   return items;
 }
 
-function extractBacktickTags(body: string): string[] {
+export function extractBacktickTags(body: string): string[] {
   const matches = body.match(/`([^`\n]+)`/g) ?? [];
   return matches.map((m) => m.slice(1, -1).trim()).filter(Boolean);
 }
 
-function isReferencesHeader(headerNorm: string): boolean {
+export function isReferencesHeader(headerNorm: string): boolean {
   return headerNorm.includes('referencia');
 }
 
 /** `### Palavras-chave` é o nome do campo na plataforma desde a 43-A; `### Tags` segue aceito. */
-function isTagsHeader(headerNorm: string): boolean {
+export function isTagsHeader(headerNorm: string): boolean {
   return headerNorm === 'tags' || /^palavras[\s-]?chave$/.test(headerNorm);
 }
 
-function isDependenciesHeader(headerNorm: string): boolean {
+export function isDependenciesHeader(headerNorm: string): boolean {
   return (
     headerNorm.includes('conexao') || headerNorm.includes('pre-requisito') || headerNorm.includes('pre requisito')
   );

@@ -671,7 +671,11 @@ padrão — tudo aceito em silêncio ou visível só na tela depois de importado
 **Fora de escopo.** Selo, filtros e versão na Área Editorial (44-C2);
 correção automática; nota de qualidade; checagem por IA.
 **Depende de.** Nada.
-**Estado.** Pronta.
+**Estado.** Concluída — PR #nn.
+**Achados da execução.** O rascunho real dos β-lactâmicos também separa
+citações por vírgula (`[1](#ref-1), [2](#ref-2)`) e usa `*` nos Pontos-Chave,
+fora do que o padrão pede mas aceitos pela importação e pelo leitor; não viraram
+regra (fora do aceite). Se a diretoria quiser, entram numa unidade futura.
 
 ### 44-C2 — Versão do padrão e conformidade na Área Editorial
 
@@ -1265,8 +1269,10 @@ do que é construído e dita prioridades.
 **Fluxo de cada material:**
 1. **Escrever** — o Gemini recebe o padrão de conteúdos, as fontes e o bloco
    do material (no plano editorial do ramo) e entrega um `.md`.
-2. **Checar o formato** — a checagem do padrão sobre o arquivo (44-C1). Até
-   ela existir, o checklist da seção 1.9 do padrão.
+2. **Checar o formato** — a checagem do padrão sobre o arquivo (44-C1):
+   `npm run checar:material -- <arquivo.md ou pasta>`, sem login nem Supabase
+   (RUNBOOK, seção 2.1). Pendência volta ao Gemini; o checklist da seção 1.9
+   do padrão segue valendo para o que é julgamento.
 3. **Revisão cruzada** — outro modelo (Claude), sem editar o arquivo: fato
    contra referência, referência que existe, escopo do nível. Os achados
    voltam ao Gemini, que entrega o arquivo corrigido.
