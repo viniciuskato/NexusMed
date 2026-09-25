@@ -56,7 +56,7 @@ describe('checagem do padrão — base', () => {
   it('a lista de regras cobre todos os ids, sem repetição', () => {
     const ids = REGRAS_DO_PADRAO.map((r) => r.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toHaveLength(15);
+    expect(ids).toHaveLength(16);
   });
 
   it('cada pendência traz seção, linha e o que corrigir', () => {
@@ -93,6 +93,19 @@ describe('checagem do padrão — citações', () => {
     expect(regras(material({ corpo: 'Afirmação [1](#ref-2)[2](#ref-2) [1](#ref-1).' }))).toContain('citacao-malformada');
   });
 
+  it('cada trecho malformado aparece uma vez, mesmo contido em outro', () => {
+    const [p] = checarMaterialMarkdown(material({ corpo: 'A [1](#ref-1)[2](#ref-2) (#ref-1 e [3](#ref-12].' })).pendencias;
+    expect(p.mensagem).toContain('"[3](#ref-12]"');
+    expect(p.mensagem).toContain('"(#ref-1"');
+  });
+
+  it('as referências contadas são as do último bloco, como na importação', () => {
+    const texto = material().replace('### Palavras-chave', '### Valores de referência\nTabela de valores.\n\n### Palavras-chave');
+    const r = regras(texto);
+    expect(r).not.toContain('citacao-sem-referencia');
+    expect(r).not.toContain('referencia-nao-citada');
+  });
+
   it('citação bem formada e colchete de texto não são pendência', () => {
     expect(regras(material({ corpo: 'Afirmação [1](#ref-1)[2](#ref-2) e [nota] de texto.' }))).toEqual([]);
   });
@@ -119,6 +132,10 @@ describe('checagem do padrão — tabelas', () => {
   });
   it('tabela com frase de abertura citada passa', () => {
     expect(regras(material({ corpo: `Frase que apresenta a tabela [1](#ref-1)[2](#ref-2).\n\n${tabela}` }))).toEqual([]);
+    expect(regras(material({ corpo: `- Um\n\nFrase que apresenta a tabela [1](#ref-1)[2](#ref-2).\n\n${tabela}` }))).toEqual([]);
+  });
+  it('frase citada colada no fim de uma lista não abre a tabela', () => {
+    expect(regras(material({ corpo: `- Um\nFrase da tabela [1](#ref-1)[2](#ref-2).\n\n${tabela}` }))).toContain('tabela-sem-abertura-citada');
   });
 });
 
@@ -127,6 +144,7 @@ describe('checagem do padrão — escrita', () => {
     expect(regras(material({ corpo: 'Inibe a $\\beta$-lactamase [1](#ref-1)[2](#ref-2).' }))).toContain('latex');
     expect(regras(material({ corpo: 'Razão \\frac{a}{b} [1](#ref-1)[2](#ref-2).' }))).toContain('latex');
     expect(regras(material({ corpo: 'Inibe a β-lactamase; custa R$ 10 [1](#ref-1)[2](#ref-2).' }))).not.toContain('latex');
+    expect(regras(material({ corpo: 'Custa R$ 10 a R$ 20 [1](#ref-1)[2](#ref-2).' }))).not.toContain('latex');
   });
 
   it('<= e >=', () => {
@@ -137,6 +155,8 @@ describe('checagem do padrão — escrita', () => {
   it('lista dentro de lista', () => {
     expect(regras(material({ corpo: 'Itens [1](#ref-1)[2](#ref-2):\n\n- Um\n  - Sub-item\n- Dois' }))).toContain('lista-aninhada');
     expect(regras(material({ corpo: 'Itens [1](#ref-1)[2](#ref-2):\n\n- Um\n- Dois\n\n1. Três\n2. Quatro' }))).toEqual([]);
+    expect(regras(material({ corpo: 'Itens [1](#ref-1)[2](#ref-2):\n\n  - Um\n  - Dois' }))).toEqual([]);
+    expect(regras(material({ corpo: 'Itens [1](#ref-1)[2](#ref-2):\n\n  - Um\n    - Sub-item' }))).toContain('lista-aninhada');
   });
 
   it('subtítulo que não é ####', () => {
@@ -148,7 +168,9 @@ describe('checagem do padrão — escrita', () => {
   it('texto que remete a outro material', () => {
     expect(regras(material({ corpo: 'Veja o material de penicilinas [1](#ref-1)[2](#ref-2).' }))).toContain('remissao-a-outro-material');
     expect(regras(material({ corpo: 'Isso será aprofundado no próximo módulo [1](#ref-1)[2](#ref-2).' }))).toContain('remissao-a-outro-material');
-    expect(regras(material({ corpo: 'Como vimos, a ceftriaxona [1](#ref-1)[2](#ref-2).' }))).toContain('remissao-a-outro-material');
+    expect(regras(material({ corpo: 'Como vimos no material de penicilinas, a ceftriaxona [1](#ref-1)[2](#ref-2).' }))).toContain('remissao-a-outro-material');
+    expect(regras(material({ corpo: 'Como vimos acima, colete os seguintes materiais [1](#ref-1)[2](#ref-2).' }))).toEqual([]);
+    expect(regras(material({ corpo: 'Veja a seção de dosagem [1](#ref-1)[2](#ref-2).' }))).toEqual([]);
     expect(regras(material({ corpo: 'A meningite bacteriana exige penetração liquórica [1](#ref-1)[2](#ref-2).' }))).toEqual([]);
   });
 });
@@ -166,12 +188,25 @@ describe('checagem do padrão — estrutura', () => {
     expect(regras(material({ corpo: `${base}**Pontos-Chave:**\n- Um\n\n**Pontos-Chave:**\n- Dois` }))).toContain('bloco-repetido');
     expect(regras(material({ corpo: `${base}> 💡 **Pérola Clínica:** um\n\n> 💡 **Pérola Clínica:** dois` }))).toContain('bloco-repetido');
     expect(regras(material({ corpo: `${base}> ⚠️ **Alerta de Armadilha:** um\n\n> **Alerta:** dois` }))).toContain('bloco-repetido');
+    expect(regras(material({ corpo: `${base}> **Alerta importante:** um\n\n> ⚠️ **Alerta de Armadilha:** dois` }))).toEqual([]);
+    const [p] = checarMaterialMarkdown(material({ corpo: `${base}> 💡 **Pérola Clínica:** um\n\n> 💡 **Pérola Clínica:** dois` })).pendencias;
+    expect(p.mensagem).toMatch(/guarda só o último e o da linha \d+ se perde/);
     expect(regras(material({ corpo: `${base}**Pontos-Chave:**\n- Um\n\n> 💡 **Pérola Clínica:** um\n\n> ⚠️ **Alerta de Armadilha:** um` }))).toEqual([]);
   });
 
   it('linha de versão do padrão ausente', () => {
     const cabecalho = '**Disciplina:** Farmacologia\n**Tema:** Clínica\n**Tempo estimado de leitura:** 12 minutos';
     expect(regras(material({ cabecalho }))).toEqual(['versao-do-padrao-ausente']);
+    for (const v of ['1', '', 'v2']) {
+      expect(regras(material({ cabecalho: `${cabecalho}\n**Versão do padrão:** ${v}` }))).toEqual(['versao-do-padrao-ausente']);
+    }
+  });
+
+  it('seção que a importação descarta', () => {
+    const antesDasPalavras = (bloco: string) => material().replace('### Palavras-chave', `${bloco}\n\n### Palavras-chave`);
+    expect(regras(antesDasPalavras('### Conexão neuromuscular\nTexto [1](#ref-1).'))).toEqual(['bloco-descartado']);
+    expect(regras(antesDasPalavras('### Valores de referência\nTabela de valores.'))).toEqual(['bloco-descartado']);
+    expect(regras(material().replace('### Referências', '### Palavras-chave\n`C3G`\n\n### Referências'))).toEqual(['bloco-descartado']);
   });
 
   it('tempo fora de 8–25 minutos, ou ausente', () => {
@@ -194,5 +229,7 @@ describe('checagem do padrão — estrutura', () => {
     expect(regras(material({ titulo: '3. Carbapenêmicos' }))).toEqual(['titulo-numerado']);
     expect(regras(material({ titulo: 'Reação de hipersensibilidade tipo I' }))).toEqual([]);
     expect(regras(material({ titulo: 'Unidade vascular e parte distal' }))).toEqual([]);
+    expect(regras(material({ titulo: 'Herança ligada ao X' }))).toEqual([]);
+    expect(regras(material({ titulo: 'Radiologia: princípios dos raios X' }))).toEqual([]);
   });
 });

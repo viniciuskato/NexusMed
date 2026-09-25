@@ -41,6 +41,7 @@ export type RegraDoPadraoId =
   | 'subtitulo-invalido'
   | 'texto-fora-de-secao'
   | 'bloco-repetido'
+  | 'bloco-descartado'
   | 'versao-do-padrao-ausente'
   | 'tempo-fora-da-faixa'
   | 'sem-palavras-chave'
@@ -140,8 +141,16 @@ function secaoDaLinha(arq: ArquivoDeMaterial, i: number): string {
   return bloco ? bloco.titulo : CABECALHO;
 }
 
+/**
+ * O bloco do tipo que a importação guarda: ela sobrescreve a cada bloco
+ * de referências ou palavras-chave, então vale o último.
+ */
+function blocoGuardado(arq: ArquivoDeMaterial, tipo: 'referencias' | 'palavras-chave'): BlocoDoArquivo | undefined {
+  return arq.blocos.filter((b) => b.tipo === tipo).pop();
+}
+
 function referencias(arq: ArquivoDeMaterial): string[] {
-  const bloco = arq.blocos.find((b) => b.tipo === 'referencias');
+  const bloco = blocoGuardado(arq, 'referencias');
   if (!bloco) return [];
   return extractNumberedList(arq.linhas.slice(bloco.inicio + 1, bloco.fim).join('\n'));
 }
@@ -184,12 +193,13 @@ const citacaoMalformada: RegraDoPadrao = {
         if (n !== alvo) problemas.push(`"${m}" (o número e o #ref- não batem)`);
         return ' ';
       });
-      for (const m of resto.matchAll(/\[\d+(?:\s*[,–-]\s*\d+)*\](?:\([^)\]]*[)\]])?/g)) {
-        problemas.push(`"${m[0]}"`);
-      }
-      for (const m of resto.matchAll(/\(#?ref-\d+[\])]?/g)) {
-        if (!problemas.some((p) => p.includes(m[0]))) problemas.push(`"${m[0]}"`);
-      }
+      // Cada trecho apontado sai do texto antes da busca seguinte, para não
+      // ser contado duas vezes.
+      const semColchetes = resto.replace(/\[\d+(?:\s*[,–-]\s*\d+)*\](?:\([^)\]]*[)\]])?/g, (m) => {
+        problemas.push(`"${m}"`);
+        return ' ';
+      });
+      for (const m of semColchetes.matchAll(/\(#?ref-\d+[\])]?/g)) problemas.push(`"${m[0]}"`);
       if (problemas.length > 0) {
         out.push(
           pendencia(
@@ -236,7 +246,7 @@ const referenciaNaoCitada: RegraDoPadrao = {
   id: 'referencia-nao-citada',
   descricao: 'Referência da lista nunca citada no texto',
   verificar(arq) {
-    const bloco = arq.blocos.find((b) => b.tipo === 'referencias');
+    const bloco = blocoGuardado(arq, 'referencias');
     if (!bloco) return [];
     const citadas = new Set<number>();
     for (const { linha } of linhasDeConteudo(arq)) {
@@ -271,15 +281,20 @@ const tabelaSemAberturaCitada: RegraDoPadrao = {
         let j = i - 1;
         while (j > bloco.inicio && arq.linhas[j].trim() === '') j--;
         const paragrafo: string[] = [];
+        // Frase colada numa lista ou citação `> ` sem linha em branco vira
+        // continuação delas no leitor, não parágrafo: não gera legenda.
+        let colada = false;
         while (j > bloco.inicio && arq.linhas[j].trim() !== '') {
           const t = arq.linhas[j].trim();
-          if (/^[#|>]/.test(t) || LISTA.test(arq.linhas[j]) || /^\*\*[^*]+:\*\*\s*$/.test(t)) break;
+          if (/^>/.test(t) || LISTA.test(arq.linhas[j])) {
+            colada = paragrafo.length > 0;
+            break;
+          }
+          if (/^[#|]/.test(t) || /^\*\*[^*]+:\*\*\s*$/.test(t)) break;
           paragrafo.unshift(t);
           j--;
         }
-        const ultimaAcima = arq.linhas.slice(bloco.inicio + 1, i).reverse().find((l) => l.trim() !== '');
-        const paragrafoLogoAcima = ultimaAcima !== undefined && paragrafo.length > 0 && paragrafo[paragrafo.length - 1] === ultimaAcima.trim();
-        if (!paragrafoLogoAcima || !/\[\d+\]\(#ref-\d+\)/.test(paragrafo.join(' '))) {
+        if (paragrafo.length === 0 || colada || !/\[\d+\]\(#ref-\d+\)/.test(paragrafo.join(' '))) {
           out.push(
             pendencia(
               arq,
@@ -301,7 +316,8 @@ const latex: RegraDoPadrao = {
   verificar(arq) {
     const out: PendenciaDoPadrao[] = [];
     for (let i = 0; i < arq.linhas.length; i++) {
-      const linha = arq.linhas[i];
+      // "R$ 10 a R$ 20" não é fórmula: o cifrão de moeda sai antes da busca.
+      const linha = arq.linhas[i].replace(/(R|US)\$(?=\s?\d)/g, '$1');
       const trechos = [
         ...[...linha.matchAll(/\$\$?[^$\n]+?\$\$?/g)].map((m) => m[0]),
         ...[...linha.replace(/\$\$?[^$\n]+?\$\$?/g, ' ').matchAll(/\\[a-zA-Z]+/g)].map((m) => m[0]),
@@ -342,15 +358,19 @@ const listaAninhada: RegraDoPadrao = {
   verificar(arq) {
     const out: PendenciaDoPadrao[] = [];
     let anteriorELista = false;
+    // Recuo do último item de lista: aninhado é o item mais recuado que ele,
+    // não qualquer item recuado (uma lista inteira com 2 espaços é um nível só).
+    let recuoDoItem = 0;
     let blocoAnterior: BlocoDoArquivo | undefined;
+    const recuo = (l: string) => (l.match(/^\s*/)?.[0] ?? '').replace(/\t/g, '    ').length;
     for (const { bloco, i, linha } of linhasDeConteudo(arq)) {
       if (bloco !== blocoAnterior) {
         anteriorELista = false;
         blocoAnterior = bloco;
       }
       if (linha.trim() === '') continue;
-      const recuada = /^(\s{2,}|\t)([-*•]|\d+\.)\s+\S/.test(linha);
-      if (recuada && anteriorELista) {
+      const eItem = LISTA.test(linha);
+      if (eItem && anteriorELista && recuo(linha) >= recuoDoItem + 2) {
         out.push(
           pendencia(
             arq,
@@ -360,7 +380,8 @@ const listaAninhada: RegraDoPadrao = {
           )
         );
       }
-      anteriorELista = LISTA.test(linha) || (anteriorELista && /^\s+\S/.test(linha));
+      if (eItem && !(anteriorELista && recuo(linha) >= recuoDoItem + 2)) recuoDoItem = recuo(linha);
+      anteriorELista = eItem || (anteriorELista && /^\s+\S/.test(linha));
     }
     return out;
   },
@@ -416,29 +437,39 @@ const blocoRepetido: RegraDoPadrao = {
   descricao: 'Mais de um bloco de Pontos-Chave, Pérola ou Alerta na mesma seção',
   verificar(arq) {
     const out: PendenciaDoPadrao[] = [];
-    const tipos: Array<{ nome: string; teste: (t: string) => boolean }> = [
-      { nome: 'Pontos-Chave', teste: (t) => /^\*\*Pontos-?Chave:?\*\*\s*$/i.test(t) },
-      // Mesmo reconhecimento de rótulo do importador: citação `> ` com emoji opcional.
-      { nome: 'Pérola Clínica', teste: (t) => /^>/.test(t) && /^\*\*P[eé]rola Cl[ií]nica/i.test(t.replace(/^>\s?/, '').replace(/^[^\w*]*/u, '')) },
-      { nome: 'Alerta de Armadilha', teste: (t) => /^>/.test(t) && /^\*\*Alerta/i.test(t.replace(/^>\s?/, '').replace(/^[^\w*]*/u, '')) },
+    // Mesmo reconhecimento de rótulo de `parseSectionBody`: citação `> ` com
+    // emoji opcional, e o que acontece com o bloco a mais na importação.
+    const rotuloDaCitacao = (t: string) => t.replace(/^>\s?/, '').replace(/^[^\w*]*/u, '');
+    const tipos: Array<{ nome: string; teste: (t: string) => boolean; efeito: (primeira: number) => string }> = [
+      {
+        nome: 'Pontos-Chave',
+        teste: (t) => /^\*\*Pontos-?Chave:?\*\*\s*$/i.test(t),
+        efeito: () => 'a importação guarda só o primeiro; este fica no texto como rótulo solto seguido de lista comum',
+      },
+      {
+        nome: 'Pérola Clínica',
+        teste: (t) => /^>/.test(t) && /^\*\*P[eé]rola Cl[ií]nica:?\*\*/i.test(rotuloDaCitacao(t)),
+        efeito: (primeira) => `a importação guarda só o último e o da linha ${primeira} se perde`,
+      },
+      {
+        nome: 'Alerta de Armadilha',
+        teste: (t) => /^>/.test(t) && /^\*\*Alerta(?: de Armadilha)?:?\*\*/i.test(rotuloDaCitacao(t)),
+        efeito: (primeira) => `a importação guarda só o último e o da linha ${primeira} se perde`,
+      },
     ];
     for (const bloco of arq.blocos) {
       if (bloco.tipo !== 'conteudo') continue;
-      for (const { nome, teste } of tipos) {
-        let vistos = 0;
+      for (const { nome, teste, efeito } of tipos) {
+        let primeira = -1;
         for (let i = bloco.inicio + 1; i < bloco.fim; i++) {
           if (!teste(arq.linhas[i].trim())) continue;
-          vistos++;
-          if (vistos === 2) {
-            out.push(
-              pendencia(
-                arq,
-                'bloco-repetido',
-                i,
-                `Segundo bloco de ${nome} na mesma seção: a importação guarda só um e o outro se perde. Junte os dois num só.`
-              )
-            );
+          if (primeira === -1) {
+            primeira = i;
+            continue;
           }
+          out.push(
+            pendencia(arq, 'bloco-repetido', i, `Mais de um bloco de ${nome} na mesma seção: ${efeito(primeira + 1)}. Junte-os num só.`)
+          );
         }
       }
     }
@@ -466,15 +497,27 @@ function fimDoCabecalho(arq: ArquivoDeMaterial): number {
 
 const versaoAusente: RegraDoPadrao = {
   id: 'versao-do-padrao-ausente',
-  descricao: 'Linha de versão do padrão ausente',
+  descricao: 'Linha de versão do padrão ausente ou diferente de 2',
   verificar(arq) {
-    if (linhaDoMetadado(arq, 'versao do padrao') !== -1) return [];
+    const i = linhaDoMetadado(arq, 'versao do padrao');
+    if (i === -1) {
+      return [
+        pendencia(
+          arq,
+          'versao-do-padrao-ausente',
+          fimDoCabecalho(arq),
+          'Falta a linha "**Versão do padrão:** 2" nos metadados, logo abaixo do título.'
+        ),
+      ];
+    }
+    const valor = arq.linhas[i].trim().replace(/^\*\*[^*:]+:\*\*\s*/, '');
+    if (valor === '2') return [];
     return [
       pendencia(
         arq,
         'versao-do-padrao-ausente',
-        fimDoCabecalho(arq),
-        'Falta a linha "**Versão do padrão:** 2" nos metadados, logo abaixo do título.'
+        i,
+        `Versão do padrão "${trecho(valor, 20)}": o valor é sempre 2. Escreva "**Versão do padrão:** 2".`
       ),
     ];
   },
@@ -500,7 +543,7 @@ const semPalavrasChave: RegraDoPadrao = {
   id: 'sem-palavras-chave',
   descricao: 'Sem palavras-chave',
   verificar(arq) {
-    const bloco = arq.blocos.find((b) => b.tipo === 'palavras-chave');
+    const bloco = blocoGuardado(arq, 'palavras-chave');
     const tags = bloco ? extractBacktickTags(arq.linhas.slice(bloco.inicio + 1, bloco.fim).join('\n')) : [];
     if (tags.length > 0) return [];
     return [
@@ -518,14 +561,20 @@ const semPalavrasChave: RegraDoPadrao = {
 
 // Numeração no título: número no início, "Módulo 2"/"Parte II"..., ou numeral
 // romano solto no fim ou antes de ":"/"—" ("Antimicrobianos I: ...") — exceto
-// quando qualifica o termo anterior ("Hipersensibilidade tipo I").
+// quando qualifica o termo anterior ("Hipersensibilidade tipo I") ou é o "X"
+// de cromossomo e raios ("Herança ligada ao X", "raios X").
 const NUMERACAO_EXPLICITA = [/^\d+[.)]?\s/, /(?:^|\s)(m[oó]dulo|parte|aula|cap[ií]tulo|unidade|volume)\s+(\d+|[IVXL]+)(?=$|[\s:—–-])/i];
 const ROMANO_SOLTO = /(\S+)\s+([IVX]{1,4})(?=\s*[:—–-]|\s*$)/g;
 const QUALIFICAM_NUMERAL = new Set(['tipo', 'tipos', 'classe', 'classes', 'grau', 'fase', 'estagio', 'estadio', 'grupo', 'geracao', 'nivel', 'fator', 'complexo', 'tabela']);
+const PRECEDEM_X_LETRA = new Set(['ao', 'o', 'do', 'no', 'raio', 'raios', 'cromossomo', 'cromossomos', 'ligada', 'ligado', 'ligadas', 'ligados']);
 
 function tituloTemNumeracao(titulo: string): boolean {
   if (NUMERACAO_EXPLICITA.some((re) => re.test(titulo))) return true;
-  return [...titulo.matchAll(ROMANO_SOLTO)].some((m) => !QUALIFICAM_NUMERAL.has(normalize(m[1])));
+  return [...titulo.matchAll(ROMANO_SOLTO)].some((m) => {
+    const anterior = normalize(m[1]);
+    if (QUALIFICAM_NUMERAL.has(anterior)) return false;
+    return !(m[2] === 'X' && PRECEDEM_X_LETRA.has(anterior));
+  });
 }
 
 const tituloNumerado: RegraDoPadrao = {
@@ -545,12 +594,14 @@ const tituloNumerado: RegraDoPadrao = {
   },
 };
 
+// Só remissão a outro material: "seção" e "como vimos acima" podem ser do
+// próprio material, e "seguintes materiais" costuma ser material biológico.
 const REMISSOES = [
-  /\bvej[ae]\s+(o|a|os|as)\s+(material|materiais|modulo|aula|capitulo|secao|pagina)/,
+  /\bvej[ae]\s+(o|a|os|as)\s+(material|materiais|modulo|aula|capitulo|pagina)/,
   /\bver\s+(o\s+)?(material|modulo|capitulo)\b/,
-  /\b(proxim[oa]s?|anterior(es)?|seguintes?)\s+(material|materiais|modulos?|aulas?|capitulos?|paginas?)\b/,
-  /\b(material|materiais|modulos?|aulas?|capitulos?|paginas?)\s+(anterior(es)?|seguintes?)\b/,
-  /\bcomo\s+(ja\s+)?vimos\b/,
+  /\b(proxim[oa]s?|anterior(es)?)\s+(material|materiais|modulos?|aulas?|capitulos?|paginas?)\b/,
+  /\b(material|materiais|modulos?|aulas?|capitulos?|paginas?)\s+anterior(es)?\b/,
+  /\bcomo\s+(ja\s+)?vimos\s+(n[oa]s?|em)\s+(outr[oa]s?\s+)?(material|materiais|modulos?|aulas?|capitulos?)\b/,
 ];
 
 const remissao: RegraDoPadrao = {
@@ -575,7 +626,27 @@ const remissao: RegraDoPadrao = {
   },
 };
 
+const blocoDescartado: RegraDoPadrao = {
+  id: 'bloco-descartado',
+  descricao: 'Seção que a importação descarta (conexões, referências ou palavras-chave repetidas)',
+  verificar(arq) {
+    const guardados = new Set([blocoGuardado(arq, 'referencias'), blocoGuardado(arq, 'palavras-chave')]);
+    return arq.blocos
+      .filter((b) => b.tipo !== 'conteudo' && !guardados.has(b))
+      .map((b) => {
+        const motivo =
+          b.tipo === 'conexoes'
+            ? 'o título tem "conexão" ou "pré-requisito", e a importação descarta essa seção inteira — o padrão não usa bloco de conexões'
+            : b.tipo === 'referencias'
+              ? 'o título tem "referência", e a importação o lê como lista de referências mas guarda só a última — esta se perde. Se for conteúdo, tire "referência" do título'
+              : 'a importação guarda só o último bloco de palavras-chave — este se perde. Junte-os num só';
+        return pendencia(arq, 'bloco-descartado', b.inicio, `Seção "${trecho(b.titulo, 40)}" some na importação: ${motivo}.`);
+      });
+  },
+};
+
 export const REGRAS_DO_PADRAO: readonly RegraDoPadrao[] = [
+  blocoDescartado,
   textoForaDeSecao,
   versaoAusente,
   tempoForaDaFaixa,

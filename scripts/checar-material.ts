@@ -52,9 +52,10 @@ if (info.isDirectory()) {
     if (situacaoDaChecagem(r) === 'erro') recusados++;
     console.log(formatarResumoDaChecagem(nome, r));
   }
-  process.exit(recusados > 0 ? 1 : 0);
+  // `exitCode` em vez de `process.exit`: deixa a saída terminar de ser escrita.
+  process.exitCode = recusados > 0 ? 1 : 0;
 } else {
   const r = checar(alvo);
   console.log(formatarChecagemDetalhada(path.basename(alvo), r));
-  process.exit(situacaoDaChecagem(r) === 'erro' ? 1 : 0);
+  process.exitCode = situacaoDaChecagem(r) === 'erro' ? 1 : 0;
 }
