@@ -249,7 +249,7 @@ Um gate de publicação comercial deveria, no mínimo:
 
 ## Artefatos
 
-- `docs/editorial/auditoria-questoes-direitos-midia.csv` — 402 linhas de dado + cabeçalho, com
+- `docs/editorial/acervo/auditoria-questoes-direitos-midia.csv` — 402 linhas de dado + cabeçalho, com
   `question_id`, campos de classificação (incl. `autoria_provavel`), evidência e próximo passo por
   questão. Substituído nesta correção 34-A2 (mesmos 402 IDs, sem remoção nem adição de linha).
 - Dados brutos da consulta (`raw_questions.json`, `raw_options.json`, `raw_option_keys.json`,

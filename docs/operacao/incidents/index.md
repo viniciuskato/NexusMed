@@ -31,6 +31,7 @@ Use `resolved` somente quando a prevenção executável estiver validada.
 | [INC-2026-002](INC-2026-002-safemarkdown-conteudo-real.md) | 2026-09-20 | média | compendium-render | verifying | `SafeMarkdown` deixava heading/tabela/lista sem linha em branco, negrito com itálico aninhado, e Pontos-Chave/Pérola Clínica/flashcards sem passar por nenhum parser — todos como texto/Markdown cru na tela |
 | [INC-2026-003](INC-2026-003-import-questoes-schema-cache-remoto.md) | 2026-09-21 | alta | questoes-import | verifying | Feature já em produção (PR #49 mesclada) falhava 100% com `PGRST202` — `import_question_draft()` nunca aplicada ao Supabase remoto; migration aplicada nesta sessão, falta confirmação do usuário |
 | [INC-2026-004](INC-2026-004-migration-45a-depois-do-merge.md) | 2026-09-24 | alta | publicacao-migration | mitigated | Recorrência do 003: PR #76 (45-A parte 2) mesclado com a migration fora do remoto por ~10 min — erro não virava flashcard, simulado fechava com nota vazia. Prevenção: 46-E (CI confere o remoto) |
+| [INC-2026-005](INC-2026-005-busca-43d-sem-migration.md) | 2026-09-25 | alta | publicacao-migration | mitigated | Terceira vez: PRs #80 (43-D) e #81 (45-A) mesclados à noite com as migrations fora do remoto — busca de materiais fora do ar para todos por ~13h45, até o dono aplicar em 25/09. A regra "46-E antes do próximo merge com migration" não segurou |
 
 ## Regra de consolidação
 

@@ -66,7 +66,7 @@ Para que o fluxo de autenticação funcione integralmente:
 5. **Templates de E-mail**:
    - Em **Email Templates**, personalize o idioma e remetente para a **Confirmação de e-mail** e **Redefinição de senha**.
 
-A segurança de acesso aos dados é garantida por Row Level Security (RLS) no Postgres — ver `supabase/migrations/` e `docs/architecture/supabase-schema.md` para o desenho completo das políticas.
+A segurança de acesso aos dados é garantida por Row Level Security (RLS) no Postgres — ver `supabase/migrations/` e `docs/archive/architecture/supabase-schema.md` para o desenho completo das políticas.
 
 ---
 
@@ -218,7 +218,7 @@ nunca `pull_request_target`; sem segredos de repositório usados no workflow):
 - `src/contexts/AuthContext.tsx`: Provedor central de autenticação e sessão com Supabase Auth.
 - `src/services/storage.ts`: Serviço de persistência com isolamento de dados por UID (`synapse_<uid>_*`).
 - `supabase/`: Modelagem PostgreSQL, migrações versionadas e Row Level Security (ver seção abaixo).
-- `docs/architecture/`: Documentação de arquitetura, incluindo a migração para Supabase.
+- `docs/archive/architecture/`: Documentação de arquitetura, incluindo a migração para Supabase.
 
 ---
 
@@ -230,7 +230,7 @@ O diretório `supabase/` contém a modelagem PostgreSQL, migrações versionadas
 - `supabase/migrations/`: DDL de tabelas, RLS/policies/funções/triggers e políticas de Storage, em ordem.
 - `supabase/seed.sql`: dados demonstrativos mínimos e não sensíveis (sem usuário admin com senha fixa).
 - `supabase/tests/database/rls_policies.test.sql`: suíte pgTAP de testes de RLS.
-- `docs/architecture/supabase-schema.md`: esquema completo, matriz de acesso e desenho de segurança.
-- `docs/architecture/migration-roadmap.md`: histórico da migração de backend para Supabase.
+- `docs/archive/architecture/supabase-schema.md`: esquema completo, matriz de acesso e desenho de segurança.
+- `docs/archive/architecture/migration-roadmap.md`: histórico da migração de backend para Supabase.
 
 Variáveis de ambiente (documentadas em `.env.example`, sem valores reais): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. `SUPABASE_SERVICE_ROLE_KEY` nunca deve ter prefixo `VITE_` nem aparecer em código cliente, Git ou logs.

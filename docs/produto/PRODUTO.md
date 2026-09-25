@@ -21,7 +21,7 @@ Cada resposta muda o que vale a pena construir. Registrar a decisão em
    de uma turma**.
 2. **Conteúdo ou funcionalidade?** Dos 21 temas da AS1 (prova em
    21/09/2026), nenhum tem cobertura completa e auditada
-   (`docs/diretoria/AS1-INVENTARIO-2026-09-17.md`), enquanto Pomodoro,
+   (`docs/archive/diretoria/AS1-INVENTARIO-2026-09-17.md`), enquanto Pomodoro,
    radar de banca e perfil cognitivo já existem. Recomendação da
    auditoria: até a próxima prova, esforço em conteúdo; funcionalidade
    nova só se destravar produção de conteúdo (importação, revisão).

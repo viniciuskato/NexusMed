@@ -7,8 +7,8 @@
 # PROJECT_STATE.md — estado presente verificável (NexusMed/SynapseMed)
 
 > Porta de entrada operacional. Leia isto primeiro, depois
-> [`DECISIONS.md`](DECISIONS.md), [`TASKS.md`](TASKS.md),
-> [`RUNBOOK.md`](RUNBOOK.md) e [`SESSION_PROTOCOL.md`](SESSION_PROTOCOL.md).
+> [`DECISIONS.md`](../operacao/DECISIONS.md), [`TASKS.md`](../operacao/TASKS.md),
+> [`RUNBOOK.md`](../operacao/RUNBOOK.md) e [`SESSION_PROTOCOL.md`](../operacao/SESSION_PROTOCOL.md).
 > Caminho crítico de leitura: estes 5 arquivos + `AGENTS.md` (raiz) — alvo de
 > até 10 minutos.
 >
@@ -22,9 +22,9 @@
 - Repositório oficial: `https://github.com/viniciuskato/SynapseMed-firebase-auth.git`, branch `main`.
 - `main` tem deploy automático no Vercel a cada push — **nunca trabalhar
   direto em `main`, nunca publicar/mesclar sem autorização explícita da
-  diretoria e sem passar pelo gate do** [`RUNBOOK.md`](RUNBOOK.md).
+  diretoria e sem passar pelo gate do** [`RUNBOOK.md`](../operacao/RUNBOOK.md).
 - Chats, memória de qualquer IA e cópias locais soltas **não são fonte de
-  verdade** — ver decisão de 2026-09-17 em [`DECISIONS.md`](DECISIONS.md).
+  verdade** — ver decisão de 2026-09-17 em [`DECISIONS.md`](../operacao/DECISIONS.md).
 - Cópia de trabalho canônica, fora do OneDrive:
   `C:\Users\vinic\dev\NexusMed\firebase-auth`.
 
@@ -414,7 +414,7 @@ escrito**, não valor permanente. Sempre rode o comando acima antes de editar.
   in the schema cache` (código PostgREST `PGRST202` — função ausente do
   schema cache daquele Supabase, não erro de dado da questão).
 - **Causa-raiz confirmada** (ver
-  [`INC-2026-003`](incidents/INC-2026-003-import-questoes-schema-cache-remoto.md)
+  [`INC-2026-003`](../operacao/incidents/INC-2026-003-import-questoes-schema-cache-remoto.md)
   para a investigação completa): as duas migrations desta branch só
   foram aplicadas ao Supabase **local**; a tela testada pelo usuário
   resolvia `VITE_SUPABASE_URL` para o Supabase **remoto** — confirmado
@@ -919,7 +919,7 @@ que não tem retorno, prompt ou entrada de registro associada:**
   entrega é só de documentação, não tocou build/deploy), e se há
   migration/schema associado.
 - **Nenhuma ação de código foi tomada sobre este commit nesta entrega** —
-  fora de escopo da 40-A. Registrado aqui e em [`TASKS.md`](TASKS.md) para
+  fora de escopo da 40-A. Registrado aqui e em [`TASKS.md`](../operacao/TASKS.md) para
   que a diretoria decida: auditar linha a linha, testar, e só então
   aceitar/registrar retroativamente ou reverter.
 
@@ -936,7 +936,7 @@ que não tem retorno, prompt ou entrada de registro associada:**
   aplicação correta.
 - **Local**: Supabase local via CLI (`supabase start`/`db reset`/`test db`)
   — é onde toda mudança de schema/RPC deve ser testada antes de considerar
-  pronta. Ver [`RUNBOOK.md`](RUNBOOK.md).
+  pronta. Ver [`RUNBOOK.md`](../operacao/RUNBOOK.md).
 - **Frontend**: React 19 + Vite 6 + Tailwind v4 + TypeScript.
 
 ## Riscos e quarentenas conhecidas (não modificar nesta nem em entregas de
@@ -966,7 +966,7 @@ documentação futuras sem autorização específica)
 - **Objetivo desta entrega (40-A)**: instituir a camada `docs/operacao/`
   (este conjunto de 5 arquivos) como porta de entrada única para sessões
   novas, e reduzir `AGENTS.md` a um índice curto — ver
-  [`DECISIONS.md`](DECISIONS.md) para o racional completo.
+  [`DECISIONS.md`](../operacao/DECISIONS.md) para o racional completo.
 - **Próximo gate (aberto pela 41-A, resolvido pela 41-C — ver seção
   seguinte)**: esta pendência (mesclar `work/41a-auditoria-fe20832` em
   `main` e rodar o gate pgTAP faltante) foi superada por um caminho
@@ -978,7 +978,7 @@ documentação futuras sem autorização específica)
   Não há mais gate técnico em aberto nesta frente; falta apenas a decisão
   da diretoria sobre descartar `work/41a-auditoria-fe20832` (conteúdo já
   coberto por 41-B/41-C). O texto de `f945fa2` foi preservado em
-  [`docs/diretoria/prompts/41-B.txt`](../diretoria/prompts/41-B.txt) por
+  [`docs/diretoria/prompts/41-B.txt`](diretoria/prompts/41-B.txt) por
   esta própria entrega, antes de qualquer proposta de exclusão da branch.
 
 ## Estado de publicação desta própria entrega

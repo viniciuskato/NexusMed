@@ -38,6 +38,11 @@ sem nenhum corte): [`docs/archive/AGENTS-HISTORICO-2026-09-17.md`](docs/archive/
 Consulte-o quando precisar do detalhamento completo de algo só resumido
 abaixo. Não é o estado atual — é arquivo morto, preservado por completo.
 
+**Mapa de `docs/`** ("quero X, abra Y", e a tabela de caminhos antigos para
+novos da reorganização de 25/09, útil quando um comentário no código ou um
+documento antigo citar um caminho que não existe mais):
+[`docs/LEIA-ME.md`](docs/LEIA-ME.md).
+
 ## O que é o projeto
 
 Plataforma de estudos médicos (NexusMed/SynapseMed — o nome de marca é
@@ -108,10 +113,13 @@ seção "Armadilhas já descobertas".
 6. **Merge em `main` ≠ schema aplicado no Supabase remoto.** São dois
    passos independentes; aplicar migration faz parte do merge, não é
    opcional depois — sempre confirmar com query direta no remoto. Já falhou
-   duas vezes em três dias
+   três vezes em quatro dias
    ([INC-2026-003](docs/operacao/incidents/INC-2026-003-import-questoes-schema-cache-remoto.md),
-   [INC-2026-004](docs/operacao/incidents/INC-2026-004-migration-45a-depois-do-merge.md));
-   a unidade 46-E põe o CI para conferir o remoto antes do merge.
+   [INC-2026-004](docs/operacao/incidents/INC-2026-004-migration-45a-depois-do-merge.md),
+   [INC-2026-005](docs/operacao/incidents/INC-2026-005-busca-43d-sem-migration.md)
+   — a busca ficou fora do ar a noite toda); a unidade 46-E põe o CI para
+   conferir o remoto antes do merge. Sessão de diretoria: ao abrir, rodar
+   `supabase migration list --linked` e comparar com o repositório.
 7. **`service_role`/service role key não é o mesmo que o usuário Postgres
    `postgres`.** Alguns triggers só liberam alteração para
    `current_user = 'postgres'`; para bootstrapping local, conectar via
@@ -224,14 +232,14 @@ link entram aqui quando todo agente precisar conhecê-los.
 O que construir e em que ordem vive no plano canônico
 (`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`); estado dos ambientes,
 decisões e fila operacional, em `PROJECT_STATE.md`, `DECISIONS.md` e
-`TASKS.md`, conforme `SESSION_PROTOCOL.md`. `docs/diretoria/registro.md` é
+`TASKS.md`, conforme `SESSION_PROTOCOL.md`. `docs/archive/diretoria/registro.md` é
 o painel legado da diretoria (histórico até 2026-09-17).
 
 ## Comunicação entre diretoria e executivas
 
 Toda sessão de diretoria deve ler e seguir
 [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md)
-e consultar [`docs/diretoria/registro.md`](docs/diretoria/registro.md)
+e consultar [`docs/archive/diretoria/registro.md`](docs/archive/diretoria/registro.md)
 para o histórico. Preserve os identificadores já emitidos ao continuar
 esse histórico.
 
@@ -243,5 +251,5 @@ frentes, as trilhas e a ordem, as decisões em aberto, as unidades (por quê,
 critério de aceite, restrições, dependências) e o registro. A unidade diz o
 quê e por quê; o como é derivado lendo o código na hora, pela trilha dona da
 área. A diretoria planeja nele; a trilha atualiza só a linha "Estado" da
-unidade no mesmo PR da implementação. `docs/diretoria/prompts/` e
+unidade no mesmo PR da implementação. `docs/archive/diretoria/prompts/` e
 `registro.md` são histórico — nada novo entra lá.

@@ -75,12 +75,12 @@ A executiva encerra com um bloco copiável: RETORNO: 01-B; Resultado; Alteraçõ
 
 ## Plano canônico e unidades (desde 2026-09-23)
 
-Substituem os prompts persistidos em `docs/diretoria/prompts/`. Motivo: os prompts
+Substituem os prompts persistidos em `docs/archive/diretoria/prompts/`. Motivo: os prompts
 envelheciam antes de serem executados — o 42-C ainda apontava para um caminho de
 repositório que não existe mais; planos detalhados eram desmentidos por decisões
 tomadas horas depois; e os achados que mais importam (ex.: o hash de atestação da
 questão incluir o vínculo com material) só aparecem lendo o código na hora de
-executar. `docs/diretoria/prompts/` fica como histórico; nada novo entra lá.
+executar. `docs/archive/diretoria/prompts/` fica como histórico; nada novo entra lá.
 
 **Onde mora.** Um único documento:
 [`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](../produto/PLANO-DE-DESENVOLVIMENTO.md).
@@ -137,7 +137,7 @@ Avalie separadamente: há informações suficientes para enviar? Pode executar j
 A tabela final deve conter: Trilha | Unidade atual | Estado | Próxima ação / dependência. Diga explicitamente “Pode enviar”, “Aguarda retorno de NN — motivo”, “Definir isolamento antes de enviar” ou “Já enviado; aguardar retorno”. Indique prioridade quando útil. Mostre apenas o histórico necessário na conversa.
 
 ## Persistência
-Use o plano canônico (`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`) como painel atual: sequência, estados, decisões em aberto e registro. Retornos vão na descrição do PR da unidade. Desde 2026-09-23; antes, o painel era docs/diretoria/registro.md, com prompts em docs/diretoria/prompts/ e retornos em docs/diretoria/retornos/ — todos mantidos como histórico. Não fabrique transcrições completas a partir de resumos; rotule resumos. Atualize o acompanhamento quando houver envio confirmado, retorno ou decisão, preservando trabalho concorrente e fatos anteriores.
+Use o plano canônico (`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`) como painel atual: sequência, estados, decisões em aberto e registro. Retornos vão na descrição do PR da unidade. Desde 2026-09-23; antes, o painel era docs/archive/diretoria/registro.md, com prompts em docs/archive/diretoria/prompts/ e retornos em docs/archive/diretoria/retornos/ — todos mantidos como histórico. Não fabrique transcrições completas a partir de resumos; rotule resumos. Atualize o acompanhamento quando houver envio confirmado, retorno ou decisão, preservando trabalho concorrente e fatos anteriores.
 
 Ao retomar uma sessão, leia AGENTS.md, este modelo e o plano canônico. Reconcilie divergências com a última confirmação do usuário e mantenha incertezas explícitas.
 
@@ -162,10 +162,10 @@ Para mudanças de risco alto (merge em `main`, decisão de taxonomia/conteúdo m
 5. Dados fictícios ou de demonstração alcançáveis em produção.
 6. O que o usuário final vê de fato: fluxos de conta (cadastro, senha), navegação e conteúdo publicado.
 
-**Escopo**: o projeto inteiro, não uma entrega. Ler `AGENTS.md`, `docs/operacao/PROJECT_STATE.md`, `DECISIONS.md`, `TASKS.md`, `docs/diretoria/registro.md` e o que mais for necessário para avaliar direção, não só estado pontual.
+**Escopo**: o projeto inteiro, não uma entrega. Ler `AGENTS.md`, `docs/operacao/PROJECT_STATE.md`, `DECISIONS.md`, `TASKS.md`, `docs/archive/diretoria/registro.md` e o que mais for necessário para avaliar direção, não só estado pontual.
 
 **Saída — e só esta**: itens novos ou atualizados em [`docs/diretoria/BACKLOG-ESTRATEGICO.md`](BACKLOG-ESTRATEGICO.md). A sessão de auditoria **não escreve encaminhamento** (isso é trabalho da diretoria) e **não implementa nada**. Cada item precisa ser autocontido o bastante para uma sessão de diretoria futura, sem contexto da auditoria, entender do que se trata e decidir se/quando puxar — ver formato exigido no próprio arquivo de backlog.
 
-**Depois de registrar os itens**, a sessão de auditoria encerra. Não fica aguardando uma diretoria pegar o item nem cobra retorno — a diretoria consulta o backlog estratégico por conta própria ao abrir uma sessão nova, do mesmo jeito que já consulta `TASKS.md` e `docs/diretoria/registro.md`.
+**Depois de registrar os itens**, a sessão de auditoria encerra. Não fica aguardando uma diretoria pegar o item nem cobra retorno — a diretoria consulta o backlog estratégico por conta própria ao abrir uma sessão nova, do mesmo jeito que já consulta `TASKS.md` e `docs/archive/diretoria/registro.md`.
 
 **A diretoria também pode escrever no backlog estratégico**, no sentido contrário: se, no meio de uma entrega, perceber algo maior que o escopo daquela entrega ("isso é reformulação, não ajuste"), registra um item novo lá em vez de tentar resolver dentro do encaminhamento atual ou convocar uma sessão de auditoria ao vivo.

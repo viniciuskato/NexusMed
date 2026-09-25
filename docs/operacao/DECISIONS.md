@@ -3,7 +3,7 @@
 > Log, não diário. Cada entrada é uma decisão que vale para sessões
 > futuras até ser explicitamente revista aqui. Não narra o trabalho feito
 > (isso é [`TASKS.md`](TASKS.md) para o presente e
-> `docs/diretoria/registro.md` / `docs/archive/` para o histórico
+> `docs/archive/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
 ## 2026-09-24 — Produção de conteúdo em paralelo, com o Gemini como redator (D-5)
@@ -157,7 +157,7 @@ materiais) e agenda os achados abertos da auditoria em unidades (frentes 45 e
 - **A execução** atualiza, no mesmo PR da implementação, o estado da unidade,
   o registro e os achados da execução. Não mexe em aceite nem em sequência.
 - `TASKS.md` fica como fila operacional (incidentes e pendências avulsas) e
-  não repete as unidades; `docs/diretoria/registro.md` vira histórico.
+  não repete as unidades; `docs/archive/diretoria/registro.md` vira histórico.
 
 **Por quê**: o dono do produto quer um material único que possa ler para
 entender o planejamento inteiro, organizado por unidades de implementação —
@@ -238,7 +238,7 @@ Ordem: primeiro o que muda a forma de produzir conteúdo, depois o que só lê.
 
 ## 2026-09-23 — Fichas de etapa no lugar de prompts
 
-Encaminhamentos deixam de ser prompts persistidos em `docs/diretoria/prompts/`
+Encaminhamentos deixam de ser prompts persistidos em `docs/archive/diretoria/prompts/`
 e passam a ser **fichas de etapa** num documento vivo por iniciativa, em
 `docs/produto/`. A ficha guarda só o que não envelhece: por quê, critério de
 aceite observável, restrições e armadilhas conhecidas (com onde conferir),
@@ -262,7 +262,7 @@ remota; gates completos; verificação independente por outra sessão.
 **Como aplicar**: ver `docs/diretoria/MODELO-DIRETORIA.md`, seção "Plano
 canônico e unidades", e `docs/operacao/EXECUTOR_PROTOCOL.md`. Uma ficha sem
 critério de aceite observável não é executável — "só a ideia" não basta.
-`docs/diretoria/prompts/` fica como histórico. *O "documento por iniciativa"
+`docs/archive/diretoria/prompts/` fica como histórico. *O "documento por iniciativa"
 foi substituído no mesmo dia por um plano canônico único — ver a entrada
 "Plano canônico único do desenvolvimento", acima; as fichas passaram a se
 chamar unidades.*
@@ -381,7 +381,7 @@ em `main`. Investigação decidiu o destino de cada uma de forma diferente:
 - **`work/integracao-estabilizacao-11b`** ("11-B2") **continua existindo, de
   propósito.** Contém um fix real de deduplicação de SRS de flashcard
   (migration `flashcard_srs_unique_creation` + RPC), documentado em
-  `docs/diretoria/registro.md` (seção "Achado em produção... 2026-09-11") como
+  `docs/archive/diretoria/registro.md` (seção "Achado em produção... 2026-09-11") como
   deliberadamente não mesclado porque depende de uma "reconciliação de
   duplicata remota" (Prompt 11-C) que nunca foi concluída. Só o sintoma mais
   estreito (id de flashcard automático não-uuid) foi extraído e publicado à
@@ -443,7 +443,7 @@ Na pré-visualização da importação real de `acidobase.compendium.yaml`, o
 usuário notou que as tags incluíam "AS1" e "Saúde do Adulto 1" — o nome da
 coleção curricular/prova de uma faculdade específica, não um conceito
 clínico. Causa: o prompt da missão AS1-B2
-(`docs/diretoria/prompts/AS1-B2.txt`, linha 127) instruía "coleção
+(`docs/archive/diretoria/prompts/AS1-B2.txt`, linha 127) instruía "coleção
 curricular: AS1 — Saúde do Adulto 1" sem dizer onde isso deveria ser
 registrado; sem um campo próprio de "coleção" no schema, a sessão
 executora colocou o rótulo em `tags`, que é visível a qualquer usuário do
@@ -454,10 +454,10 @@ real).
 
 **Como aplicar**: `tags` de um material só leva vocabulário clínico livre
 (disciplina, subtemas, fármacos/estruturas — como já instruído em
-`docs/architecture/compendium-extraction-prompt.md`, item 8). Identificadores
+`docs/archive/architecture/compendium-extraction-prompt.md`, item 8). Identificadores
 de coleção/curso/prova externos (AS1, nome de faculdade, sigla de
 disciplina de um currículo específico) nunca entram em `tags` — ficam só
-no documento da coleção (`docs/diretoria/AS1-TAXONOMIA-PILOTO-2026-09-17.md`,
+no documento da coleção (`docs/archive/diretoria/AS1-TAXONOMIA-PILOTO-2026-09-17.md`,
 que já se descreve como "não duplica nenhum material, só referencia").
 Prompts futuros de conversão (temas 12, 19 e as próximas ondas da AS1)
 devem dizer isso explicitamente, não só mencionar "coleção curricular: X"
@@ -629,7 +629,7 @@ Decisão da diretoria, origem da Entrega 40-A:
    porta de entrada única e curta para qualquer sessão nova — substitui a
    necessidade de ler o `AGENTS.md` antigo (114 KB, misturava regra
    permanente, estado e diário histórico) e o
-   `docs/diretoria/registro.md` completo (histórico extenso de prompts)
+   `docs/archive/diretoria/registro.md` completo (histórico extenso de prompts)
    só para entender o presente. `AGENTS.md` passou a ser um índice curto
    que aponta para cá; o conteúdo histórico integral foi preservado sem
    perdas em

@@ -7,7 +7,7 @@ auditoria" descrita em
 Este arquivo é a **única saída** de uma sessão de auditoria e a
 **única ponte** entre ela e a diretoria — não existe sessão viva de
 auditoria esperando resposta. A diretoria lê este arquivo ao abrir uma
-sessão nova (junto com `TASKS.md` e `docs/diretoria/registro.md`) e
+sessão nova (junto com `TASKS.md` e `docs/archive/diretoria/registro.md`) e
 decide, por conta própria, se/quando puxar um item.
 
 ## Formato de item
@@ -33,7 +33,7 @@ contexto da auditoria que o escreveu. Use este esqueleto:
 
 Itens descartados ou concluídos **não são apagados** — mudam de estado
 e ficam como histórico (mesma lógica de preservação já usada em
-`docs/diretoria/registro.md` e `DECISIONS.md`).
+`docs/archive/diretoria/registro.md` e `DECISIONS.md`).
 
 ## Itens
 
