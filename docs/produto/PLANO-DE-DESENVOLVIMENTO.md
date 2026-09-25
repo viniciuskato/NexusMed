@@ -884,7 +884,7 @@ duplicar tentativas.
 antes de corrigir. Testes E2E de recarregar com operação pendente e de login
 novamente com reenvio.
 **Depende de.** 45-A (mesmo caminho de gravação de respostas) — concluída.
-**Estado.** Pronta.
+**Estado.** Concluída — PR #86.
 
 ---
 
