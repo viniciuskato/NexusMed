@@ -524,10 +524,14 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
   // nem toca em material_sections (mesmo motivo de updateSectionContent
   // abaixo: saveCompendium é "substitui tudo", risco alto demais pra uma
   // associação pontual — 21-D).
+  // A URL só é gravada quando a fonte traz uma: fonte curada sem URL mantém a
+  // URL original da referência (AUD-24, 45-D — antes ela virava NULL).
   async updateMaterialReferenceSource(referenceId: string, sourceId: string | null, url: string | null): Promise<void> {
+    const patch: { source_id: string | null; url?: string } = { source_id: sourceId };
+    if (sourceId && url) patch.url = url;
     const { error } = await supabase
       .from('material_references')
-      .update({ source_id: sourceId, url: sourceId ? url : null })
+      .update(patch)
       .eq('id', referenceId);
     if (error) throw error;
   }

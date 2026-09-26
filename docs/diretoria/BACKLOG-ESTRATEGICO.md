@@ -446,7 +446,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
     histórico;
   - em material publicado, `save_compendium` passa a recusar a remoção de
     seção.
-- **Estado**: Aberto
+- **Estado**: Concluído (unidade 45-D)
 
 ### AUD-23 — CMS: o painel de revisão pode mostrar e atestar o item errado
 - **Registrado em**: 2026-09-19 pela sessão de auditoria (revisão do PR #18)
@@ -493,7 +493,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
   modelo; `docs/editorial/POLITICA-QUESTOES-DIREITOS-E-MIDIA.md`. Decidir
   antes: editar publicado exige despublicar, ou gera uma nova revisão que
   fica pendente?
-- **Estado**: Aberto
+- **Estado**: Parcial — a URL apagada ao "Associar" foi concluída na unidade 45-D; a edição de publicado sem revisão fica com a 45-K
 
 ### AUD-25 — "Faça login novamente" nunca se resolve, e os dados ficam presos no aparelho
 - **Registrado em**: 2026-09-19 pela sessão de auditoria

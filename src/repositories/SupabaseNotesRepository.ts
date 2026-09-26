@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
-import { NotesRepository } from './NotesRepository';
+import type { NotesRepository, RemovedSectionNote } from './NotesRepository';
 import { StorageService } from '../services/storage';
 
 // ============================================================================
@@ -48,6 +48,8 @@ interface NoteRow {
   flashcard_id: string | null;
   note_text: string;
   updated_at: string;
+  /** 45-D: preenchido quando a seção da anotação saiu do material. */
+  removed_section_title: string | null;
 }
 
 async function resolveNoteColumn(targetId: string): Promise<NoteTargetColumn> {
@@ -66,11 +68,14 @@ export class SupabaseNotesRepository implements NotesRepository {
   async getNotes(): Promise<Record<string, string>> {
     const { data, error } = await supabase
       .from('notes')
-      .select('material_id, material_section_id, question_id, flashcard_id, note_text, updated_at');
+      .select('material_id, material_section_id, question_id, flashcard_id, note_text, updated_at, removed_section_title');
     if (error) throw error;
 
     const result: Record<string, string> = {};
     for (const row of (data ?? []) as NoteRow[]) {
+      // Anotação de seção removida aponta para o material, mas não é a
+      // anotação do material: é lida à parte (getRemovedSectionNotes).
+      if (row.removed_section_title) continue;
       const targetId = row.material_id ?? row.material_section_id ?? row.question_id ?? row.flashcard_id;
       if (targetId) {
         result[targetId] = row.note_text;
@@ -82,6 +87,19 @@ export class SupabaseNotesRepository implements NotesRepository {
       }
     }
     return result;
+  }
+
+  async getRemovedSectionNotes(materialId: string): Promise<RemovedSectionNote[]> {
+    const { data, error } = await supabase
+      .from('notes')
+      .select('note_text, removed_section_title, created_at')
+      .eq('material_id', materialId)
+      .not('removed_section_title', 'is', null);
+    if (error) throw error;
+    return ((data ?? []) as Array<{ note_text: string; removed_section_title: string }>).map((r) => ({
+      sectionTitle: r.removed_section_title,
+      noteText: r.note_text,
+    }));
   }
 
   // NOTA: este método não é chamado no fluxo real do app — `saveNote`
