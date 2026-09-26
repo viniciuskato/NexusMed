@@ -56,7 +56,7 @@ describe('checagem do padrão — base', () => {
   it('a lista de regras cobre todos os ids, sem repetição', () => {
     const ids = REGRAS_DO_PADRAO.map((r) => r.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toHaveLength(16);
+    expect(ids).toHaveLength(17);
   });
 
   it('cada pendência traz seção, linha e o que corrigir', () => {
@@ -195,7 +195,7 @@ describe('checagem do padrão — estrutura', () => {
   });
 
   it('linha de versão do padrão ausente', () => {
-    const cabecalho = '**Disciplina:** Farmacologia\n**Tema:** Clínica\n**Tempo estimado de leitura:** 12 minutos';
+    const cabecalho = '**Subtítulo:** S\n**Disciplina:** Farmacologia\n**Tema:** Clínica\n**Tempo estimado de leitura:** 12 minutos';
     expect(regras(material({ cabecalho }))).toEqual(['versao-do-padrao-ausente']);
     for (const v of ['1', '', 'v2']) {
       expect(regras(material({ cabecalho: `${cabecalho}\n**Versão do padrão:** ${v}` }))).toEqual(['versao-do-padrao-ausente']);
@@ -210,7 +210,7 @@ describe('checagem do padrão — estrutura', () => {
   });
 
   it('tempo fora de 8–25 minutos, ou ausente', () => {
-    const com = (t: string) => `**Disciplina:** Farmacologia\n**Tema:** Clínica\n${t}**Versão do padrão:** 2`;
+    const com = (t: string) => `**Subtítulo:** S\n**Disciplina:** Farmacologia\n**Tema:** Clínica\n${t}**Versão do padrão:** 2`;
     expect(regras(material({ cabecalho: com('**Tempo estimado de leitura:** 30 minutos\n') }))).toEqual(['tempo-fora-da-faixa']);
     expect(regras(material({ cabecalho: com('**Tempo estimado de leitura:** 5 minutos\n') }))).toEqual(['tempo-fora-da-faixa']);
     expect(regras(material({ cabecalho: com('') }))).toEqual(['tempo-fora-da-faixa']);
@@ -231,5 +231,57 @@ describe('checagem do padrão — estrutura', () => {
     expect(regras(material({ titulo: 'Unidade vascular e parte distal' }))).toEqual([]);
     expect(regras(material({ titulo: 'Herança ligada ao X' }))).toEqual([]);
     expect(regras(material({ titulo: 'Radiologia: princípios dos raios X' }))).toEqual([]);
+  });
+
+  it('numeral romano que faz parte do nome não é numeração', () => {
+    for (const titulo of [
+      'Reações de hipersensibilidade tipos I e II',
+      'MHC classe I e II',
+      'Insuficiência cardíaca: classes NYHA I a IV',
+      'Bloqueio AV Mobitz II',
+      'Nervo craniano VII: anatomia',
+      'Hidratação por via IV',
+      '5 momentos da higiene das mãos',
+    ]) {
+      expect(regras(material({ titulo })), titulo).toEqual([]);
+    }
+  });
+});
+
+describe('checagem do padrão — achados da segunda revisão do #85', () => {
+  it('sem subtítulo, sem referências ou sem nenhuma citação', () => {
+    expect(regras(material().replace('**Subtítulo:** Espectro e uso\n', ''))).toEqual(['item-obrigatorio-ausente']);
+    const semBibliografia = material({ corpo: 'Texto sem citação.' }).replace(/### Referências Bibliográficas[\s\S]*$/, '');
+    const r = checarMaterialMarkdown(semBibliografia).pendencias.filter((p) => p.regra === 'item-obrigatorio-ausente');
+    expect(r.map((p) => p.mensagem)).toEqual([
+      expect.stringMatching(/Nenhuma citação no texto/),
+      expect.stringMatching(/Falta o bloco "### Referências Bibliográficas"/),
+    ]);
+  });
+
+  it('seção com "referência" depois da bibliografia: aponta a seção culpada, não a bibliografia', () => {
+    const texto = `${material()}\n### Valores de referência laboratoriais\n| A | B |\n`;
+    const ps = checarMaterialMarkdown(texto).pendencias.filter((p) => p.regra === 'bloco-descartado');
+    expect(ps).toHaveLength(1);
+    expect(ps[0].secao).toBe('Valores de referência laboratoriais');
+    expect(ps[0].mensagem).toMatch(/no lugar da bibliografia da linha \d+/);
+  });
+
+  it('tabela: vale o conteúdo que a importação entrega ao leitor', () => {
+    const tabela = '| A | B |\n|---|---|\n| 1 | 2 |';
+    // A importação tira os Pontos-Chave; a frase vira parágrafo próprio e abre a tabela.
+    expect(regras(material({ corpo: `**Pontos-Chave:**\n- a\nFrase que apresenta [1](#ref-1)[2](#ref-2).\n\n${tabela}` }))).toEqual([]);
+    // Rótulo em negrito colado abaixo da frase: o leitor ainda gera a legenda.
+    expect(regras(material({ corpo: `Frase [1](#ref-1)[2](#ref-2).\n**Classificação:**\n\n${tabela}` }))).toEqual([]);
+  });
+
+  it('intervalo numérico entre colchetes não é citação', () => {
+    expect(regras(material({ corpo: 'Escore no intervalo [0, 10] [1](#ref-1)[2](#ref-2).' }))).toEqual([]);
+    expect(regras(material({ corpo: 'Faixa [2-4] de pontos [1](#ref-1)[2](#ref-2).' }))).toEqual([]);
+    expect(regras(material({ corpo: 'Afirmação [3, 7] [1](#ref-1)[2](#ref-2).' }))).toContain('citacao-malformada');
+  });
+
+  it('"<=>" de equilíbrio não é comparador', () => {
+    expect(regras(material({ corpo: 'CO2 + H2O <=> H2CO3 [1](#ref-1)[2](#ref-2).' }))).toEqual([]);
   });
 });

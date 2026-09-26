@@ -1269,10 +1269,8 @@ do que é construído e dita prioridades.
 **Fluxo de cada material:**
 1. **Escrever** — o Gemini recebe o padrão de conteúdos, as fontes e o bloco
    do material (no plano editorial do ramo) e entrega um `.md`.
-2. **Checar o formato** — a checagem do padrão sobre o arquivo (44-C1):
-   `npm run checar:material -- <arquivo.md ou pasta>`, sem login nem Supabase
-   (RUNBOOK, seção 2.1). Pendência volta ao Gemini; o checklist da seção 1.9
-   do padrão segue valendo para o que é julgamento.
+2. **Checar o formato** — a checagem do padrão sobre o arquivo (44-C1). Até
+   ela existir, o checklist da seção 1.9 do padrão.
 3. **Revisão cruzada** — outro modelo (Claude), sem editar o arquivo: fato
    contra referência, referência que existe, escopo do nível. Os achados
    voltam ao Gemini, que entrega o arquivo corrigido.

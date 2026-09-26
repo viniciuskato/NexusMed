@@ -61,6 +61,7 @@ do padrão antes de ir para "Importar material" — sem login nem Supabase:
 ```
 npm run checar:material -- "docs/conteúdos/<ramo>/<arquivo>.md"   # pendências, com seção e linha
 npm run checar:material -- "docs/conteúdos/<ramo>"                # uma linha por .md da pasta
+npm run checar:material -- a.md b.md "docs/conteúdos/<ramo>"      # vários caminhos: uma linha por arquivo
 ```
 
 - **Conforme**: nenhuma pendência mecânica. **N pendências**: cada uma diz a

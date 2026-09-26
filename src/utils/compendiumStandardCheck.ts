@@ -1,14 +1,20 @@
 import {
+  ALERT_LABEL,
+  blockBody,
+  blockquoteLabelText,
   extractBacktickTags,
   extractMetadata,
   extractNumberedList,
-  isDependenciesHeader,
-  isReferencesHeader,
-  isTagsHeader,
+  extractSectionParts,
   METADATA_LABELS,
   normalize,
   parseCompendiumMarkdownText,
+  PEARL_LABEL,
+  readMarkdownLayout,
+  TAKEAWAYS_LABEL,
+  type MarkdownFileBlock,
 } from './compendiumMarkdownImport';
+import { extractTableCitations, splitReaderBlocks } from './markdownBlocks';
 
 // ============================================================================
 // Checagem do padrão de conteúdos sobre o arquivo `.md` (unidade 44-C1).
@@ -20,10 +26,12 @@ import {
 // não corrige o arquivo. Regras de julgamento (profundidade, escopo do nível)
 // ficam fora: são do checklist do padrão e da revisão.
 //
-// O arquivo é lido pelo mesmo caminho da importação: o título é a primeira
-// linha `# `, cada linha `### ` abre um bloco, e os blocos de palavras-chave,
-// referências e conexões são reconhecidos pelos mesmos predicados do
-// importador. O que a importação recusaria vem como erro, com a mensagem dela.
+// Nada da leitura é reimplementado aqui: a divisão do arquivo em título e
+// blocos, a classificação dos blocos, os rótulos de Pontos-Chave/Pérola/Alerta
+// e o que sobra como conteúdo vêm do importador (`compendiumMarkdownImport.ts`);
+// a divisão em blocos que o leitor exibe e a legenda "Fonte" das tabelas vêm
+// de `markdownBlocks.ts`, a mesma usada pelo `SafeMarkdown`. O que a
+// importação recusaria vem como erro, com a mensagem dela.
 //
 // `REGRAS_DO_PADRAO` é a lista única de regras — a 44-C2 a reaplica sobre o
 // conteúdo guardado, sem reescrever regra. Regra mecânica nova no padrão entra
@@ -42,6 +50,7 @@ export type RegraDoPadraoId =
   | 'texto-fora-de-secao'
   | 'bloco-repetido'
   | 'bloco-descartado'
+  | 'item-obrigatorio-ausente'
   | 'versao-do-padrao-ausente'
   | 'tempo-fora-da-faixa'
   | 'sem-palavras-chave'
@@ -73,17 +82,18 @@ export function situacaoDaChecagem(r: ResultadoDaChecagem): SituacaoDaChecagem {
 
 // --- Modelo do arquivo ------------------------------------------------------
 
-export type TipoDeBloco = 'conteudo' | 'palavras-chave' | 'referencias' | 'conexoes';
-
-export interface BlocoDoArquivo {
-  titulo: string;
-  tipo: TipoDeBloco;
-  /** Índice (base 0) da linha `### `. */
-  inicio: number;
-  /** Índice (base 0) da primeira linha depois do bloco. */
-  fim: number;
+export interface SecaoDeConteudo {
+  bloco: MarkdownFileBlock;
+  /** Linhas do corpo como estão no arquivo, com o índice original. */
+  linhas: Array<{ i: number; linha: string }>;
+  /**
+   * O que a importação guarda como texto da seção (sem Tag, Pontos-Chave,
+   * Pérola e Alerta), linha a linha, com o índice original.
+   */
+  conteudo: Array<{ i: number; linha: string }>;
 }
 
+/** O arquivo lido uma vez; as regras só consultam. */
 export interface ArquivoDeMaterial {
   linhas: string[];
   /** Índice da linha `# Título`, ou -1. */
@@ -91,68 +101,63 @@ export interface ArquivoDeMaterial {
   titulo: string;
   /** Índice da primeira linha `### `, ou o total de linhas. */
   inicioDasSecoes: number;
-  blocos: BlocoDoArquivo[];
+  blocos: MarkdownFileBlock[];
+  secoes: SecaoDeConteudo[];
+  /** Título da seção de cada linha ("Cabeçalho" antes da primeira). */
+  secaoDaLinha: string[];
+  /** Bloco de referências que a importação guarda (o último), se houver. */
+  blocoDeReferencias?: MarkdownFileBlock;
+  /** Bloco de palavras-chave que a importação guarda (o último), se houver. */
+  blocoDePalavrasChave?: MarkdownFileBlock;
+  referencias: string[];
+  /** Números citados em `[N](#ref-N)` no texto das seções. */
+  citadas: Set<number>;
 }
 
 const CABECALHO = 'Cabeçalho';
+const CITACAO_VALIDA = /\[(\d+)\]\(#ref-(\d+)\)/g;
 
 export function lerArquivoDeMaterial(texto: string): ArquivoDeMaterial {
-  const linhas = texto.split(/\r\n|\n/);
-  // Mesmos critérios de `extractTitle` e `splitByH3` no importador.
-  const linhaDoTitulo = linhas.findIndex((l) => /^#\s+.+/.test(l.trim()));
-  const titulo = linhaDoTitulo === -1 ? '' : linhas[linhaDoTitulo].trim().replace(/^#\s+/, '').trim();
-  const inicios: number[] = [];
-  linhas.forEach((l, i) => {
-    if (i > linhaDoTitulo && /^###\s+.+/.test(l.trim())) inicios.push(i);
-  });
-  const blocos = inicios.map((inicio, k): BlocoDoArquivo => {
-    const tituloDoBloco = linhas[inicio].trim().replace(/^###\s+/, '').trim();
-    const n = normalize(tituloDoBloco);
-    const tipo: TipoDeBloco = isReferencesHeader(n)
-      ? 'referencias'
-      : isTagsHeader(n)
-        ? 'palavras-chave'
-        : isDependenciesHeader(n)
-          ? 'conexoes'
-          : 'conteudo';
-    return { titulo: tituloDoBloco, tipo, inicio, fim: k + 1 < inicios.length ? inicios[k + 1] : linhas.length };
-  });
+  const layout = readMarkdownLayout(texto);
+  const { lines: linhas, blocks: blocos } = layout;
+  const inicioDasSecoes = blocos.length > 0 ? blocos[0].headerLine : linhas.length;
+
+  const secaoDaLinha = linhas.map(() => CABECALHO);
+  for (const b of blocos) for (let i = b.headerLine; i < b.endLine; i++) secaoDaLinha[i] = b.headerText;
+
+  const secoes: SecaoDeConteudo[] = blocos
+    .filter((b) => b.kind === 'content')
+    .map((bloco) => {
+      const inicio = bloco.headerLine + 1;
+      const { contentLines } = extractSectionParts(blockBody(layout, bloco));
+      return {
+        bloco,
+        linhas: linhas.slice(inicio, bloco.endLine).map((linha, k) => ({ i: inicio + k, linha })),
+        conteudo: contentLines.map((linha, k) => ({ i: inicio + k, linha })),
+      };
+    });
+
+  const ultimo = (kind: MarkdownFileBlock['kind']) => blocos.filter((b) => b.kind === kind).pop();
+  const blocoDeReferencias = ultimo('references');
+  const blocoDePalavrasChave = ultimo('tags');
+  const referencias = blocoDeReferencias ? extractNumberedList(blockBody(layout, blocoDeReferencias)) : [];
+
+  const citadas = new Set<number>();
+  for (const s of secoes) for (const { linha } of s.linhas) for (const m of linha.matchAll(CITACAO_VALIDA)) citadas.add(Number(m[1]));
+
   return {
     linhas,
-    linhaDoTitulo,
-    titulo,
-    inicioDasSecoes: inicios.length > 0 ? inicios[0] : linhas.length,
+    linhaDoTitulo: layout.titleLine,
+    titulo: layout.title,
+    inicioDasSecoes,
     blocos,
+    secoes,
+    secaoDaLinha,
+    blocoDeReferencias,
+    blocoDePalavrasChave,
+    referencias,
+    citadas,
   };
-}
-
-/** Linhas do corpo de cada seção de conteúdo, com o índice original. */
-function linhasDeConteudo(arq: ArquivoDeMaterial): Array<{ bloco: BlocoDoArquivo; i: number; linha: string }> {
-  const out: Array<{ bloco: BlocoDoArquivo; i: number; linha: string }> = [];
-  for (const bloco of arq.blocos) {
-    if (bloco.tipo !== 'conteudo') continue;
-    for (let i = bloco.inicio + 1; i < bloco.fim; i++) out.push({ bloco, i, linha: arq.linhas[i] });
-  }
-  return out;
-}
-
-function secaoDaLinha(arq: ArquivoDeMaterial, i: number): string {
-  const bloco = arq.blocos.find((b) => i >= b.inicio && i < b.fim);
-  return bloco ? bloco.titulo : CABECALHO;
-}
-
-/**
- * O bloco do tipo que a importação guarda: ela sobrescreve a cada bloco
- * de referências ou palavras-chave, então vale o último.
- */
-function blocoGuardado(arq: ArquivoDeMaterial, tipo: 'referencias' | 'palavras-chave'): BlocoDoArquivo | undefined {
-  return arq.blocos.filter((b) => b.tipo === tipo).pop();
-}
-
-function referencias(arq: ArquivoDeMaterial): string[] {
-  const bloco = blocoGuardado(arq, 'referencias');
-  if (!bloco) return [];
-  return extractNumberedList(arq.linhas.slice(bloco.inicio + 1, bloco.fim).join('\n'));
 }
 
 function trecho(s: string, max = 60): string {
@@ -169,16 +174,27 @@ export interface RegraDoPadrao {
   verificar(arq: ArquivoDeMaterial): PendenciaDoPadrao[];
 }
 
-const CITACAO_VALIDA = /\[(\d+)\]\(#ref-(\d+)\)/g;
 const LISTA = /^\s*([-*•]|\d+\.)\s+\S/;
 
-function pendencia(
-  arq: ArquivoDeMaterial,
-  regra: RegraDoPadraoId,
-  i: number,
-  mensagem: string
-): PendenciaDoPadrao {
-  return { regra, secao: secaoDaLinha(arq, i), linha: i + 1, mensagem };
+function pendencia(arq: ArquivoDeMaterial, regra: RegraDoPadraoId, i: number, mensagem: string): PendenciaDoPadrao {
+  return { regra, secao: arq.secaoDaLinha[i] ?? CABECALHO, linha: i + 1, mensagem };
+}
+
+function* linhasDasSecoes(arq: ArquivoDeMaterial): Generator<{ i: number; linha: string }> {
+  for (const s of arq.secoes) yield* s.linhas;
+}
+
+// Colchete com números que parece citação sem link: "[12]", "[3, 7]". Não é
+// citação: faixa com hífen ("[2-4]"), número 0, lista fora de ordem ("[10, 2]")
+// ou colchete depois de "intervalo"/"faixa"/"entre"/"escala" ("intervalo [0, 10]").
+const COLCHETE_NUMERICO = /\[(\d+(?:\s*,\s*\d+)*)\](\([^)\]]*[)\]])?/g;
+const ANTES_DE_INTERVALO = /(intervalo|faixa|entre|escala|de)\s*$/;
+
+function pareceCitacao(numeros: string, antes: string): boolean {
+  const ns = numeros.split(',').map((n) => Number(n.trim()));
+  if (ns.some((n) => n < 1)) return false;
+  if (ns.some((n, k) => k > 0 && n <= ns[k - 1])) return false;
+  return !ANTES_DE_INTERVALO.test(normalize(antes));
 }
 
 const citacaoMalformada: RegraDoPadrao = {
@@ -186,7 +202,7 @@ const citacaoMalformada: RegraDoPadrao = {
   descricao: 'Citação fora do formato [N](#ref-N)',
   verificar(arq) {
     const out: PendenciaDoPadrao[] = [];
-    for (const { i, linha } of linhasDeConteudo(arq)) {
+    for (const { i, linha } of linhasDasSecoes(arq)) {
       const problemas: string[] = [];
       // O que sobra depois de tirar as citações bem formadas.
       const resto = linha.replace(CITACAO_VALIDA, (m, n: string, alvo: string) => {
@@ -195,7 +211,8 @@ const citacaoMalformada: RegraDoPadrao = {
       });
       // Cada trecho apontado sai do texto antes da busca seguinte, para não
       // ser contado duas vezes.
-      const semColchetes = resto.replace(/\[\d+(?:\s*[,–-]\s*\d+)*\](?:\([^)\]]*[)\]])?/g, (m) => {
+      const semColchetes = resto.replace(COLCHETE_NUMERICO, (m, numeros: string, link: string | undefined, pos: number) => {
+        if (link === undefined && !pareceCitacao(numeros, resto.slice(0, pos))) return m;
         problemas.push(`"${m}"`);
         return ' ';
       });
@@ -219,9 +236,9 @@ const citacaoSemReferencia: RegraDoPadrao = {
   id: 'citacao-sem-referencia',
   descricao: 'Citação para referência que não existe na lista',
   verificar(arq) {
-    const total = referencias(arq).length;
+    const total = arq.referencias.length;
     const out: PendenciaDoPadrao[] = [];
-    for (const { i, linha } of linhasDeConteudo(arq)) {
+    for (const { i, linha } of linhasDasSecoes(arq)) {
       const fora = new Set<number>();
       for (const m of linha.matchAll(CITACAO_VALIDA)) {
         for (const n of [Number(m[1]), Number(m[2])]) if (n < 1 || n > total) fora.add(n);
@@ -246,20 +263,16 @@ const referenciaNaoCitada: RegraDoPadrao = {
   id: 'referencia-nao-citada',
   descricao: 'Referência da lista nunca citada no texto',
   verificar(arq) {
-    const bloco = blocoGuardado(arq, 'referencias');
+    const bloco = arq.blocoDeReferencias;
     if (!bloco) return [];
-    const citadas = new Set<number>();
-    for (const { linha } of linhasDeConteudo(arq)) {
-      for (const m of linha.matchAll(CITACAO_VALIDA)) citadas.add(Number(m[1]));
-    }
     // Linha de cada item numerado da lista, na ordem.
     const linhasDosItens: number[] = [];
-    for (let i = bloco.inicio + 1; i < bloco.fim; i++) {
+    for (let i = bloco.headerLine + 1; i < bloco.endLine; i++) {
       if (/^\d+\.\s+/.test(arq.linhas[i].trim())) linhasDosItens.push(i);
     }
     return linhasDosItens
       .map((i, k) => ({ i, n: k + 1 }))
-      .filter(({ n }) => !citadas.has(n))
+      .filter(({ n }) => !arq.citadas.has(n))
       .map(({ i, n }) =>
         pendencia(arq, 'referencia-nao-citada', i, `A referência ${n} nunca é citada no texto. Cite-a onde ela sustenta uma afirmação, ou retire-a da lista.`)
       );
@@ -271,40 +284,28 @@ const tabelaSemAberturaCitada: RegraDoPadrao = {
   descricao: 'Tabela sem frase de abertura citada logo acima',
   verificar(arq) {
     const out: PendenciaDoPadrao[] = [];
-    const eTabela = (l: string | undefined) => l !== undefined && /^\|.*\|\s*$/.test(l.trim());
-    for (const bloco of arq.blocos) {
-      if (bloco.tipo !== 'conteudo') continue;
-      for (let i = bloco.inicio + 1; i < bloco.fim; i++) {
-        if (!eTabela(arq.linhas[i]) || eTabela(arq.linhas[i - 1])) continue;
-        // Mesmo critério da legenda "Fonte: [N]" do leitor: o bloco logo acima
-        // da tabela precisa ser parágrafo comum com ao menos uma citação.
-        let j = i - 1;
-        while (j > bloco.inicio && arq.linhas[j].trim() === '') j--;
-        const paragrafo: string[] = [];
-        // Frase colada numa lista ou citação `> ` sem linha em branco vira
-        // continuação delas no leitor, não parágrafo: não gera legenda.
-        let colada = false;
-        while (j > bloco.inicio && arq.linhas[j].trim() !== '') {
-          const t = arq.linhas[j].trim();
-          if (/^>/.test(t) || LISTA.test(arq.linhas[j])) {
-            colada = paragrafo.length > 0;
-            break;
-          }
-          if (/^[#|]/.test(t) || /^\*\*[^*]+:\*\*\s*$/.test(t)) break;
-          paragrafo.unshift(t);
-          j--;
-        }
-        if (paragrafo.length === 0 || colada || !/\[\d+\]\(#ref-\d+\)/.test(paragrafo.join(' '))) {
-          out.push(
-            pendencia(
-              arq,
-              'tabela-sem-abertura-citada',
-              i,
-              'Tabela sem frase de abertura citada: escreva, logo acima dela, uma frase que a apresente terminada pela citação [N](#ref-N), seguida de linha em branco — é ela que vira a legenda "Fonte" da tabela.'
-            )
-          );
-        }
-      }
+    for (const secao of arq.secoes) {
+      // Exatamente o que o leitor faz com o conteúdo que a importação guarda:
+      // mesma divisão em blocos e mesma derivação da legenda "Fonte".
+      const blocos = splitReaderBlocks(secao.conteudo.map((c) => c.linha).join('\n'));
+      let cursor = 0;
+      blocos.forEach((bloco, k) => {
+        const primeira = bloco.split('\n').find((l) => l.trim() !== '')?.trim();
+        if (primeira === undefined) return;
+        const achada = secao.conteudo.findIndex((c, idx) => idx >= cursor && c.linha.trim() === primeira);
+        if (achada !== -1) cursor = achada + 1;
+        if (!primeira.startsWith('|')) return;
+        if (extractTableCitations(blocos[k - 1]).length > 0) return;
+        const i = achada === -1 ? secao.bloco.headerLine : secao.conteudo[achada].i;
+        out.push(
+          pendencia(
+            arq,
+            'tabela-sem-abertura-citada',
+            i,
+            'Tabela sem frase de abertura citada: escreva, logo acima dela, uma frase que a apresente terminada pela citação [N](#ref-N), seguida de linha em branco — é ela que vira a legenda "Fonte" da tabela.'
+          )
+        );
+      });
     }
     return out;
   },
@@ -326,12 +327,7 @@ const latex: RegraDoPadrao = {
       const lista = trechos.slice(0, 3).map((t) => `"${trecho(t, 40)}"`).join(', ');
       const mais = trechos.length > 3 ? ` e mais ${trechos.length - 3}` : '';
       out.push(
-        pendencia(
-          arq,
-          'latex',
-          i,
-          `LaTeX aparece literal na tela: ${lista}${mais}. Escreva em texto e Unicode (β, ≥, ≤, ×, Cmáx/CIM).`
-        )
+        pendencia(arq, 'latex', i, `LaTeX aparece literal na tela: ${lista}${mais}. Escreva em texto e Unicode (β, ≥, ≤, ×, Cmáx/CIM).`)
       );
     }
     return out;
@@ -344,7 +340,9 @@ const comparadorAscii: RegraDoPadrao = {
   verificar(arq) {
     const out: PendenciaDoPadrao[] = [];
     arq.linhas.forEach((linha, i) => {
-      if (/<=|>=/.test(linha)) {
+      // Setas ("<=>", "<==", "==>") não são comparador: "≤" as corromperia.
+      const semSetas = linha.replace(/<=+>|<==+|==+>/g, ' ');
+      if (/<=|>=/.test(semSetas)) {
         out.push(pendencia(arq, 'comparador-ascii', i, 'Troque "<=" por "≤" e ">=" por "≥".'));
       }
     });
@@ -357,31 +355,29 @@ const listaAninhada: RegraDoPadrao = {
   descricao: 'Lista dentro de lista',
   verificar(arq) {
     const out: PendenciaDoPadrao[] = [];
-    let anteriorELista = false;
-    // Recuo do último item de lista: aninhado é o item mais recuado que ele,
-    // não qualquer item recuado (uma lista inteira com 2 espaços é um nível só).
-    let recuoDoItem = 0;
-    let blocoAnterior: BlocoDoArquivo | undefined;
     const recuo = (l: string) => (l.match(/^\s*/)?.[0] ?? '').replace(/\t/g, '    ').length;
-    for (const { bloco, i, linha } of linhasDeConteudo(arq)) {
-      if (bloco !== blocoAnterior) {
-        anteriorELista = false;
-        blocoAnterior = bloco;
+    for (const secao of arq.secoes) {
+      let anteriorELista = false;
+      // Recuo do último item de lista: aninhado é o item mais recuado que ele,
+      // não qualquer item recuado (uma lista inteira com 2 espaços é um nível só).
+      let recuoDoItem = 0;
+      for (const { i, linha } of secao.linhas) {
+        if (linha.trim() === '') continue;
+        const eItem = LISTA.test(linha);
+        const aninhado = eItem && anteriorELista && recuo(linha) >= recuoDoItem + 2;
+        if (aninhado) {
+          out.push(
+            pendencia(
+              arq,
+              'lista-aninhada',
+              i,
+              'Lista dentro de lista: o leitor não tem recuo de nível. Reescreva como itens do mesmo nível ou como frases dentro do item.'
+            )
+          );
+        }
+        if (eItem && !aninhado) recuoDoItem = recuo(linha);
+        anteriorELista = eItem || (anteriorELista && /^\s+\S/.test(linha));
       }
-      if (linha.trim() === '') continue;
-      const eItem = LISTA.test(linha);
-      if (eItem && anteriorELista && recuo(linha) >= recuoDoItem + 2) {
-        out.push(
-          pendencia(
-            arq,
-            'lista-aninhada',
-            i,
-            'Lista dentro de lista: o leitor não tem recuo de nível. Reescreva como itens do mesmo nível ou como frases dentro do item.'
-          )
-        );
-      }
-      if (eItem && !(anteriorELista && recuo(linha) >= recuoDoItem + 2)) recuoDoItem = recuo(linha);
-      anteriorELista = eItem || (anteriorELista && /^\s+\S/.test(linha));
     }
     return out;
   },
@@ -437,39 +433,34 @@ const blocoRepetido: RegraDoPadrao = {
   descricao: 'Mais de um bloco de Pontos-Chave, Pérola ou Alerta na mesma seção',
   verificar(arq) {
     const out: PendenciaDoPadrao[] = [];
-    // Mesmo reconhecimento de rótulo de `parseSectionBody`: citação `> ` com
-    // emoji opcional, e o que acontece com o bloco a mais na importação.
-    const rotuloDaCitacao = (t: string) => t.replace(/^>\s?/, '').replace(/^[^\w*]*/u, '');
+    // Rótulos do próprio importador, e o que acontece com o bloco a mais.
     const tipos: Array<{ nome: string; teste: (t: string) => boolean; efeito: (primeira: number) => string }> = [
       {
         nome: 'Pontos-Chave',
-        teste: (t) => /^\*\*Pontos-?Chave:?\*\*\s*$/i.test(t),
+        teste: (t) => TAKEAWAYS_LABEL.test(t),
         efeito: () => 'a importação guarda só o primeiro; este fica no texto como rótulo solto seguido de lista comum',
       },
       {
         nome: 'Pérola Clínica',
-        teste: (t) => /^>/.test(t) && /^\*\*P[eé]rola Cl[ií]nica:?\*\*/i.test(rotuloDaCitacao(t)),
+        teste: (t) => t.startsWith('>') && PEARL_LABEL.test(blockquoteLabelText(t)),
         efeito: (primeira) => `a importação guarda só o último e o da linha ${primeira} se perde`,
       },
       {
         nome: 'Alerta de Armadilha',
-        teste: (t) => /^>/.test(t) && /^\*\*Alerta(?: de Armadilha)?:?\*\*/i.test(rotuloDaCitacao(t)),
+        teste: (t) => t.startsWith('>') && ALERT_LABEL.test(blockquoteLabelText(t)),
         efeito: (primeira) => `a importação guarda só o último e o da linha ${primeira} se perde`,
       },
     ];
-    for (const bloco of arq.blocos) {
-      if (bloco.tipo !== 'conteudo') continue;
+    for (const secao of arq.secoes) {
       for (const { nome, teste, efeito } of tipos) {
         let primeira = -1;
-        for (let i = bloco.inicio + 1; i < bloco.fim; i++) {
-          if (!teste(arq.linhas[i].trim())) continue;
+        for (const { i, linha } of secao.linhas) {
+          if (!teste(linha.trim())) continue;
           if (primeira === -1) {
             primeira = i;
             continue;
           }
-          out.push(
-            pendencia(arq, 'bloco-repetido', i, `Mais de um bloco de ${nome} na mesma seção: ${efeito(primeira + 1)}. Junte-os num só.`)
-          );
+          out.push(pendencia(arq, 'bloco-repetido', i, `Mais de um bloco de ${nome} na mesma seção: ${efeito(primeira + 1)}. Junte-os num só.`));
         }
       }
     }
@@ -495,30 +486,60 @@ function fimDoCabecalho(arq: ArquivoDeMaterial): number {
   return ultima;
 }
 
+function metadados(arq: ArquivoDeMaterial) {
+  return extractMetadata(arq.linhas.slice(arq.linhaDoTitulo + 1, arq.inicioDasSecoes).join('\n'));
+}
+
+const itemObrigatorioAusente: RegraDoPadrao = {
+  id: 'item-obrigatorio-ausente',
+  descricao: 'Sem subtítulo, sem referências ou sem nenhuma citação',
+  verificar(arq) {
+    const out: PendenciaDoPadrao[] = [];
+    const { subtitle } = metadados(arq);
+    if (typeof subtitle !== 'string' || subtitle.trim() === '') {
+      out.push(
+        pendencia(arq, 'item-obrigatorio-ausente', fimDoCabecalho(arq), 'Falta o subtítulo: escreva "**Subtítulo:** uma frase que resume o material" logo abaixo do título.')
+      );
+    }
+    if (arq.referencias.length === 0) {
+      const bloco = arq.blocoDeReferencias;
+      out.push(
+        pendencia(
+          arq,
+          'item-obrigatorio-ausente',
+          bloco ? bloco.headerLine : arq.linhas.length - 1,
+          bloco
+            ? 'O bloco de referências não tem nenhuma referência numerada ("1. ...").'
+            : 'Falta o bloco "### Referências Bibliográficas", com uma referência por item numerado.'
+        )
+      );
+    }
+    if (arq.citadas.size === 0 && arq.secoes.length > 0) {
+      out.push(
+        pendencia(
+          arq,
+          'item-obrigatorio-ausente',
+          arq.secoes[0].bloco.headerLine,
+          'Nenhuma citação no texto: toda afirmação de peso clínico leva [N](#ref-N), com N na posição da referência na lista.'
+        )
+      );
+    }
+    return out;
+  },
+};
+
 const versaoAusente: RegraDoPadrao = {
   id: 'versao-do-padrao-ausente',
   descricao: 'Linha de versão do padrão ausente ou diferente de 2',
   verificar(arq) {
     const i = linhaDoMetadado(arq, 'versao do padrao');
     if (i === -1) {
-      return [
-        pendencia(
-          arq,
-          'versao-do-padrao-ausente',
-          fimDoCabecalho(arq),
-          'Falta a linha "**Versão do padrão:** 2" nos metadados, logo abaixo do título.'
-        ),
-      ];
+      return [pendencia(arq, 'versao-do-padrao-ausente', fimDoCabecalho(arq), 'Falta a linha "**Versão do padrão:** 2" nos metadados, logo abaixo do título.')];
     }
     const valor = arq.linhas[i].trim().replace(/^\*\*[^*:]+:\*\*\s*/, '');
     if (valor === '2') return [];
     return [
-      pendencia(
-        arq,
-        'versao-do-padrao-ausente',
-        i,
-        `Versão do padrão "${trecho(valor, 20)}": o valor é sempre 2. Escreva "**Versão do padrão:** 2".`
-      ),
+      pendencia(arq, 'versao-do-padrao-ausente', i, `Versão do padrão "${trecho(valor, 20)}": o valor é sempre 2. Escreva "**Versão do padrão:** 2".`),
     ];
   },
 };
@@ -527,8 +548,7 @@ const tempoForaDaFaixa: RegraDoPadrao = {
   id: 'tempo-fora-da-faixa',
   descricao: 'Tempo de leitura fora de 8–25 minutos',
   verificar(arq) {
-    const cabecalho = arq.linhas.slice(arq.linhaDoTitulo + 1, arq.inicioDasSecoes).join('\n');
-    const minutos = extractMetadata(cabecalho).estimatedReadTimeMinutes;
+    const minutos = metadados(arq).estimatedReadTimeMinutes;
     const i = linhaDoMetadado(arq, 'tempo estimado de leitura');
     if (typeof minutos === 'number' && minutos >= 8 && minutos <= 25) return [];
     const mensagem =
@@ -543,14 +563,14 @@ const semPalavrasChave: RegraDoPadrao = {
   id: 'sem-palavras-chave',
   descricao: 'Sem palavras-chave',
   verificar(arq) {
-    const bloco = blocoGuardado(arq, 'palavras-chave');
-    const tags = bloco ? extractBacktickTags(arq.linhas.slice(bloco.inicio + 1, bloco.fim).join('\n')) : [];
+    const bloco = arq.blocoDePalavrasChave;
+    const tags = bloco ? extractBacktickTags(arq.linhas.slice(bloco.headerLine + 1, bloco.endLine).join('\n')) : [];
     if (tags.length > 0) return [];
     return [
       pendencia(
         arq,
         'sem-palavras-chave',
-        bloco ? bloco.inicio : fimDoCabecalho(arq),
+        bloco ? bloco.headerLine : fimDoCabecalho(arq),
         bloco
           ? 'O bloco "### Palavras-chave" não tem nenhuma palavra-chave entre crases (`assim`).'
           : 'Falta o bloco "### Palavras-chave", com sinônimos, siglas e nomes comerciais entre crases.'
@@ -559,22 +579,24 @@ const semPalavrasChave: RegraDoPadrao = {
   },
 };
 
-// Numeração no título: número no início, "Módulo 2"/"Parte II"..., ou numeral
-// romano solto no fim ou antes de ":"/"—" ("Antimicrobianos I: ...") — exceto
-// quando qualifica o termo anterior ("Hipersensibilidade tipo I") ou é o "X"
-// de cromossomo e raios ("Herança ligada ao X", "raios X").
-const NUMERACAO_EXPLICITA = [/^\d+[.)]?\s/, /(?:^|\s)(m[oó]dulo|parte|aula|cap[ií]tulo|unidade|volume)\s+(\d+|[IVXL]+)(?=$|[\s:—–-])/i];
-const ROMANO_SOLTO = /(\S+)\s+([IVX]{1,4})(?=\s*[:—–-]|\s*$)/g;
-const QUALIFICAM_NUMERAL = new Set(['tipo', 'tipos', 'classe', 'classes', 'grau', 'fase', 'estagio', 'estadio', 'grupo', 'geracao', 'nivel', 'fator', 'complexo', 'tabela']);
-const PRECEDEM_X_LETRA = new Set(['ao', 'o', 'do', 'no', 'raio', 'raios', 'cromossomo', 'cromossomos', 'ligada', 'ligado', 'ligadas', 'ligados']);
+// Numeração de série no título: "3. Carbapenêmicos", "Módulo 2 — ...",
+// "Parte II", e o numeral romano logo antes de ":" ou travessão
+// ("Antimicrobianos I: Betalactâmicos"). Numeral romano no fim do título ou
+// dentro do nome ("MHC classe I e II", "Bloqueio AV Mobitz II", "Nervo
+// craniano VII: anatomia", "tipos I a IV") é parte do nome e não conta —
+// a regra prefere deixar passar a pedir para mutilar um nome legítimo.
+const NUMERACAO_EXPLICITA = [/^\d+[.)]\s/, /(?:^|\s)(m[oó]dulo|parte|aula|cap[ií]tulo|unidade|volume)\s+(\d+|[IVXL]+)(?=$|[\s:—–-])/i];
+const ROMANO_ANTES_DE_SEPARADOR = /(\S+)\s+([IVX]{1,4})\s*[:—–]/;
+const FAZEM_PARTE_DO_NOME = new Set([
+  'tipo', 'tipos', 'classe', 'classes', 'grau', 'graus', 'fase', 'fases', 'estagio', 'estadio', 'grupo', 'geracao',
+  'nivel', 'fator', 'complexo', 'tabela', 'nyha', 'mobitz', 'craniano', 'cranianos', 'nervo', 'par', 'via', 'e', 'a', 'ou', 'ate',
+  'ao', 'o', 'do', 'no', 'raio', 'raios', 'cromossomo', 'ligada', 'ligado',
+]);
 
 function tituloTemNumeracao(titulo: string): boolean {
   if (NUMERACAO_EXPLICITA.some((re) => re.test(titulo))) return true;
-  return [...titulo.matchAll(ROMANO_SOLTO)].some((m) => {
-    const anterior = normalize(m[1]);
-    if (QUALIFICAM_NUMERAL.has(anterior)) return false;
-    return !(m[2] === 'X' && PRECEDEM_X_LETRA.has(anterior));
-  });
+  const m = titulo.match(ROMANO_ANTES_DE_SEPARADOR);
+  return m !== null && !FAZEM_PARTE_DO_NOME.has(normalize(m[1]));
 }
 
 const tituloNumerado: RegraDoPadrao = {
@@ -609,7 +631,7 @@ const remissao: RegraDoPadrao = {
   descricao: 'Texto que remete a outro material',
   verificar(arq) {
     const out: PendenciaDoPadrao[] = [];
-    for (const { i, linha } of linhasDeConteudo(arq)) {
+    for (const { i, linha } of linhasDasSecoes(arq)) {
       const n = normalize(linha);
       const achado = REMISSOES.map((re) => n.match(re)).find(Boolean);
       if (!achado) continue;
@@ -626,27 +648,43 @@ const remissao: RegraDoPadrao = {
   },
 };
 
+/** Título que é mesmo o de uma bibliografia ("Referências", "Referências Bibliográficas"). */
+function eBibliografia(b: MarkdownFileBlock): boolean {
+  return /^referencias?\b/.test(normalize(b.headerText));
+}
+
 const blocoDescartado: RegraDoPadrao = {
   id: 'bloco-descartado',
   descricao: 'Seção que a importação descarta (conexões, referências ou palavras-chave repetidas)',
   verificar(arq) {
-    const guardados = new Set([blocoGuardado(arq, 'referencias'), blocoGuardado(arq, 'palavras-chave')]);
-    return arq.blocos
-      .filter((b) => b.tipo !== 'conteudo' && !guardados.has(b))
-      .map((b) => {
-        const motivo =
-          b.tipo === 'conexoes'
-            ? 'o título tem "conexão" ou "pré-requisito", e a importação descarta essa seção inteira — o padrão não usa bloco de conexões'
-            : b.tipo === 'referencias'
-              ? 'o título tem "referência", e a importação o lê como lista de referências mas guarda só a última — esta se perde. Se for conteúdo, tire "referência" do título'
-              : 'a importação guarda só o último bloco de palavras-chave — este se perde. Junte-os num só';
-        return pendencia(arq, 'bloco-descartado', b.inicio, `Seção "${trecho(b.titulo, 40)}" some na importação: ${motivo}.`);
-      });
+    const out: PendenciaDoPadrao[] = [];
+    const bibliografias = arq.blocos.filter((b) => b.kind === 'references' && eBibliografia(b));
+    const bibliografia = bibliografias[bibliografias.length - 1];
+    for (const b of arq.blocos) {
+      let motivo: string | undefined;
+      if (b.kind === 'dependencies') {
+        motivo = 'o título tem "conexão" ou "pré-requisito", e a importação descarta essa seção inteira — o padrão não usa bloco de conexões';
+      } else if (b.kind === 'references' && !eBibliografia(b)) {
+        // Seção de conteúdo com "referência" no título: some do conteúdo e,
+        // se for a última, substitui a lista de referências verdadeira.
+        const substitui = b === arq.blocoDeReferencias && bibliografia !== undefined;
+        motivo = `o título tem "referência", e a importação a lê como lista de referências${
+          substitui ? `, no lugar da bibliografia da linha ${bibliografia.headerLine + 1}` : ''
+        }. Se for conteúdo, tire "referência" do título`;
+      } else if (b.kind === 'references' && b !== bibliografia) {
+        motivo = 'a importação guarda só a última lista de referências — esta se perde. Junte as listas numa só';
+      } else if (b.kind === 'tags' && b !== arq.blocoDePalavrasChave) {
+        motivo = 'a importação guarda só o último bloco de palavras-chave — este se perde. Junte-os num só';
+      }
+      if (motivo) out.push(pendencia(arq, 'bloco-descartado', b.headerLine, `Seção "${trecho(b.headerText, 40)}" some na importação: ${motivo}.`));
+    }
+    return out;
   },
 };
 
 export const REGRAS_DO_PADRAO: readonly RegraDoPadrao[] = [
   blocoDescartado,
+  itemObrigatorioAusente,
   textoForaDeSecao,
   versaoAusente,
   tempoForaDaFaixa,
