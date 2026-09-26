@@ -29,9 +29,9 @@
     "verify:full": "npm run verify:fast && npm run test:db && supabase db reset && npm run test:e2e"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.115.0",
+    "@supabase/supabase-js": "^2.117.1",
     "canvas-confetti": "^1.9.4",
-    "lucide-react": "^1.46.0",
+    "lucide-react": "^1.47.0",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "yaml": "^2.9.1"
