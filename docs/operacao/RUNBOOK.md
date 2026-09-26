@@ -53,6 +53,25 @@ git rev-parse origin/main
 - Antes de commitar: `git diff --check` (sem marcadores de conflito, sem
   espaço em branco problemático) e revisão do diff completo.
 
+## 2.1. Checar um material antes de importar (44-C1)
+
+Todo `.md` de material que chega de fora (Gemini, pessoa) passa pela checagem
+do padrão antes de ir para "Importar material" — sem login nem Supabase:
+
+```
+npm run checar:material -- "docs/conteúdos/<ramo>/<arquivo>.md"   # pendências, com seção e linha
+npm run checar:material -- "docs/conteúdos/<ramo>"                # uma linha por .md da pasta
+npm run checar:material -- a.md b.md "docs/conteúdos/<ramo>"      # vários caminhos: uma linha por arquivo
+```
+
+- **Conforme**: nenhuma pendência mecânica. **N pendências**: cada uma diz a
+  seção, a linha e o que corrigir — os achados voltam a quem escreveu. **ERRO**:
+  a importação recusaria o arquivo, com a mesma mensagem dela (saída 1).
+- A checagem orienta, não bloqueia nem corrige. Profundidade e escopo do nível
+  continuam com a revisão cruzada e o checklist do padrão (seção 1.9).
+- As regras vivem em `src/utils/compendiumStandardCheck.ts`. Regra mecânica
+  nova no padrão entra lá no mesmo PR, com teste que passa e teste que falha.
+
 ## 3. Publicação (merge em `main` + push)
 
 **Exige autorização explícita e específica do usuário/diretoria para ESTA
