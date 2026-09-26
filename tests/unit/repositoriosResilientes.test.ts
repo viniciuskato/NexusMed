@@ -422,7 +422,8 @@ describe('Resilient*Repository — falha de rede e retentativa', () => {
     await queue.flush(UID);
 
     expect(handler).toHaveBeenCalledTimes(1);
-    expect(handler).toHaveBeenCalledWith({ targetId: 'q-1', noteText: 'antes do reload' }, clientOpId);
+    // 3º argumento: contexto da fila para o handler (45-E).
+    expect(handler).toHaveBeenCalledWith({ targetId: 'q-1', noteText: 'antes do reload' }, clientOpId, expect.anything());
     expect(queue.getOps(UID)[0].state).toBe('synced');
   });
 

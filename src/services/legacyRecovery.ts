@@ -73,7 +73,7 @@
 
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { StorageService } from './storage';
-import { enqueue, getOps, generateClientOpId } from './syncQueue';
+import { enqueue, getOps, generateClientOpId, type SyncOp } from './syncQueue';
 import { QuestionAnswerRecord } from '../types';
 import { fetchAllRows } from '../repositories/supabasePaging';
 
@@ -256,14 +256,26 @@ export function recoverLegacyLocalProgress(uid: string): Promise<void> {
   return run;
 }
 
-/** A fila já tem tentativa ainda não confirmada para esta questão (ex.: respondida offline). */
-function hasQueuedAttempt(uid: string, questionId: string): boolean {
-  return getOps(uid).some(
-    (o) =>
-      o.category === 'question_attempt' &&
-      o.state !== 'synced' &&
-      (o.payload as { questionId?: unknown } | null)?.questionId === questionId
-  );
+/** Questões com tentativa ainda não confirmada na fila (ex.: respondida offline). */
+function questionsWithQueuedAttempt(ops: SyncOp[]): Set<string> {
+  const ids = new Set<string>();
+  for (const o of ops) {
+    const questionId = (o.payload as { questionId?: unknown } | null)?.questionId;
+    if (o.category === 'question_attempt' && o.state !== 'synced' && typeof questionId === 'string') ids.add(questionId);
+  }
+  return ids;
+}
+
+/** Cards com criação, edição, SRS ou exclusão ainda não confirmada na fila (ex.: criado offline). */
+function flashcardsWithQueuedOps(ops: SyncOp[]): Set<string> {
+  const ids = new Set<string>();
+  for (const o of ops) {
+    if (o.state === 'synced' || !o.category.startsWith('flashcard_')) continue;
+    const p = o.payload as { flashcard?: { id?: unknown }; id?: unknown; flashcardId?: unknown } | null;
+    const id = p?.flashcard?.id ?? p?.flashcardId ?? p?.id;
+    if (typeof id === 'string') ids.add(id);
+  }
+  return ids;
 }
 
 async function runRecovery(uid: string): Promise<void> {
@@ -276,6 +288,12 @@ async function runRecovery(uid: string): Promise<void> {
     // --- Tentativas de questão respondidas offline/antes desta entrega ---
     const localAnswers = StorageService.getAnswers();
     const currentOps = getOps(uid);
+    // Lida uma vez (não uma por resposta: com milhares, o login travava).
+    // Antes de cada enfileiramento a fila é relida, porque entre os `await`
+    // desta função o app pode ter enfileirado uma resposta nova.
+    const queuedAttempts = questionsWithQueuedAttempt(currentOps);
+    const queuedNow = (questionId: string) =>
+      queuedAttempts.has(questionId) || questionsWithQueuedAttempt(getOps(uid)).has(questionId);
 
     for (const questionId of Object.keys(localAnswers)) {
       if (ledger.answers.includes(questionId)) continue; // já confirmado no servidor, nunca reexaminar
@@ -350,7 +368,7 @@ async function runRecovery(uid: string): Promise<void> {
       // o servidor ainda não tem a linha porque a operação não saiu, e
       // enfileirá-la de novo criaria uma segunda tentativa (AUD-28). A fila
       // cuida dela; o próximo login a encontra no servidor.
-      if (hasQueuedAttempt(uid, questionId)) continue;
+      if (queuedAttempts.has(questionId)) continue;
 
       const { data: remoteRows, error } = await supabase
         .from('question_attempts')
@@ -362,6 +380,7 @@ async function runRecovery(uid: string): Promise<void> {
 
       if (remote.length === 0) {
         // Nenhuma tentativa remota para esta questão — claramente não sincronizada.
+        if (queuedNow(questionId)) continue;
         const op = enqueue(uid, 'question_attempt', {
           questionId,
           selectedOption: record.selectedOption,
@@ -396,6 +415,7 @@ async function runRecovery(uid: string): Promise<void> {
         // Todas as tentativas remotas divergem claramente (alternativa
         // diferente, ou modo/estratégia incompatíveis) — esta resposta local
         // é distinta e legítima, não é ambígua. Enfileira normalmente.
+        if (queuedNow(questionId)) continue;
         const op = enqueue(uid, 'question_attempt', {
           questionId,
           selectedOption: record.selectedOption,
@@ -448,7 +468,12 @@ async function runRecovery(uid: string): Promise<void> {
     // recuperados automaticamente sem duplicar sob um novo id — ficam
     // documentados como limitação, não descartados do localStorage.
     const localCustomCards = StorageService.getFlashcards().filter((f) => f.isCustom && UUID_RE.test(f.id));
-    const pendingCards = localCustomCards.filter((f) => !ledger.flashcards.includes(f.id));
+    // Card com operação ainda na fila (criado ou editado offline) não é
+    // "legado": a fila o envia, na ordem. Um upsert novo com a cópia local
+    // entraria depois dos SRS pendentes e regravaria o card com valores
+    // antigos (45-E, revisão do f3bbf3e). O próximo login o acha no servidor.
+    const queuedCards = flashcardsWithQueuedOps(getOps(uid));
+    const pendingCards = localCustomCards.filter((f) => !ledger.flashcards.includes(f.id) && !queuedCards.has(f.id));
 
     if (pendingCards.length > 0) {
       // Todos os ids (45-C): com a lista cortada em 1000, um card que já está
@@ -458,7 +483,9 @@ async function runRecovery(uid: string): Promise<void> {
       );
 
       const remoteIds = new Set(remoteCards.map((r) => r.id));
+      const queuedAfterFetch = flashcardsWithQueuedOps(getOps(uid)); // o app pode ter enfileirado durante a consulta
       for (const card of pendingCards) {
+        if (queuedAfterFetch.has(card.id)) continue;
         if (!remoteIds.has(card.id)) {
           enqueue(uid, 'flashcard_upsert', { flashcard: card });
         }

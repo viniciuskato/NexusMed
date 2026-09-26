@@ -73,7 +73,20 @@ export interface SyncQueueSummary {
 
 // O payload vem da fila persistida (JSON), sem tipo em tempo de execução;
 // cada handler declara o próprio formato via `registerHandler<P>`.
-type Handler = (payload: unknown, clientOpId: string) => Promise<unknown>;
+type Handler = (payload: unknown, clientOpId: string, ctx: SyncHandlerContext) => Promise<unknown>;
+
+/**
+ * O que o handler pode fazer na fila além de enviar a própria operação.
+ * `updateNewer` aplica `fn` ao payload das operações MAIS NOVAS do mesmo alvo
+ * que ainda não saíram e devolve o payload da mais nova (ou `null` se não há
+ * nenhuma). Usado pela nota: quando o envio funde o texto de outro
+ * dispositivo, a edição que o estudante fez depois (já na fila, sem esse
+ * texto) recebe a mesma fusão — senão ela sairia em seguida e o apagaria
+ * (45-E, revisão do f3bbf3e).
+ */
+export interface SyncHandlerContext {
+  updateNewer<P>(fn: (payload: P) => P): P | null;
+}
 
 const MAX_RETRYABLE_ATTEMPTS_DEFAULT = 8;
 const SYNCED_RETENTION = 30; // mantém só as últimas N ops sincronizadas, para não crescer sem limite
@@ -122,7 +135,14 @@ let periodicTimerStarted = false;
 //
 // Flashcard é só serializado, nunca substituído: criar, editar, apagar e
 // gravar SRS do mesmo card são operações diferentes (um SRS não pode tomar o
-// lugar da criação do card), mas precisam chegar na ordem.
+// lugar da criação do card), mas precisam chegar na ordem. Simulado também é
+// só serializado: `SimuladoSession` acompanha a gravação pelo id da operação
+// (`enqueueAndTryTracked`/`subscribeToResult`), e substituí-la deixaria a nota
+// "pendente" para sempre.
+//
+// Falha permanente (validação, permissão...) de categoria só serializada
+// também segura o alvo: um delete de card não pode sair antes da criação que
+// falhou, senão o reenvio manual da criação traz o card de volta.
 //
 // Categorias fora deste mapa (tentativa de questão, revisão de flashcard,
 // feedback) são eventos que se somam, sem alvo.
@@ -134,7 +154,7 @@ const TARGETS: Record<string, { group: string; supersedes: boolean; key: (p: Pay
   reading_progress_set: { group: 'reading', supersedes: true, key: (p) => [p.compendiumId, p.sectionId] },
   reaction_set: { group: 'reaction', supersedes: true, key: (p) => [p.questionId] },
   error_notebook_update: { group: 'error_notebook', supersedes: true, key: (p) => [(p.errorItem as Payload | undefined)?.id] },
-  simulado_save: { group: 'simulado', supersedes: true, key: (p) => [(p.session as Payload | undefined)?.id] },
+  simulado_save: { group: 'simulado', supersedes: false, key: (p) => [(p.session as Payload | undefined)?.id] },
   flashcard_upsert: { group: 'flashcard', supersedes: false, key: (p) => [(p.flashcard as Payload | undefined)?.id] },
   flashcard_create_from_question: { group: 'flashcard', supersedes: false, key: (p) => [(p.flashcard as Payload | undefined)?.id] },
   flashcard_delete: { group: 'flashcard', supersedes: false, key: (p) => [p.id] },
@@ -186,7 +206,7 @@ function notify(userId: string): void {
 
 export function registerHandler<P>(
   category: string,
-  handler: (payload: P, clientOpId: string) => Promise<unknown>
+  handler: (payload: P, clientOpId: string, ctx: SyncHandlerContext) => Promise<unknown>
 ): void {
   handlers.set(category, handler as Handler);
 }
@@ -534,6 +554,10 @@ async function runFlush(userId: string, force = false): Promise<void> {
   // `enqueue`). Operações que nascem durante o flush ficam para a passagem
   // seguinte (ver `flush`).
   for (const opId of ops.map((o) => o.id)) {
+    // Relida a cada volta: o `saveQueue` da volta anterior avisa os listeners,
+    // e um deles pode ter enfileirado uma operação nova (ex.: tentativa
+    // confirmada gera o card do erro). Gravar aqui o array velho a apagaria.
+    ops = loadQueue(userId);
     const i = ops.findIndex((o) => o.id === opId);
     if (i < 0) continue;
     let op = ops[i];
@@ -541,14 +565,16 @@ async function runFlush(userId: string, force = false): Promise<void> {
     const target = targetOf(op);
     if (target && heldTargets.has(target)) continue;
     if (op.state === 'failed' && !isRetryable(op.lastError?.kind ?? 'unknown')) {
-      // Falha permanente só sai por reenvio manual e não segura as seguintes
-      // do mesmo alvo. Se já existe uma mais nova que a substitui (fila
-      // gravada antes da 45-E), ela sai, para o reenvio manual nunca
-      // mandá-la depois da nova.
+      // Falha permanente só sai por reenvio manual. Se já existe uma mais nova
+      // que a substitui (fila gravada antes da 45-E), ela sai, para o reenvio
+      // manual nunca mandá-la depois da nova. Em categoria só serializada
+      // (flashcard, simulado) ela segura o alvo até o reenvio.
       if (ops.some((o, j) => j > i && o.state !== 'synced' && supersedes(o, op))) {
         ops.splice(i, 1);
         changed = true;
         saveQueue(userId, ops);
+      } else if (!TARGETS[op.category]?.supersedes) {
+        hold(op);
       }
       continue;
     }
@@ -630,7 +656,24 @@ async function runFlush(userId: string, force = false): Promise<void> {
     saveQueue(userId, ops);
 
     try {
-      const result = await handler(op.payload, clientOpId);
+      const sent = op;
+      const ctx: SyncHandlerContext = {
+        updateNewer<P>(fn: (payload: P) => P): P | null {
+          const current = loadQueue(userId);
+          const self = current.findIndex((o) => o.id === sent.id);
+          let latest: P | null = null;
+          for (let j = self + 1; self >= 0 && j < current.length; j++) {
+            const candidate = current[j];
+            if ((candidate.state === 'pending' || candidate.state === 'failed') && supersedes(candidate, sent)) {
+              latest = fn(candidate.payload as P);
+              current[j] = { ...candidate, payload: latest, updatedAt: new Date().toISOString() };
+            }
+          }
+          if (latest !== null) saveQueue(userId, current);
+          return latest;
+        },
+      };
+      const result = await handler(op.payload, clientOpId, ctx);
       ops = loadQueue(userId);
       const idx = ops.findIndex((o) => o.id === op.id);
       if (idx >= 0) {
@@ -657,7 +700,7 @@ async function runFlush(userId: string, force = false): Promise<void> {
         // fila em vez de ser reenviada depois dela ou prendê-la numa falha.
         const failedOp = ops[idx];
         if (ops.some((o, j) => j > idx && o.state !== 'synced' && supersedes(o, failedOp))) ops.splice(idx, 1);
-        else if (failedOp.state === 'pending') hold(failedOp);
+        else if (failedOp.state === 'pending' || !TARGETS[failedOp.category]?.supersedes) hold(failedOp);
       }
       // Erro de auth: não adianta continuar tentando as próximas operações agora.
       if (kind === 'auth') {
@@ -710,9 +753,10 @@ export function retryFailedOp(userId: string, opId: string): void {
  * ativa deste usuário agora — sem ela, o flush não envia nada, a falha
  * sumiria da tela e o aviso "faça login novamente" junto (45-E).
  */
-export async function retryAllFailed(userId: string): Promise<void> {
+export async function retryAllFailed(userId: string): Promise<{ needsLogin: boolean }> {
   const signedIn = (await getActiveSupabaseUserId()) === userId;
   resetFailed(userId, (op) => signedIn || !needsLogin(op));
+  return { needsLogin: !signedIn && loadQueue(userId).some(needsLogin) };
 }
 
 export function getSummary(userId: string | null): SyncQueueSummary {

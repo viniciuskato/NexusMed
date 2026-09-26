@@ -129,7 +129,9 @@ function noteRpcArgs(column: NoteColumn, targetId: string) {
 // usuário revisar/editar manualmente — não é um editor colaborativo, só a
 // proteção mínima contra perda silenciosa.
 function mergeConflictingNoteText(localText: string, serverText: string): string {
-  if (localText === serverText) return localText;
+  // Já contém o texto do servidor (ex.: edição que já recebeu esta fusão, ou
+  // escrita por cima da versão fundida): nada a acrescentar, nada duplicado.
+  if (localText === serverText || localText.includes(serverText)) return localText;
   const stamp = new Date().toLocaleString('pt-BR');
   return (
     `${localText}\n\n---\n` +
@@ -333,7 +335,7 @@ export function registerSyncHandlers(): void {
   // sucesso. O texto mesclado mais recente permanece salvo localmente e
   // visível ao usuário; nada é perdido, mas a operação fica marcada como
   // pendente/conflituosa na fila até o usuário revisar/reenviar.
-  registerHandler('note_upsert', async (payload: NoteUpsertOpPayload) => {
+  registerHandler('note_upsert', async (payload: NoteUpsertOpPayload, _clientOpId, ctx) => {
     const MAX_NOTE_MERGE_ATTEMPTS = 3;
     const column = await resolveNoteColumn(payload.targetId);
 
@@ -349,9 +351,11 @@ export function registerSyncHandlers(): void {
       if (error) throw error;
 
       if (!data?.conflict) {
-        // Aceito pelo servidor — grava exatamente o texto que foi aceito
-        // (pode já incluir fusões de rodadas anteriores deste mesmo laço).
-        StorageService.saveNote(payload.targetId, textToSend);
+        // Aceito pelo servidor. A nota local mostra a edição mais nova do
+        // estudante, se houver uma na fila (já com as fusões deste laço);
+        // senão, o texto aceito.
+        const newer = ctx.updateNewer<NoteUpsertOpPayload>((p) => p);
+        StorageService.saveNote(payload.targetId, newer?.noteText ?? textToSend);
         if (data?.updated_at) StorageService.setNoteBaseVersion(payload.targetId, data.updated_at as string);
         return data;
       }
@@ -361,9 +365,18 @@ export function registerSyncHandlers(): void {
       // nem o do servidor, e já grava o resultado fundido localmente antes
       // de saber se a PRÓXIMA rodada vai ser aceita (o usuário nunca vê um
       // texto mais "antigo" que o que já foi fundido nesta chamada).
-      textToSend = mergeConflictingNoteText(textToSend, data.server_text as string);
+      const serverText = data.server_text as string;
+      textToSend = mergeConflictingNoteText(textToSend, serverText);
       baseUpdatedAt = data.server_updated_at as string;
-      StorageService.saveNote(payload.targetId, textToSend);
+      // A edição que o estudante fez depois desta (já na fila, escrita antes
+      // de ver o texto do outro dispositivo) recebe a mesma fusão: quando esta
+      // for aceita e a base avançar, ela sai sem conflito — e sem a fusão,
+      // apagaria o texto do outro dispositivo (45-E, revisão do f3bbf3e).
+      const newer = ctx.updateNewer<NoteUpsertOpPayload>((p) => ({
+        ...p,
+        noteText: mergeConflictingNoteText(p.noteText, serverText),
+      }));
+      StorageService.saveNote(payload.targetId, newer?.noteText ?? textToSend);
       // A base guardada só avança quando o servidor ACEITA (acima). Avançá-la
       // aqui, com o texto do outro dispositivo ainda fora do servidor, fazia a
       // próxima edição deste dispositivo — enfileirada antes desta fusão, sem

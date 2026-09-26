@@ -61,6 +61,8 @@ async function loadQueue(remote: Remote) {
             await new Promise((r) => setTimeout(r, 5));
             return { data: remote.attempts, error: null };
           },
+          // Leitura paginada dos ids de flashcards (recuperação legada): nenhum no servidor.
+          order: () => ({ range: async () => ({ data: [], error: null }) }),
         }),
       }),
     },
@@ -286,16 +288,35 @@ describe('45-E, revisão do #86 — alvos além das notas e favoritos', () => {
     expect(queue.getOps(UID).map((o) => o.category)).toEqual(['flashcard_upsert', 'flashcard_srs_upsert']);
   });
 
-  it('gravação nova da mesma sessão de simulado substitui a antiga ainda não enviada', async () => {
+  it('gravação de simulado acompanhada pelo id não some da fila quando a mesma sessão é gravada de novo (revisão do f3bbf3e, item 4)', async () => {
     const remote: Remote = { sessionUid: null, attempts: [], attemptQueries: 0 };
     const queue = await loadQueue(remote);
-    queue.enqueue(UID, 'simulado_save', { session: { id: 'sim-1', score: 1 } });
+    // SimuladoSession acompanha o resultado pelo id da operação (subscribeToResult).
+    const tracked = queue.enqueue(UID, 'simulado_save', { session: { id: 'sim-1', score: 1 } });
     queue.enqueue(UID, 'simulado_save', { session: { id: 'sim-1', score: 2 } });
-    queue.enqueue(UID, 'simulado_save', { session: { id: 'sim-2', score: 1 } });
-    expect(queue.getOps(UID).map((o) => o.payload)).toEqual([
-      { session: { id: 'sim-1', score: 2 } },
-      { session: { id: 'sim-2', score: 1 } },
-    ]);
+    expect(queue.getOps(UID).map((o) => o.id)).toContain(tracked.id);
+  });
+
+  it('gravações da mesma sessão de simulado saem na ordem, mesmo com a primeira em backoff', async () => {
+    const remote: Remote = { sessionUid: UID, attempts: [], attemptQueries: 0 };
+    const queue = await loadQueue(remote);
+    const applied: number[] = [];
+    let fail = true;
+    queue.registerHandler<{ session: { score: number } }>('simulado_save', async (p) => {
+      if (fail) {
+        fail = false;
+        throw networkError();
+      }
+      applied.push(p.session.score);
+      return null;
+    });
+    queue.enqueue(UID, 'simulado_save', { session: { id: 'sim-1', score: 1 } });
+    await queue.flush(UID);
+    queue.enqueue(UID, 'simulado_save', { session: { id: 'sim-1', score: 2 } });
+    await queue.flush(UID);
+    expect(applied).toEqual([]);
+    await queue.flush(UID, true);
+    expect(applied).toEqual([1, 2]);
   });
 
   it('payload sem id não vira alvo comum: itens diferentes não se substituem', async () => {
@@ -451,5 +472,176 @@ describe('45-E, revisão do #86 — nota em conflito substituída por edição n
     expect(server.text).toContain('A B');
     expect(server.text).toContain('outro-2'); // o que o outro dispositivo gravou por último continua no servidor
     expect(local.notes['q-1']).toBe(server.text);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Revisão do f3bbf3e (triagem da diretoria no PR #86)
+// ---------------------------------------------------------------------------
+describe('45-E, revisão do f3bbf3e', () => {
+  it('item 1 — edição enfileirada com A em voo não apaga o texto do outro dispositivo quando a fusão de A é ACEITA', async () => {
+    const server = { text: 'outro-0', updatedAt: 't1' };
+    let releaseFirstCall: () => void = () => {};
+    const firstCall = new Promise<void>((r) => (releaseFirstCall = r));
+    let calls = 0;
+    const local = { notes: {} as Record<string, string>, base: { 'q-1': 't0' } as Record<string, string> };
+
+    vi.doMock('../../src/services/storage', () => ({
+      StorageService: {
+        saveNote: (id: string, text: string) => (local.notes[id] = text),
+        getNoteBaseVersion: (id: string) => local.base[id] ?? null,
+        setNoteBaseVersion: (id: string, v: string) => (local.base[id] = v),
+      },
+    }));
+    vi.doMock('../../src/repositories/SupabaseFlashcardsRepository', () => ({ supabaseFlashcardsRepository: {} }));
+    vi.doMock('../../src/lib/supabaseClient', () => ({
+      isSupabaseConfigured: true,
+      supabase: {
+        auth: { getSession: async () => ({ data: { session: { user: { id: UID } } }, error: null }) },
+        from: (table: string) => ({
+          select: () => ({
+            eq: () => ({ maybeSingle: async () => ({ data: table === 'questions' ? { id: 'q-1' } : null, error: null }) }),
+          }),
+        }),
+        // Regra do `upsert_note`: base mais antiga que a do servidor = conflito, sem gravar.
+        rpc: async (_fn: string, args: { p_note_text: string; p_base_updated_at: string | null }) => {
+          calls += 1;
+          if (calls === 1) await firstCall;
+          if (args.p_base_updated_at && server.updatedAt > args.p_base_updated_at) {
+            return { data: { conflict: true, server_text: server.text, server_updated_at: server.updatedAt }, error: null };
+          }
+          server.text = args.p_note_text;
+          server.updatedAt = `t${calls + 1}`;
+          return { data: { conflict: false, updated_at: server.updatedAt }, error: null };
+        },
+      },
+    }));
+    const queue = await import('../../src/services/syncQueue');
+    const { registerSyncHandlers } = await import('../../src/services/syncHandlers');
+    registerSyncHandlers();
+
+    queue.enqueue(UID, 'note_upsert', { targetId: 'q-1', noteText: 'A' });
+    await new Promise((r) => setTimeout(r, 0));
+    queue.enqueue(UID, 'note_upsert', { targetId: 'q-1', noteText: 'A B' }); // antes da fusão de A
+    releaseFirstCall();
+    await queue.flush(UID);
+    await queue.flush(UID);
+
+    expect(queue.getOps(UID).filter((o) => o.state !== 'synced')).toEqual([]);
+    expect(server.text).toContain('A B');
+    expect(server.text).toContain('outro-0');
+    expect(server.text.split('outro-0')).toHaveLength(2); // o texto do outro aparece uma vez só
+    expect(local.notes['q-1']).toBe(server.text);
+  });
+
+  it('item 2 — criação de card com falha permanente segura o delete do mesmo card, e o reenvio manual mantém a ordem', async () => {
+    const remote: Remote = { sessionUid: UID, attempts: [], attemptQueries: 0 };
+    const queue = await loadQueue(remote);
+    const applied: string[] = [];
+    let rejectUpsert = true;
+    queue.registerHandler('flashcard_upsert', async () => {
+      if (rejectUpsert) {
+        rejectUpsert = false;
+        throw Object.assign(new Error('permission denied'), { code: '42501' });
+      }
+      applied.push('upsert');
+      return null;
+    });
+    queue.registerHandler('flashcard_delete', async () => {
+      applied.push('delete');
+      return null;
+    });
+
+    queue.enqueue(UID, 'flashcard_upsert', { flashcard: { id: 'fc-1' } });
+    await queue.flush(UID);
+    queue.enqueue(UID, 'flashcard_delete', { id: 'fc-1' });
+    await queue.flush(UID);
+    expect(applied).toEqual([]);
+
+    await queue.retryAllFailed(UID);
+    await queue.flush(UID);
+    expect(applied).toEqual(['upsert', 'delete']);
+  });
+
+  it('item 3 — tirar da fila uma falha antiga substituída não apaga a operação que um listener acabou de enfileirar', async () => {
+    const remote: Remote = { sessionUid: UID, attempts: [], attemptQueries: 0 };
+    const queue = await loadQueue(remote);
+    queue.registerHandler('note_upsert', async () => null);
+    queue.registerHandler('bookmark_set', async () => null);
+    const base = { userId: UID, createdAt: 't', updatedAt: 't' };
+    localStorage.setItem(
+      `synapse_${UID}_sync_queue_v1`,
+      JSON.stringify([
+        { ...base, id: 'x', clientOpId: 'x', category: 'note_upsert', payload: { targetId: 'q-5', noteText: 'x' }, state: 'pending', attempts: 0 },
+        {
+          ...base,
+          id: 'old',
+          clientOpId: 'old',
+          category: 'bookmark_set',
+          payload: { type: 'questions', id: 'q-1', desired: true },
+          state: 'failed',
+          attempts: 1,
+          lastError: { kind: 'permission', message: 'x' },
+        },
+        { ...base, id: 'new', clientOpId: 'new', category: 'bookmark_set', payload: { type: 'questions', id: 'q-1', desired: false }, state: 'pending', attempts: 0 },
+      ])
+    );
+    // Como no app: a confirmação de uma operação faz um listener enfileirar outra (ex.: card do erro).
+    let spawned: string | null = null;
+    let fired = false;
+    queue.subscribe(UID, () => {
+      if (!fired && queue.getOps(UID).some((o) => o.id === 'x' && o.state === 'synced')) {
+        fired = true; // o enqueue abaixo avisa os listeners de novo, na mesma pilha
+        spawned = queue.enqueue(UID, 'reaction_set', { questionId: 'q-7', reaction: 'up' }).id;
+      }
+    });
+    queue.registerHandler('reaction_set', async () => null); // sincronizada, continua registrada na fila
+
+    await queue.flush(UID);
+
+    expect(spawned).not.toBeNull();
+    expect(queue.getOps(UID).map((o) => o.id)).toContain(spawned);
+  });
+
+  it('item 5 — recuperação legada não enfileira de novo um card que já tem operação na fila', async () => {
+    const card = { id: '11111111-1111-4111-8111-111111111111', isCustom: true, front: 'f', back: 'b' };
+    vi.doMock('../../src/services/storage', () => ({
+      StorageService: { getAnswers: () => ({}), getFlashcards: () => [card] },
+    }));
+    const remote: Remote = { sessionUid: null, attempts: [], attemptQueries: 0 };
+    const queue = await loadQueue(remote);
+    const recovery = await import('../../src/services/legacyRecovery');
+    queue.enqueue(UID, 'flashcard_upsert', { flashcard: card }); // criado offline, ainda na fila
+    queue.enqueue(UID, 'flashcard_srs_upsert', { flashcardId: card.id, srs: {} });
+
+    await recovery.recoverLegacyLocalProgress(UID);
+
+    expect(queue.getOps(UID).map((o) => o.category)).toEqual(['flashcard_upsert', 'flashcard_srs_upsert']);
+  });
+
+  it('item 6 — a recuperação lê a fila uma vez, não uma vez por resposta local', async () => {
+    const answers: Record<string, unknown> = {};
+    for (let i = 0; i < 300; i++) {
+      answers[`q-${i}`] = { questionId: `q-${i}`, selectedOption: 'A', isCorrect: false, timestamp: 't', timeSpentSeconds: 1 };
+    }
+    vi.doMock('../../src/services/storage', () => ({
+      StorageService: { getAnswers: () => answers, getFlashcards: () => [] },
+    }));
+    const remote: Remote = { sessionUid: null, attempts: [], attemptQueries: 0 };
+    const queue = await loadQueue(remote);
+    const recovery = await import('../../src/services/legacyRecovery');
+    for (let i = 0; i < 300; i++) {
+      queue.enqueue(UID, 'question_attempt', { questionId: `q-${i}`, selectedOption: 'A', timeSpentSeconds: 1, timestamp: 't' });
+    }
+    // Espera os flushes disparados pelos enqueues acima: só as leituras da recuperação contam.
+    await queue.flush(UID);
+    await new Promise((r) => setTimeout(r, 10));
+    const getItem = vi.spyOn(localStorage, 'getItem');
+
+    await recovery.recoverLegacyLocalProgress(UID);
+
+    const queueReads = getItem.mock.calls.filter(([k]) => k === `synapse_${UID}_sync_queue_v1`).length;
+    expect(queueReads).toBeLessThan(10);
+    expect(queue.getOps(UID)).toHaveLength(300); // e continua sem duplicar
   });
 });

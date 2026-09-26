@@ -5,8 +5,12 @@ import { createTestUser, deleteTestUser, psqlLocal, type CreatedTestUser } from 
 //
 // - AUD-19: com a rede oscilando, uma ação antiga (favoritar) que falhou e
 //   ficou esperando nova tentativa não pode chegar ao servidor depois da
-//   ação nova (desfavoritar) — nem depois de recarregar a página com a
-//   operação pendente e a rede voltando.
+//   ação nova (desfavoritar) — nem depois de recarregar a página e a rede
+//   voltar. Aqui quem garante é a SUBSTITUIÇÃO ao enfileirar (o desfavoritar
+//   tira o favoritar da fila). A RETENÇÃO por alvo no envio (`heldTargets`,
+//   categorias só serializadas como flashcard e simulado) é coberta pelos
+//   testes de unidade da fila em tests/unit/sincronizacao45e.test.ts, que
+//   falham se ela for removida.
 // - AUD-25: "faça login novamente" se resolve ao sair e entrar de novo: o que
 //   estava pendente sobe sozinho, e o botão "Tentar novamente" aparece.
 //
