@@ -11,6 +11,7 @@ import {
   parseCompendiumMarkdownText,
   PEARL_LABEL,
   readMarkdownLayout,
+  SECTION_NUMBER_PREFIX,
   TAKEAWAYS_LABEL,
   type MarkdownFileBlock,
 } from './compendiumMarkdownImport';
@@ -188,7 +189,8 @@ function* linhasDasSecoes(arq: ArquivoDeMaterial): Generator<{ i: number; linha:
 // citação: faixa com hífen ("[2-4]"), número 0, lista fora de ordem ("[10, 2]")
 // ou colchete depois de "intervalo"/"faixa"/"entre"/"escala" ("intervalo [0, 10]").
 const COLCHETE_NUMERICO = /\[(\d+(?:\s*,\s*\d+)*)\](\([^)\]]*[)\]])?/g;
-const ANTES_DE_INTERVALO = /(intervalo|faixa|entre|escala|de)\s*$/;
+// Palavra inteira: "mortalidade [1]" é citação sem link, não intervalo.
+const ANTES_DE_INTERVALO = /\b(intervalo|faixa|entre|escala|de)\s*$/;
 
 function pareceCitacao(numeros: string, antes: string): boolean {
   const ns = numeros.split(',').map((n) => Number(n.trim()));
@@ -585,7 +587,13 @@ const semPalavrasChave: RegraDoPadrao = {
 // dentro do nome ("MHC classe I e II", "Bloqueio AV Mobitz II", "Nervo
 // craniano VII: anatomia", "tipos I a IV") é parte do nome e não conta —
 // a regra prefere deixar passar a pedir para mutilar um nome legítimo.
-const NUMERACAO_EXPLICITA = [/^\d+[.)]\s/, /(?:^|\s)(m[oó]dulo|parte|aula|cap[ií]tulo|unidade|volume)\s+(\d+|[IVXL]+)(?=$|[\s:—–-])/i];
+// Sem flag `i`: o numeral romano é maiúsculo ("volume x tempo", "parte v" não
+// contam), e o número só conta no fim ou antes de separador ("volume 30 mL/kg"
+// não conta; "Módulo 2 — ..." conta).
+const NUMERACAO_EXPLICITA = [
+  /^\d+[.)]\s/,
+  /(?:^|\s)([Mm][oó]dulo|[Pp]arte|[Aa]ula|[Cc]ap[ií]tulo|[Uu]nidade|[Vv]olume)\s+(\d+|[IVXL]+)(?=\s*(?:$|[:—–-]))/,
+];
 const ROMANO_ANTES_DE_SEPARADOR = /(\S+)\s+([IVX]{1,4})\s*[:—–]/;
 const FAZEM_PARTE_DO_NOME = new Set([
   'tipo', 'tipos', 'classe', 'classes', 'grau', 'graus', 'fase', 'fases', 'estagio', 'estadio', 'grupo', 'geracao',
@@ -650,7 +658,9 @@ const remissao: RegraDoPadrao = {
 
 /** Título que é mesmo o de uma bibliografia ("Referências", "Referências Bibliográficas"). */
 function eBibliografia(b: MarkdownFileBlock): boolean {
-  return /^referencias?\b/.test(normalize(b.headerText));
+  // Numeração antes do título ("Seção 9 — ", "7. ") não muda o que o bloco é.
+  const semNumero = b.headerText.replace(SECTION_NUMBER_PREFIX, '').replace(/^\d+[.)]\s*/, '');
+  return /^referencias?\b/.test(normalize(semNumero));
 }
 
 const blocoDescartado: RegraDoPadrao = {

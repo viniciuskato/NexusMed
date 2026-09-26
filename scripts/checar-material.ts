@@ -13,7 +13,7 @@
  *
  * Saída 0 quando nenhum arquivo seria recusado pela importação (pendência
  * orienta, não bloqueia); 1 quando algum seria; 2 em erro de uso (caminho
- * inexistente, pasta sem `.md`) — os demais caminhos são checados mesmo assim.
+ * inexistente, pasta sem `.md`, arquivo ilegível) — os demais são checados mesmo assim.
  * As regras vivem em `src/utils/compendiumStandardCheck.ts`.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -59,7 +59,15 @@ if (alvos.length === 0) {
   const detalhado = alvos.length === 1 && arquivos.length === 1 && arquivos[0] === alvos[0];
   let recusados = 0;
   for (const arquivo of arquivos) {
-    const r = checar(arquivo);
+    let r;
+    try {
+      r = checar(arquivo);
+    } catch (e) {
+      // Ilegível (pasta com nome de .md, sem permissão): relata e segue.
+      console.error(`Não foi possível ler ${arquivo}: ${e instanceof Error ? e.message : String(e)}`);
+      erroDeUso = true;
+      continue;
+    }
     if (situacaoDaChecagem(r) === 'erro') recusados++;
     const nome = alvos.length === 1 ? path.basename(arquivo) : arquivo;
     console.log(detalhado ? formatarChecagemDetalhada(nome, r) : formatarResumoDaChecagem(nome, r));

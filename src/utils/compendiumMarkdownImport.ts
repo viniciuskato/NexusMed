@@ -297,7 +297,7 @@ export function isDependenciesHeader(headerNorm: string): boolean {
   );
 }
 
-const SECTION_NUMBER_PREFIX = /^se[cç][aã]o\s*\d+\s*[—\-:]\s*/i;
+export const SECTION_NUMBER_PREFIX =/^se[cç][aã]o\s*\d+\s*[—\-:]\s*/i;
 
 export function parseCompendiumMarkdownText(
   text: string,

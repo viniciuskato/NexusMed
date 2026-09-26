@@ -281,6 +281,27 @@ describe('checagem do padrão — achados da segunda revisão do #85', () => {
     expect(regras(material({ corpo: 'Afirmação [3, 7] [1](#ref-1)[2](#ref-2).' }))).toContain('citacao-malformada');
   });
 
+  it('[N] solto depois de palavra terminada em "de" é citação malformada', () => {
+    for (const antes of ['Reduz a mortalidade', 'Na saúde', 'Com a idade', 'Por toxicidade', 'Pode']) {
+      expect(regras(material({ corpo: `${antes} [1] e mais [1](#ref-1)[2](#ref-2).` })), antes).toContain('citacao-malformada');
+    }
+    expect(regras(material({ corpo: 'Nota de [0, 10] no escore [1](#ref-1)[2](#ref-2).' }))).toEqual([]);
+  });
+
+  it('bibliografia com título numerado não é seção descartada', () => {
+    for (const titulo of ['Seção 9 — Referências Bibliográficas', '7. Referências']) {
+      const texto = material().replace('### Referências Bibliográficas', `### ${titulo}`);
+      expect(regras(texto), titulo).toEqual([]);
+    }
+  });
+
+  it('"volume x", "parte v" em minúscula não são numeração', () => {
+    for (const titulo of ['Espirometria: curva volume x tempo', 'Anatomia da parte v do nervo', 'Reposição de volume 30 mL/kg']) {
+      expect(regras(material({ titulo })), titulo).toEqual([]);
+    }
+    expect(regras(material({ titulo: 'Farmacologia — Parte II' }))).toEqual(['titulo-numerado']);
+  });
+
   it('"<=>" de equilíbrio não é comparador', () => {
     expect(regras(material({ corpo: 'CO2 + H2O <=> H2CO3 [1](#ref-1)[2](#ref-2).' }))).toEqual([]);
   });
