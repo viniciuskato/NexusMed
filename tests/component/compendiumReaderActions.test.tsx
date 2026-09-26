@@ -27,6 +27,7 @@ vi.mock('../../src/repositories/BookmarksRepository', () => ({
 vi.mock('../../src/repositories/NotesRepository', () => ({
   notesRepository: {
     getNotes: vi.fn().mockResolvedValue({}),
+    getRemovedSectionNotes: vi.fn().mockResolvedValue([]),
     saveNote: vi.fn().mockResolvedValue(undefined),
   },
 }));

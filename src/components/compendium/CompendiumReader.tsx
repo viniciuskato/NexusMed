@@ -27,7 +27,7 @@ import {
 import { Compendium, CompendiumSection, Discipline, Theme } from '../../types';
 import { StorageService } from '../../services/storage';
 import { bookmarksRepository } from '../../repositories/BookmarksRepository';
-import { notesRepository } from '../../repositories/NotesRepository';
+import { notesRepository, type RemovedSectionNote } from '../../repositories/NotesRepository';
 import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { readingProgressRepository } from '../../repositories/ReadingProgressRepository';
 import { SafeMarkdown, parseInline } from '../common/SafeMarkdown';
@@ -92,6 +92,8 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   const [readSectionIds, setReadSectionIds] = useState<string[]>([]);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [userNote, setUserNote] = useState('');
+  // 45-D: anotações do aluno em seções que saíram do material (só leitura).
+  const [removedSectionNotes, setRemovedSectionNotes] = useState<RemovedSectionNote[]>([]);
   const [showNoteDrawer, setShowNoteDrawer] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [isIndexOpen, setIsIndexOpen] = useState(false);
@@ -173,12 +175,14 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [progress, bookmarks, notes] = await Promise.all([
+      const [progress, bookmarks, notes, removedNotes] = await Promise.all([
         readingProgressRepository.getReadingProgress(),
         bookmarksRepository.getBookmarks(),
         notesRepository.getNotes(),
+        notesRepository.getRemovedSectionNotes(compendium.id),
       ]);
       if (cancelled) return;
+      setRemovedSectionNotes(removedNotes);
 
       const compProgress = progress[compendium.id];
       if (compProgress) {
@@ -645,6 +649,21 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
                 Salvar anotação
               </button>
             </div>
+            {removedSectionNotes.length > 0 && (
+              <ul className="mt-4 space-y-2.5">
+                {removedSectionNotes.map((n, idx) => (
+                  <li
+                    key={idx}
+                    className="p-3 rounded-lg border border-dashed border-[#E2E8F0] dark:border-[#263244] bg-[#F6F7F9] dark:bg-[#182235]"
+                  >
+                    <p className="text-[11px] font-semibold text-[#64748B] dark:text-[#94A3B8] mb-1">
+                      De uma seção removida: {n.sectionTitle}
+                    </p>
+                    <p className="text-sm text-[#172033] dark:text-[#E5E7EB] whitespace-pre-wrap">{n.noteText}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
 

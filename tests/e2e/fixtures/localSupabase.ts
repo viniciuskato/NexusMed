@@ -322,6 +322,12 @@ export function deleteE2EMaterials(): void {
       `(select id from public.materials where title like '${MATERIAL_PREFIX}%') ` +
       `or target_material_id in (select id from public.materials where title like '${MATERIAL_PREFIX}%');`
   );
+  // Desde a 45-D a trilha de revisão não sai em cascata com o material
+  // (`content_revisions_material_id_fkey` é restrict): apagá-la antes.
+  psqlLocal(
+    `delete from public.content_revisions where material_id in ` +
+      `(select id from public.materials where title like '${MATERIAL_PREFIX}%');`
+  );
   psqlLocal(`delete from public.materials where title like '${MATERIAL_PREFIX}%';`);
 }
 

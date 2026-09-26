@@ -862,7 +862,8 @@ Associar uma fonte curada sem URL apaga a URL da referência.
 **Fora de escopo.** Lixeira ou restauração de material excluído; a edição
 pendente de material publicado (45-K).
 **Depende de.** Nada.
-**Estado.** Pronta.
+**Estado.** Concluída — PR #nn.
+**Achados da execução.** Decisões do dono em 26/09: anotação de seção removida em linha própria (o app hoje só grava anotação do material, então isso protege dado vindo de outro caminho); material com trilha de revisão, ligações ou filhos também não é excluído (a trilha não pode existir sem o material, e as ligações estão congeladas). Bug anterior corrigido: desde a 43-A nenhuma exclusão de material pela Área Editorial funcionava (`clear_symmetric_material_links` sem permissão em `material_links`). Fica de fora: remover seção ainda apaga o histórico dela (`material_section_versions`), e excluir questão não publicada ainda apaga a trilha dela.
 
 ---
 

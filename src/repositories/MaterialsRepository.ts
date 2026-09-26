@@ -132,11 +132,14 @@ class ResilientMaterialsRepository implements MaterialsRepository {
     this.local.saveCompendium(compendium);
   }
 
+  // Remoto antes do local: desde a 45-D o banco recusa excluir material
+  // protegido, e apagar a cópia local antes fazia o material sumir da tela
+  // mesmo com a exclusão recusada.
   async deleteCompendium(id: string): Promise<void> {
-    this.local.deleteCompendium(id);
     if (isSupabaseConfigured) {
       try { await this.supa.deleteCompendium(id); } catch (err) { console.error(`[MaterialsRepository] falha ao sincronizar deleteCompendium com Supabase:`, err); throw err; }
     }
+    this.local.deleteCompendium(id);
   }
 
   /**
