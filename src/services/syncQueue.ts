@@ -340,6 +340,34 @@ export function needsSupport(op: SyncOp): boolean {
  * qualquer caso, e a falha é visível na fila (nunca só no console).
  */
 export function enqueue<TPayload>(userId: string, category: string, payload: TPayload, clientOpId?: string): SyncOp<TPayload> {
+  return insertOp(userId, category, payload, clientOpId);
+}
+
+/**
+ * Enfileira uma operação da qual outras já na fila dependem, ANTES da
+ * primeira delas (`dependsOnIt`), e devolve a `pending` as que falharam de vez
+ * — falharam porque faltava justamente o que esta operação cria. Uso: a
+ * recuperação legada envia um card que só existia no aparelho quando a fila já
+ * tem revisão ou SRS dele (45-E, revisão do 1af8cf3); no fim da fila, a
+ * criação sairia depois deles (o SRS em backoff segura o card) e a revisão
+ * falharia em todo reenvio.
+ */
+export function enqueueBefore<TPayload>(
+  userId: string,
+  category: string,
+  payload: TPayload,
+  dependsOnIt: (op: SyncOp) => boolean
+): SyncOp<TPayload> {
+  return insertOp(userId, category, payload, undefined, dependsOnIt);
+}
+
+function insertOp<TPayload>(
+  userId: string,
+  category: string,
+  payload: TPayload,
+  clientOpId?: string,
+  dependsOnIt?: (op: SyncOp) => boolean
+): SyncOp<TPayload> {
   knownUserIds.add(userId);
   const now = new Date().toISOString();
 
@@ -386,7 +414,17 @@ export function enqueue<TPayload>(userId: string, category: string, payload: TPa
     attempts: 0,
     ...(resolvedClientOpId ? {} : { lastError: { kind: 'crypto_unavailable' as SyncErrorKind, message: CRYPTO_UNAVAILABLE_MESSAGE } }),
   };
-  ops.push(op);
+  const firstDependent = dependsOnIt ? ops.findIndex((o) => o.state !== 'synced' && o.state !== 'syncing' && dependsOnIt(o)) : -1;
+  if (firstDependent < 0) {
+    ops.push(op);
+  } else {
+    ops.splice(firstDependent, 0, op);
+    for (let i = firstDependent + 1; i < ops.length; i++) {
+      if (ops[i].state === 'failed' && dependsOnIt!(ops[i])) {
+        ops[i] = { ...ops[i], state: 'pending', nextRetryAt: undefined, attempts: 0, updatedAt: now };
+      }
+    }
+  }
   saveQueue(userId, ops);
   enqueueVersions.set(userId, (enqueueVersions.get(userId) ?? 0) + 1);
   void flush(userId);

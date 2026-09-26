@@ -645,3 +645,53 @@ describe('45-E, revisão do f3bbf3e', () => {
     expect(queue.getOps(UID)).toHaveLength(300); // e continua sem duplicar
   });
 });
+
+// ---------------------------------------------------------------------------
+// Revisão do 1af8cf3 (comentário em legacyRecovery.ts)
+// ---------------------------------------------------------------------------
+describe('45-E, revisão do 1af8cf3 — card antigo só no aparelho, com revisão ou SRS na fila', () => {
+  it('a recuperação envia o card antes da revisão e do SRS dele, e os dois passam', async () => {
+    const card = { id: '22222222-2222-4222-8222-222222222222', isCustom: true, front: 'f', back: 'b' };
+    vi.doMock('../../src/services/storage', () => ({
+      StorageService: { getAnswers: () => ({}), getFlashcards: () => [card] },
+    }));
+    const remote: Remote = { sessionUid: UID, attempts: [], attemptQueries: 0 };
+    const queue = await loadQueue(remote);
+    const recovery = await import('../../src/services/legacyRecovery');
+
+    // Servidor falso: revisão e SRS só funcionam se o card existir, como no banco real.
+    const serverCards = new Set<string>();
+    const applied: string[] = [];
+    queue.registerHandler<{ flashcard: { id: string } }>('flashcard_upsert', async (p) => {
+      serverCards.add(p.flashcard.id);
+      applied.push('upsert');
+      return null;
+    });
+    queue.registerHandler<{ flashcardId: string }>('flashcard_review', async (p) => {
+      // submit_flashcard_review: P0001 "flashcard não encontrado" → validation (falha permanente)
+      if (!serverCards.has(p.flashcardId)) throw Object.assign(new Error('flashcard não encontrado'), { code: 'P0001' });
+      applied.push('review');
+      return null;
+    });
+    queue.registerHandler<{ flashcardId: string }>('flashcard_srs_upsert', async (p) => {
+      // FK ausente (23503) → unknown (retentável, fica em backoff)
+      if (!serverCards.has(p.flashcardId)) throw Object.assign(new Error('violates foreign key constraint'), { code: '23503' });
+      applied.push('srs');
+      return null;
+    });
+
+    queue.enqueue(UID, 'flashcard_review', { flashcardId: card.id, rating: 3 });
+    queue.enqueue(UID, 'flashcard_srs_upsert', { flashcardId: card.id, srs: {} });
+    await queue.flush(UID);
+    expect(queue.getOps(UID).map((o) => o.state)).toEqual(['failed', 'pending']); // revisão falhou de vez; SRS em backoff
+    expect(applied).toEqual([]);
+
+    await recovery.recoverLegacyLocalProgress(UID);
+    await queue.flush(UID, true);
+    await queue.flush(UID, true);
+
+    expect(serverCards.has(card.id)).toBe(true);
+    expect(applied).toEqual(['upsert', 'review', 'srs']);
+    expect(queue.getOps(UID).filter((o) => o.state !== 'synced')).toEqual([]);
+  });
+});
