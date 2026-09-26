@@ -364,7 +364,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
   a armadilha #8 do `AGENTS.md`. Correção provável: serializar por alvo
   (categoria + id), ou fazer operações do tipo "set" substituírem as
   pendentes do mesmo alvo ao enfileirar.
-- **Estado**: Aberto
+- **Estado**: Concluído (unidade 45-E)
 
 ### AUD-20 — Com rede lenta ou offline, respostas certas contam como erradas e a nota do simulado fica errada
 - **Registrado em**: 2026-09-19 pela sessão de auditoria
@@ -513,7 +513,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
   reenvio.
 - **Contexto mínimo pra puxar**: `syncQueue.ts` (`classifySyncError`,
   `onActiveUserChanged`, `retryAllFailed`) e `SyncStatusIndicator.tsx`.
-- **Estado**: Aberto
+- **Estado**: Concluído (unidade 45-E)
 
 ### AUD-26 — Falha momentânea ao ler o perfil manda aluno ativo para "aguardando aprovação"
 - **Registrado em**: 2026-09-19 pela sessão de auditoria
@@ -568,7 +568,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
 - **Contexto mínimo pra puxar**: `legacyRecovery.ts` e `syncQueue.ts`.
   Correção provável: pular questões com operação pendente e rodar uma vez
   só por UID.
-- **Estado**: Aberto
+- **Estado**: Concluído (unidade 45-E)
 
 ### AUD-29 — Favoritar e marcar leitura decidem o estado a partir do cache local vazio
 - **Registrado em**: 2026-09-19 pela sessão de auditoria

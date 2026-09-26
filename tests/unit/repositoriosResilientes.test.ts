@@ -282,12 +282,11 @@ describe('Resilient*Repository — escrita local e enfileiramento', () => {
       ['error_notebook_update', 'pending'],
       ['simulado_save', 'synced'],
       ['reaction_set', 'pending'],
-      ['reaction_set', 'pending'],
       ['flashcard_delete', 'pending'],
     ]);
     expect(ops[0].payload).toEqual({ targetId: 'q-1', noteText: 'texto' });
-    expect(ops[3].payload).toEqual({ questionId: 'q-1', reaction: 'up' });
-    expect(ops[4].payload).toEqual({ questionId: 'q-1', reaction: null });
+    // 45-E: remover a reação substitui o "up" ainda não enviado da mesma questão.
+    expect(ops[3].payload).toEqual({ questionId: 'q-1', reaction: null });
     // Cada operação tem um client_op_id próprio (uuid) — nunca compartilhado.
     const ids = ops.map((o) => o.clientOpId);
     expect(new Set(ids).size).toBe(ids.length);
@@ -423,7 +422,8 @@ describe('Resilient*Repository — falha de rede e retentativa', () => {
     await queue.flush(UID);
 
     expect(handler).toHaveBeenCalledTimes(1);
-    expect(handler).toHaveBeenCalledWith({ targetId: 'q-1', noteText: 'antes do reload' }, clientOpId);
+    // 3º argumento: contexto da fila para o handler (45-E).
+    expect(handler).toHaveBeenCalledWith({ targetId: 'q-1', noteText: 'antes do reload' }, clientOpId, expect.anything());
     expect(queue.getOps(UID)[0].state).toBe('synced');
   });
 
@@ -496,7 +496,8 @@ describe('Resilient*Repository — toggles enviados como estado desejado', () =>
     await queue.flush(UID);
     expect(await bookmarksRepository.toggleBookmark('questions', 'q-1')).toBe(false);
     await queue.flush(UID);
-    expect(queue.getOps(UID).map((o) => (o.payload as { desired: boolean }).desired)).toEqual([true, false]);
+    // 45-E: o desfavoritar substitui o favoritar que ainda não saiu — só o estado final vai.
+    expect(queue.getOps(UID).map((o) => (o.payload as { desired: boolean }).desired)).toEqual([false]);
 
     online = true;
     await queue.flush(UID, true);
@@ -518,8 +519,8 @@ describe('Resilient*Repository — toggles enviados como estado desejado', () =>
     await queue.flush(UID);
 
     expect(StorageService.getReadingProgress()['comp-1'].readSectionIds).toEqual(['sec-2']);
+    // 45-E: desmarcar sec-1 substitui o "lida" ainda não enviado da mesma seção.
     expect(queue.getOps(UID).map((o) => o.payload)).toEqual([
-      { compendiumId: 'comp-1', sectionId: 'sec-1', isRead: true, totalSections: 4 },
       { compendiumId: 'comp-1', sectionId: 'sec-2', isRead: true, totalSections: 4 },
       { compendiumId: 'comp-1', sectionId: 'sec-1', isRead: false, totalSections: 4 },
     ]);

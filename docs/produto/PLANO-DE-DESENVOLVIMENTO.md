@@ -889,7 +889,8 @@ duplicar tentativas.
 antes de corrigir. Testes E2E de recarregar com operação pendente e de login
 novamente com reenvio.
 **Depende de.** 45-A (mesmo caminho de gravação de respostas) — concluída.
-**Estado.** Pronta.
+**Estado.** Concluída — PR #86.
+**Achados da execução.** O envio e o enfileiramento da fila ficaram O(n²) no tamanho da fila (`findIndex`/`some` por operação); não pesa com a fila pequena do uso real — volta quando alguém medir fila longa (revisão do #86, item 9).
 
 ---
 
