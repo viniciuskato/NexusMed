@@ -556,6 +556,7 @@ function AuthenticatedApp() {
   const handleStartTestarOQueLi = (questionIds: string[]) => {
     setIsTestarOpen(false);
     setFilterThemeForQuestions(undefined);
+    setFilterStatusForQuestions(undefined);
     setFocusQuestionId(undefined);
     setScopeCompendiumForQuestions(undefined);
     setScopeQuestionIdsForQuestions(questionIds);

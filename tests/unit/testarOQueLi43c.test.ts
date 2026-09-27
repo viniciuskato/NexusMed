@@ -59,6 +59,15 @@ describe('materiaisLidosHoje', () => {
     expect(materiaisLidosHoje([leitura('a', '2026-09-28T01:00:00.000Z', 0)], agora)).toEqual([]);
   });
 
+  // Revisão do #96, item 6.
+  it('ordena pelo instante, não pelo texto', () => {
+    const lidos = materiaisLidosHoje(
+      [leitura('a', '2026-09-28T01:00:00+00:00'), leitura('b', '2026-09-27T22:30:00-03:00')],
+      agora
+    );
+    expect(lidos).toEqual(['b', 'a']);
+  });
+
   it('ordena da leitura mais recente para a mais antiga', () => {
     const lidos = materiaisLidosHoje(
       [leitura('a', '2026-09-27T12:00:00.000Z'), leitura('b', '2026-09-28T01:00:00.000Z')],
@@ -69,13 +78,18 @@ describe('materiaisLidosHoje', () => {
 });
 
 describe('juntarLeiturasPendentes', () => {
+  const prog = (materialId: string, secaoIds: string[], ultimaLeitura: string) => ({ materialId, secaoIds, ultimaLeitura });
+  const pend = (materialId: string, sectionId: string, isRead: boolean, criadaEm: string) => ({
+    materialId,
+    sectionId,
+    isRead,
+    criadaEm,
+  });
+
   it('seção marcada como lida que ainda não subiu conta como leitura agora', () => {
     const juntas = juntarLeiturasPendentes(
-      [leitura('a', '2026-09-20T12:00:00.000Z', 2)],
-      [
-        { materialId: 'a', isRead: true, criadaEm: '2026-09-28T01:00:00.000Z' },
-        { materialId: 'b', isRead: true, criadaEm: '2026-09-28T01:30:00.000Z' },
-      ]
+      [prog('a', ['s1', 's2'], '2026-09-20T12:00:00.000Z')],
+      [pend('a', 's3', true, '2026-09-28T01:00:00.000Z'), pend('b', 's9', true, '2026-09-28T01:30:00.000Z')]
     );
     expect(juntas).toEqual([
       leitura('a', '2026-09-28T01:00:00.000Z', 3),
@@ -84,8 +98,36 @@ describe('juntarLeiturasPendentes', () => {
   });
 
   it('desmarcar pendente não transforma o material em lido', () => {
-    const juntas = juntarLeiturasPendentes([], [{ materialId: 'a', isRead: false, criadaEm: '2026-09-28T01:00:00.000Z' }]);
-    expect(juntas).toEqual([]);
+    expect(juntarLeiturasPendentes([], [pend('a', 's1', false, '2026-09-28T01:00:00.000Z')])).toEqual([]);
+  });
+
+  // Revisão do #96, item 3.
+  it('desmarcar pendente a única seção lida tira o material de "lido hoje"', () => {
+    const agora = new Date('2026-09-28T02:00:00.000Z');
+    const juntas = juntarLeiturasPendentes(
+      [prog('a', ['s1'], '2026-09-28T00:30:00.000Z')],
+      [pend('a', 's1', false, '2026-09-28T01:00:00.000Z')]
+    );
+    expect(juntas[0].secoesLidas).toBe(0);
+    expect(materiaisLidosHoje(juntas, agora)).toEqual([]);
+  });
+
+  it('marcar e desmarcar a mesma seção na fila aplica na ordem', () => {
+    const juntas = juntarLeiturasPendentes(
+      [],
+      [pend('a', 's1', false, '2026-09-28T01:10:00.000Z'), pend('a', 's1', true, '2026-09-28T01:00:00.000Z')]
+    );
+    expect(juntas[0].secoesLidas).toBe(0);
+  });
+
+  // Revisão do #96, item 6: a data mais recente vem do instante, não do texto.
+  it('compara datas como instantes, mesmo com fusos diferentes no texto', () => {
+    // 22:30 em -03:00 = 01:30Z do dia 28, depois de 01:00Z.
+    const juntas = juntarLeiturasPendentes(
+      [prog('a', ['s1'], '2026-09-28T01:00:00+00:00')],
+      [pend('a', 's2', true, '2026-09-27T22:30:00-03:00')]
+    );
+    expect(juntas[0].ultimaLeitura).toBe('2026-09-27T22:30:00-03:00');
   });
 });
 

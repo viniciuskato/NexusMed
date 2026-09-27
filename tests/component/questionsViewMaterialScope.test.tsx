@@ -94,3 +94,17 @@ describe('QuestionsView — recorte "Testar o que li" (43-C)', () => {
     expect(screen.getAllByTestId('card').map((c) => c.textContent)).toEqual(['Questão 2']);
   });
 });
+
+describe('QuestionsView — recorte "Testar o que li", revisão do #96', () => {
+  // Item 1: o "incorretas" que sobra do "Treinar erradas" não esvazia o teste.
+  it('começa sem filtro de status, mesmo com o status inicial da visita anterior', () => {
+    renderView({ scopeQuestionIds: ['2'], initialStatusFilter: 'incorrect', onClearScope: vi.fn() });
+    expect(screen.getAllByTestId('card').map((c) => c.textContent)).toEqual(['Questão 2']);
+  });
+
+  // Item 2: o aviso mostra o número que aparece na tela.
+  it('o aviso conta as questões mostradas, não os ids recebidos', () => {
+    renderView({ scopeQuestionIds: ['2', 'id-que-nao-existe-mais'], onClearScope: vi.fn() });
+    expect(screen.getByText(/Testar o que li/).parentElement?.textContent).toContain('1 questão dos materiais');
+  });
+});

@@ -458,7 +458,7 @@ data da última leitura). "Hoje" segue o fuso do estudante. Sem tabela nova de
 **Depende de.** 43-B. A D-6 (25/09) a antecipou para antes dos passos 1 a 4
 da 46-A, que a D-3 preferia antes.
 **Estado.** Concluída — PR #96.
-**Achados da execução.** Sem migration: "lido hoje" é material com seção lida e `reading_progress.updated_at` no dia local; marcações ainda na fila contam como leitura de agora. A sessão é a lista de questões recortada pelos ids escolhidos (errar gera flashcard pelo caminho de sempre). O "Marcar lida" do leitor, no `main` de 27/09, volta a mostrar "Marcar lida" logo após o clique (relê o servidor antes de a fila subir) — a 45-G (#93) cobre.
+**Achados da execução.** Sem migration: "lido hoje" é material com seção lida e `reading_progress.updated_at` no dia local; marcações ainda na fila contam como leitura de agora. A sessão é a lista de questões recortada pelos ids escolhidos (errar gera flashcard pelo caminho de sempre). O "Marcar lida" do leitor, no `main` de 27/09, volta a mostrar "Marcar lida" logo após o clique (relê o servidor antes de a fila subir) — a 45-G (#93) cobre. Adiados na triagem da revisão do #96: no modo local, sem Supabase, abrir o material conta como leitura (a produção usa Supabase); o recorte do "Testar" se perde ao recarregar a página — o estudante reabre pelo botão; entra quando a navegação guardar o recorte (46-A).
 
 ---
 

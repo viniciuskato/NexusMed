@@ -18,10 +18,16 @@ export interface LeiturasRepository {
 function marcacoesPendentes(userId: string | null): MarcacaoPendente[] {
   if (!userId) return [];
   return getOps(userId)
-    .filter((op) => op.category === 'reading_progress_set' && op.state !== 'synced')
+    // Só o que ainda vai chegar ao servidor: a que falhou de vez não conta.
+    .filter((op) => op.category === 'reading_progress_set' && (op.state === 'pending' || op.state === 'syncing'))
     .map((op) => {
       const payload = op.payload as ReadingProgressSetOpPayload;
-      return { materialId: payload.compendiumId, isRead: payload.isRead, criadaEm: op.createdAt };
+      return {
+        materialId: payload.compendiumId,
+        sectionId: payload.sectionId,
+        isRead: payload.isRead,
+        criadaEm: op.createdAt,
+      };
     });
 }
 
@@ -32,7 +38,7 @@ class SupabaseLeiturasRepository implements LeiturasRepository {
     const doServidor = ((data ?? []) as { material_id: string; read_section_ids: string[] | null; updated_at: string }[]).map(
       (row) => ({
         materialId: row.material_id,
-        secoesLidas: row.read_section_ids?.length ?? 0,
+        secaoIds: row.read_section_ids ?? [],
         ultimaLeitura: row.updated_at,
       })
     );

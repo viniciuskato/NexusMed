@@ -15,12 +15,23 @@ export interface LeituraDeMaterial {
   ultimaLeitura: string;
 }
 
+/** Progresso como o servidor devolve: as seções lidas e a última marcação. */
+export interface ProgressoLido {
+  materialId: string;
+  secaoIds: string[];
+  ultimaLeitura: string;
+}
+
 /** Marcação de seção ainda na fila de sincronização (não chegou ao servidor). */
 export interface MarcacaoPendente {
   materialId: string;
+  sectionId: string;
   isRead: boolean;
   criadaEm: string;
 }
+
+// Datas comparadas como instantes: o texto ISO pode vir com fusos diferentes.
+const instante = (iso: string) => Date.parse(iso) || 0;
 
 /**
  * Ids dos materiais com alguma seção lida e última leitura hoje, do mais
@@ -30,28 +41,37 @@ export function materiaisLidosHoje(leituras: LeituraDeMaterial[], agora: Date = 
   const hoje = diaLocal(agora);
   return leituras
     .filter((l) => l.secoesLidas > 0 && diaLocal(l.ultimaLeitura) === hoje)
-    .sort((x, y) => y.ultimaLeitura.localeCompare(x.ultimaLeitura))
+    .sort((x, y) => instante(y.ultimaLeitura) - instante(x.ultimaLeitura))
     .map((l) => l.materialId);
 }
 
 /**
- * Soma ao que o servidor devolveu as seções marcadas como lidas que ainda
- * estão na fila: quem acabou de ler e abre o teste em seguida não pode ver o
- * material de fora só porque a gravação ainda não subiu.
+ * Aplica ao que o servidor devolveu as marcações que ainda estão na fila, seção
+ * a seção e na ordem em que foram feitas: quem acabou de ler não fica de fora
+ * porque a gravação não subiu, e quem desmarcou a única seção lida sai.
+ * Material que só aparece em desmarcações não entra.
  */
-export function juntarLeiturasPendentes(leituras: LeituraDeMaterial[], pendentes: MarcacaoPendente[]): LeituraDeMaterial[] {
-  const porMaterial = new Map(leituras.map((l) => [l.materialId, { ...l }]));
-  for (const p of pendentes) {
-    if (!p.isRead) continue;
-    const atual = porMaterial.get(p.materialId);
+export function juntarLeiturasPendentes(progresso: ProgressoLido[], pendentes: MarcacaoPendente[]): LeituraDeMaterial[] {
+  const porMaterial = new Map(
+    progresso.map((p) => [p.materialId, { secoes: new Set(p.secaoIds), ultimaLeitura: p.ultimaLeitura }])
+  );
+  const emOrdem = [...pendentes].sort((x, y) => instante(x.criadaEm) - instante(y.criadaEm));
+  for (const p of emOrdem) {
+    let atual = porMaterial.get(p.materialId);
     if (!atual) {
-      porMaterial.set(p.materialId, { materialId: p.materialId, secoesLidas: 1, ultimaLeitura: p.criadaEm });
-      continue;
+      if (!p.isRead) continue;
+      atual = { secoes: new Set(), ultimaLeitura: p.criadaEm };
+      porMaterial.set(p.materialId, atual);
     }
-    atual.secoesLidas += 1;
-    if (p.criadaEm > atual.ultimaLeitura) atual.ultimaLeitura = p.criadaEm;
+    if (p.isRead) atual.secoes.add(p.sectionId);
+    else atual.secoes.delete(p.sectionId);
+    if (instante(p.criadaEm) > instante(atual.ultimaLeitura)) atual.ultimaLeitura = p.criadaEm;
   }
-  return [...porMaterial.values()];
+  return [...porMaterial.entries()].map(([materialId, m]) => ({
+    materialId,
+    secoesLidas: m.secoes.size,
+    ultimaLeitura: m.ultimaLeitura,
+  }));
 }
 
 /**

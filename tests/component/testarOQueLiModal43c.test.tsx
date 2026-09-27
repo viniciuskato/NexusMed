@@ -98,6 +98,24 @@ describe('TestarOQueLiModal (43-C)', () => {
     expect(screen.queryByRole('button', { name: /Começar/ })).toBeNull();
   });
 
+  // Revisão do #96, item 5: nova identidade de `compendiums` (refresh do App)
+  // não recarrega nem perde o que o estudante desmarcou.
+  it('nova lista de materiais não recarrega nem desfaz a escolha', async () => {
+    getLeituras.mockResolvedValue([
+      { materialId: 'a', secoesLidas: 1, ultimaLeitura: agora },
+      { materialId: 'b', secoesLidas: 1, ultimaLeitura: agora },
+    ]);
+    const props = {
+      themes, questions, onClose: vi.fn(), onStart: vi.fn(), onOpenQuestionsForTheme: vi.fn(),
+    };
+    const { rerender } = render(<TestarOQueLiModal compendiums={compendiums} {...props} />);
+    fireEvent.click(await screen.findByRole('checkbox', { name: /Cefalosporinas/ }));
+    rerender(<TestarOQueLiModal compendiums={[...compendiums]} {...props} />);
+    expect(screen.queryByText(/Carregando/)).toBeNull();
+    expect((screen.getByRole('checkbox', { name: /Cefalosporinas/ }) as HTMLInputElement).checked).toBe(false);
+    expect(getLeituras).toHaveBeenCalledTimes(1);
+  });
+
   it('sem conexão: avisa e não finge que nada foi lido', async () => {
     getLeituras.mockRejectedValue(new TypeError('Failed to fetch'));
     renderModal();

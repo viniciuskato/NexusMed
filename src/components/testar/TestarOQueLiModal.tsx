@@ -19,7 +19,7 @@ interface TestarOQueLiModalProps {
   onOpenQuestionsForTheme: (themeId: string) => void;
 }
 
-type Carga = { estado: 'carregando' } | { estado: 'erro' } | { estado: 'ok'; lidos: string[] };
+type Carga = { estado: 'carregando' } | { estado: 'erro' } | { estado: 'ok'; lidosHoje: string[] };
 
 export const TestarOQueLiModal: React.FC<TestarOQueLiModalProps> = ({
   compendiums,
@@ -39,10 +39,7 @@ export const TestarOQueLiModal: React.FC<TestarOQueLiModalProps> = ({
     setCarga({ estado: 'carregando' });
     leiturasRepository.getLeituras().then(
       (leituras) => {
-        if (cancelled) return;
-        // Só materiais que o estudante ainda consegue abrir.
-        const ids = new Set(compendiums.map((c) => c.id));
-        setCarga({ estado: 'ok', lidos: materiaisLidosHoje(leituras).filter((id) => ids.has(id)) });
+        if (!cancelled) setCarga({ estado: 'ok', lidosHoje: materiaisLidosHoje(leituras) });
       },
       () => {
         if (!cancelled) setCarga({ estado: 'erro' });
@@ -51,9 +48,16 @@ export const TestarOQueLiModal: React.FC<TestarOQueLiModalProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [compendiums, tentativa]);
+    // Só a carga inicial e "Tentar de novo" buscam: um refresh do App (nova
+    // identidade de `compendiums`) não pode voltar o modal para "Carregando…".
+  }, [tentativa]);
 
-  const lidos = useMemo(() => (carga.estado === 'ok' ? carga.lidos : []), [carga]);
+  // Só materiais que o estudante ainda consegue abrir.
+  const lidos = useMemo(() => {
+    if (carga.estado !== 'ok') return [];
+    const ids = new Set(compendiums.map((c) => c.id));
+    return carga.lidosHoje.filter((id) => ids.has(id));
+  }, [carga, compendiums]);
   const marcados = useMemo(() => lidos.filter((id) => !desmarcados.has(id)), [lidos, desmarcados]);
   const selecionadas = useMemo(() => questoesParaTestar(questions, marcados), [questions, marcados]);
 

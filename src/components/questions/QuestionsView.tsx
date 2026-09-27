@@ -112,7 +112,12 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
     setSelectedTheme('all');
     setSelectedDifficulty('all');
     setSelectedInstitution('all');
-    if (!initialStatusFilter) setSelectedStatus('all');
+    // "Testar o que li" começa sempre sem status nem busca (revisão do #96):
+    // o "incorretas" de um "Treinar erradas" anterior esvaziava a lista.
+    if (questionScopeKey !== undefined) {
+      setSelectedStatus('all');
+      setSearchQuery('');
+    } else if (!initialStatusFilter) setSelectedStatus('all');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [materialScope, questionScopeKey]);
 
@@ -265,7 +270,7 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
         >
           <p className="text-xs text-slate-700 dark:text-slate-200 min-w-0">
             <span className="font-bold">Testar o que li:</span>{' '}
-            {scopeQuestionIds.length === 1 ? '1 questão' : `${scopeQuestionIds.length} questões`} dos materiais lidos hoje.
+            {filteredQuestions.length === 1 ? '1 questão' : `${filteredQuestions.length} questões`} dos materiais lidos hoje.
           </p>
           {onClearScope && (
             <button
