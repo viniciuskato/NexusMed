@@ -127,8 +127,7 @@ autocontido (#6), code splitting + botão voltar (#7), processo via PR
   simplificar.
 - **Contexto mínimo pra puxar**: `src/repositories/Resilient*`,
   `src/services/storage.ts`, `docs/archive/SINCRONIZACAO-CONFIAVEL.md`.
-- **Estado**: Aberto (reconfirmado em 2026-09-19; o cache vazio já causa
-  bugs visíveis online — ver AUD-29 e AUD-20)
+- **Estado**: Concluído (unidade 45-G)
 
 ### AUD-06 — Integridade de dados controlada pelo cliente
 - **Registrado em**: 2026-09-18 pela sessão de auditoria
@@ -584,7 +583,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
   ser corrigida antes passando o estado desejado explicitamente.
 - **Contexto mínimo pra puxar**: os dois repositórios, os dois componentes
   e AUD-05.
-- **Estado**: Aberto
+- **Estado**: Concluído (unidade 45-G)
 
 ### AUD-30 — Observabilidade e privacidade: lacunas depois do PR #17
 - **Registrado em**: 2026-09-19 pela sessão de auditoria
