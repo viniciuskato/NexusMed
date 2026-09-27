@@ -30,7 +30,9 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { Discipline, Theme, Question, Compendium, Flashcard, CompendiumSection, UserFeedback } from '../../types';
+import { Discipline, Theme, Question, QuestionMaterialLink, Compendium, Flashcard, CompendiumSection, UserFeedback } from '../../types';
+import { QuestionMaterialLinksEditor } from './QuestionMaterialLinksEditor';
+import { questionMaterialIds } from '../../utils/questionMaterials';
 import { MaterialNavigationFields } from './MaterialNavigationFields';
 import {
   MaterialNavigationValue,
@@ -327,11 +329,11 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   // Associação de referências de material -> fonte curada (21-D).
   const [editingReferencesCompId, setEditingReferencesCompId] = useState<string | null>(null);
 
-  // Vínculo material_id/material_section_id de uma questão já existente
-  // (21-D) — controle explícito, separado do form grande de criação.
+  // Materiais que uma questão já existente cobra (21-D; vários desde a 43-B) —
+  // controle explícito, separado do form grande de criação.
   const [editingLinkQuestionId, setEditingLinkQuestionId] = useState<string | null>(null);
-  const [linkMaterialId, setLinkMaterialId] = useState<string>('');
-  const [linkSectionId, setLinkSectionId] = useState<string>('');
+  // 43-B: materiais que a questão em edição cobra (um ou vários, seção opcional).
+  const [linkDraft, setLinkDraft] = useState<QuestionMaterialLink[]>([]);
   const [linkBusy, setLinkBusy] = useState(false);
 
   // Compendium Form Fields
@@ -668,13 +670,13 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     e.preventDefault();
     if (!newQStem.trim()) return;
 
-    const matchedComp = compendiums.find((c) => c.disciplineId === newQDiscipline);
-
     const question: Question = {
       id: crypto.randomUUID(),
       disciplineId: newQDiscipline,
       themeId: newQTheme || themes.find((t) => t.disciplineId === newQDiscipline)?.id || 'cardio-fa',
-      compendiumRefId: matchedComp?.id || 'comp-cardio-fa',
+      // Sem palpite de material (antes: o primeiro da disciplina). O vínculo
+      // é escolhido depois, pelo botão "Vínculo" (43-B).
+      compendiumRefId: '',
       cycle: 'internato_residencia',
       difficulty: newQDifficulty,
       institution: newQInstitution,
@@ -724,24 +726,18 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
 
   const handleOpenQuestionLink = (q: Question) => {
     setEditingLinkQuestionId(q.id);
-    setLinkMaterialId(q.compendiumRefId || '');
-    setLinkSectionId(q.compendiumSectionId || '');
+    setLinkDraft(q.materialLinks ?? (q.compendiumRefId ? [{ materialId: q.compendiumRefId, sectionId: q.compendiumSectionId }] : []));
   };
 
   const handleCancelQuestionLink = () => {
     setEditingLinkQuestionId(null);
-    setLinkMaterialId('');
-    setLinkSectionId('');
+    setLinkDraft([]);
   };
 
   const handleSaveQuestionLink = async (questionId: string) => {
     setLinkBusy(true);
     try {
-      await questionsRepository.updateQuestionMaterialLink(
-        questionId,
-        linkMaterialId || null,
-        linkMaterialId ? linkSectionId || null : null
-      );
+      await questionsRepository.setQuestionMaterialLinks(questionId, linkDraft);
       showToast('Vínculo com material atualizado.');
       onRefreshData();
       handleCancelQuestionLink();
@@ -1810,6 +1806,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
             <ImportQuestionsModal
               disciplines={disciplines}
               themes={themes}
+              compendiums={compendiums}
               onClose={() => setIsImportQuestionsOpen(false)}
               onImported={onRefreshData}
             />
@@ -2164,6 +2161,13 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                   ) : null}
                 </div>
                 <p className="text-stone-600 dark:text-slate-400 font-medium line-clamp-1">{q.questionStem}</p>
+                <p className="text-[11px] text-stone-500 dark:text-slate-400" data-testid={`admin-question-materials-${q.id}`}>
+                  {questionMaterialIds(q).length === 0
+                    ? 'Sem material'
+                    : `Materiais cobrados: ${questionMaterialIds(q)
+                        .map((id) => compendiums.find((c) => c.id === id)?.title ?? 'material indisponível')
+                        .join(' · ')}`}
+                </p>
               </div>
 
               {/* Ações — linha própria e com flex-wrap: numa questão (4
@@ -2187,7 +2191,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                       editingLinkQuestionId === q.id ? handleCancelQuestionLink() : handleOpenQuestionLink(q)
                     }
                     className="px-2.5 py-1 rounded-lg border border-stone-200 dark:border-[#243452] hover:bg-stone-100 dark:hover:bg-[#1A2845] text-stone-600 dark:text-stone-300 font-semibold flex items-center gap-1 transition-colors"
-                    title="Vincular esta questão a um material/seção (não altera enunciado, alternativas, gabarito ou status)"
+                    title="Materiais que esta questão cobra, com seção opcional (não altera enunciado, alternativas, gabarito nem status, e vale também para questão publicada)"
                   >
                     <Link className="w-3.5 h-3.5" />
                     <span>Vínculo</span>
@@ -2220,47 +2224,14 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
 
               {editingLinkQuestionId === q.id && (
                 <div className="flex flex-wrap items-end gap-2 p-3 rounded-lg bg-stone-50 dark:bg-[#0B1424] border border-stone-200 dark:border-[#243452]">
-                  <div className="min-w-[220px] flex-1">
-                    <label className="font-bold text-stone-700 dark:text-slate-300 block mb-1" htmlFor={`link-material-${q.id}`}>
-                      Material
-                    </label>
-                    <select
-                      id={`link-material-${q.id}`}
-                      value={linkMaterialId}
-                      onChange={(e) => {
-                        setLinkMaterialId(e.target.value);
-                        setLinkSectionId('');
-                      }}
-                      className="w-full p-2 rounded-lg border border-stone-200 dark:border-[#243452] bg-white dark:bg-[#0F172A] text-stone-900 dark:text-slate-100"
-                    >
-                      <option value="">Sem material</option>
-                      {compendiums.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.title}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="min-w-[260px] flex-1">
+                    <QuestionMaterialLinksEditor
+                      htmlId={`link-materials-${q.id}`}
+                      compendiums={compendiums}
+                      value={linkDraft}
+                      onChange={setLinkDraft}
+                    />
                   </div>
-                  {linkMaterialId && (
-                    <div className="min-w-[220px] flex-1">
-                      <label className="font-bold text-stone-700 dark:text-slate-300 block mb-1" htmlFor={`link-section-${q.id}`}>
-                        Seção (opcional)
-                      </label>
-                      <select
-                        id={`link-section-${q.id}`}
-                        value={linkSectionId}
-                        onChange={(e) => setLinkSectionId(e.target.value)}
-                        className="w-full p-2 rounded-lg border border-stone-200 dark:border-[#243452] bg-white dark:bg-[#0F172A] text-stone-900 dark:text-slate-100"
-                      >
-                        <option value="">Nenhuma seção específica</option>
-                        {(compendiums.find((c) => c.id === linkMaterialId)?.sections ?? []).map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.title}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
                   <div className="flex items-center gap-2">
                     <button
                       type="button"

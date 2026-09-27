@@ -555,13 +555,20 @@ que cruzam materiais (uma questão que compara ceftriaxona com ceftazidima
 cobra os dois). É também ele que conecta um material aos outros — não há
 ligação a cadastrar entre materiais.
 
-Na prática, hoje:
+Na prática:
 - Produza as questões **por material**, num arquivo de questões para cada
   material; isso deixa o vínculo óbvio.
-- Depois de importar, ligue cada questão ao material pelo botão **Vínculo**
-  na lista de questões. A plataforma aceita hoje **um** material por
-  questão; em breve aceitará vários e permitirá escolher os materiais do
-  lote inteiro já na importação.
+- Na importação, escolha em **"Materiais cobrados por este lote"** o
+  material — ou os materiais — que as questões do arquivo cobram: busque
+  pelo nome e clique para escolher. A escolha vale para todas as questões
+  do arquivo.
+- Depois, ajuste questão por questão pelo botão **Vínculo** na lista de
+  questões: uma questão pode cobrar **um ou vários** materiais, cada um com
+  uma seção opcional. O vínculo pode ser ajustado mesmo com a questão
+  publicada — ele não faz parte do conteúdo atestado.
+- Questão sem vínculo continua acessível ao estudante pelo tema e nos
+  simulados; com vínculo, ela aparece também a partir de cada material que
+  cobra.
 
 ## 2.7 Versões do padrão e materiais antigos
 

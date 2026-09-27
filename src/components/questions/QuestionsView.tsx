@@ -16,6 +16,7 @@ import { answersRepository } from '../../repositories/AnswersRepository';
 import { questionReactionsRepository } from '../../repositories/QuestionReactionsRepository';
 import { QuestionCard } from './QuestionCard';
 import { SCOPE_UNLINKED } from '../../services/thematicPacks';
+import { questionMatchesMaterialScope } from '../../utils/questionMaterials';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
 
@@ -29,8 +30,8 @@ interface QuestionsViewProps {
   filterThemeId?: string;
   /**
    * Escopo de material (Prompt 22-A): id de um compêndio — mostra só as questões
-   * que o referenciam explicitamente (`compendiumRefId`) — ou `SCOPE_UNLINKED`,
-   * que mostra só as questões SEM material declarado. Diferente dos filtros da
+   * que o cobram (um dos `materialLinks`, 43-B) — ou `SCOPE_UNLINKED`, que
+   * mostra só as questões SEM material. Diferente dos filtros da
    * barra, este recorte vem da navegação (pack do Estudo Temático) e não é
    * persistido: sair pelo menu principal o descarta.
    */
@@ -127,14 +128,8 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
       // O escopo de material é o recorte mais forte: ele define QUAIS questões
       // existem nesta visita, antes de qualquer filtro escolhido pelo usuário
       // (e antes até do foco em questão única, que não pode furar o escopo).
-      if (filterCompendiumId) {
-        const ref = (q.compendiumRefId ?? '').trim();
-        if (filterCompendiumId === SCOPE_UNLINKED) {
-          if (ref !== '') return false;
-        } else if (ref !== filterCompendiumId) {
-          return false;
-        }
-      }
+      // 43-B: a questão cobra um ou vários materiais; entra se cobrar este.
+      if (filterCompendiumId && !questionMatchesMaterialScope(q, filterCompendiumId)) return false;
 
       if (focusQuestionId && q.id === focusQuestionId) return true;
 

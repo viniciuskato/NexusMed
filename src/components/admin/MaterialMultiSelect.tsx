@@ -50,6 +50,7 @@ export function MaterialMultiSelect({ label, helperText, options, selectedIds, o
                 onClick={() => toggle(s.id)}
                 className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-teal-50 dark:bg-teal-950/50 border border-teal-200 dark:border-teal-800 text-teal-800 dark:text-teal-300 text-[11px] font-medium cursor-pointer"
                 title="Remover"
+                aria-label={`Remover ${s.title}`}
               >
                 <span>{s.title}</span>
                 {s.publicationStatus !== 'published' && (

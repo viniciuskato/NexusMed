@@ -1,4 +1,4 @@
-import { Question, QuestionReviewResult } from '../types';
+import { Question, QuestionMaterialLink, QuestionReviewResult } from '../types';
 import { StorageService } from '../services/storage';
 import { SupabaseQuestionsRepository } from './SupabaseQuestionsRepository';
 
@@ -21,13 +21,12 @@ export interface QuestionsRepository {
   publishQuestion(id: string): Promise<void>;
   unpublishQuestion(id: string): Promise<void>;
   /**
-   * Altera SÓ o vínculo material_id/material_section_id de uma questão já
-   * existente — nunca reenvia/sobrescreve stem, opções, gabarito,
-   * explicações, referências ou status (21-D: reusar saveQuestion inteiro
-   * pra isso ampliaria o risco). materialId null = "Sem material" (limpa
-   * também materialSectionId, já que uma seção não existe sem material).
+   * Troca SÓ os materiais que a questão cobra (um ou vários, seção opcional
+   * por material; lista vazia = sem material) — nunca reenvia enunciado,
+   * opções, gabarito, explicações, referências ou status (21-D). Vale também
+   * para questão publicada: o vínculo não entra no hash de atestação (43-B).
    */
-  updateQuestionMaterialLink(questionId: string, materialId: string | null, materialSectionId: string | null): Promise<void>;
+  setQuestionMaterialLinks(questionId: string, links: QuestionMaterialLink[]): Promise<void>;
 }
 
 class LocalStorageQuestionsRepository implements QuestionsRepository {
@@ -71,13 +70,14 @@ class LocalStorageQuestionsRepository implements QuestionsRepository {
   }
   async publishQuestion(_id: string): Promise<void> {}
   async unpublishQuestion(_id: string): Promise<void> {}
-  async updateQuestionMaterialLink(questionId: string, materialId: string | null, materialSectionId: string | null): Promise<void> {
+  async setQuestionMaterialLinks(questionId: string, links: QuestionMaterialLink[]): Promise<void> {
     const question = StorageService.getQuestions().find((q) => q.id === questionId);
     if (!question) return;
     StorageService.saveQuestion({
       ...question,
-      compendiumRefId: materialId ?? '',
-      compendiumSectionId: materialSectionId ?? undefined,
+      materialLinks: links,
+      compendiumRefId: links[0]?.materialId ?? '',
+      compendiumSectionId: links[0]?.sectionId,
     });
   }
 }
@@ -162,16 +162,18 @@ class ResilientQuestionsRepository implements QuestionsRepository {
     }
   }
 
-  async updateQuestionMaterialLink(questionId: string, materialId: string | null, materialSectionId: string | null): Promise<void> {
-    await this.local.updateQuestionMaterialLink(questionId, materialId, materialSectionId);
+  // Remoto antes do local: o vínculo recusado pelo banco não aparece como
+  // salvo na cópia local.
+  async setQuestionMaterialLinks(questionId: string, links: QuestionMaterialLink[]): Promise<void> {
     if (isSupabaseConfigured) {
       try {
-        await this.supa.updateQuestionMaterialLink(questionId, materialId, materialSectionId);
+        await this.supa.setQuestionMaterialLinks(questionId, links);
       } catch (err) {
-        console.error(`[QuestionsRepository] falha ao sincronizar updateQuestionMaterialLink com Supabase:`, err);
+        console.error(`[QuestionsRepository] falha ao sincronizar setQuestionMaterialLinks com Supabase:`, err);
         throw err;
       }
     }
+    await this.local.setQuestionMaterialLinks(questionId, links);
   }
 }
 

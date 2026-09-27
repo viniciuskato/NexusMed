@@ -61,6 +61,7 @@ function renderReader() {
       themes={[]}
       onBack={vi.fn()}
       onOpenQuestionsForTheme={vi.fn()}
+      onOpenQuestionsForMaterial={vi.fn()}
       onOpenFlashcardsForTheme={vi.fn()}
     />
   );
