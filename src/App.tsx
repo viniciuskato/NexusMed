@@ -34,6 +34,7 @@ import { feedbackRepository } from './repositories/FeedbackRepository';
 import { questionReactionsRepository } from './repositories/QuestionReactionsRepository';
 import { buildSimuladoSelection, SimuladoSelectionResult } from './services/simuladoSelection';
 import { packIdForCompendium, SCOPE_CUSTOM, SCOPE_UNLINKED } from './services/thematicPacks';
+import { questionMatchesMaterialScope } from './utils/questionMaterials';
 
 registerSyncHandlers();
 
@@ -522,6 +523,24 @@ function AuthenticatedApp() {
   const handleOpenQuestionsForTheme = (themeId: string) => {
     setFilterThemeForQuestions(themeId);
     setFocusQuestionId(undefined);
+    // Recorte por tema, nunca herdado de um pack aberto antes.
+    setScopeCompendiumForQuestions(undefined);
+    setPackReturnContext(null);
+    setActiveView('questions');
+  };
+
+  // 43-B: "Resolver questões" a partir de um material traz as questões que
+  // cobram aquele material (uma questão pode cobrar vários). Sem nenhuma,
+  // cai no tema, como antes — questões sem vínculo seguem acessíveis por lá.
+  const handleOpenQuestionsForMaterial = (compendiumId: string, themeId: string) => {
+    if (!questions.some((q) => questionMatchesMaterialScope(q, compendiumId))) {
+      handleOpenQuestionsForTheme(themeId);
+      return;
+    }
+    setFilterThemeForQuestions(undefined);
+    setFocusQuestionId(undefined);
+    setScopeCompendiumForQuestions(compendiumId);
+    setPackReturnContext(null);
     setActiveView('questions');
   };
 
@@ -725,6 +744,7 @@ function AuthenticatedApp() {
                 }
               }}
               onOpenQuestionsForTheme={handleOpenQuestionsForTheme}
+              onOpenQuestionsForMaterial={handleOpenQuestionsForMaterial}
               onOpenFlashcardsForTheme={handleOpenFlashcardsForTheme}
               targetSectionId={selectedSectionId}
               onSectionJumpHandled={() => setSelectedSectionId(undefined)}

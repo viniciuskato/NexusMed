@@ -166,12 +166,27 @@ export interface QuestionOption {
   mechanismReference?: string;
 }
 
+/** Um material que a questão cobra, com seção opcional (43-B). */
+export interface QuestionMaterialLink {
+  materialId: string;
+  sectionId?: string;
+}
+
 export interface Question {
   id: string;
   disciplineId: string;
   themeId: string;
-  compendiumRefId: string; // Linking directly to compendium!
+  /**
+   * "O" material da questão para quem abre um só (cartão, caderno de erros,
+   * flashcard): desde a 43-B, o primeiro de `materialLinks`.
+   */
+  compendiumRefId: string;
   compendiumSectionId?: string; // Exact section anchor
+  /**
+   * Materiais que a questão cobra, na ordem escolhida (43-B). Ausente no modo
+   * local/dados de exemplo — aí vale `compendiumRefId`.
+   */
+  materialLinks?: QuestionMaterialLink[];
   cycle: MedicalCycle;
   difficulty: DifficultyLevel;
   institution: string; // USP, UNIFESP, UFRJ, ENARE, Revalida, etc.

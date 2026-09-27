@@ -429,7 +429,8 @@ questões sem vínculo e ter de revisitá-las depois.
 **Fora de escopo.** A tela "Testar o que li" (43-C). Vincular em massa as 420
 questões antigas (tarefa editorial; sugestão automática pode vir depois).
 **Depende de.** 43-A.
-**Estado.** Planejada.
+**Estado.** Concluída — PR #94.
+**Achados da execução.** Decisão registrada (migration e PR): o vínculo mora em `question_materials`, fora do hash de atestação — mesma regra dos materiais; `app.build_question_snapshot` não mudou e as colunas antigas `questions.material_id`/`material_section_id` ficam congeladas só como registro, então nenhuma aprovação muda. Consequência: o vínculo passa a ser ajustável com a questão publicada (o E2E do 21-D que provava o bloqueio foi reescrito). O botão "Resolver questões" do leitor abre as questões do material e cai no tema quando nenhuma o cobra; o "Resolver Questões deste Tema" do fim do material continua por tema. Isso tocou `App.tsx` (área da trilha 3, pausada). Material cobrado por questões não é excluído (entrou na guarda da 45-D). O formulário de questão nova vinculava sozinho ao primeiro material da disciplina (ou a um id inválido); o palpite saiu.
 
 ---
 

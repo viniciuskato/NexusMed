@@ -111,6 +111,10 @@ function deleteE2EFixtures(): void {
   // guard_question_delete rejeita apagar questão published — volta pra
   // draft antes (é fixture de teste, não conteúdo real).
   psqlLocal(`update public.questions set status = 'draft' where question_stem like '${MATERIAL_PREFIX}%' and status = 'published';`);
+  // Desde a 43-B, material cobrado por questão não sai em cascata (restrict).
+  psqlLocal(
+    `delete from public.question_materials where material_id in (select id from public.materials where title like '${MATERIAL_PREFIX}%');`
+  );
   psqlLocal(`delete from public.materials where title like '${MATERIAL_PREFIX}%';`);
   psqlLocal(`delete from public.questions where question_stem like '${MATERIAL_PREFIX}%';`);
   psqlLocal(`delete from public.sources where id like '${SOURCE_PREFIX}%';`);
@@ -179,31 +183,36 @@ test.describe('CMS — fluxo humano de revisão (21-D)', () => {
     await page.getByRole('button', { name: 'Questões Comentadas', exact: false }).click();
 
     const row = page.locator(`#admin-question-${questionId}`);
+    const links = () =>
+      psqlLocal(`select coalesce(string_agg(material_id::text, ',' order by sort_order), '') from public.question_materials where question_id = '${questionId}';`);
+    const chooseMaterial = async (title: string) => {
+      await row.locator(`#link-materials-${questionId}-search`).fill(title);
+      await row.getByRole('button', { name: new RegExp(`^${title}`) }).click();
+    };
     await row.getByRole('button', { name: 'Vínculo' }).click();
 
     // Cancelar sem salvar não escreve nada.
-    await row.locator(`#link-material-${questionId}`).selectOption({ label: `${MATERIAL_PREFIX}Material alvo do vínculo` });
+    await chooseMaterial(`${MATERIAL_PREFIX}Material alvo do vínculo`);
     await row.getByRole('button', { name: 'Cancelar' }).click();
-    let stored = psqlLocal(`select coalesce(material_id::text, '') from public.questions where id = '${questionId}';`);
-    expect(stored).toBe('');
+    expect(links()).toBe('');
 
-    // Trocar e salvar: só material_id muda (o resto da linha permanece igual).
+    // Escolher e salvar: só o vínculo muda (a linha da questão permanece igual).
     const before = psqlLocal(
       `select discipline_id::text, theme_id::text, question_stem, status from public.questions where id = '${questionId}';`
     );
     await row.getByRole('button', { name: 'Vínculo' }).click();
-    await row.locator(`#link-material-${questionId}`).selectOption({ label: `${MATERIAL_PREFIX}Material alvo do vínculo` });
+    await chooseMaterial(`${MATERIAL_PREFIX}Material alvo do vínculo`);
     await row.getByRole('button', { name: 'Salvar vínculo' }).click();
     await expect(page.getByText('Vínculo com material atualizado.')).toBeVisible();
 
-    stored = psqlLocal(`select material_id::text from public.questions where id = '${questionId}';`);
-    expect(stored).toBe(targetMaterialId);
+    await expect.poll(links).toBe(targetMaterialId);
+    await expect(row.getByTestId(`admin-question-materials-${questionId}`)).toContainText('Material alvo do vínculo');
     const after = psqlLocal(
       `select discipline_id::text, theme_id::text, question_stem, status from public.questions where id = '${questionId}';`
     );
     expect(after).toBe(before);
 
-    // Remover o vínculo ("Sem material") também limpa material_section_id.
+    // Tirar o material deixa a questão sem vínculo.
     //
     // O aviso do salvamento ANTERIOR tem o mesmo texto e fica 3,5 s na tela.
     // Sem esperar ele sumir, o toBeVisible() abaixo passava na hora, olhando o
@@ -212,19 +221,17 @@ test.describe('CMS — fluxo humano de revisão (21-D)', () => {
     // mais rápida). Esperar sumir + ler o banco com expect.poll fecha a corrida.
     await expect(page.getByText('Vínculo com material atualizado.')).toBeHidden();
     await row.getByRole('button', { name: 'Vínculo' }).click();
-    await row.locator(`#link-material-${questionId}`).selectOption({ label: 'Sem material' });
+    await row.getByRole('button', { name: `Remover ${MATERIAL_PREFIX}Material alvo do vínculo` }).click();
     await row.getByRole('button', { name: 'Salvar vínculo' }).click();
     await expect(page.getByText('Vínculo com material atualizado.')).toBeVisible();
-    await expect
-      .poll(() =>
-        psqlLocal(
-          `select coalesce(material_id::text, '') || '|' || coalesce(material_section_id::text, '') from public.questions where id = '${questionId}';`
-        )
-      )
-      .toBe('|');
+    await expect.poll(links).toBe('');
+    await expect(row.getByTestId(`admin-question-materials-${questionId}`)).toHaveText('Sem material');
   });
 
-  test('vínculo bloqueado com erro visível quando a questão já está publicada', async ({ page }) => {
+  // Até a 43-B o vínculo entrava no hash e congelava com a questão publicada.
+  // Desde então ele fica fora do conteúdo atestado: ajustável sem despublicar,
+  // e a aprovação continua valendo.
+  test('vínculo de questão publicada pode ser ajustado sem invalidar a aprovação', async ({ page }) => {
     const admin = await createTestUser({
       emailLocalPart: `cms21d-c-${Date.now()}`,
       password: 'senha-teste-123',
@@ -258,13 +265,16 @@ test.describe('CMS — fluxo humano de revisão (21-D)', () => {
     await expect(row).toContainText('publicada', { timeout: 10_000 });
 
     await row.getByRole('button', { name: 'Vínculo' }).click();
-    await row.locator(`#link-material-${questionId}`).selectOption({ label: `${MATERIAL_PREFIX}Material alvo bloqueado` });
+    await row.locator(`#link-materials-${questionId}-search`).fill(`${MATERIAL_PREFIX}Material alvo bloqueado`);
+    await row.getByRole('button', { name: new RegExp(`^${MATERIAL_PREFIX}Material alvo bloqueado`) }).click();
     await row.getByRole('button', { name: 'Salvar vínculo' }).click();
 
-    await expect(page.getByText(/Vínculo não alterado:/)).toBeVisible({ timeout: 10_000 });
-    const stored = psqlLocal(`select coalesce(material_id::text, '') from public.questions where id = '${questionId}';`);
-    expect(stored).toBe('');
-    void targetMaterialId;
+    await expect(page.getByText('Vínculo com material atualizado.')).toBeVisible({ timeout: 10_000 });
+    await expect
+      .poll(() => psqlLocal(`select coalesce(string_agg(material_id::text, ','), '') from public.question_materials where question_id = '${questionId}';`))
+      .toBe(targetMaterialId);
+    expect(psqlLocal(`select status from public.questions where id = '${questionId}';`)).toBe('published');
+    expect(psqlLocal(`select app.has_current_approved_revision(null, '${questionId}'::uuid);`)).toBe('t');
   });
 
   test('seletor de fonte pesquisável (título e DOI) com campos evidenciais completos; vínculo aparece na lista', async ({

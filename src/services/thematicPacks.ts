@@ -1,5 +1,6 @@
 import { Compendium, Discipline, Flashcard, Question, QuestionAnswerRecord, Theme } from '../types';
 import { isCardDueToday } from './srsAlgorithm';
+import { questionMaterialIds, SCOPE_UNLINKED } from '../utils/questionMaterials';
 
 // ============================================================================
 // Estudo Temático — construção dos packs (Prompt 22-A)
@@ -95,7 +96,7 @@ export const THEMATIC_PACK_ID_PREFIX = 'pack-';
  * Escopos especiais aceitos por QuestionsView/FlashcardsView no lugar de um id
  * de compêndio. Prefixados com `__` para nunca colidirem com um id real (uuid).
  */
-export const SCOPE_UNLINKED = '__sem-material__';
+export { SCOPE_UNLINKED };
 export const SCOPE_CUSTOM = '__meus-cards__';
 
 export function packIdForCompendium(compendiumId: string): string {
@@ -139,9 +140,12 @@ export function buildThematicStudyData({
   };
 
   for (const question of questions) {
-    const ref = explicitRef(question.compendiumRefId);
-    if (ref) {
-      if (compendiumById.has(ref)) pushTo(questionsByCompendium, ref, question);
+    // 43-B: a questão entra no pack de CADA material que ela cobra. Só vira
+    // referência inválida quando nenhum dos materiais existe.
+    const refs = questionMaterialIds(question);
+    if (refs.length > 0) {
+      const known = refs.filter((ref) => compendiumById.has(ref));
+      if (known.length > 0) for (const ref of known) pushTo(questionsByCompendium, ref, question);
       else invalidRefQuestions.push(question);
       continue;
     }
@@ -276,7 +280,8 @@ export function buildThematicStudyData({
       packs: allPacks.length,
       completedPacks: allPacks.filter((p) => p.isCompleted).length,
       dueCards: allPacks.reduce((acc, p) => acc + p.dueCards.length, 0),
-      linkedQuestions: allPacks.reduce((acc, p) => acc + p.questions.length, 0),
+      // Distintas: uma questão que cobra dois materiais está em dois packs (43-B).
+      linkedQuestions: new Set(allPacks.flatMap((p) => p.questions.map((q) => q.id))).size,
       looseQuestions: groups.reduce((acc, g) => acc + g.looseQuestions.length, 0),
       looseFlashcards: groups.reduce((acc, g) => acc + g.looseFlashcards.length, 0),
     },

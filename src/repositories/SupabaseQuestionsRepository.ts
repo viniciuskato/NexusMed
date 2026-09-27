@@ -1,4 +1,4 @@
-import { Question, QuestionOption, QuestionReviewResult } from '../types';
+import { Question, QuestionMaterialLink, QuestionOption, QuestionReviewResult } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { QuestionsRepository } from './QuestionsRepository';
 import { mapQuestionReviewPayload } from './questionReviewMapper';
@@ -16,7 +16,10 @@ import { fetchAllRows } from './supabasePaging';
 //
 // Question <-> questions (+ question_options + question_option_keys + question_answer_keys)
 //   id <-> id | disciplineId <-> discipline_id | themeId <-> theme_id
-//   compendiumRefId <-> material_id | compendiumSectionId <-> material_section_id
+//   materialLinks <-> question_materials (43-B), na ordem de sort_order;
+//   compendiumRefId/compendiumSectionId = o primeiro vínculo. As colunas
+//   antigas questions.material_id/material_section_id não são mais lidas
+//   nem gravadas: ficam no banco só porque entram no hash de atestação.
 //   cycle <-> cycle | difficulty <-> difficulty | institution <-> institution
 //   year <-> year | clinicalVignette <-> clinical_vignette
 //   questionStem <-> question_stem | tags <-> tags
@@ -85,11 +88,23 @@ interface QuestionAnswerKeyRow {
   high_yield_summary: string;
 }
 
+interface QuestionMaterialRow {
+  question_id: string;
+  material_id: string;
+  material_section_id: string | null;
+  sort_order: number;
+}
+
+function toLinkPayload(links: QuestionMaterialLink[] | undefined) {
+  return (links ?? []).map((l) => ({ material_id: l.materialId, material_section_id: l.sectionId ?? null }));
+}
+
 function buildQuestion(
   q: QuestionRow,
   options: QuestionOptionRow[],
   optionKeys: QuestionOptionKeyRow[],
-  answerKeys: QuestionAnswerKeyRow[]
+  answerKeys: QuestionAnswerKeyRow[],
+  materialLinks: QuestionMaterialLink[]
 ): Question {
   const answerKey = answerKeys.find((a) => a.question_id === q.id);
   const opts: QuestionOption[] = options
@@ -109,8 +124,9 @@ function buildQuestion(
     id: q.id,
     disciplineId: q.discipline_id,
     themeId: q.theme_id,
-    compendiumRefId: q.material_id ?? '',
-    compendiumSectionId: q.material_section_id ?? undefined,
+    compendiumRefId: materialLinks[0]?.materialId ?? '',
+    compendiumSectionId: materialLinks[0]?.sectionId,
+    materialLinks,
     cycle: q.cycle as Question['cycle'],
     difficulty: q.difficulty as Question['difficulty'],
     institution: q.institution ?? '',
@@ -127,7 +143,7 @@ function buildQuestion(
 
 export class SupabaseQuestionsRepository implements QuestionsRepository {
   async getQuestions(): Promise<Question[]> {
-    const [questions, options, optionKeys, answerKeys] = await Promise.all([
+    const [questions, options, optionKeys, answerKeys, links] = await Promise.all([
       fetchAllRows<QuestionRow>((from, to) =>
         supabase.from('questions').select('*').order('id', { ascending: true }).range(from, to)
       ),
@@ -151,9 +167,25 @@ export class SupabaseQuestionsRepository implements QuestionsRepository {
       fetchAllRows<QuestionAnswerKeyRow>((from, to) =>
         supabase.from('question_answer_keys').select('*').order('question_id', { ascending: true }).range(from, to)
       ),
+      fetchAllRows<QuestionMaterialRow>((from, to) =>
+        supabase
+          .from('question_materials')
+          .select('question_id, material_id, material_section_id, sort_order')
+          .order('question_id', { ascending: true })
+          .order('sort_order', { ascending: true })
+          .order('material_id', { ascending: true })
+          .range(from, to)
+      ),
     ]);
 
-    return questions.map((q) => buildQuestion(q, options, optionKeys, answerKeys));
+    const linksByQuestion = new Map<string, QuestionMaterialLink[]>();
+    for (const l of [...links].sort((a, b) => a.sort_order - b.sort_order)) {
+      const list = linksByQuestion.get(l.question_id) ?? [];
+      list.push(l.material_section_id ? { materialId: l.material_id, sectionId: l.material_section_id } : { materialId: l.material_id });
+      linksByQuestion.set(l.question_id, list);
+    }
+
+    return questions.map((q) => buildQuestion(q, options, optionKeys, answerKeys, linksByQuestion.get(q.id) ?? []));
   }
 
   async saveQuestions(questions: Question[]): Promise<void> {
@@ -167,8 +199,9 @@ export class SupabaseQuestionsRepository implements QuestionsRepository {
       id: question.id,
       discipline_id: question.disciplineId,
       theme_id: question.themeId,
-      material_id: question.compendiumRefId || null,
-      material_section_id: question.compendiumSectionId || null,
+      // Sem material_id/material_section_id: desde a 43-B o vínculo mora em
+      // question_materials (setQuestionMaterialLinks); a coluna antiga só
+      // guarda o vínculo original porque entra no hash de atestação.
       cycle: question.cycle,
       difficulty: question.difficulty,
       institution: question.institution || null,
@@ -257,6 +290,7 @@ export class SupabaseQuestionsRepository implements QuestionsRepository {
       p_high_yield_summary: question.highYieldSummary || '',
       p_tags: question.tags ?? [],
       p_options: optionsPayload,
+      p_material_links: toLinkPayload(question.materialLinks),
     });
     if (error) throw error;
     const row = data as QuestionRow;
@@ -303,11 +337,14 @@ export class SupabaseQuestionsRepository implements QuestionsRepository {
   // (21-D). guard_question_content_immutable no banco já rejeita esse UPDATE
   // com erro descritivo se a questão estiver published/archived — propagado
   // como está, sem tentar "consertar" mudando status sozinho aqui.
-  async updateQuestionMaterialLink(questionId: string, materialId: string | null, materialSectionId: string | null): Promise<void> {
-    const { error } = await supabase
-      .from('questions')
-      .update({ material_id: materialId, material_section_id: materialSectionId })
-      .eq('id', questionId);
+  // Troca os vínculos pela RPC `set_question_materials` (só admin). Não toca
+  // no conteúdo da questão, e vale também para questão publicada: o vínculo
+  // não entra no hash de atestação (43-B).
+  async setQuestionMaterialLinks(questionId: string, links: QuestionMaterialLink[]): Promise<void> {
+    const { error } = await supabase.rpc('set_question_materials', {
+      p_question_id: questionId,
+      p_links: toLinkPayload(links),
+    });
     if (error) throw error;
   }
 }

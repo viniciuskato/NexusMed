@@ -49,6 +49,8 @@ interface CompendiumReaderProps {
   themes: Theme[];
   onBack: () => void;
   onOpenQuestionsForTheme: (themeId: string) => void;
+  /** "Resolver questões": as que cobram este material, ou as do tema se nenhuma cobra (43-B). */
+  onOpenQuestionsForMaterial: (compendiumId: string, themeId: string) => void;
   onOpenFlashcardsForTheme: (themeId: string) => void;
   targetSectionId?: string;
   /**
@@ -77,6 +79,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   themes,
   onBack,
   onOpenQuestionsForTheme,
+  onOpenQuestionsForMaterial,
   onOpenFlashcardsForTheme,
   targetSectionId,
   onSectionJumpHandled,
@@ -371,7 +374,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
             </button>
           ) : (
             <button
-              onClick={() => onOpenQuestionsForTheme(compendium.themeId)}
+              onClick={() => onOpenQuestionsForMaterial(compendium.id, compendium.themeId)}
               className="order-2 sm:order-3 shrink-0 min-h-11 sm:min-h-0 px-3.5 py-2 sm:px-3 sm:py-1.5 rounded-lg bg-[#0F766E] hover:bg-teal-800 dark:bg-[#14B8A6] dark:hover:bg-teal-400 text-white dark:text-[#0B1220] text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <HelpCircle className="w-3.5 h-3.5" />
@@ -869,7 +872,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
               </button>
             ) : (
               <button
-                onClick={() => onOpenQuestionsForTheme(compendium.themeId)}
+                onClick={() => onOpenQuestionsForMaterial(compendium.id, compendium.themeId)}
                 className="px-3 py-1.5 rounded-lg bg-[#0F766E] hover:bg-teal-800 dark:bg-[#14B8A6] dark:hover:bg-teal-400 text-white dark:text-[#0B1220] text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <HelpCircle className="w-3.5 h-3.5" />

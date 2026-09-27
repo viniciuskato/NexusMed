@@ -112,6 +112,7 @@ describe('CompendiumReader — ações de cada tópico', () => {
         themes={[theme]}
         onBack={vi.fn()}
         onOpenQuestionsForTheme={vi.fn()}
+        onOpenQuestionsForMaterial={vi.fn()}
         onOpenFlashcardsForTheme={vi.fn()}
       />
     );
