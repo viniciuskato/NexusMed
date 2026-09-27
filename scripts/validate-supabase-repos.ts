@@ -25,6 +25,7 @@ import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createClient } from '@supabase/supabase-js';
+import { deleteSeededMaterial } from './maintenance';
 
 const execFileAsync = promisify(execFile);
 
@@ -104,7 +105,13 @@ const createdIds = {
 async function cleanup() {
   console.log('\n--- Limpeza (best-effort, via service_role) ---');
   await admin.from('questions').delete().eq('id', createdIds.questionId);
-  await admin.from('materials').delete().eq('id', createdIds.materialId);
+  // Caminho explícito de manutenção (45-D); a falha aparece, nunca some.
+  try {
+    await deleteSeededMaterial(admin, createdIds.materialId);
+  } catch (err) {
+    console.error(`LIMPEZA FALHOU: ${(err as Error).message}`);
+    process.exitCode = 1;
+  }
   await admin.from('themes').delete().eq('id', createdIds.themeId);
   await admin.from('disciplines').delete().eq('id', createdIds.disciplineId);
   if (testUserId) {

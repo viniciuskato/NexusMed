@@ -33,7 +33,7 @@ const INTEGRITY_HINTS: Array<[string, string]> = [
   ],
   [
     'material_links_target_fkey',
-    'Outro material aponta para este em "Estude antes". Remova essa ligação no material de origem antes de excluí-lo.',
+    'Outro material aponta para este em "Estude antes". As ligações estão congeladas desde a 43-A e não são removidas pela tela; mantenha o material despublicado para tirá-lo do ar.',
   ],
   [
     'material_links_pair_unique',
