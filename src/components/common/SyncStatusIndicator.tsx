@@ -16,11 +16,20 @@ import { LegacyRecoveryDialog } from './LegacyRecoveryDialog';
 // ============================================================================
 
 export const SyncStatusIndicator: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const status = useSyncQueueStatus(user?.id ?? null);
   const ambiguous = useAmbiguousRecoveries(user?.id ?? null);
   const [open, setOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  // "Tentar novamente" com falha de sessão e nenhuma sessão ativa não tem o que
+  // reenviar: a tela diz o que fazer em vez de um clique mudo (45-E).
+  const [signInNeeded, setSignInNeeded] = useState(false);
+
+  const retry = async () => {
+    if (!user) return;
+    const { needsLogin } = await retryAllFailed(user.id);
+    setSignInNeeded(needsLogin);
+  };
 
   if (status.status === 'synced' && status.pending === 0 && status.failed === 0 && ambiguous.length === 0) {
     return null; // nada pendente: não polui a interface com "tudo certo" o tempo todo
@@ -72,17 +81,31 @@ export const SyncStatusIndicator: React.FC = () => {
           </ul>
           {status.failedNeedsLogin && (
             <p className="mt-2 text-amber-700 dark:text-amber-300">
-              Sua sessão expirou. Saia e entre novamente para reenviar o que ficou pendente — nada foi perdido.
+              Sua sessão expirou. Ao entrar de novo, o que ficou pendente é reenviado sozinho — nada foi perdido.
             </p>
           )}
-          {status.failed > 0 && !status.failedNeedsLogin && (
+          {status.failed > 0 && (
             <button
               type="button"
-              onClick={() => user && retryAllFailed(user.id)}
+              onClick={() => void retry()}
               className="mt-2 w-full rounded-md bg-sky-600 text-white py-1.5 font-medium hover:bg-sky-700"
             >
               Tentar novamente
             </button>
+          )}
+          {signInNeeded && status.failedNeedsLogin && (
+            <>
+              <p className="mt-2 text-amber-700 dark:text-amber-300" role="status">
+                Não deu para reenviar: não há sessão ativa. Entre de novo e o que ficou pendente sobe sozinho.
+              </p>
+              <button
+                type="button"
+                onClick={() => void logout()}
+                className="mt-2 w-full rounded-md bg-amber-600 text-white py-1.5 font-medium hover:bg-amber-700"
+              >
+                Entrar de novo
+              </button>
+            </>
           )}
           {status.failedNeedsSupport > 0 && (
             <p className="mt-2 text-slate-500 dark:text-slate-400">
