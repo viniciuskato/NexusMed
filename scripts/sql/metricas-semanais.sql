@@ -38,9 +38,10 @@ select now()::date                                                              
        (select count(*) from public.questions where status = 'published')           as questoes_publicadas,
        (select count(*) from public.questions where status = 'draft')               as questoes_rascunho,
        -- Questão publicada ligada a material publicado: o que o estudante
-       -- alcança. Vínculo de hoje: questions.material_id (um material);
-       -- quando a 43-B trocar o vínculo, trocar esta linha junto.
-       (select count(*) from public.questions q
-          join public.materials m on m.id = q.material_id and m.status = 'published'
+       -- alcança. Desde a 43-B o vínculo mora em question_materials (uma
+       -- questão pode cobrar vários materiais: conta a questão uma vez).
+       (select count(distinct q.id) from public.questions q
+          join public.question_materials qm on qm.question_id = q.id
+          join public.materials m on m.id = qm.material_id and m.status = 'published'
          where q.status = 'published')                                              as questoes_ligadas_a_material
 from ativos_semana a, volume v, cards c;

@@ -107,6 +107,10 @@ export const ImportQuestionsModal: React.FC<ImportQuestionsModalProps> = ({
         const question = {
           ...buildQuestionFromImportRow(row.preview, row.overrideDisciplineId, row.overrideThemeId),
           materialLinks: lotLinks,
+          // "O" material da questão (cartão, caderno de erros, flashcard):
+          // o primeiro do lote, como em setQuestionMaterialLinks.
+          compendiumRefId: lotLinks[0]?.materialId ?? '',
+          compendiumSectionId: lotLinks[0]?.sectionId,
         };
         await questionsRepository.importQuestionDraft(question);
         successCount++;

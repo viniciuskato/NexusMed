@@ -63,6 +63,15 @@ describe('QuestionMaterialLinksEditor (43-B)', () => {
     expect(onChange).toHaveBeenLastCalledWith([{ materialId: 'mat-ceftri', sectionId: 'sec-espectro' }]);
   });
 
+  it('mostra os materiais na ordem da escolha, com o primeiro marcado como principal', () => {
+    // Ceftazidima vem depois de Ceftriaxona no catálogo, mas foi escolhida primeiro.
+    render(<Harness initial={[{ materialId: 'mat-ceftaz' }, { materialId: 'mat-ceftri' }]} onChange={vi.fn()} />);
+    const chips = screen.getAllByRole('button', { name: /^Remover / });
+    expect(chips.map((c) => c.getAttribute('aria-label'))).toEqual(['Remover Ceftazidima', 'Remover Ceftriaxona']);
+    expect(chips[0].textContent).toMatch(/principal/i);
+    expect(chips[1].textContent).not.toMatch(/principal/i);
+  });
+
   it('não oferece campo de título digitado', () => {
     render(<Harness initial={[]} onChange={vi.fn()} />);
     expect(screen.queryByRole('textbox', { name: /título do material/i })).toBeNull();

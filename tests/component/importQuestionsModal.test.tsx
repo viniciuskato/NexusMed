@@ -114,7 +114,10 @@ describe('ImportQuestionsModal — materiais cobrados pelo lote (43-B)', () => {
     fireEvent.click(screen.getByRole('button', { name: /importar 2 rascunho/i }));
     await waitFor(() => expect(importQuestionDraftMock).toHaveBeenCalledTimes(2));
     for (const call of importQuestionDraftMock.mock.calls) {
-      expect((call[0] as Question).materialLinks).toEqual([{ materialId: 'mat-espiro' }, { materialId: 'mat-dpoc' }]);
+      const saved = call[0] as Question;
+      expect(saved.materialLinks).toEqual([{ materialId: 'mat-espiro' }, { materialId: 'mat-dpoc' }]);
+      // "O" material da questão (cartão, caderno de erros, flashcard) é o primeiro do lote.
+      expect(saved.compendiumRefId).toBe('mat-espiro');
     }
   });
 
