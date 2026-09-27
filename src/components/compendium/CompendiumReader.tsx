@@ -5,6 +5,7 @@ import {
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ArrowLeft,
+  BookOpenCheck,
   Bookmark,
   CheckCircle2,
   Clock,
@@ -51,6 +52,8 @@ interface CompendiumReaderProps {
   onOpenQuestionsForTheme: (themeId: string) => void;
   /** "Resolver questões": as que cobram este material, ou as do tema se nenhuma cobra (43-B). */
   onOpenQuestionsForMaterial: (compendiumId: string, themeId: string) => void;
+  /** Abre "Testar o que li" — questões dos materiais lidos hoje (43-C). */
+  onTestarOQueLi?: () => void;
   onOpenFlashcardsForTheme: (themeId: string) => void;
   targetSectionId?: string;
   /**
@@ -80,6 +83,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   onBack,
   onOpenQuestionsForTheme,
   onOpenQuestionsForMaterial,
+  onTestarOQueLi,
   onOpenFlashcardsForTheme,
   targetSectionId,
   onSectionJumpHandled,
@@ -861,6 +865,17 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
               <Layers className="w-3.5 h-3.5 text-[#0F766E] dark:text-[#14B8A6]" />
               <span>Flashcards</span>
             </button>
+
+            {onTestarOQueLi && (
+              <button
+                type="button"
+                onClick={onTestarOQueLi}
+                className="px-3 py-1.5 rounded-lg border border-[#E2E8F0] dark:border-[#263244] hover:bg-slate-50 dark:hover:bg-[#182235] text-[#172033] dark:text-[#E5E7EB] text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <BookOpenCheck className="w-3.5 h-3.5 text-[#0F766E] dark:text-[#14B8A6]" />
+                <span>Testar o que li</span>
+              </button>
+            )}
 
             {onReturnToQuestions && returnToQuestionsContext ? (
               <button

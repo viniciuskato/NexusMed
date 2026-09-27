@@ -76,3 +76,21 @@ describe('QuestionsView — recorte por material (43-B)', () => {
     expect(screen.getAllByTestId('card').map((c) => c.textContent)).toEqual(['Questão 1']);
   });
 });
+
+describe('QuestionsView — recorte "Testar o que li" (43-C)', () => {
+  it('mostra só as questões escolhidas, avisa o recorte e oferece saída', () => {
+    const onClearScope = vi.fn();
+    renderView({ scopeQuestionIds: ['2'], onClearScope });
+    expect(screen.getAllByTestId('card').map((c) => c.textContent)).toEqual(['Questão 2']);
+    expect(screen.getByText(/Testar o que li/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Ver todas as questões' }));
+    expect(onClearScope).toHaveBeenCalled();
+  });
+
+  it('filtros persistidos de outra visita não esvaziam o recorte', () => {
+    uiState.questions_theme = 't';
+    uiState.questions_status = 'incorrect';
+    renderView({ scopeQuestionIds: ['2'], onClearScope: vi.fn() });
+    expect(screen.getAllByTestId('card').map((c) => c.textContent)).toEqual(['Questão 2']);
+  });
+});

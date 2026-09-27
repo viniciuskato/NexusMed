@@ -36,9 +36,14 @@ interface QuestionsViewProps {
    * persistido: sair pelo menu principal o descarta.
    */
   filterCompendiumId?: string;
+  /**
+   * Recorte "Testar o que li" (43-C): ids das questões escolhidas no modal.
+   * Como o recorte por material, vem da navegação e é o filtro mais forte.
+   */
+  scopeQuestionIds?: string[];
   /** Presente quando se chegou aqui por um pack — mostra o retorno explícito. */
   onReturnToThematicStudy?: () => void;
-  /** Sai do recorte por material (aviso "Questões que cobram…", 43-B). */
+  /** Sai do recorte por material (43-B) ou do "Testar o que li" (43-C). */
   onClearScope?: () => void;
   focusQuestionId?: string;
   /**
@@ -61,6 +66,7 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
   onOpenCreateSimulado,
   filterThemeId,
   filterCompendiumId,
+  scopeQuestionIds,
   onReturnToThematicStudy,
   onClearScope,
   focusQuestionId,
@@ -98,15 +104,17 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
   // zera os filtros lembrados de outra visita: somados ao recorte, eles
   // esvaziavam a lista sem motivo visível (43-B).
   const materialScope = filterCompendiumId && filterCompendiumId !== SCOPE_UNLINKED ? filterCompendiumId : undefined;
+  // O recorte do "Testar o que li" (43-C) também: a chave muda a cada escolha.
+  const questionScopeKey = scopeQuestionIds?.join('|');
   useEffect(() => {
-    if (!materialScope) return;
+    if (!materialScope && questionScopeKey === undefined) return;
     setSelectedDiscipline('all');
     setSelectedTheme('all');
     setSelectedDifficulty('all');
     setSelectedInstitution('all');
     if (!initialStatusFilter) setSelectedStatus('all');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [materialScope]);
+  }, [materialScope, questionScopeKey]);
 
   const [answers, setAnswers] = useState<Record<string, QuestionAnswerRecord>>({});
   const [bookmarks, setBookmarks] = useState<{
@@ -141,7 +149,9 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
 
   // If focusQuestionId exists, locate it
   const filteredQuestions = useMemo(() => {
+    const questionScope = scopeQuestionIds ? new Set(scopeQuestionIds) : null;
     return questions.filter((q) => {
+      if (questionScope && !questionScope.has(q.id)) return false;
       // O escopo de material é o recorte mais forte: ele define QUAIS questões
       // existem nesta visita, antes de qualquer filtro escolhido pelo usuário
       // (e antes até do foco em questão única, que não pode furar o escopo).
@@ -194,6 +204,7 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
     bookmarks,
     focusQuestionId,
     filterCompendiumId,
+    scopeQuestionIds,
   ]);
 
   const mistakesCount = (Object.values(answers) as QuestionAnswerRecord[]).filter((a) => !a.isCorrect).length;
@@ -233,6 +244,28 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
           <p className="text-xs text-slate-700 dark:text-slate-200 min-w-0">
             <span className="font-bold">Questões que cobram</span>{' '}
             <span>{compendiums?.find((c) => c.id === materialScope)?.title ?? 'este material'}</span>.
+          </p>
+          {onClearScope && (
+            <button
+              type="button"
+              onClick={onClearScope}
+              className="px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-teal-600 hover:bg-slate-800 dark:hover:bg-teal-700 text-white text-xs font-bold transition-all cursor-pointer shrink-0"
+            >
+              Ver todas as questões
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Recorte "Testar o que li" (43-C) ─────────────────────── */}
+      {scopeQuestionIds && (
+        <div
+          id="questions-testar-scope"
+          className="p-3 sm:px-4 sm:py-2.5 rounded-2xl bg-slate-900/5 dark:bg-teal-950/40 border border-slate-300 dark:border-teal-800/50 elev-xs flex items-center justify-between gap-3"
+        >
+          <p className="text-xs text-slate-700 dark:text-slate-200 min-w-0">
+            <span className="font-bold">Testar o que li:</span>{' '}
+            {scopeQuestionIds.length === 1 ? '1 questão' : `${scopeQuestionIds.length} questões`} dos materiais lidos hoje.
           </p>
           {onClearScope && (
             <button
