@@ -331,12 +331,6 @@ export class SupabaseQuestionsRepository implements QuestionsRepository {
     if (error) throw error;
   }
 
-  // UPDATE direcionado só em material_id/material_section_id — nunca chama
-  // saveQuestion (que apaga+reinsere opções e reescreve toda a linha de
-  // questions) pra evitar risco de sobrescrever stem/gabarito/explicações
-  // (21-D). guard_question_content_immutable no banco já rejeita esse UPDATE
-  // com erro descritivo se a questão estiver published/archived — propagado
-  // como está, sem tentar "consertar" mudando status sozinho aqui.
   // Troca os vínculos pela RPC `set_question_materials` (só admin). Não toca
   // no conteúdo da questão, e vale também para questão publicada: o vínculo
   // não entra no hash de atestação (43-B).

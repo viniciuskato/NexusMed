@@ -106,10 +106,21 @@ begin
   if p_links is null or jsonb_typeof(p_links) <> 'array' then
     raise exception 'lista de materiais inválida';
   end if;
+  -- Vínculo sem material antes da checagem de repetição (count distinct
+  -- ignora nulo), e repetição comparada como uuid, não como texto (a mesma
+  -- id com outra caixa virava erro cru de chave primária).
+  for v_link in select * from jsonb_array_elements(p_links)
+  loop
+    v_idx := v_idx + 1;
+    if nullif(v_link->>'material_id', '') is null then
+      raise exception 'vínculo % sem material', v_idx;
+    end if;
+  end loop;
   if (select count(*) from jsonb_array_elements(p_links) e)
-     <> (select count(distinct e->>'material_id') from jsonb_array_elements(p_links) e) then
+     <> (select count(distinct (e->>'material_id')::uuid) from jsonb_array_elements(p_links) e) then
     raise exception 'o mesmo material aparece mais de uma vez';
   end if;
+  v_idx := 0;
 
   delete from public.question_materials where question_id = p_question_id;
 
@@ -144,7 +155,9 @@ begin
   if not app.is_admin_active(auth.uid()) then
     raise exception 'apenas administradores ativos podem alterar o vínculo da questão';
   end if;
-  perform 1 from public.questions where id = p_question_id;
+  -- Trava a questão: duas trocas simultâneas (clique duplo em "Salvar
+  -- vínculo", dois admins) se enfileiram em vez de colidir na chave primária.
+  perform 1 from public.questions where id = p_question_id for update;
   if not found then
     raise exception 'questão não encontrada: %', p_question_id;
   end if;
@@ -368,8 +381,14 @@ begin
     return 'Material com ligações "Estude antes" ou "Veja também" (de saída ou de entrada) não pode ser excluído. As ligações estão congeladas desde a 43-A e não são removidas pela tela; mantenha o material despublicado para tirá-lo do ar.';
   end if;
 
+  -- Também a coluna antiga: ela entra no hash de atestação da questão, e o
+  -- ON DELETE SET NULL dela mudaria esse hash (invalidando em silêncio a
+  -- aprovação de um rascunho) ou esbarraria no congelamento da publicada.
   if exists (select 1 from public.question_materials where material_id = p_material_id) then
     return 'Material cobrado por questões não pode ser excluído. Tire o material do vínculo dessas questões (botão "Vínculo" na lista de questões) antes.';
+  end if;
+  if exists (select 1 from public.questions where material_id = p_material_id) then
+    return 'Material registrado como vínculo original de questões não pode ser excluído: esse registro faz parte do conteúdo atestado delas. Mantenha-o despublicado para tirá-lo do ar.';
   end if;
 
   return null;

@@ -549,12 +549,22 @@ function AuthenticatedApp() {
     setActiveView('flashcards');
   };
 
+  // Abrir uma questão ou "Treinar erradas" é saída explícita de qualquer
+  // recorte por material: senão a questão focada que não cobre o material
+  // sumia da lista, e os erros ficavam só os daquele material (43-B).
+  const clearQuestionsScope = () => {
+    setScopeCompendiumForQuestions(undefined);
+    setPackReturnContext(null);
+  };
+
   const handleOpenQuestion = (questionId: string) => {
+    clearQuestionsScope();
     setFocusQuestionId(questionId);
     setActiveView('questions');
   };
 
   const handleTrainMistakesUntimed = () => {
+    clearQuestionsScope();
     setFilterThemeForQuestions(undefined);
     setFocusQuestionId(undefined);
     setFilterStatusForQuestions('incorrect');
@@ -766,6 +776,7 @@ function AuthenticatedApp() {
               focusQuestionId={focusQuestionId}
               initialStatusFilter={filterStatusForQuestions}
               onReturnToThematicStudy={packReturnContext ? handleReturnToThematicStudy : undefined}
+              onClearScope={clearQuestionsScope}
               returnToCompendiumContext={lastReadingSession}
               onReturnToCompendium={() => {
                 if (lastReadingSession) {
