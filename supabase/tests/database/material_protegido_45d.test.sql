@@ -6,7 +6,7 @@
 -- ============================================================================
 
 create extension if not exists pgtap;
-select plan(19);
+select plan(30);
 
 select tests.clear_auth();
 select tests.create_user('protegido.admin@test.local', 'admin', 'active') as v_admin \gset
@@ -41,10 +41,11 @@ insert into public.materials (discipline_id, theme_id, title) values (:'v_disc',
 insert into public.bookmarks (user_id, material_id) values (:'v_student', :'v_bm');
 insert into public.reading_progress (user_id, material_id, read_section_ids, percent) values (:'v_student', :'v_rp', '{}', 10);
 
-select tests.authenticate_as(:'v_student');
+-- Anotação de aluno num rascunho: hoje o app não a grava (item 2 da revisão),
+-- mas pode existir de antes — semeada direto, como dado vindo de outro caminho.
 select lives_ok(
-  format($$ select public.upsert_note(p_material_id => %L, p_note_text => 'minha nota') $$, :'v_note'),
-  'aluno anota o material'
+  format($$ insert into public.notes (user_id, material_id, note_text) values (%L, %L, 'minha nota') $$, :'v_student', :'v_note'),
+  'anotação de aluno existente no rascunho'
 );
 
 -- Exclusão pela Área Editorial (admin, com RLS).
@@ -84,6 +85,7 @@ select has_column('public', 'notes', 'removed_section_title', 'notes guarda o t�
 insert into public.materials (discipline_id, theme_id, title) values (:'v_disc', :'v_theme', 'Com seção anotada') returning id as v_sec_mat \gset
 insert into public.material_sections (material_id, sort_order, title, content) values (:'v_sec_mat', 0, 'Seção que sai', 'C.') returning id as v_sec \gset
 insert into public.material_sections (material_id, sort_order, title, content) values (:'v_sec_mat', 1, 'Seção que fica', 'C.');
+select tests.force_publish_material(:'v_sec_mat');
 
 select tests.authenticate_as(:'v_student');
 select public.upsert_note(p_material_section_id => :'v_sec', p_note_text => 'nota da seção');
@@ -126,5 +128,60 @@ select tests.authenticate_as(:'v_student');
 select public.upsert_note(p_material_section_id => :'v_sec2', p_note_text => 'outra nota');
 select tests.clear_auth();
 select lives_ok(format($$ delete from public.material_sections where id = %L $$, :'v_sec2'), 'segunda seção anotada também pode sair');
+
+-- ----------------------------------------------------------------------------
+-- Correções da revisão do a4af38c
+-- ----------------------------------------------------------------------------
+
+-- Item 2: só dado de estudante conta. O admin (autor) conferindo o próprio
+-- rascunho não o torna impossível de excluir.
+insert into public.materials (discipline_id, theme_id, title) values (:'v_disc', :'v_theme', 'Rascunho conferido pelo autor') returning id as v_autor \gset
+insert into public.material_sections (material_id, sort_order, title, content) values (:'v_autor', 0, 'S', 'C.') returning id as v_autor_sec \gset
+select tests.authenticate_as(:'v_admin');
+select public.set_section_read(:'v_autor', :'v_autor_sec', true, 1);
+insert into public.bookmarks (user_id, material_id) values (:'v_admin', :'v_autor');
+select lives_ok(format($$ delete from public.materials where id = %L $$, :'v_autor'),
+  'progresso e favorito do admin no próprio rascunho não impedem a exclusão');
+select tests.clear_auth();
+
+-- Item 2: estudante não grava dado de aluno em material que não pode ler.
+insert into public.materials (discipline_id, theme_id, title) values (:'v_disc', :'v_theme', 'Rascunho alheio') returning id as v_draft \gset
+insert into public.material_sections (material_id, sort_order, title, content) values (:'v_draft', 0, 'S', 'C.') returning id as v_draft_sec \gset
+select tests.authenticate_as(:'v_student');
+select throws_ok(format($$ insert into public.bookmarks (user_id, material_id) values (%L, %L) $$, :'v_student', :'v_draft'),
+  '42501', NULL::text, 'estudante não favorita rascunho');
+select throws_ok(format($$ insert into public.reading_progress (user_id, material_id, read_section_ids, percent) values (%L, %L, '{}', 0) $$, :'v_student', :'v_draft'),
+  '42501', NULL::text, 'estudante não grava progresso direto em rascunho');
+select throws_ok(format($$ select public.set_section_read(%L, %L, true, 1) $$, :'v_draft', :'v_draft_sec'),
+  NULL::char(5), NULL::text, 'estudante não grava progresso de rascunho pela RPC');
+select throws_ok(format($$ select public.upsert_note(p_material_id => %L, p_note_text => 'x') $$, :'v_draft'),
+  NULL::char(5), NULL::text, 'estudante não anota rascunho');
+select throws_ok(format($$ select public.upsert_note(p_material_section_id => %L, p_note_text => 'x') $$, :'v_draft_sec'),
+  NULL::char(5), NULL::text, 'estudante não anota seção de rascunho');
+select tests.clear_auth();
+select is((select count(*)::int from public.bookmarks where material_id = :'v_draft')
+         + (select count(*)::int from public.reading_progress where material_id = :'v_draft')
+         + (select count(*)::int from public.notes where material_id = :'v_draft'),
+  0, 'nada de estudante ficou gravado no rascunho');
+
+-- Item 3: service_role (scripts de manutenção) não exclui pela via comum, mas
+-- tem um caminho explícito, que ninguém mais do app pode usar.
+insert into public.materials (discipline_id, theme_id, title) values (:'v_disc', :'v_theme', 'Semeado por script') returning id as v_seed \gset
+insert into public.material_sections (material_id, sort_order, title, content) values (:'v_seed', 0, 'S', 'C.');
+select tests.force_publish_material(:'v_seed');
+select tests.approve_material_revision(:'v_seed');
+select set_config('role', 'service_role', false);
+select throws_like(format($$ delete from public.materials where id = %L $$, :'v_seed'), '%publicado%',
+  'service_role não exclui material publicado pela via comum');
+reset role;
+select tests.authenticate_as(:'v_admin');
+select throws_ok(format($$ select public.delete_material_maintenance(%L) $$, :'v_seed'),
+  '42501', NULL::text, 'admin do app não usa o caminho de manutenção');
+select tests.clear_auth();
+select set_config('role', 'service_role', false);
+select lives_ok(format($$ select public.delete_material_maintenance(%L) $$, :'v_seed'),
+  'service_role exclui pelo caminho de manutenção');
+reset role;
+select is((select count(*)::int from public.materials where id = :'v_seed'), 0, 'material semeado foi excluído');
 
 select * from finish();

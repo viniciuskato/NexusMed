@@ -19,6 +19,11 @@
 --    material, marcada com o título da seção (`notes.removed_section_title`).
 --    A anotação do material continua sendo uma por aluno; as de seções
 --    removidas ficam ao lado, uma por seção.
+-- 4. Só conta como "dado de aluno" o de estudante (não o do admin/autor), e
+--    favorito, progresso e anotação só são gravados em material que o usuário
+--    pode ler (RLS e as RPCs `upsert_note`/`set_section_read`).
+-- 5. `delete_material_maintenance`, só de service_role, é o caminho explícito
+--    dos scripts de manutenção para apagar o material que eles semeiam.
 --
 -- Não muda: editar material publicado continua mudando o conteúdo na hora
 -- (isso é da 45-K); "Salvar" sem mudança continua no-op; `save_compendium`
@@ -103,6 +108,14 @@ begin
   if p_note_text is null then
     raise exception 'note_text é obrigatório';
   end if;
+  -- Só anota material (ou seção de material) que o usuário pode ler: sem
+  -- isso, qualquer estudante gravaria "dado de aluno" num rascunho alheio e o
+  -- tornaria impossível de excluir (seção 4 abaixo).
+  if (p_material_id is not null and not app.can_read_material(v_uid, p_material_id))
+     or (p_material_section_id is not null and not app.can_read_material(
+           v_uid, (select material_id from public.material_sections where id = p_material_section_id))) then
+    raise exception 'material não encontrado';
+  end if;
 
   -- Serialização por (usuário, alvo): ver 20260909150000_conflict_serialization_07e3.sql.
   v_lock_key := pg_catalog.hashtextextended(
@@ -173,11 +186,18 @@ begin
     return 'Material publicado não pode ser excluído. Despublique-o antes; se alunos já o usaram, ele continua protegido.';
   end if;
 
-  if exists (select 1 from public.notes where material_id = p_material_id)
-     or exists (select 1 from public.notes n join public.material_sections s on s.id = n.material_section_id
-                where s.material_id = p_material_id)
-     or exists (select 1 from public.bookmarks where material_id = p_material_id)
-     or exists (select 1 from public.reading_progress where material_id = p_material_id) then
+  -- Só dado de estudante: o admin (inclusive o autor conferindo o próprio
+  -- rascunho) não torna o material impossível de excluir.
+  if exists (select 1 from public.notes n join public.profiles p on p.id = n.user_id
+             where n.material_id = p_material_id and p.role = 'student')
+     or exists (select 1 from public.notes n
+                join public.material_sections s on s.id = n.material_section_id
+                join public.profiles p on p.id = n.user_id
+                where s.material_id = p_material_id and p.role = 'student')
+     or exists (select 1 from public.bookmarks b join public.profiles p on p.id = b.user_id
+                where b.material_id = p_material_id and p.role = 'student')
+     or exists (select 1 from public.reading_progress r join public.profiles p on p.id = r.user_id
+                where r.material_id = p_material_id and p.role = 'student') then
     return 'Material com dados de alunos (anotações, favoritos ou progresso de leitura) não pode ser excluído. Mantenha-o despublicado para tirá-lo do ar.';
   end if;
 
@@ -250,3 +270,144 @@ alter table public.content_revisions add constraint content_revisions_material_i
 alter table public.material_links drop constraint material_links_source_fkey;
 alter table public.material_links add constraint material_links_source_fkey
   foreign key (source_material_id) references public.materials(id) on delete restrict;
+
+-- ----------------------------------------------------------------------------
+-- 4. Dado de aluno só em material que o aluno pode ler
+-- ----------------------------------------------------------------------------
+-- Sem isto, qualquer estudante ativo gravava favorito, progresso ou anotação
+-- para qualquer id de material — inclusive rascunho alheio, que a guarda da
+-- seção 2 passaria a considerar "com dados de alunos" e não deixaria excluir.
+
+-- Publicado, ou o usuário é admin ativo (mesma regra de materials_select_published).
+create or replace function app.can_read_material(p_uid uuid, p_material_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.materials m
+    where m.id = p_material_id
+      and ((m.status = 'published' and app.current_profile_status(p_uid) = 'active')
+           or app.is_admin_active(p_uid))
+  );
+$$;
+
+revoke all on function app.can_read_material(uuid, uuid) from public, anon;
+grant execute on function app.can_read_material(uuid, uuid) to authenticated, service_role;
+
+-- Gravação direta pela API (favorito; progresso e anotação também, embora o
+-- app use as RPCs). RESTRICTIVE: soma-se à política de dono já existente.
+create policy bookmarks_material_readable on public.bookmarks
+  as restrictive for insert to authenticated
+  with check (material_id is null or app.can_read_material(auth.uid(), material_id));
+create policy bookmarks_material_readable_update on public.bookmarks
+  as restrictive for update to authenticated
+  with check (material_id is null or app.can_read_material(auth.uid(), material_id));
+
+create policy reading_progress_material_readable on public.reading_progress
+  as restrictive for insert to authenticated
+  with check (app.can_read_material(auth.uid(), material_id));
+create policy reading_progress_material_readable_update on public.reading_progress
+  as restrictive for update to authenticated
+  with check (app.can_read_material(auth.uid(), material_id));
+
+create policy notes_material_readable on public.notes
+  as restrictive for insert to authenticated
+  with check (
+    (material_id is null or app.can_read_material(auth.uid(), material_id))
+    and (material_section_id is null or app.can_read_material(
+           auth.uid(), (select s.material_id from public.material_sections s where s.id = material_section_id)))
+  );
+create policy notes_material_readable_update on public.notes
+  as restrictive for update to authenticated
+  with check (
+    (material_id is null or app.can_read_material(auth.uid(), material_id))
+    and (material_section_id is null or app.can_read_material(
+           auth.uid(), (select s.material_id from public.material_sections s where s.id = material_section_id)))
+  );
+
+-- Progresso pela RPC: mesma função de 20260909130000_sync_reliability_categorias_3_a_7.sql,
+-- com a existência do material trocada por "o usuário pode lê-lo".
+create or replace function public.set_section_read(
+  p_material_id uuid,
+  p_section_id uuid,
+  p_is_read boolean,
+  p_total_sections int
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_current uuid[];
+  v_updated uuid[];
+  v_percent int;
+begin
+  if app.current_profile_status(v_uid) is distinct from 'active' then
+    raise exception 'apenas estudantes ativos podem registrar progresso de leitura';
+  end if;
+  if p_total_sections is null or p_total_sections <= 0 then
+    raise exception 'total_sections deve ser maior que zero';
+  end if;
+  if not app.can_read_material(v_uid, p_material_id) then
+    raise exception 'compêndio não encontrado: %', p_material_id;
+  end if;
+
+  insert into public.reading_progress (user_id, material_id, read_section_ids, percent)
+  values (v_uid, p_material_id, '{}', 0)
+  on conflict (user_id, material_id) do nothing;
+
+  select read_section_ids into v_current
+  from public.reading_progress
+  where user_id = v_uid and material_id = p_material_id
+  for update;
+
+  if p_is_read then
+    select array_agg(distinct x) into v_updated
+    from unnest(coalesce(v_current, '{}') || array[p_section_id]) as x;
+  else
+    v_updated := array_remove(coalesce(v_current, '{}'), p_section_id);
+  end if;
+
+  v_percent := round((coalesce(array_length(v_updated, 1), 0)::numeric / p_total_sections) * 100);
+
+  update public.reading_progress
+  set read_section_ids = v_updated,
+      percent = v_percent,
+      updated_at = pg_catalog.now()
+  where user_id = v_uid and material_id = p_material_id;
+
+  return jsonb_build_object('read_section_ids', to_jsonb(v_updated), 'percent', v_percent);
+end;
+$$;
+
+revoke all on function public.set_section_read(uuid, uuid, boolean, int) from public, anon;
+grant execute on function public.set_section_read(uuid, uuid, boolean, int) to authenticated;
+
+-- ----------------------------------------------------------------------------
+-- 5. Caminho explícito de manutenção (scripts com service_role)
+-- ----------------------------------------------------------------------------
+-- A guarda da seção 2 vale também para service_role, e os scripts de
+-- validação semeiam material publicado. Esta função, só de service_role,
+-- apaga o material semeado de ponta a ponta (trilha de revisão e ligações
+-- incluídas); roda como o dono (`postgres`), que a guarda deixa passar.
+create or replace function public.delete_material_maintenance(p_material_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  delete from public.content_revisions where material_id = p_material_id;
+  delete from public.material_links
+  where source_material_id = p_material_id or target_material_id = p_material_id;
+  delete from public.materials where id = p_material_id;
+end;
+$$;
+
+revoke all on function public.delete_material_maintenance(uuid) from public, anon, authenticated;
+grant execute on function public.delete_material_maintenance(uuid) to service_role;

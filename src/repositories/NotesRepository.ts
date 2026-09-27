@@ -13,8 +13,8 @@ export interface RemovedSectionNote {
 export interface NotesRepository {
   getNotes(): Promise<Record<string, string>>;
   saveNote(targetId: string, noteText: string): Promise<void>;
-  /** Anotações do aluno em seções que saíram deste material. */
-  getRemovedSectionNotes(materialId: string): Promise<RemovedSectionNote[]>;
+  /** Anotações do aluno em seções que saíram dos materiais, por material, em ordem de criação. */
+  getRemovedSectionNotes(): Promise<Record<string, RemovedSectionNote[]>>;
 }
 
 class LocalStorageNotesRepository implements NotesRepository {
@@ -22,8 +22,8 @@ class LocalStorageNotesRepository implements NotesRepository {
     return StorageService.getNotes();
   }
   // A remoção de seção acontece no banco; sem ele, não há o que mostrar.
-  async getRemovedSectionNotes(): Promise<RemovedSectionNote[]> {
-    return [];
+  async getRemovedSectionNotes(): Promise<Record<string, RemovedSectionNote[]>> {
+    return {};
   }
   async saveNote(targetId: string, noteText: string): Promise<void> {
     StorageService.saveNote(targetId, noteText);
@@ -43,12 +43,16 @@ class ResilientNotesRepository implements NotesRepository {
     }
   }
 
-  async getRemovedSectionNotes(materialId: string): Promise<RemovedSectionNote[]> {
+  // Sem cópia local para cair: em erro, nada a mostrar, mas registrado —
+  // senão a anotação some da tela sem rastro (ex.: coluna ainda ausente no
+  // remoto, rede).
+  async getRemovedSectionNotes(): Promise<Record<string, RemovedSectionNote[]>> {
     if (!isSupabaseConfigured) return this.local.getRemovedSectionNotes();
     try {
-      return await this.supa.getRemovedSectionNotes(materialId);
-    } catch {
-      return [];
+      return await this.supa.getRemovedSectionNotes();
+    } catch (err) {
+      console.error('[NotesRepository] falha ao ler getRemovedSectionNotes do Supabase:', err);
+      return {};
     }
   }
 

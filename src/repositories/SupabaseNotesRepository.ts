@@ -89,17 +89,18 @@ export class SupabaseNotesRepository implements NotesRepository {
     return result;
   }
 
-  async getRemovedSectionNotes(materialId: string): Promise<RemovedSectionNote[]> {
+  async getRemovedSectionNotes(): Promise<Record<string, RemovedSectionNote[]>> {
     const { data, error } = await supabase
       .from('notes')
-      .select('note_text, removed_section_title, created_at')
-      .eq('material_id', materialId)
-      .not('removed_section_title', 'is', null);
+      .select('material_id, note_text, removed_section_title')
+      .not('removed_section_title', 'is', null)
+      .order('created_at', { ascending: true });
     if (error) throw error;
-    return ((data ?? []) as Array<{ note_text: string; removed_section_title: string }>).map((r) => ({
-      sectionTitle: r.removed_section_title,
-      noteText: r.note_text,
-    }));
+    const result: Record<string, RemovedSectionNote[]> = {};
+    for (const r of (data ?? []) as Array<{ material_id: string; note_text: string; removed_section_title: string }>) {
+      (result[r.material_id] ??= []).push({ sectionTitle: r.removed_section_title, noteText: r.note_text });
+    }
+    return result;
   }
 
   // NOTA: este método não é chamado no fluxo real do app — `saveNote`

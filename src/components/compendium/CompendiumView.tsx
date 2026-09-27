@@ -154,6 +154,8 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
     flashcards: string[];
   }>({ questions: [], compendiums: [], flashcards: [] });
   const [notes, setNotes] = useState<Record<string, string>>({});
+  // 45-D: materiais com anotação de seção removida também têm anotação.
+  const [removedSectionNotes, setRemovedSectionNotes] = useState<Record<string, unknown[]>>({});
   const highlights = StorageService.getHighlights();
 
   // Materiais que foram começados e não terminados (para colocar no começo da biblioteca)
@@ -182,12 +184,14 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [nextProgress, nextBookmarks, nextNotes] = await Promise.all([
+      const [nextProgress, nextBookmarks, nextNotes, nextRemovedNotes] = await Promise.all([
         readingProgressRepository.getReadingProgress(),
         bookmarksRepository.getBookmarks(),
         notesRepository.getNotes(),
+        notesRepository.getRemovedSectionNotes(),
       ]);
       if (cancelled) return;
+      setRemovedSectionNotes(nextRemovedNotes);
       setReadingProgress(nextProgress);
       setBookmarks(nextBookmarks);
       setNotes(nextNotes);
@@ -696,7 +700,7 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
                     const compProgress = readingProgress[comp.id] || { readSectionIds: [], percent: 0 };
                     const isBookmarked = bookmarks.compendiums.includes(comp.id);
                     const compHighlights = highlights[comp.id] || [];
-                    const hasNote = Boolean(notes[comp.id]);
+                    const hasNote = Boolean(notes[comp.id]) || Boolean(removedSectionNotes[comp.id]?.length);
                     const lens = getCompendiumLens(comp);
                     const lensMeta = STUDY_LENSES.find((l) => l.id === lens);
                     const status = getCompendiumStatus(comp);
@@ -850,7 +854,7 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
             const disc = disciplines.find((d) => d.id === comp.disciplineId);
             const compProgress = readingProgress[comp.id] || { readSectionIds: [], percent: 0 };
             const compHighlights = highlights[comp.id] || [];
-            const hasNote = Boolean(notes[comp.id]);
+            const hasNote = Boolean(notes[comp.id]) || Boolean(removedSectionNotes[comp.id]?.length);
             const lens = getCompendiumLens(comp);
             const lensMeta = STUDY_LENSES.find((l) => l.id === lens);
             const status = getCompendiumStatus(comp);

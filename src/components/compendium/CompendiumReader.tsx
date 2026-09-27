@@ -179,10 +179,10 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
         readingProgressRepository.getReadingProgress(),
         bookmarksRepository.getBookmarks(),
         notesRepository.getNotes(),
-        notesRepository.getRemovedSectionNotes(compendium.id),
+        notesRepository.getRemovedSectionNotes(),
       ]);
       if (cancelled) return;
-      setRemovedSectionNotes(removedNotes);
+      setRemovedSectionNotes(removedNotes[compendium.id] ?? []);
 
       const compProgress = progress[compendium.id];
       if (compProgress) {

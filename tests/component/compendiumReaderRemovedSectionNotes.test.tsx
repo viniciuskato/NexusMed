@@ -19,9 +19,10 @@ vi.mock('../../src/repositories/BookmarksRepository', () => ({
 vi.mock('../../src/repositories/NotesRepository', () => ({
   notesRepository: {
     getNotes: vi.fn().mockResolvedValue({ 'comp-1': 'Minha anotação do material' }),
-    getRemovedSectionNotes: vi.fn().mockResolvedValue([
-      { sectionTitle: 'Seção que saiu', noteText: 'Anotei aqui antes da edição' },
-    ]),
+    getRemovedSectionNotes: vi.fn().mockResolvedValue({
+      'comp-1': [{ sectionTitle: 'Seção que saiu', noteText: 'Anotei aqui antes da edição' }],
+      'outro-material': [{ sectionTitle: 'Não é daqui', noteText: 'Não deve aparecer' }],
+    }),
     saveNote: vi.fn(),
   },
 }));
@@ -68,7 +69,7 @@ function renderReader() {
 describe('CompendiumReader — anotação de seção removida (45-D)', () => {
   it('aparece nas anotações do material, indicada como de seção removida e só para leitura', async () => {
     renderReader();
-    expect(notesRepository.getRemovedSectionNotes).toHaveBeenCalledWith('comp-1');
+    expect(notesRepository.getRemovedSectionNotes).toHaveBeenCalled();
 
     fireEvent.click(screen.getAllByRole('button', { name: /Anotações pessoais/ })[0]);
 
@@ -76,6 +77,7 @@ describe('CompendiumReader — anotação de seção removida (45-D)', () => {
     expect(aviso).toBeTruthy();
     const texto = screen.getByText('Anotei aqui antes da edição');
     expect(texto.closest('textarea')).toBeNull();
+    expect(screen.queryByText('Não deve aparecer')).toBeNull();
     // A anotação do material continua no campo editável, sem mistura.
     expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('Minha anotação do material');
   });

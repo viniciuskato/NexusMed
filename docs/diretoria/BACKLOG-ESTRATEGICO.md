@@ -446,7 +446,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
     histórico;
   - em material publicado, `save_compendium` passa a recusar a remoção de
     seção.
-- **Estado**: Concluído (unidade 45-D)
+- **Estado**: Parcial — a unidade 45-D fechou a exclusão em cascata (material, trilha de revisão, ligações, dado de aluno). Ficam abertos: remover seção ainda apaga o histórico dela (`material_section_versions`), e `save_compendium` ainda remove seção de material publicado sem checagem (a anotação dos alunos nela é preservada desde a 45-D)
 
 ### AUD-23 — CMS: o painel de revisão pode mostrar e atestar o item errado
 - **Registrado em**: 2026-09-19 pela sessão de auditoria (revisão do PR #18)

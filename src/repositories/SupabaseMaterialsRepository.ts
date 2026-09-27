@@ -524,16 +524,41 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
   // nem toca em material_sections (mesmo motivo de updateSectionContent
   // abaixo: saveCompendium é "substitui tudo", risco alto demais pra uma
   // associação pontual — 21-D).
-  // A URL só é gravada quando a fonte traz uma: fonte curada sem URL mantém a
-  // URL original da referência (AUD-24, 45-D — antes ela virava NULL).
+  // URL da referência ao trocar de fonte (AUD-24, 45-D):
+  // - a fonte nova traz URL → grava a dela;
+  // - não traz → mantém a URL original da referência (antes virava NULL),
+  //   mas não a herdada da fonte anterior, que apontaria para a fonte errada.
   async updateMaterialReferenceSource(referenceId: string, sourceId: string | null, url: string | null): Promise<void> {
-    const patch: { source_id: string | null; url?: string } = { source_id: sourceId };
-    if (sourceId && url) patch.url = url;
+    const patch: { source_id: string | null; url?: string | null } = { source_id: sourceId };
+    if (sourceId && url) {
+      patch.url = url;
+    } else if (await this.referenceUrlCameFromItsSource(referenceId)) {
+      patch.url = null;
+    }
     const { error } = await supabase
       .from('material_references')
       .update(patch)
       .eq('id', referenceId);
     if (error) throw error;
+  }
+
+  /** A URL atual da referência é a da fonte a que ela está associada (herdada)? */
+  private async referenceUrlCameFromItsSource(referenceId: string): Promise<boolean> {
+    const { data: ref, error } = await supabase
+      .from('material_references')
+      .select('source_id, url')
+      .eq('id', referenceId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!ref?.source_id || !ref.url) return false;
+    const { data: src, error: srcErr } = await supabase
+      .from('sources')
+      .select('identificadores')
+      .eq('id', ref.source_id)
+      .maybeSingle();
+    if (srcErr) throw srcErr;
+    const inherited = sourceUrl(src?.identificadores as Record<string, string> | null | undefined);
+    return inherited !== undefined && inherited === sourceUrl(null, ref.url);
   }
 
   // ── Edição segura de seção (piloto CMS) ──────────────────────────

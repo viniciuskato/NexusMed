@@ -1,10 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// 45-D — repositórios:
-// - associar referência a fonte curada sem URL mantém a URL original (AUD-24);
-// - a anotação de seção removida não sobrescreve a anotação do material e é
-//   lida à parte;
-// - exclusão recusada pelo banco não some da cópia local.
+// 45-D — repositórios e scripts:
+// - associar referência a fonte curada sem URL mantém a URL original, mas não
+//   a herdada de outra fonte (AUD-24, revisão do a4af38c item 1);
+// - a anotação de seção removida não sobrescreve a do material, é lida à
+//   parte, em ordem de criação, e erro de leitura fica registrado;
+// - exclusão recusada pelo banco não some da cópia local;
+// - limpeza de script com service_role usa o caminho de manutenção e não
+//   engole erro.
 
 beforeEach(() => {
   vi.resetModules();
@@ -13,15 +16,29 @@ beforeEach(() => {
 afterEach(() => {
   vi.doUnmock('../../src/lib/supabaseClient');
   vi.doUnmock('../../src/repositories/SupabaseMaterialsRepository');
+  vi.doUnmock('../../src/repositories/SupabaseNotesRepository');
   vi.doUnmock('../../src/services/storage');
+  vi.restoreAllMocks();
 });
 
-/** Cliente Supabase falso que registra `update`/`select` e devolve `rows`. */
-function fakeSupabase(rows: unknown[] = []) {
-  const calls: { table: string; op: string; arg?: unknown; filters: Array<[string, string, unknown]> }[] = [];
+type Filter = [string, string, unknown];
+interface Call {
+  table: string;
+  op: string;
+  arg?: unknown;
+  filters: Filter[];
+}
+
+/**
+ * Cliente Supabase falso: registra cada consulta e responde por tabela.
+ * `rows[table]` é o que `select` devolve (lista, ou o primeiro em `maybeSingle`).
+ */
+function fakeSupabase(rows: Record<string, unknown[]> = {}) {
+  const calls: Call[] = [];
   const from = (table: string) => {
-    const call = { table, op: '', arg: undefined as unknown, filters: [] as Array<[string, string, unknown]> };
+    const call: Call = { table, op: '', filters: [] };
     calls.push(call);
+    const result = () => ({ data: rows[table] ?? [], error: null });
     const builder = {
       update(arg: unknown) {
         call.op = 'update';
@@ -41,8 +58,15 @@ function fakeSupabase(rows: unknown[] = []) {
         call.filters.push(['not', col, `${op}:${String(val)}`]);
         return builder;
       },
+      order(col: string, opts?: { ascending?: boolean }) {
+        call.filters.push(['order', col, opts?.ascending ?? true]);
+        return builder;
+      },
+      maybeSingle() {
+        return Promise.resolve({ data: (rows[table] ?? [])[0] ?? null, error: null });
+      },
       then(resolve: (v: { data: unknown[]; error: null }) => unknown) {
-        return Promise.resolve({ data: rows, error: null }).then(resolve);
+        return Promise.resolve(result()).then(resolve);
       },
     };
     return builder;
@@ -50,26 +74,44 @@ function fakeSupabase(rows: unknown[] = []) {
   return { client: { from }, calls };
 }
 
+async function repoCom(rows: Record<string, unknown[]>) {
+  const fake = fakeSupabase(rows);
+  vi.doMock('../../src/lib/supabaseClient', () => ({ isSupabaseConfigured: true, supabase: fake.client }));
+  const { SupabaseMaterialsRepository } = await import('../../src/repositories/SupabaseMaterialsRepository');
+  return { repo: new SupabaseMaterialsRepository(), calls: fake.calls };
+}
+
+const update = (calls: Call[]) => calls.find((c) => c.op === 'update')?.arg;
+
 describe('updateMaterialReferenceSource (AUD-24)', () => {
-  it('associar a fonte curada sem URL não apaga a URL da referência', async () => {
-    const { client, calls } = fakeSupabase();
-    vi.doMock('../../src/lib/supabaseClient', () => ({ isSupabaseConfigured: true, supabase: client }));
-    const { SupabaseMaterialsRepository } = await import('../../src/repositories/SupabaseMaterialsRepository');
+  it('fonte sem URL mantém a URL original da referência', async () => {
+    const { repo, calls } = await repoCom({ material_references: [{ source_id: null, url: 'https://original.org' }] });
+    await repo.updateMaterialReferenceSource('ref-1', 'fonte-b', null);
+    expect(update(calls)).toEqual({ source_id: 'fonte-b' });
+  });
 
-    await new SupabaseMaterialsRepository().updateMaterialReferenceSource('ref-1', 'fonte-1', null);
+  it('reassociar a fonte sem URL tira a URL herdada da fonte anterior', async () => {
+    const { repo, calls } = await repoCom({
+      material_references: [{ source_id: 'fonte-a', url: 'https://a.org/' }],
+      sources: [{ identificadores: { url: 'https://a.org/' } }],
+    });
+    await repo.updateMaterialReferenceSource('ref-1', 'fonte-b', null);
+    expect(update(calls)).toEqual({ source_id: 'fonte-b', url: null });
+  });
 
-    expect(calls[0].op).toBe('update');
-    expect(calls[0].arg).toEqual({ source_id: 'fonte-1' });
+  it('reassociar mantém a URL que não veio da fonte anterior', async () => {
+    const { repo, calls } = await repoCom({
+      material_references: [{ source_id: 'fonte-a', url: 'https://original.org' }],
+      sources: [{ identificadores: { doi: '10.1/x' } }],
+    });
+    await repo.updateMaterialReferenceSource('ref-1', 'fonte-b', null);
+    expect(update(calls)).toEqual({ source_id: 'fonte-b' });
   });
 
   it('com URL da fonte, grava a URL junto', async () => {
-    const { client, calls } = fakeSupabase();
-    vi.doMock('../../src/lib/supabaseClient', () => ({ isSupabaseConfigured: true, supabase: client }));
-    const { SupabaseMaterialsRepository } = await import('../../src/repositories/SupabaseMaterialsRepository');
-
-    await new SupabaseMaterialsRepository().updateMaterialReferenceSource('ref-1', 'fonte-1', 'https://exemplo.org');
-
-    expect(calls[0].arg).toEqual({ source_id: 'fonte-1', url: 'https://exemplo.org' });
+    const { repo, calls } = await repoCom({ material_references: [{ source_id: null, url: null }] });
+    await repo.updateMaterialReferenceSource('ref-1', 'fonte-1', 'https://exemplo.org');
+    expect(update(calls)).toEqual({ source_id: 'fonte-1', url: 'https://exemplo.org' });
   });
 });
 
@@ -80,7 +122,7 @@ describe('SupabaseNotesRepository — anotação de seção removida', () => {
   ];
 
   it('getNotes não deixa a da seção removida sobrescrever a do material', async () => {
-    const { client } = fakeSupabase(rows);
+    const { client } = fakeSupabase({ notes: rows });
     vi.doMock('../../src/lib/supabaseClient', () => ({ isSupabaseConfigured: true, supabase: client }));
     vi.doMock('../../src/services/storage', () => ({ StorageService: { setNoteBaseVersion: vi.fn() } }));
     const { SupabaseNotesRepository } = await import('../../src/repositories/SupabaseNotesRepository');
@@ -88,16 +130,45 @@ describe('SupabaseNotesRepository — anotação de seção removida', () => {
     expect(await new SupabaseNotesRepository().getNotes()).toEqual({ 'mat-1': 'nota do material' });
   });
 
-  it('getRemovedSectionNotes devolve as do material, com o título da seção', async () => {
-    const { client, calls } = fakeSupabase([rows[1]]);
+  it('getRemovedSectionNotes agrupa por material, com o título da seção, em ordem de criação', async () => {
+    const { client, calls } = fakeSupabase({
+      notes: [
+        { material_id: 'mat-1', note_text: 'primeira', removed_section_title: 'A' },
+        { material_id: 'mat-1', note_text: 'segunda', removed_section_title: 'B' },
+        { material_id: 'mat-2', note_text: 'outra', removed_section_title: 'C' },
+      ],
+    });
     vi.doMock('../../src/lib/supabaseClient', () => ({ isSupabaseConfigured: true, supabase: client }));
     const { SupabaseNotesRepository } = await import('../../src/repositories/SupabaseNotesRepository');
 
-    const result = await new SupabaseNotesRepository().getRemovedSectionNotes('mat-1');
+    const result = await new SupabaseNotesRepository().getRemovedSectionNotes();
 
-    expect(result).toEqual([{ sectionTitle: 'Seção que saiu', noteText: 'nota da seção' }]);
-    expect(calls[0].filters).toContainEqual(['eq', 'material_id', 'mat-1']);
+    expect(result).toEqual({
+      'mat-1': [
+        { sectionTitle: 'A', noteText: 'primeira' },
+        { sectionTitle: 'B', noteText: 'segunda' },
+      ],
+      'mat-2': [{ sectionTitle: 'C', noteText: 'outra' }],
+    });
     expect(calls[0].filters).toContainEqual(['not', 'removed_section_title', 'is:null']);
+    expect(calls[0].filters).toContainEqual(['order', 'created_at', true]);
+  });
+
+  it('erro ao ler as de seção removida fica registrado no console', async () => {
+    vi.doMock('../../src/lib/supabaseClient', () => ({ isSupabaseConfigured: true, supabase: {} }));
+    vi.doMock('../../src/repositories/SupabaseNotesRepository', () => ({
+      SupabaseNotesRepository: vi.fn().mockImplementation(() => ({
+        getRemovedSectionNotes: vi.fn().mockRejectedValue(new Error('column notes.removed_section_title does not exist')),
+      })),
+    }));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { notesRepository } = await import('../../src/repositories/NotesRepository');
+
+    expect(await notesRepository.getRemovedSectionNotes()).toEqual({});
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('getRemovedSectionNotes'),
+      expect.objectContaining({ message: expect.stringContaining('removed_section_title') })
+    );
   });
 });
 
@@ -117,5 +188,20 @@ describe('ResilientMaterialsRepository.deleteCompendium', () => {
 
     await expect(materialsRepository.deleteCompendium('mat-1')).rejects.toThrow('publicado');
     expect(localDelete).not.toHaveBeenCalled();
+  });
+});
+
+describe('scripts — limpeza de material semeado (revisão do a4af38c, item 3)', () => {
+  it('usa o caminho de manutenção e devolve o erro em vez de engoli-lo', async () => {
+    const { deleteSeededMaterial } = await import('../../scripts/maintenance');
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: { message: 'permission denied' } });
+    await expect(deleteSeededMaterial({ rpc }, 'mat-1')).rejects.toThrow('permission denied');
+    expect(rpc).toHaveBeenCalledWith('delete_material_maintenance', { p_material_id: 'mat-1' });
+  });
+
+  it('sem erro, conclui', async () => {
+    const { deleteSeededMaterial } = await import('../../scripts/maintenance');
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    await expect(deleteSeededMaterial({ rpc }, 'mat-1')).resolves.toBeUndefined();
   });
 });
