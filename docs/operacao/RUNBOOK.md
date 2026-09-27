@@ -88,15 +88,18 @@ revisão.
    validado, se há migration e a ordem de publicação.
 2. Esperar o CI (`fast` e `full`) **verde**. CI vermelho não se mescla —
    nem "porque a falha já existia": conserte a falha antes ou em PR
-   separado. E o check `revisado` verde: rótulo posto depois da revisão em
-   sessão nova (`EXECUTOR_PROTOCOL.md`, "Revisão").
+   separado. E o check `revisado` verde: rótulo posto pela sessão que
+   revisou (`EXECUTOR_PROTOCOL.md`, "Revisão"). Com migration, também o
+   `migration-no-remoto` (passo 4).
 3. Conferir o *preview* da Vercel (link no próprio PR) quando a mudança
    afeta tela/fluxo de usuário.
 4. Se a mudança inclui migration nova: aplicar no Supabase remoto faz
    parte do merge, não é um passo opcional posterior
    (`supabase db push --linked --yes`, rodado pelo usuário; no PowerShell
    dele, o CLI só roda pelo caminho completo,
-   `C:\Users\vinic\bin\supabase.exe db push --linked --yes`). **Se o
+   `C:\Users\vinic\bin\supabase.exe db push --linked --yes`). O check
+   `migration-no-remoto` (46-E) fica vermelho enquanto a migration do PR não
+   está no remoto; depois de aplicar, "Re-run jobs" nele o deixa verde. **Se o
    frontend novo depende da migration (RPC nova, coluna nova), aplicar a
    migration ANTES do merge** — o deploy da Vercel é imediato. Conferir
    depois com uma query direta contra o schema remoto — não confiar só na
@@ -123,6 +126,36 @@ Uma vez por semana, a diretoria (ou o dono) roda
 arquivo no SQL Editor) e acrescenta uma linha em
 [`docs/produto/METRICAS.md`](../produto/METRICAS.md). O arquivo só lê; nunca
 escreve.
+
+## 3.2. Credencial do check de migrations (P-4, uma vez)
+
+O check `migration-no-remoto` (46-E) lê o histórico de migrations do Supabase
+de produção com um papel que não consegue ler mais nada nem escrever.
+
+1. No Supabase, SQL Editor do projeto `synapsemed`, trocando a senha por uma
+   forte que você gerar (não a use em mais nada):
+   ```sql
+   create role ci_migracoes_leitura with login password 'TROQUE-POR-UMA-SENHA-FORTE'
+     noinherit connection limit 3;
+   grant usage on schema supabase_migrations to ci_migracoes_leitura;
+   grant select on supabase_migrations.schema_migrations to ci_migracoes_leitura;
+   alter role ci_migracoes_leitura set default_transaction_read_only = on;
+   alter role ci_migracoes_leitura set statement_timeout = '10s';
+   ```
+   O papel herda o que `PUBLIC` concede. Em 27/09 isso era só executar
+   `rls_auto_enable()`, que é gatilho de evento e não pode ser chamada, e
+   ler as estatísticas do `pg_stat_statements`, das quais cada papel só vê
+   as próprias consultas.
+2. No Supabase, botão "Connect", aba "Session pooler": copie a URI. Nela,
+   troque `postgres.jfvhwwvixwvgjfqzlkkb` por
+   `ci_migracoes_leitura.jfvhwwvixwvgjfqzlkkb` e `[YOUR-PASSWORD]` pela senha
+   do passo 1. No fim, acrescente `?sslmode=require`.
+3. No GitHub: Settings → Secrets and variables → Actions → New repository
+   secret. Nome `MIGRACOES_REMOTO_URL`, valor a URI do passo 2.
+4. No ruleset "Proteger main": inclua `migration-no-remoto` (e `revisado`)
+   entre os checks obrigatórios.
+5. Conferir: Actions → migracoes → Run workflow no `main`. Verde é "todas as
+   migrations do repositório estão no Supabase de produção".
 
 ## 4. Rollback
 

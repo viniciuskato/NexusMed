@@ -2,6 +2,7 @@ name: revisao
 
 # Trava de revisão (D-6, PR #84). O check `revisado` fica verde quando o PR
 # tem o rótulo "revisado" e o código não mudou desde que o rótulo foi posto.
+# Quem põe o rótulo é a sessão que revisou (EXECUTOR_PROTOCOL.md).
 # Ao pôr o rótulo, este workflow registra num comentário do PR o commit
 # rotulado. A cada execução, confere que tudo o que veio depois dele são só
 # merges limpos da base (o botão "Update branch", que a regra de branch

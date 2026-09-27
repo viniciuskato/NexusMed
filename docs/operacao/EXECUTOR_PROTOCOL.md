@@ -147,8 +147,10 @@ foram respeitadas. Em mudança de risco alto — hash de atestação,
 sincronização, RLS, migration que mexe em dado existente —, vale um segundo
 olhar de outro modelo (`MODELO-DIRETORIA.md`, "Verificação cruzada").
 
-**Rótulo "revisado" e check `revisado` (D-6).** Sem achado pendente, o dono
-põe o rótulo no PR. O workflow `.github/workflows/revisao.yml` registra num
+**Rótulo "revisado" e check `revisado` (D-6).** Sem achado pendente, **a
+sessão que revisou** põe o rótulo no PR. Nem a trilha nem o dono põem: o dono
+só mescla quando `fast`, `full`, `revisado` e `migration-no-remoto` estão
+verdes (INC-2026-006). O workflow `.github/workflows/revisao.yml` registra num
 comentário o commit rotulado; o check fica verde enquanto tudo depois dele
 forem só merges limpos do `main`. Na prática:
 - ponha o rótulo só com o commit revisado como último do PR — o registro é
@@ -156,11 +158,12 @@ forem só merges limpos do `main`. Na prática:
 - commit novo, merge com edição à mão (conflito resolvido), rebase ou
   force-push tiram o rótulo sozinhos; "Update branch" e `git merge
   origin/main` limpo não tiram;
-- a trilha nunca põe nem tira o rótulo — o check não distingue quem o pôs,
+- a trilha nunca põe nem tira o rótulo. O check não distingue quem o pôs,
   porque as sessões usam a conta do dono;
-- o workflow roda a versão do `main` (`pull_request_target`), então só vale
-  depois de mesclado, e só bloqueia o merge depois que o dono o incluir como
-  obrigatório no ruleset do `main`. Até lá, conferir o check à mão.
+- a trilha encerra o retorno com "pronto para revisão", sem listar rótulo e
+  merge como passos do dono;
+- os checks só bloqueiam o merge quando o dono os inclui como obrigatórios no
+  ruleset do `main`. Até lá, conferi-los à mão.
 
 ## Regras de segurança sem exceção implícita
 

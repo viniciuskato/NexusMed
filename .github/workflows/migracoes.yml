@@ -1,0 +1,95 @@
+name: migracoes
+
+# 46-E (D-4; INC-2026-003 a INC-2026-006). Merge em `main` é deploy imediato,
+# e o front novo chama o que a migration cria. O check `migration-no-remoto`
+# fica vermelho enquanto alguma migration que o PR traz não estiver no
+# Supabase de produção, e diz qual falta. Depois de aplicar
+# (`supabase db push --linked`), "Re-run jobs" deixa o check verde, sem commit
+# novo. PR sem migration (Dependabot incluído) passa direto. No push do
+# `main`, confere todas as migrations do repositório: vermelho ali é aviso de
+# que algo foi mesclado sem a migration.
+#
+# Credencial (P-4): segredo `MIGRACOES_REMOTO_URL`, conexão de um papel que só
+# lê `supabase_migrations.schema_migrations`, sessão só leitura. Sem o
+# segredo, PR com migration reprova (falha fechada). O CI nunca escreve no
+# remoto. O GitHub mascara o segredo no log, e o script nunca o imprime.
+#
+# `pull_request_target` roda a versão deste arquivo que está na base: um PR
+# não consegue trocar o check nem ler o segredo. É seguro porque o job nunca
+# faz checkout nem executa código do PR: pega a lista de arquivos pela API e
+# só aproveita dela a versão da migration (14 dígitos) do nome do arquivo.
+on:
+  pull_request_target:
+    branches: ['**']
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: migracoes-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  no-remoto:
+    name: migration-no-remoto
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      EVENTO: ${{ github.event_name }}
+      PR: ${{ github.event.pull_request.number }}
+      MIGRACOES_REMOTO_URL: ${{ secrets.MIGRACOES_REMOTO_URL }}
+    steps:
+      # Só fora de PR: o `main` (ou a branch do workflow_dispatch) é código
+      # confiável. Em PR, nada do PR é baixado.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name != 'pull_request_target'
+        with:
+          persist-credentials: false
+
+      - name: Confere se as migrations estão no Supabase de produção
+        run: |
+          set -euo pipefail
+          if [ "$EVENTO" = pull_request_target ]; then
+            arquivos=$(gh api "repos/$GH_REPO/pulls/$PR/files" --paginate \
+              --jq '.[] | select(.status != "removed") | .filename')
+            em="neste PR"; de="deste PR"
+          else
+            arquivos=$(ls supabase/migrations/*.sql)
+            em="no repositório"; de="do repositório"
+          fi
+          # Só a versão: 14 dígitos no começo do nome. Nada mais do nome
+          # entra na consulta.
+          versoes=$(printf '%s\n' "$arquivos" \
+            | sed -nE 's#^supabase/migrations/([0-9]{14})_[^/]*\.sql$#\1#p' | sort -u)
+          if [ -z "$versoes" ]; then
+            echo "Sem migration $em."
+            exit 0
+          fi
+          echo "Migrations $de: $(echo $versoes)"
+
+          if [ -z "${MIGRACOES_REMOTO_URL:-}" ]; then
+            echo "::error::Há migration $em, mas o segredo MIGRACOES_REMOTO_URL não está configurado (P-4). Sem ele o check reprova: não dá para saber se a migration está no remoto."
+            exit 1
+          fi
+
+          lista=$(printf "'%s'," $versoes)
+          lista=${lista%,}
+          remotas=$(PGCONNECT_TIMEOUT=15 psql "$MIGRACOES_REMOTO_URL" -X -q -At -v ON_ERROR_STOP=1 \
+            -c "select version from supabase_migrations.schema_migrations where version in ($lista)" \
+            | sort -u)
+
+          faltam=$(comm -23 <(printf '%s\n' $versoes) <(printf '%s\n' $remotas))
+          if [ -n "$faltam" ]; then
+            for v in $faltam; do
+              echo "::error::A migration $v ainda não está no Supabase de produção. Aplique antes do merge (supabase db push --linked) e rode este check de novo (Re-run jobs)."
+            done
+            exit 1
+          fi
+          echo "Todas as migrations $de estão no Supabase de produção."

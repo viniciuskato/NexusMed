@@ -1221,7 +1221,9 @@ AUD-34 e 46-D); aplicar migration pelo CI.
 **Depende de.** P-4 — o dono cria o papel e o segredo com os passos que a
 sessão desta unidade entregar; o PR só mescla depois disso.
 **Executa.** Sessão avulsa, fora das trilhas (CI não é área de nenhuma).
-**Estado.** Pronta.
+**Estado.** Concluída — PR da 46-E (INC-2026-006). Falta a P-4 e incluir o
+check `migration-no-remoto` no ruleset; aceite verde/vermelho no primeiro PR com
+migration depois dela.
 
 ---
 
