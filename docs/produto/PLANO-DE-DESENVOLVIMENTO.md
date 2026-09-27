@@ -671,7 +671,12 @@ padrão — tudo aceito em silêncio ou visível só na tela depois de importado
 **Fora de escopo.** Selo, filtros e versão na Área Editorial (44-C2);
 correção automática; nota de qualidade; checagem por IA.
 **Depende de.** Nada.
-**Estado.** Pronta.
+**Estado.** Concluída — PR #85.
+**Achados da execução.** O rascunho real dos β-lactâmicos também separa
+citações por vírgula (`[1](#ref-1), [2](#ref-2)`) e usa `*` nos Pontos-Chave,
+fora do que o padrão pede mas aceitos pela importação e pelo leitor; não viraram
+regra (fora do aceite). Se a diretoria quiser, entram numa unidade futura.
+Revisão do c11eb05, adiado por triagem da diretoria: `$5 a $10` lido como LaTeX; aviso impreciso com 3+ Pérolas/Alertas; e, para a 44-C2, regex repetidos do importador e do leitor (linha de metadado, citação, marcador de lista), arquivo lido duas vezes e regras de arquivo separadas das de conteúdo.
 
 ### 44-C2 — Versão do padrão e conformidade na Área Editorial
 

@@ -23,6 +23,7 @@
     "preview:e2e": "vite preview --outDir dist-e2e --port 4183 --strictPort",
     "check:no-debug-bundle": "node scripts/check-no-debug-bundle.mjs dist",
     "clean": "node scripts/clean.mjs",
+    "checar:material": "tsx scripts/checar-material.ts",
     "verify": "npm run typecheck && npm run lint && npm run test && npm run build",
     "verify:fast": "npm run typecheck && npm run lint && npm run test:unit && npm run build",
     "verify:full": "npm run verify:fast && npm run test:db && supabase db reset && npm run test:e2e"

@@ -51,42 +51,64 @@ function stripAccents(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
-function normalize(s: string): string {
+export function normalize(s: string): string {
   return stripAccents(s).toLowerCase().trim();
 }
 
-interface MdSection {
+export type MarkdownBlockKind = 'content' | 'references' | 'tags' | 'dependencies';
+
+export interface MarkdownFileBlock {
   headerText: string;
-  body: string;
+  kind: MarkdownBlockKind;
+  /** Índice (base 0) da linha `### `. */
+  headerLine: number;
+  /** Índice (base 0) da primeira linha depois do bloco. */
+  endLine: number;
 }
 
-/** Quebra o corpo em blocos por heading `### `, preservando a ordem. */
-function splitByH3(text: string): MdSection[] {
+export interface MarkdownFileLayout {
+  lines: string[];
+  /** Índice da primeira linha `# `, ou -1. */
+  titleLine: number;
+  title: string;
+  /** Blocos `### `, em ordem. De referências e palavras-chave, a importação guarda o último. */
+  blocks: MarkdownFileBlock[];
+}
+
+/**
+ * Divide o arquivo como a importação o lê: o título é a primeira linha `# `,
+ * e cada linha `### ` depois dele abre um bloco, classificado pelo título.
+ * Exportado para a checagem do padrão (`compendiumStandardCheck.ts`) apontar
+ * linhas sem reimplementar a leitura.
+ */
+export function readMarkdownLayout(text: string): MarkdownFileLayout {
   const lines = text.split(/\r\n|\n/);
-  const headingIdx: number[] = [];
+  const titleLine = lines.findIndex((l) => /^#\s+.+/.test(l.trim()));
+  const title = titleLine === -1 ? '' : lines[titleLine].trim().replace(/^#\s+/, '').trim();
+  const starts: number[] = [];
   lines.forEach((line, i) => {
-    if (/^###\s+.+/.test(line.trim())) headingIdx.push(i);
+    if (i > titleLine && /^###\s+.+/.test(line.trim())) starts.push(i);
   });
-
-  const blocks: MdSection[] = [];
-  headingIdx.forEach((idx, i) => {
-    const headerText = lines[idx].trim().replace(/^###\s+/, '').trim();
-    const end = i + 1 < headingIdx.length ? headingIdx[i + 1] : lines.length;
-    const body = lines.slice(idx + 1, end).join('\n');
-    blocks.push({ headerText, body });
+  const blocks = starts.map((headerLine, k): MarkdownFileBlock => {
+    const headerText = lines[headerLine].trim().replace(/^###\s+/, '').trim();
+    const n = normalize(headerText);
+    const kind: MarkdownBlockKind = isReferencesHeader(n)
+      ? 'references'
+      : isTagsHeader(n)
+        ? 'tags'
+        : isDependenciesHeader(n)
+          ? 'dependencies'
+          : 'content';
+    return { headerText, kind, headerLine, endLine: k + 1 < starts.length ? starts[k + 1] : lines.length };
   });
-  return blocks;
+  return { lines, titleLine, title, blocks };
 }
 
-function extractTitle(text: string): { title: string; rest: string } {
-  const lines = text.split(/\r\n|\n/);
-  const idx = lines.findIndex((l) => /^#\s+.+/.test(l.trim()));
-  if (idx === -1) return { title: '', rest: text };
-  const title = lines[idx].trim().replace(/^#\s+/, '').trim();
-  return { title, rest: lines.slice(idx + 1).join('\n') };
+export function blockBody(layout: MarkdownFileLayout, block: MarkdownFileBlock): string {
+  return layout.lines.slice(block.headerLine + 1, block.endLine).join('\n');
 }
 
-const METADATA_LABELS: Record<string, keyof RawCompendiumInput> = {
+export const METADATA_LABELS: Record<string, keyof RawCompendiumInput> = {
   subtitulo: 'subtitle',
   disciplina: 'disciplineName',
   tema: 'themeName',
@@ -95,7 +117,7 @@ const METADATA_LABELS: Record<string, keyof RawCompendiumInput> = {
 };
 
 /** Lê `**Rótulo:** valor` de cada linha, até o primeiro heading `### `. */
-function extractMetadata(text: string): Partial<RawCompendiumInput> {
+export function extractMetadata(text: string): Partial<RawCompendiumInput> {
   const beforeFirstH3 = text.split(/\r\n|\n/);
   const out: Partial<RawCompendiumInput> = {};
   for (const line of beforeFirstH3) {
@@ -130,7 +152,27 @@ interface ExtractedSection {
   warningAlert?: string;
 }
 
-function parseSectionBody(rawBody: string): Omit<ExtractedSection, 'title'> {
+/** Rótulos que a importação tira do corpo da seção (ver `extractSectionParts`). */
+export const TAKEAWAYS_LABEL = /^\*\*Pontos-?Chave:?\*\*\s*$/i;
+export const PEARL_LABEL = /^\*\*P[eé]rola Cl[ií]nica:?\*\*\s*(.*)$/i;
+export const ALERT_LABEL = /^\*\*Alerta(?: de Armadilha)?:?\*\*\s*(.*)$/i;
+
+/** Texto de uma linha de citação `> ` sem o `>` e sem o emoji antes do rótulo. */
+export function blockquoteLabelText(line: string): string {
+  return line.trim().replace(/^>\s?/, '').replace(/^[^\w*]*/u, '');
+}
+
+export interface SectionParts extends Omit<ExtractedSection, 'title' | 'content'> {
+  /** Linhas do corpo, na posição original, com o que a importação extrai trocado por linha vazia. */
+  contentLines: string[];
+}
+
+/**
+ * Separa do corpo da seção o que vira campo próprio (Tag de Mecanismo,
+ * Pontos-Chave, Pérola, Alerta). As linhas ficam na posição original, para a
+ * checagem do padrão apontar a linha do arquivo.
+ */
+export function extractSectionParts(rawBody: string): SectionParts {
   const lines = rawBody.split(/\r\n|\n/);
   let mechanismTag: string | undefined;
   let clinicalPearl: string | undefined;
@@ -152,7 +194,7 @@ function parseSectionBody(rawBody: string): Omit<ExtractedSection, 'title'> {
   });
 
   // Pontos-Chave: rótulo em negrito seguido de itens de lista.
-  const takeawaysLabelIdx = lines.findIndex((l) => /^\*\*Pontos-?Chave:?\*\*\s*$/i.test(l.trim()));
+  const takeawaysLabelIdx = lines.findIndex((l) => TAKEAWAYS_LABEL.test(l.trim()));
   if (takeawaysLabelIdx !== -1) {
     let end = takeawaysLabelIdx + 1;
     while (end < lines.length) {
@@ -182,7 +224,7 @@ function parseSectionBody(rawBody: string): Omit<ExtractedSection, 'title'> {
     // grupo novo, mesmo colada na anterior sem linha em branco — só uma
     // continuação de frase quebrada (sem rótulo novo) entra no mesmo grupo.
     while (j < lines.length && /^>\s?/.test(lines[j].trim())) {
-      const nextStripped = lines[j].trim().replace(/^>\s?/, '').replace(/^[^\w*]*/u, '');
+      const nextStripped = blockquoteLabelText(lines[j]);
       if (/^\*\*(P[eé]rola|Alerta)/i.test(nextStripped)) break;
       j++;
     }
@@ -193,8 +235,8 @@ function parseSectionBody(rawBody: string): Omit<ExtractedSection, 'title'> {
       .trim();
     // Emoji opcional antes do rótulo (💡, ⚠️, etc.) — descartado junto com o rótulo.
     const label = joined.replace(/^[^\w*]*/u, '');
-    const pearlMatch = label.match(/^\*\*P[eé]rola Cl[ií]nica:?\*\*\s*(.*)$/i);
-    const alertMatch = label.match(/^\*\*Alerta(?: de Armadilha)?:?\*\*\s*(.*)$/i);
+    const pearlMatch = label.match(PEARL_LABEL);
+    const alertMatch = label.match(ALERT_LABEL);
     if (pearlMatch) {
       clinicalPearl = pearlMatch[1].trim() || undefined;
       blankLines(lines, start, j);
@@ -206,16 +248,20 @@ function parseSectionBody(rawBody: string): Omit<ExtractedSection, 'title'> {
     i = j;
   }
 
-  const content = lines
+  return { contentLines: lines, keyTakeaways, mechanismTag, clinicalPearl, warningAlert };
+}
+
+function parseSectionBody(rawBody: string): Omit<ExtractedSection, 'title'> {
+  const { contentLines, ...parts } = extractSectionParts(rawBody);
+  const content = contentLines
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
-
-  return { content, keyTakeaways, mechanismTag, clinicalPearl, warningAlert };
+  return { content, ...parts };
 }
 
 /** Junta linhas de continuação de um item de lista numerada (mesma ideia do SafeMarkdown). */
-function extractNumberedList(body: string): string[] {
+export function extractNumberedList(body: string): string[] {
   const lines = body.split(/\r\n|\n/);
   const items: string[] = [];
   for (const raw of lines) {
@@ -231,27 +277,27 @@ function extractNumberedList(body: string): string[] {
   return items;
 }
 
-function extractBacktickTags(body: string): string[] {
+export function extractBacktickTags(body: string): string[] {
   const matches = body.match(/`([^`\n]+)`/g) ?? [];
   return matches.map((m) => m.slice(1, -1).trim()).filter(Boolean);
 }
 
-function isReferencesHeader(headerNorm: string): boolean {
+export function isReferencesHeader(headerNorm: string): boolean {
   return headerNorm.includes('referencia');
 }
 
 /** `### Palavras-chave` é o nome do campo na plataforma desde a 43-A; `### Tags` segue aceito. */
-function isTagsHeader(headerNorm: string): boolean {
+export function isTagsHeader(headerNorm: string): boolean {
   return headerNorm === 'tags' || /^palavras[\s-]?chave$/.test(headerNorm);
 }
 
-function isDependenciesHeader(headerNorm: string): boolean {
+export function isDependenciesHeader(headerNorm: string): boolean {
   return (
     headerNorm.includes('conexao') || headerNorm.includes('pre-requisito') || headerNorm.includes('pre requisito')
   );
 }
 
-const SECTION_NUMBER_PREFIX = /^se[cç][aã]o\s*\d+\s*[—\-:]\s*/i;
+export const SECTION_NUMBER_PREFIX =/^se[cç][aã]o\s*\d+\s*[—\-:]\s*/i;
 
 export function parseCompendiumMarkdownText(
   text: string,
@@ -259,27 +305,27 @@ export function parseCompendiumMarkdownText(
   themes: Theme[],
   existingCompendiums: Compendium[]
 ): CompendiumImportSuccess | CompendiumImportFailure {
-  const { title, rest } = extractTitle(text);
-  const metadata = extractMetadata(rest);
-  const blocks = splitByH3(rest);
+  const layout = readMarkdownLayout(text);
+  const { title } = layout;
+  const metadata = extractMetadata(layout.lines.slice(layout.titleLine + 1).join('\n'));
 
   const sections: Array<{ title: string; content: string; keyTakeaways: string[]; mechanismTag?: string; clinicalPearl?: string; warningAlert?: string }> = [];
   let references: string[] = [];
   let tags: string[] = [];
 
-  for (const block of blocks) {
-    const headerNorm = normalize(block.headerText);
-    if (isReferencesHeader(headerNorm)) {
-      references = extractNumberedList(block.body);
-    } else if (isTagsHeader(headerNorm)) {
-      tags = extractBacktickTags(block.body);
-    } else if (isDependenciesHeader(headerNorm)) {
+  for (const block of layout.blocks) {
+    const body = blockBody(layout, block);
+    if (block.kind === 'references') {
+      references = extractNumberedList(body);
+    } else if (block.kind === 'tags') {
+      tags = extractBacktickTags(body);
+    } else if (block.kind === 'dependencies') {
       // Não há campo equivalente aceito hoje pela importação (mesma
       // lacuna já existe no formato YAML) — ignorado deliberadamente.
       continue;
     } else {
       const sectionTitle = block.headerText.replace(SECTION_NUMBER_PREFIX, '').trim();
-      const parsed = parseSectionBody(block.body);
+      const parsed = parseSectionBody(body);
       sections.push({ title: sectionTitle, ...parsed });
     }
   }
