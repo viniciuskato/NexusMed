@@ -11,6 +11,8 @@ interface MaterialMultiSelectProps {
   /** Materiais já escolhidos na OUTRA lista (prerequisite/related) — um par só pode ter uma relação (ver material_links_pair_unique). */
   excludeIds: string[];
   htmlId: string;
+  /** Marca a primeira ficha como "principal" (vínculo de questão, 43-B: é o material que o cartão abre). */
+  markFirstAsPrimary?: boolean;
 }
 
 /**
@@ -19,10 +21,13 @@ interface MaterialMultiSelectProps {
  * título digitado (renomear um material não pode quebrar o vínculo).
  * Checkboxes nativos: acessível sem precisar de useDialogA11y (não é modal).
  */
-export function MaterialMultiSelect({ label, helperText, options, selectedIds, onChange, excludeIds, htmlId }: MaterialMultiSelectProps) {
+export function MaterialMultiSelect({ label, helperText, options, selectedIds, onChange, excludeIds, htmlId, markFirstAsPrimary = false }: MaterialMultiSelectProps) {
   const [query, setQuery] = useState('');
 
-  const selected = options.filter((o) => selectedIds.includes(o.id));
+  // Na ordem da escolha, não na do catálogo: a ordem é parte do vínculo.
+  const selected = selectedIds
+    .map((id) => options.find((o) => o.id === id))
+    .filter((o): o is Compendium => o !== undefined);
   const filtered = options
     .filter((o) => !selectedIds.includes(o.id))
     .filter((o) => !excludeIds.includes(o.id))
@@ -43,7 +48,7 @@ export function MaterialMultiSelect({ label, helperText, options, selectedIds, o
 
       {selected.length > 0 && (
         <ul className="flex flex-wrap gap-1.5 mb-2">
-          {selected.map((s) => (
+          {selected.map((s, i) => (
             <li key={s.id}>
               <button
                 type="button"
@@ -53,6 +58,11 @@ export function MaterialMultiSelect({ label, helperText, options, selectedIds, o
                 aria-label={`Remover ${s.title}`}
               >
                 <span>{s.title}</span>
+                {markFirstAsPrimary && i === 0 && (
+                  <span className="font-bold" title="Material que o cartão da questão abre">
+                    (principal)
+                  </span>
+                )}
                 {s.publicationStatus !== 'published' && (
                   <span className="text-amber-600 dark:text-amber-400" title="Rascunho — fica invisível para o estudante até ser publicado">
                     (rascunho)

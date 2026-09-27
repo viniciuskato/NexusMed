@@ -1,8 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { createClient } from '@supabase/supabase-js';
 import {
   createTestUser,
   deleteTestUser,
   deleteE2EMaterials,
+  getLocalConfig,
   getSeedIds,
   insertPublishedMaterial,
   psqlLocal,
@@ -76,7 +80,9 @@ function deleteE2EQuestions(): void {
 
 async function resolverQuestoesDoMaterial(page: Page, title: string) {
   await openLibraryTree(page);
-  await page.getByRole('button', { name: title, exact: true }).click();
+  // Material já aberto aparece também no atalho de continuar a leitura: os
+  // dois botões abrem o mesmo material.
+  await page.getByRole('button', { name: title, exact: true }).first().click();
   await page.getByRole('button', { name: 'Resolver questões' }).first().click();
 }
 
@@ -116,6 +122,24 @@ test.describe('43-B — questão cobre um ou vários materiais', () => {
     await resolverQuestoesDoMaterial(page, titleA);
     await expect(page.getByText('Exibindo')).toContainText('1 questões');
     await expect(page.getByText(`${STEM_PREFIX}cobra A e B`).first()).toBeVisible();
+
+    // O recorte é visível e tem saída (revisão do PR #94, item 2).
+    await expect(page.locator('#questions-material-scope')).toContainText(titleA);
+    await page.getByRole('button', { name: 'Ver todas as questões' }).click();
+    await expect(page.locator('#questions-material-scope')).toHaveCount(0);
+
+    // E não sobrevive a abrir uma questão por outro caminho (busca global):
+    // a questão que não cobra A aparece, em vez de uma lista vazia.
+    await resolverQuestoesDoMaterial(page, titleA);
+    await expect(page.locator('#questions-material-scope')).toBeVisible();
+    await page.keyboard.press('Control+k');
+    await page.getByRole('textbox', { name: 'Pesquisar no acervo' }).fill(`${STEM_PREFIX}cobra só B`);
+    await page
+      .getByRole('dialog', { name: 'Busca global' })
+      .getByRole('button', { name: new RegExp(`${STEM_PREFIX}cobra só B`) })
+      .click();
+    await expect(page.locator('#questions-material-scope')).toHaveCount(0);
+    await expect(page.getByText(`${STEM_PREFIX}cobra só B`).first()).toBeVisible();
 
     await resolverQuestoesDoMaterial(page, titleB);
     await expect(page.getByText('Exibindo')).toContainText('2 questões');
@@ -183,5 +207,68 @@ test.describe('43-B — questão cobre um ou vários materiais', () => {
         `where q.question_stem like '${STEM_PREFIX}lote % ${t}' group by q.id order by 1;`
     );
     expect(vinculos.split('\n')).toEqual([`${matA},${matB}`, `${matA},${matB}`]);
+  });
+
+  // Revisão do PR #94, item 7: clique duplo em "Salvar vínculo" (ou dois admins
+  // ao mesmo tempo) não pode dar erro cru de chave primária.
+  test('trocas simultâneas do vínculo não dão erro', async () => {
+    const t = `${Date.now()}`;
+    const matA = insertPublishedMaterial(`43b-conc-A-${t}`);
+    const matB = insertPublishedMaterial(`43b-conc-B-${t}`);
+    cleanup.push(() => deleteE2EQuestions());
+    cleanup.push(() => deleteE2EMaterials());
+    const questionId = insertPublishedQuestion(`concorrencia ${t}`, []);
+
+    const admin = await createTestUser({
+      emailLocalPart: `e2e-43b-conc-${Date.now()}`,
+      password: 'senha-teste-123',
+      role: 'admin',
+      status: 'active',
+    });
+    cleanup.push(() => deleteTestUser(admin.id));
+
+    const cfg = getLocalConfig();
+    const client = createClient(cfg.apiUrl, cfg.anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { error: loginError } = await client.auth.signInWithPassword({ email: admin.email, password: admin.password });
+    expect(loginError).toBeNull();
+
+    const links = [
+      { material_id: matA, material_section_id: null },
+      { material_id: matB, material_section_id: null },
+    ];
+    const results = await Promise.all(
+      Array.from({ length: 8 }, () => client.rpc('set_question_materials', { p_question_id: questionId, p_links: links }))
+    );
+    expect(results.map((r) => r.error?.message ?? null)).toEqual(Array(8).fill(null));
+    expect(psqlLocal(`select count(*) from public.question_materials where question_id = '${questionId}';`)).toBe('2');
+  });
+
+  // Revisão do PR #94, item 3: a métrica pela qual a meta de 02/10 é medida lê
+  // o vínculo novo, só com material publicado.
+  test('métrica semanal conta as questões ligadas pela tabela nova', async () => {
+    const sql = readFileSync(path.resolve(process.cwd(), 'scripts/sql/metricas-semanais.sql'), 'utf8')
+      .split(/\r?\n/)
+      .filter((l) => !l.trim().startsWith('--'))
+      .join(' ')
+      .replace(/;\s*$/, '');
+    const ligadas = () => Number(psqlLocal(`select questoes_ligadas_a_material from (${sql}) m;`));
+
+    const t = `${Date.now()}`;
+    const antes = ligadas();
+    const publicado = insertPublishedMaterial(`43b-metrica-${t}`);
+    cleanup.push(() => deleteE2EQuestions());
+    cleanup.push(() => deleteE2EMaterials());
+    insertPublishedQuestion(`metrica ${t}`, [publicado]);
+    expect(ligadas()).toBe(antes + 1);
+
+    // Ligada só a rascunho não conta: o estudante não alcança.
+    const rascunho = psqlLocal(
+      `insert into public.materials (discipline_id, theme_id, title) ` +
+        `select discipline_id, theme_id, '${MATERIAL_PREFIX}43b-metrica-rasc-${t}' from public.materials where id = '${publicado}' returning id;`
+    )
+      .split('\n')[0]
+      .trim();
+    insertPublishedQuestion(`metrica rascunho ${t}`, [rascunho]);
+    expect(ligadas()).toBe(antes + 1);
   });
 });

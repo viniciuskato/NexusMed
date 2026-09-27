@@ -16,8 +16,9 @@ interface QuestionMaterialLinksEditorProps {
 /**
  * Materiais que a questão cobra (43-B): um ou vários, escolhidos por busca e
  * clique — nunca por título digitado —, com seção opcional por material. A
- * ordem da escolha é a ordem do vínculo; o primeiro é o material que o
- * cartão da questão abre.
+ * ordem da escolha é a ordem do vínculo e a das fichas; com mais de um
+ * material, o primeiro aparece como "principal" — é o que o cartão da
+ * questão abre.
  */
 export function QuestionMaterialLinksEditor({
   compendiums,
@@ -49,6 +50,7 @@ export function QuestionMaterialLinksEditor({
         onChange={handleIds}
         excludeIds={[]}
         htmlId={htmlId}
+        markFirstAsPrimary={value.length > 1}
       />
       {!withoutSections &&
         value.map((link) => {

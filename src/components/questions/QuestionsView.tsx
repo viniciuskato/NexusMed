@@ -38,6 +38,8 @@ interface QuestionsViewProps {
   filterCompendiumId?: string;
   /** Presente quando se chegou aqui por um pack — mostra o retorno explícito. */
   onReturnToThematicStudy?: () => void;
+  /** Sai do recorte por material (aviso "Questões que cobram…", 43-B). */
+  onClearScope?: () => void;
   focusQuestionId?: string;
   /**
    * Status inicial dos pills de filtro (ex.: 'incorrect' ao chegar vindo de
@@ -60,6 +62,7 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
   filterThemeId,
   filterCompendiumId,
   onReturnToThematicStudy,
+  onClearScope,
   focusQuestionId,
   initialStatusFilter,
   returnToCompendiumContext,
@@ -90,6 +93,20 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
     if (initialStatusFilter) setSelectedStatus(initialStatusFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialStatusFilter]);
+
+  // Chegar com recorte por material (pack ou "Resolver questões" do leitor)
+  // zera os filtros lembrados de outra visita: somados ao recorte, eles
+  // esvaziavam a lista sem motivo visível (43-B).
+  const materialScope = filterCompendiumId && filterCompendiumId !== SCOPE_UNLINKED ? filterCompendiumId : undefined;
+  useEffect(() => {
+    if (!materialScope) return;
+    setSelectedDiscipline('all');
+    setSelectedTheme('all');
+    setSelectedDifficulty('all');
+    setSelectedInstitution('all');
+    if (!initialStatusFilter) setSelectedStatus('all');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [materialScope]);
 
   const [answers, setAnswers] = useState<Record<string, QuestionAnswerRecord>>({});
   const [bookmarks, setBookmarks] = useState<{
@@ -204,6 +221,28 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Voltar ao Estudo Temático</span>
           </button>
+        </div>
+      )}
+
+      {/* ── Recorte por material fora do Estudo Temático (43-B) ────── */}
+      {materialScope && !onReturnToThematicStudy && (
+        <div
+          id="questions-material-scope"
+          className="p-3 sm:px-4 sm:py-2.5 rounded-2xl bg-slate-900/5 dark:bg-teal-950/40 border border-slate-300 dark:border-teal-800/50 elev-xs flex items-center justify-between gap-3"
+        >
+          <p className="text-xs text-slate-700 dark:text-slate-200 min-w-0">
+            <span className="font-bold">Questões que cobram</span>{' '}
+            <span>{compendiums?.find((c) => c.id === materialScope)?.title ?? 'este material'}</span>.
+          </p>
+          {onClearScope && (
+            <button
+              type="button"
+              onClick={onClearScope}
+              className="px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-teal-600 hover:bg-slate-800 dark:hover:bg-teal-700 text-white text-xs font-bold transition-all cursor-pointer shrink-0"
+            >
+              Ver todas as questões
+            </button>
+          )}
         </div>
       )}
 
