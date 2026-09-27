@@ -66,18 +66,15 @@ class LocalStorageMaterialsRepository implements MaterialsRepository {
   async updateMaterialReferenceSource(_referenceId: string, _sourceId: string | null, _url: string | null): Promise<void> {}
 }
 
+// Leitura (45-G, D-2): com Supabase configurado, só do servidor. A falha sobe
+// para a tela, que diz "sem conexão" — nunca cai numa cópia local vazia ou velha.
 class ResilientMaterialsRepository implements MaterialsRepository {
   private supa = new SupabaseMaterialsRepository();
   private local = new LocalStorageMaterialsRepository();
 
   async getDisciplines(): Promise<Discipline[]> {
     if (!isSupabaseConfigured) return this.local.getDisciplines();
-    try {
-      const res = await this.supa.getDisciplines();
-      return res;
-    } catch {
-      return this.local.getDisciplines();
-    }
+    return this.supa.getDisciplines();
   }
 
   async saveDisciplines(disciplines: Discipline[]): Promise<void> {
@@ -89,12 +86,7 @@ class ResilientMaterialsRepository implements MaterialsRepository {
 
   async getThemes(): Promise<Theme[]> {
     if (!isSupabaseConfigured) return this.local.getThemes();
-    try {
-      const res = await this.supa.getThemes();
-      return res;
-    } catch {
-      return this.local.getThemes();
-    }
+    return this.supa.getThemes();
   }
 
   async saveThemes(themes: Theme[]): Promise<void> {
@@ -106,12 +98,7 @@ class ResilientMaterialsRepository implements MaterialsRepository {
 
   async getCompendiums(): Promise<Compendium[]> {
     if (!isSupabaseConfigured) return this.local.getCompendiums();
-    try {
-      const res = await this.supa.getCompendiums();
-      return res;
-    } catch {
-      return this.local.getCompendiums();
-    }
+    return this.supa.getCompendiums();
   }
 
   async saveCompendiums(compendiums: Compendium[]): Promise<void> {

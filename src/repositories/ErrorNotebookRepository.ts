@@ -19,17 +19,15 @@ class LocalStorageErrorNotebookRepository implements ErrorNotebookRepository {
   }
 }
 
+// Leitura (45-G, D-2): com Supabase configurado, só do servidor. A falha sobe
+// para a tela, que diz "sem conexão" — nunca cai numa cópia local vazia ou velha.
 class ResilientErrorNotebookRepository implements ErrorNotebookRepository {
   private supa = new SupabaseErrorNotebookRepository();
   private local = new LocalStorageErrorNotebookRepository();
 
   async getErrorLogs(): Promise<ErrorLogItem[]> {
     if (!isSupabaseConfigured) return this.local.getErrorLogs();
-    try {
-      return await this.supa.getErrorLogs();
-    } catch {
-      return this.local.getErrorLogs();
-    }
+    return this.supa.getErrorLogs();
   }
 
   async updateErrorLog(errorItem: ErrorLogItem): Promise<void> {

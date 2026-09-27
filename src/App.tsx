@@ -90,6 +90,8 @@ import { CreateSimuladoModal } from './components/questions/CreateSimuladoModal'
 import { CreateFlashcardModal } from './components/flashcards/CreateFlashcardModal';
 import { ClinicalPomodoroWidget } from './components/common/ClinicalPomodoroWidget';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
+import { ConnectionNotice } from './components/common/ConnectionNotice';
+import { LoadStatus, loadStatusOf, onReconnect } from './services/connectivity';
 import { lazyWithReload } from './lib/lazyWithReload';
 
 // Telas carregadas sob demanda: o bundle inicial leva só o painel. O CMS
@@ -243,10 +245,16 @@ function AuthenticatedApp() {
   const [answers, setAnswers] = useState<Record<string, QuestionAnswerRecord>>({});
   const [stats, setStats] = useState<UserStats>(() => StorageService.getStats());
   const [dataLoading, setDataLoading] = useState(true);
+  const [dataStatus, setDataStatus] = useState<LoadStatus>('ok');
 
+  // Sem leitura offline (45-G, D-2): se o servidor não responde, nada do que
+  // já está na tela é trocado — o aviso "sem conexão" aparece e a carga roda
+  // de novo quando a rede volta. Nunca lança: as telas chamam isto como
+  // `onUpdate` depois de gravar.
   const refreshData = useCallback(async () => {
-    const [nextDisciplines, nextThemes, nextCompendiums, nextQuestions, nextFlashcards, nextAnswers] =
-      await Promise.all([
+    let loaded;
+    try {
+      loaded = await Promise.all([
         materialsRepository.getDisciplines(),
         materialsRepository.getThemes(),
         materialsRepository.getCompendiums(),
@@ -254,6 +262,12 @@ function AuthenticatedApp() {
         flashcardsRepository.getFlashcards(),
         answersRepository.getAnswers(),
       ]);
+    } catch (err) {
+      setDataStatus(loadStatusOf(err));
+      return;
+    }
+    const [nextDisciplines, nextThemes, nextCompendiums, nextQuestions, nextFlashcards, nextAnswers] = loaded;
+    setDataStatus('ok');
     setDisciplines(nextDisciplines);
     setThemes(nextThemes);
     setCompendiums(nextCompendiums);
@@ -264,6 +278,11 @@ function AuthenticatedApp() {
     setPlan(StorageService.getUserPlan());
     setTheme(StorageService.getTheme());
   }, []);
+
+  useEffect(() => {
+    if (dataStatus === 'ok') return;
+    return onReconnect(() => void refreshData());
+  }, [dataStatus, refreshData]);
 
   // Quando o usuário autenticado muda, recarrega os dados do namespace dele
   useEffect(() => {
@@ -645,6 +664,8 @@ function AuthenticatedApp() {
               : 'max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-24 xl:pb-12'
           }`}
         >
+
+          <ConnectionNotice status={dataStatus} onRetry={() => void refreshData()} className="mb-4" />
 
           {/* View Router */}
           <AppErrorBoundary resetKey={activeView}>

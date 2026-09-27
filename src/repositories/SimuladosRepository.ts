@@ -48,17 +48,15 @@ class LocalStorageSimuladosRepository implements SimuladosRepository {
   }
 }
 
+// Leitura (45-G, D-2): com Supabase configurado, só do servidor. A falha sobe
+// para a tela, que diz "sem conexão" — nunca cai numa cópia local vazia ou velha.
 class ResilientSimuladosRepository implements SimuladosRepository {
   private supa = new SupabaseSimuladosRepository();
   private local = new LocalStorageSimuladosRepository();
 
   async getSimulados(): Promise<SimuladoSessionData[]> {
     if (!isSupabaseConfigured) return this.local.getSimulados();
-    try {
-      return await this.supa.getSimulados();
-    } catch {
-      return this.local.getSimulados();
-    }
+    return this.supa.getSimulados();
   }
 
   async saveSimuladoSession(session: SimuladoSessionData): Promise<SimuladoSaveOutcome> {
@@ -113,11 +111,7 @@ class ResilientSimuladosRepository implements SimuladosRepository {
 
   async getSimuladoHistory(): Promise<SimuladoSessionData[]> {
     if (!isSupabaseConfigured) return this.local.getSimuladoHistory();
-    try {
-      return await this.supa.getSimuladoHistory();
-    } catch {
-      return this.local.getSimuladoHistory();
-    }
+    return this.supa.getSimuladoHistory();
   }
 }
 

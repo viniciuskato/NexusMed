@@ -23,6 +23,8 @@ import { questionsRepository } from '../../repositories/QuestionsRepository';
 import { questionReactionsRepository } from '../../repositories/QuestionReactionsRepository';
 import { GamificationService, CELEBRATION_STREAK_LENGTH } from '../../services/gamification';
 import { ContextualFeedbackPopover } from '../feedback/ContextualFeedbackPopover';
+import { ConnectionNotice } from '../common/ConnectionNotice';
+import { LoadStatus, loadStatusOf, onReconnect } from '../../services/connectivity';
 
 interface QuestionCardProps {
   question: Question;
@@ -48,6 +50,8 @@ interface QuestionCardProps {
     answer: QuestionAnswerRecord | null;
     bookmarked: boolean;
     reaction: QuestionReactionValue | null;
+    /** `false` enquanto a carga do pai não deu certo (sem rede): o favorito não é conhecido (45-G). */
+    known?: boolean;
   };
 }
 
@@ -110,10 +114,23 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const hydratedKey = hydrated
     ? `${hydrated.answer?.selectedOption ?? ''}|${hydrated.answer?.isCorrect ?? ''}|${
         hydrated.answer?.timestamp ?? ''
-      }|${hydrated.bookmarked}|${hydrated.reaction ?? ''}`
+      }|${hydrated.bookmarked}|${hydrated.reaction ?? ''}|${hydrated.known !== false}`
     : null;
 
   const [isHovered, setIsHovered] = useState(false);
+  // Carga do card avulso (sem `hydrated`), do servidor (45-G, D-2). Numa
+  // falha, só o que chegou é aplicado; o resto fica como estava, o aviso
+  // aparece e a carga roda de novo quando a rede volta. Enquanto o favorito
+  // não é conhecido, o botão fica desativado — senão gravaria a partir de um
+  // estado que a tela não sabe (AUD-29).
+  const [hydrateStatus, setHydrateStatus] = useState<LoadStatus>('ok');
+  const [bookmarkKnown, setBookmarkKnown] = useState(true);
+  const [hydrateAttempt, setHydrateAttempt] = useState(0);
+
+  useEffect(() => {
+    if (hydrateStatus === 'ok') return;
+    return onReconnect(() => setHydrateAttempt((n) => n + 1));
+  }, [hydrateStatus]);
 
   useEffect(() => {
     let cancelled = false;
@@ -153,6 +170,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     correctionUnsubscribeRef.current = null;
 
     if (hydrated) {
+      // O aviso de rede fica com o pai, que fez a carga (45-G).
+      setHydrateStatus('ok');
+      setBookmarkKnown(hydrated.known !== false);
       applyInitialState(hydrated.answer, hydrated.bookmarked, hydrated.reaction);
       loadReviewIfAnswered(hydrated.answer);
       return () => {
@@ -168,23 +188,29 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       ]);
       if (cancelled) return;
 
-      const answers = answersResult.status === 'fulfilled' ? answersResult.value : {};
-      const bookmarks =
-        bookmarksResult.status === 'fulfilled'
-          ? bookmarksResult.value
-          : { questions: [], compendiums: [], flashcards: [] };
-      const reaction = reactionResult.status === 'fulfilled' ? reactionResult.value : null;
+      const failure = [answersResult, bookmarksResult, reactionResult].find((r) => r.status === 'rejected');
+      setHydrateStatus(failure ? loadStatusOf((failure as PromiseRejectedResult).reason) : 'ok');
+      setBookmarkKnown(bookmarksResult.status === 'fulfilled');
 
-      const initialAnswer = answers[question.id] ?? null;
-      applyInitialState(initialAnswer, bookmarks.questions.includes(question.id), reaction);
-      await loadReviewIfAnswered(initialAnswer);
+      if (bookmarksResult.status === 'fulfilled') setIsBookmarked(bookmarksResult.value.questions.includes(question.id));
+      if (reactionResult.status === 'fulfilled') setMyReaction(reactionResult.value);
+      if (answersResult.status === 'fulfilled') {
+        const initialAnswer = answersResult.value[question.id] ?? null;
+        if (!isExamMode) {
+          setSelectedOption(initialAnswer?.selectedOption || selectedOptionInExam || null);
+          setIsSubmitted(!!initialAnswer);
+          setAnswerOrigin(initialAnswer ? 'hydrated' : null);
+        }
+        setErrorReason(initialAnswer?.errorReason || 'lacuna_teorica');
+        await loadReviewIfAnswered(initialAnswer);
+      }
     })();
 
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [question.id, hydratedKey]);
+  }, [question.id, hydratedKey, hydrateAttempt]);
 
   useEffect(
     () => () => {
@@ -267,7 +293,11 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       showToast('Resposta incorreta. Questão catalogada automaticamente no seu Caderno de Erros!');
     } else {
       showToast('Resposta correta! Excelente raciocínio clínico.');
-      await checkStreakCelebration();
+      try {
+        await checkStreakCelebration();
+      } catch {
+        // Celebração é opcional: sem rede para ler o histórico (45-G), só não celebra.
+      }
     }
   }, [errorReason, onAnswerRecorded, question, showToast, checkStreakCelebration]);
 
@@ -397,7 +427,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   };
 
   const handleToggleBookmark = async () => {
-    const bookmarked = await bookmarksRepository.toggleBookmark('questions', question.id);
+    // Contrário do que a tela mostra, nunca da cópia local (45-G, AUD-29).
+    const bookmarked = await bookmarksRepository.setBookmark('questions', question.id, !isBookmarked);
     setIsBookmarked(bookmarked);
     showToast(bookmarked ? 'Questão adicionada aos seus favoritos' : 'Removida dos favoritos');
   };
@@ -426,6 +457,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           : 'border-slate-300/80 dark:border-[#243652]'
       }`}
     >
+      <ConnectionNotice status={hydrateStatus} onRetry={() => setHydrateAttempt((n) => n + 1)} className="mb-4" />
+
       {/* Toast */}
       {toastMessage && (
         <div className="absolute top-4 right-4 z-20 bg-slate-900 dark:bg-slate-800 text-white px-3 py-2 rounded-xl text-xs font-semibold elev-lg flex items-center gap-1.5 animate-in fade-in">
@@ -479,8 +512,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             variant="pill"
           />
           <button
+            type="button"
             onClick={handleToggleBookmark}
-            className={`p-2 rounded-xl border text-xs transition-colors cursor-pointer ${
+            disabled={!bookmarkKnown}
+            className={`p-2 rounded-xl border text-xs transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
               isBookmarked
                 ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800'
                 : 'bg-white dark:bg-[#142038] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-[#243452] hover:bg-slate-100 dark:hover:bg-slate-800'

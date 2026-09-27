@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AlertCircle,
   ArrowLeft,
@@ -31,6 +31,8 @@ import {
   buildThematicStudyData,
   findPackById,
 } from '../../services/thematicPacks';
+import { useServerLoad } from '../../hooks/useServerLoad';
+import { ConnectionNotice } from '../common/ConnectionNotice';
 
 // ============================================================================
 // Estudo Temático (Prompt 22-A)
@@ -102,28 +104,14 @@ export const ThematicStudyView: React.FC<ThematicStudyViewProps> = ({
   const [readingProgress, setReadingProgress] = useState<
     Record<string, { readSectionIds: string[]; percent: number }>
   >({});
-  const [progressError, setProgressError] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const progress = await readingProgressRepository.getReadingProgress();
-        if (!cancelled) {
-          setReadingProgress(progress);
-          setProgressError(false);
-        }
-      } catch {
-        // A tela continua utilizável sem o progresso de leitura; o aviso abaixo
-        // deixa explícito que a porcentagem exibida pode estar incompleta, em
-        // vez de mostrar 0% como se fosse um fato.
-        if (!cancelled) setProgressError(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // A tela continua utilizável sem o progresso de leitura; o aviso deixa
+  // explícito que a porcentagem exibida pode estar incompleta, em vez de
+  // mostrar 0% como se fosse um fato. Sem rede, recarrega quando ela volta
+  // (45-G, D-2).
+  const { status: loadStatus, reload } = useServerLoad(async () => {
+    setReadingProgress(await readingProgressRepository.getReadingProgress());
+  });
+  const progressError = loadStatus !== 'ok';
 
   const data = useMemo(
     () =>
@@ -495,6 +483,7 @@ export const ThematicStudyView: React.FC<ThematicStudyViewProps> = ({
 
   return (
     <div id="thematic-study-view" className="space-y-6">
+      <ConnectionNotice status={loadStatus} onRetry={() => void reload()} />
       <div className="bg-gradient-to-r from-teal-900 via-slate-900 to-slate-950 rounded-3xl p-6 sm:p-8 text-white elev-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 border border-teal-800/30">
         <div className="max-w-2xl space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 text-xs font-semibold border border-teal-400/30">

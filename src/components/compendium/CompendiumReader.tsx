@@ -33,6 +33,8 @@ import { readingProgressRepository } from '../../repositories/ReadingProgressRep
 import { SafeMarkdown, parseInline } from '../common/SafeMarkdown';
 import { ContextualFeedbackPopover } from '../feedback/ContextualFeedbackPopover';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
+import { useServerLoad } from '../../hooks/useServerLoad';
+import { ConnectionNotice } from '../common/ConnectionNotice';
 import { MaterialBreadcrumb, MaterialChildrenCards, MaterialLinkBoxes } from './MaterialNavigation';
 
 interface CompendiumReaderProps {
@@ -169,25 +171,30 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Load reading progress, bookmark and notes
+  // Progresso de leitura, favorito e anotação vêm do servidor (45-G, D-2).
+  // Sem rede, o material aberto continua na tela e o aviso "sem conexão"
+  // aparece; a carga roda de novo quando a rede volta. O pulo para a seção
+  // pedida acontece de qualquer jeito — não depende desses dados.
+  const openCompendiumId = useRef(compendium.id);
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
+    openCompendiumId.current = compendium.id;
+  }, [compendium.id]);
+
+  const { status: loadStatus, reload } = useServerLoad(async () => {
+    const id = compendium.id;
+    try {
       const [progress, bookmarks, notes] = await Promise.all([
         readingProgressRepository.getReadingProgress(),
         bookmarksRepository.getBookmarks(),
         notesRepository.getNotes(),
       ]);
-      if (cancelled) return;
+      if (openCompendiumId.current !== id) return; // outro material já foi aberto
 
-      const compProgress = progress[compendium.id];
-      if (compProgress) {
-        setReadSectionIds(compProgress.readSectionIds);
-      }
-      setIsBookmarked(bookmarks.compendiums.includes(compendium.id));
-      setUserNote(notes[compendium.id] || '');
-
-      if (targetSectionId) {
+      setReadSectionIds(progress[id]?.readSectionIds ?? []);
+      setIsBookmarked(bookmarks.compendiums.includes(id));
+      setUserNote(notes[id] || '');
+    } finally {
+      if (targetSectionId && openCompendiumId.current === id) {
         setActiveSectionId(targetSectionId);
         const elem = document.getElementById(targetSectionId);
         if (elem) elem.scrollIntoView({ behavior: 'smooth' });
@@ -197,12 +204,8 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
         // deste compêndio, mesmo muito depois deste pulo específico.
         onSectionJumpHandled?.();
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [compendium.id, targetSectionId]);
+    }
+  }, `${compendium.id}|${targetSectionId ?? ''}`);
 
   // Persistir sessão de leitura ativa para navegação contextual fluida
   useEffect(() => {
@@ -226,21 +229,24 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   };
 
   const handleToggleRead = async (sectionId: string) => {
-    const newPercent = await readingProgressRepository.toggleSectionRead(
-      compendium.id,
-      sectionId,
-      compendium.sections.length
-    );
-    const progress = await readingProgressRepository.getReadingProgress();
-    setReadSectionIds(progress[compendium.id]?.readSectionIds || []);
+    // O estado desejado é o contrário do que a tela MOSTRA (vindo do
+    // servidor), nunca da cópia local (45-G, AUD-29). A tela é atualizada
+    // aqui mesmo, sem reler do servidor: sem rede, a marcação continua valendo
+    // e sobe pela fila.
+    const isRead = !readSectionIds.includes(sectionId);
+    const next = isRead ? [...readSectionIds, sectionId] : readSectionIds.filter((id) => id !== sectionId);
+    setReadSectionIds(next);
+    await readingProgressRepository.setSectionRead(compendium.id, sectionId, isRead, compendium.sections.length);
+    const newPercent = Math.round((next.length / Math.max(1, compendium.sections.length)) * 100);
 
-    if (newPercent === 100) {
+    if (isRead && newPercent === 100) {
       showToast('Leitura concluída com sucesso!');
     }
   };
 
   const handleToggleBookmark = async () => {
-    const bookmarked = await bookmarksRepository.toggleBookmark('compendiums', compendium.id);
+    // Contrário do que a tela mostra, nunca da cópia local (45-G, AUD-29).
+    const bookmarked = await bookmarksRepository.setBookmark('compendiums', compendium.id, !isBookmarked);
     setIsBookmarked(bookmarked);
     showToast(bookmarked ? 'Adicionado aos favoritos' : 'Removido dos favoritos');
   };
@@ -307,6 +313,8 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
         className="fixed top-0 left-0 h-0.5 bg-[#0F766E] dark:bg-[#14B8A6] z-50 transition-all duration-100"
         style={{ width: `${scrollPercent}%` }}
       />
+
+      <ConnectionNotice status={loadStatus} onRetry={() => void reload()} className="mx-4 mt-3 sm:mx-6" />
 
       {/* ── Toast Notification ───────────────────────────────────── */}
       {notification && (

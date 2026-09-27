@@ -82,18 +82,15 @@ class LocalStorageQuestionsRepository implements QuestionsRepository {
   }
 }
 
+// Leitura (45-G, D-2): com Supabase configurado, só do servidor. A falha sobe
+// para a tela, que diz "sem conexão" — nunca cai numa cópia local vazia ou velha.
 class ResilientQuestionsRepository implements QuestionsRepository {
   private supa = new SupabaseQuestionsRepository();
   private local = new LocalStorageQuestionsRepository();
 
   async getQuestions(): Promise<Question[]> {
     if (!isSupabaseConfigured) return this.local.getQuestions();
-    try {
-      const res = await this.supa.getQuestions();
-      return res;
-    } catch {
-      return this.local.getQuestions();
-    }
+    return this.supa.getQuestions();
   }
 
   async saveQuestions(questions: Question[]): Promise<void> {
@@ -143,11 +140,7 @@ class ResilientQuestionsRepository implements QuestionsRepository {
 
   async getQuestionReview(questionId: string): Promise<QuestionReviewResult> {
     if (!isSupabaseConfigured) return this.local.getQuestionReview(questionId);
-    try {
-      return await this.supa.getQuestionReview(questionId);
-    } catch {
-      return this.local.getQuestionReview(questionId);
-    }
+    return this.supa.getQuestionReview(questionId);
   }
 
   async publishQuestion(id: string): Promise<void> {

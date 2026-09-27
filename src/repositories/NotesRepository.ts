@@ -18,17 +18,15 @@ class LocalStorageNotesRepository implements NotesRepository {
   }
 }
 
+// Leitura (45-G, D-2): com Supabase configurado, só do servidor. A falha sobe
+// para a tela, que diz "sem conexão" — nunca cai numa cópia local vazia ou velha.
 class ResilientNotesRepository implements NotesRepository {
   private supa = new SupabaseNotesRepository();
   private local = new LocalStorageNotesRepository();
 
   async getNotes(): Promise<Record<string, string>> {
     if (!isSupabaseConfigured) return this.local.getNotes();
-    try {
-      return await this.supa.getNotes();
-    } catch {
-      return this.local.getNotes();
-    }
+    return this.supa.getNotes();
   }
 
   async saveNote(targetId: string, noteText: string): Promise<void> {
