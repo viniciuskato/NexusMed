@@ -493,7 +493,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
   modelo; `docs/editorial/POLITICA-QUESTOES-DIREITOS-E-MIDIA.md`. Decidir
   antes: editar publicado exige despublicar, ou gera uma nova revisão que
   fica pendente?
-- **Estado**: Parcial — a URL apagada ao "Associar" foi concluída na unidade 45-D; a edição de publicado sem revisão fica com a 45-K
+- **Estado**: Concluído — a URL apagada ao "Associar" na unidade 45-D; a edição de publicado sem revisão na unidade 45-K. Resta, anotado na 45-K: associar referência a fonte curada em material publicado muda `source_id`/`url` na hora
 
 ### AUD-25 — "Faça login novamente" nunca se resolve, e os dados ficam presos no aparelho
 - **Registrado em**: 2026-09-19 pela sessão de auditoria

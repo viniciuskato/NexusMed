@@ -1,8 +1,9 @@
 import { sourceUrl } from '../utils/bibliographicSources';
 import { Discipline, Theme, Compendium, CompendiumSection, CompendiumSectionSnapshot, MaterialSectionVersion } from '../types';
 import { supabase } from '../lib/supabaseClient';
-import { MaterialsRepository } from './MaterialsRepository';
+import type { MaterialsRepository, SaveCompendiumResult } from './MaterialsRepository';
 import { fetchAllRows, fetchAllRowsByIds } from './supabasePaging';
+import { buildSaveCompendiumPayload, compendiumFromSavePayload } from '../utils/compendiumSavePayload';
 
 // ============================================================================
 // Fase 3 — Supabase-backed MaterialsRepository
@@ -377,7 +378,21 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
       sourcesById = new Map(sources.map((s) => [s.id, s]));
     }
 
-    return materials.map((m) => buildCompendium(m, sections, refs, sourcesById, links));
+    // 45-K: só admin enxerga edição pendente (RLS); para o estudante a lista
+    // vem vazia. À parte e tolerante a erro: uma falha aqui só esconde o selo
+    // "Edição pendente", nunca a biblioteca.
+    const pending = new Set<string>();
+    const { data: pendingRows, error: pendingError } = await supabase.from('material_pending_edits').select('material_id');
+    if (pendingError) {
+      console.error('[SupabaseMaterialsRepository] falha ao ler edições pendentes:', pendingError);
+    } else {
+      for (const r of (pendingRows ?? []) as Array<{ material_id: string }>) pending.add(r.material_id);
+    }
+
+    return materials.map((m) => {
+      const c = buildCompendium(m, sections, refs, sourcesById, links);
+      return pending.has(c.id) ? { ...c, hasPendingEdit: true } : c;
+    });
   }
 
   async saveCompendiums(compendiums: Compendium[]): Promise<void> {
@@ -437,62 +452,33 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
     };
   }
 
-  async saveCompendium(compendium: Compendium): Promise<void> {
-    // Gravação atômica via RPC save_compendium: seções existentes são
-    // atualizadas por id (não apagadas e reinseridas), então anotações de
-    // alunos, histórico de versões, imagens e vínculos de questões com a
-    // seção sobrevivem ao salvar. Só as seções removidas do formulário são
-    // apagadas. Referências preservam source_id/url quando já vinculadas.
-    //
-    // parent_material_id/tree_sort_order/nav_short_title/taxonomy_kind/
-    // navigation_links vão SEMPRE (mesmo null/[]), porque desde a Fase 2 o
-    // formulário do Admin é a fonte de verdade da navegação: omitir a chave
-    // faria a RPC preservar o valor anterior (contrato pensado pra cliente
-    // ANTIGO que não conhece esses campos — ver 20260922130000, bloco 10).
-    // Quem ainda não conhece navegação é só importCompendiumDraft, que usa
-    // outra RPC (import_compendium_draft) e não passa por aqui.
-    const { error } = await supabase.rpc('save_compendium', {
-      p_material: {
-        id: compendium.id,
-        discipline_id: compendium.disciplineId,
-        theme_id: compendium.themeId,
-        title: compendium.title,
-        subtitle: compendium.subtitle || null,
-        mode: compendium.mode ?? null,
-        study_lens: compendium.studyLens ?? null,
-        module_number: compendium.moduleNumber ?? null,
-        // 0 é "desconhecido": a leitura mapeia nulo → 0 (o tipo é number), então
-        // gravar 0 de volta trocaria nulo por 0 e mudaria o hash atestado.
-        estimated_read_time_minutes: compendium.estimatedReadTimeMinutes || null,
-        author: compendium.author || null,
-        tags: compendium.tags ?? [],
-        parent_material_id: compendium.parentMaterialId ?? null,
-        tree_sort_order: compendium.treeSortOrder ?? 0,
-        nav_short_title: compendium.navShortTitle?.trim() || null,
-        taxonomy_kind: compendium.taxonomyKind ?? null,
-        navigation_links: (compendium.navigationLinks ?? []).map((l) => ({
-          material_id: l.materialId,
-          link_type: l.linkType,
-          sort_order: l.sortOrder,
-        })),
-      },
-      p_sections: compendium.sections.map((s) => ({
-        id: s.id,
-        title: s.title,
-        mechanism_tag: s.mechanismTag ?? null,
-        content: s.content,
-        key_takeaways: s.keyTakeaways ?? [],
-        clinical_pearl: s.clinicalPearl ?? null,
-        warning_alert: s.warningAlert ?? null,
-      })),
-      // Só o texto. O banco casa cada referência com a existente de texto
-      // idêntico e preserva id e vínculo com fonte curada; o vínculo é gerido
-      // exclusivamente pelo painel de referências (updateMaterialReferenceSource).
-      // Mandar source_id aqui era perigoso: referenceSources é alinhado por
-      // ÍNDICE com as referências antigas, então inserir ou remover uma linha
-      // no formulário desalinhava e podia pendurar o vínculo na referência errada.
-      p_references: compendium.references.map((text) => ({ citation_text: text })),
-    });
+  // Gravação atômica via RPC save_compendium: seções existentes são
+  // atualizadas por id (não apagadas e reinseridas), então anotações de
+  // alunos, histórico de versões, imagens e vínculos de questões com a seção
+  // sobrevivem ao salvar. Desde a 45-K, em material publicado a mudança de
+  // conteúdo fica à parte até ser atestada ('pendente'); o resto grava
+  // direto ('aplicado').
+  async saveCompendium(compendium: Compendium): Promise<SaveCompendiumResult> {
+    const { data, error } = await supabase.rpc('save_compendium', buildSaveCompendiumPayload(compendium));
+    if (error) throw error;
+    return data === 'pendente' ? 'pendente' : 'aplicado';
+  }
+
+  /** Material como a edição pendente o deixaria, ou null se não há edição pendente (45-K). */
+  async getPendingEdit(current: Compendium): Promise<Compendium | null> {
+    const { data, error } = await supabase
+      .from('material_pending_edits')
+      .select('payload')
+      .eq('material_id', current.id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const payload = (data as { payload: { material: Record<string, unknown>; sections: Array<Record<string, unknown>>; references: Array<Record<string, unknown>> } }).payload;
+    return { ...compendiumFromSavePayload(current, payload), hasPendingEdit: true };
+  }
+
+  async discardPendingEdit(materialId: string): Promise<void> {
+    const { error } = await supabase.rpc('discard_material_pending_edit', { p_material_id: materialId });
     if (error) throw error;
   }
 

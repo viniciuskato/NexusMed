@@ -554,9 +554,9 @@ select throws_ok(
   'admin não publica material com UPDATE direto (só via publish_material())'
 );
 
--- Edição invalida a aprovação: muda o conteúdo, despublica pela RPC segura,
--- tenta publicar de novo sem nova revisão/atestação — falha.
-update public.material_sections set content = 'Conteúdo editado depois da aprovação.' where id = :'v_section_id';
+-- Edição invalida a aprovação: despublica pela RPC segura, muda o conteúdo,
+-- tenta publicar de novo sem nova revisão/atestação — falha. (Desde a 45-K,
+-- material publicado não muda direto: a edição vem depois de despublicar.)
 -- lives_ok em vez de select solto: se unpublish_material passar a levantar
 -- exceção aqui (ex.: fixture ganhar um descendente publicado em edição
 -- futura deste arquivo), o pgTAP falha esta asserção nomeada em vez de
@@ -565,6 +565,7 @@ select lives_ok(
   format($$ select public.unpublish_material(%L) $$, :'v_material_id'),
   'despublica material sem descendente/pré-requisito publicado dependendo dele'
 );
+update public.material_sections set content = 'Conteúdo editado depois da aprovação.' where id = :'v_section_id';
 
 select is(
   public.get_provenance_status(:'v_material_id', null),

@@ -124,6 +124,8 @@ export interface Compendium {
   editorialStatus?: EditorialStatus;
   /** Controla visibilidade para estudantes via RLS (materials.status). Distinto de editorialStatus. */
   publicationStatus?: 'draft' | 'published' | 'archived';
+  /** Só admin: há edição de conteúdo guardada à parte, aguardando atestação (45-K). */
+  hasPendingEdit?: boolean;
   tags?: string[];
   dependencies?: { title: string; linkId?: string }[];
   /** Material-pai na árvore de navegação. Ausente/null = raiz. Mesma disciplina exigida pelo banco. */
@@ -394,6 +396,8 @@ export interface LastReadingSession {
 export type ProvenanceStatus =
   | 'legacy_unmapped'
   | 'em_revisao'
+  | 'edicao_pendente'
+  | 'edicao_pendente_em_revisao'
   | 'aprovado_para_esta_versao'
   | 'aprovacao_desatualizada';
 

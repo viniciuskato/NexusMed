@@ -97,7 +97,7 @@ $$;
 grant usage on schema tests to anon, authenticated;
 grant execute on function tests.clear_auth() to anon, authenticated;
 
-select plan(83);
+select plan(84);
 
 -- ----------------------------------------------------------------------------
 -- Fixtures: usuários, conteúdo em draft/published/archived
@@ -285,8 +285,15 @@ select throws_ok(
 
 select tests.authenticate_as(:'v_admin');
 select lives_ok(
-  format($$ update public.materials set subtitle = 'editado por admin' where id = %L $$, :'v_material_pub_id'),
+  format($$ update public.materials set subtitle = 'editado por admin' where id = %L $$, :'v_material_draft_id'),
   'admin active edita conteúdo editorial'
+);
+-- 45-K: publicado não muda direto — a edição passa pelo formulário e fica
+-- pendente até ser atestada.
+select throws_ok(
+  format($$ update public.materials set subtitle = 'editado por admin' where id = %L $$, :'v_material_pub_id'),
+  'P0001', NULL::text,
+  'admin não muda direto o conteúdo de material publicado'
 );
 select throws_ok(
   format($$ insert into public.material_links (source_material_id, target_material_id, link_type) values (%L, %L, 'prerequisite') $$, :'v_material_draft_id', :'v_material_pub_id'),

@@ -46,6 +46,8 @@ const CONSULTATION_BASIS_LABEL: Record<ConsultationBasis, string> = {
 const STATUS_LABEL: Record<ProvenanceStatus, string> = {
   legacy_unmapped: 'Legado não mapeado',
   em_revisao: 'Em revisão',
+  edicao_pendente: 'Edição pendente de atestação',
+  edicao_pendente_em_revisao: 'Edição pendente em revisão',
   aprovado_para_esta_versao: 'Aprovado para esta versão',
   aprovacao_desatualizada: 'Aprovação desatualizada',
 };
@@ -53,6 +55,8 @@ const STATUS_LABEL: Record<ProvenanceStatus, string> = {
 const STATUS_CLASS: Record<ProvenanceStatus, string> = {
   legacy_unmapped: 'bg-stone-100 dark:bg-[#1A2845] text-stone-600 dark:text-slate-300',
   em_revisao: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300',
+  edicao_pendente: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300',
+  edicao_pendente_em_revisao: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300',
   aprovado_para_esta_versao: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300',
   aprovacao_desatualizada: 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300',
 };
@@ -160,7 +164,9 @@ export default function ProvenanceReviewPanel({
         // banco bloqueia) — usamos "todo claim decidido" como sinal
         // aproximado; o estado real (aprovado_para_esta_versao/desatualizada)
         // já veio de get_provenance_status acima.
-        setRevisionAttested(s === 'aprovado_para_esta_versao' || s === 'aprovacao_desatualizada');
+        // 45-K: com edição pendente ainda sem revisão, a última revisão é a da
+        // versão no ar (já atestada) — oferece criar a da edição.
+        setRevisionAttested(s === 'aprovado_para_esta_versao' || s === 'aprovacao_desatualizada' || s === 'edicao_pendente');
 
         const claimSourcesLists = await Promise.all(cs.map((c) => contentProvenanceRepository.listClaimSources(c.id)));
         const byClaim: Record<string, ClaimSource[]> = {};
@@ -364,6 +370,16 @@ export default function ProvenanceReviewPanel({
         </button>
       </div>
 
+      {(status === 'edicao_pendente' || status === 'edicao_pendente_em_revisao') && (
+        <p
+          id="provenance-pending-edit-notice"
+          className="px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300"
+        >
+          Esta revisão cobre a <strong>edição pendente</strong>. Os alunos leem a versão atestada até a aprovação; aprovada,
+          a edição entra no ar de uma vez.
+        </p>
+      )}
+
       {toast && (
         <div className="px-3 py-2 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 font-semibold">
           {toast}
@@ -389,7 +405,13 @@ export default function ProvenanceReviewPanel({
               className="px-3.5 py-2 rounded-lg border border-teal-200 dark:border-teal-900 bg-teal-50 dark:bg-teal-950/40 hover:bg-teal-100 hover:dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
             >
               <FileCheck2 className="w-4 h-4" />
-              <span>{revisionId ? 'Criar nova revisão (conteúdo atual)' : 'Criar primeira revisão'}</span>
+              <span>
+                {status === 'edicao_pendente'
+                  ? 'Criar revisão da edição pendente'
+                  : revisionId
+                    ? 'Criar nova revisão (conteúdo atual)'
+                    : 'Criar primeira revisão'}
+              </span>
             </button>
           ) : (
             <>
