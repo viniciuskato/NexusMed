@@ -175,6 +175,8 @@ describe('Resilient*Repository — leitura só do servidor', () => {
 
   it.each([
     ['NotesRepository', 'notesRepository', 'Notes', 'getNotes'],
+    // Veio do #92 (45-D) engolindo a falha e devolvendo {} — mesma regra (45-G).
+    ['NotesRepository', 'notesRepository', 'Notes', 'getRemovedSectionNotes'],
     ['BookmarksRepository', 'bookmarksRepository', 'Bookmarks', 'getBookmarks'],
     ['ReadingProgressRepository', 'readingProgressRepository', 'ReadingProgress', 'getReadingProgress'],
     ['SimuladosRepository', 'simuladosRepository', 'Simulados', 'getSimulados'],

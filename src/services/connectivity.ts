@@ -6,7 +6,8 @@
 // falha (D-2: sem leitura offline, por ora). A tela que precisa buscar dado
 // mostra "sem conexão", mantém o que já estava na tela e carrega sozinha
 // quando a rede volta. Este módulo diz se a falha foi de rede e avisa quando
-// ela volta; `useServerLoad` e `ConnectionNotice` usam isso nas telas.
+// vale tentar de novo; `useAutoRetry`, `useServerLoad` e `ConnectionNotice`
+// usam isso nas telas.
 //
 // A gravação offline não passa por aqui: continua na fila (`syncQueue`).
 // ============================================================================
@@ -49,4 +50,21 @@ export function onReconnect(callback: () => void): () => void {
     active = false;
     window.removeEventListener('online', handler);
   };
+}
+
+// "Tentar agora" do aviso vale para todas as cargas que falharam na tela, não
+// só para a do componente que desenhou o aviso (só um aviso aparece por vez —
+// ver ConnectionNotice).
+const RETRY_ALL_EVENT = 'synapse:retry-failed-loads';
+
+/** Pede a todas as cargas que falharam na tela que tentem de novo agora. */
+export function requestRetryAll(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(RETRY_ALL_EVENT));
+}
+
+export function onRetryAll(callback: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  window.addEventListener(RETRY_ALL_EVENT, callback);
+  return () => window.removeEventListener(RETRY_ALL_EVENT, callback);
 }

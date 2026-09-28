@@ -4,12 +4,7 @@ import {
 } from 'lucide-react';
 import {
   UserPlan,
-  Discipline,
-  Theme,
-  Compendium,
-  Question,
   Flashcard,
-  UserStats,
   SimuladoConfig,
   ThemeMode,
   MigrationSummary,
@@ -17,10 +12,6 @@ import {
   LastReadingSession,
 } from './types';
 import { StorageService } from './services/storage';
-import { materialsRepository } from './repositories/MaterialsRepository';
-import { questionsRepository } from './repositories/QuestionsRepository';
-import { flashcardsRepository } from './repositories/FlashcardsRepository';
-import { answersRepository } from './repositories/AnswersRepository';
 import { registerSyncHandlers } from './services/syncHandlers';
 import { isCardDueToday } from './services/srsAlgorithm';
 import * as syncQueueDebug from './services/syncQueue';
@@ -69,7 +60,6 @@ if (import.meta.env.DEV) {
     storage: StorageService,
   };
 }
-import { GamificationService } from './services/gamification';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LoadingScreen } from './components/common/LoadingScreen';
 import { LoginView } from './components/auth/LoginView';
@@ -92,7 +82,7 @@ import { CreateFlashcardModal } from './components/flashcards/CreateFlashcardMod
 import { ClinicalPomodoroWidget } from './components/common/ClinicalPomodoroWidget';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { ConnectionNotice } from './components/common/ConnectionNotice';
-import { LoadStatus, loadStatusOf, onReconnect } from './services/connectivity';
+import { useAppData } from './hooks/useAppData';
 import { lazyWithReload } from './lib/lazyWithReload';
 
 // Telas carregadas sob demanda: o bundle inicial leva só o painel. O CMS
@@ -238,65 +228,43 @@ function AuthenticatedApp() {
   // Core Data State (carregados do StorageService / Supabase)
   const [theme, setTheme] = useState<ThemeMode>(() => StorageService.getTheme());
   const [plan, setPlan] = useState<UserPlan>(() => StorageService.getUserPlan());
-  const [disciplines, setDisciplines] = useState<Discipline[]>([]);
-  const [themes, setThemes] = useState<Theme[]>([]);
-  const [compendiums, setCompendiums] = useState<Compendium[]>([]);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
-  const [answers, setAnswers] = useState<Record<string, QuestionAnswerRecord>>({});
-  const [stats, setStats] = useState<UserStats>(() => StorageService.getStats());
-  const [dataLoading, setDataLoading] = useState(true);
-  const [dataStatus, setDataStatus] = useState<LoadStatus>('ok');
+  // Carregamento do servidor (45-G, D-2): troca de usuário limpa o estado
+  // antes de carregar; numa falha, o aviso aparece e a carga tenta de novo
+  // sozinha; `dataReady` diz se os dados na tela são deste usuário. Ver
+  // useAppData.
+  const {
+    disciplines,
+    themes,
+    compendiums,
+    questions,
+    flashcards,
+    answers,
+    stats,
+    loading: dataLoading,
+    ready: dataReady,
+    status: dataStatus,
+    refresh,
+  } = useAppData(user?.id ?? null);
 
-  // Sem leitura offline (45-G, D-2): se o servidor não responde, nada do que
-  // já está na tela é trocado — o aviso "sem conexão" aparece e a carga roda
-  // de novo quando a rede volta. Nunca lança: as telas chamam isto como
-  // `onUpdate` depois de gravar.
+  // Nunca lança: as telas chamam isto como `onUpdate` depois de gravar.
   const refreshData = useCallback(async () => {
-    let loaded;
-    try {
-      loaded = await Promise.all([
-        materialsRepository.getDisciplines(),
-        materialsRepository.getThemes(),
-        materialsRepository.getCompendiums(),
-        questionsRepository.getQuestions(),
-        flashcardsRepository.getFlashcards(),
-        answersRepository.getAnswers(),
-      ]);
-    } catch (err) {
-      setDataStatus(loadStatusOf(err));
-      return;
-    }
-    const [nextDisciplines, nextThemes, nextCompendiums, nextQuestions, nextFlashcards, nextAnswers] = loaded;
-    setDataStatus('ok');
-    setDisciplines(nextDisciplines);
-    setThemes(nextThemes);
-    setCompendiums(nextCompendiums);
-    setQuestions(nextQuestions);
-    setFlashcards(nextFlashcards);
-    setAnswers(nextAnswers);
-    setStats(GamificationService.computeRealStats(nextAnswers, nextFlashcards));
+    await refresh();
     setPlan(StorageService.getUserPlan());
     setTheme(StorageService.getTheme());
-  }, []);
+  }, [refresh]);
 
-  useEffect(() => {
-    if (dataStatus === 'ok') return;
-    return onReconnect(() => void refreshData());
-  }, [dataStatus, refreshData]);
-
-  // Quando o usuário autenticado muda, recarrega os dados do namespace dele
+  // Quando o usuário autenticado muda (a carga dos dados dele é do useAppData)
   useEffect(() => {
     if (user?.id) {
       setNavStateRestored(false);
-      setDataLoading(true);
-      refreshData().finally(() => setDataLoading(false));
+      setPlan(StorageService.getUserPlan());
+      setTheme(StorageService.getTheme());
       const legacySummary = StorageService.checkLegacyDataSummary(user.id);
       if (legacySummary.hasLegacyData) {
         setMigrationSummary(legacySummary);
       }
     }
-  }, [user?.id, refreshData]);
+  }, [user?.id]);
 
   // ── Restauração de navegação depois de um reload (Prompt 22-A) ─────────────
   // Só roda depois que os dados do usuário terminaram de carregar: a view é
@@ -305,8 +273,11 @@ function AuthenticatedApp() {
   // disponíveis para ESTA conta agora — um material despublicado ou removido
   // entre sessões não pode ser reaberto, e o usuário é avisado em vez de cair
   // numa tela vazia. O estado é lido do StorageService, que já isola por UID.
+  // Espera os dados DESTE usuário terem vindo do servidor (`dataReady`): uma
+  // carga que falhou deixa a lista de compêndios vazia, e julgar o pack salvo
+  // contra ela o daria como despublicado e o apagaria (45-G, revisão do #93).
   useEffect(() => {
-    if (!user?.id || dataLoading || navStateRestored) return;
+    if (!user?.id || dataLoading || !dataReady || navStateRestored) return;
 
     // Link direto (#/questoes etc.) tem prioridade sobre a tela salva.
     const hashView = viewFromHash();
@@ -330,7 +301,7 @@ function AuthenticatedApp() {
       setInvalidSavedPackId(savedPackId);
     }
     setNavStateRestored(true);
-  }, [user?.id, dataLoading, navStateRestored, compendiums, profile?.role, profile?.status]);
+  }, [user?.id, dataLoading, dataReady, navStateRestored, compendiums, profile?.role, profile?.status]);
 
   // Persistência só começa depois da restauração — gravar antes sobrescreveria
   // o valor salvo com o 'dashboard' do estado inicial.
@@ -694,7 +665,7 @@ function AuthenticatedApp() {
           }`}
         >
 
-          <ConnectionNotice status={dataStatus} onRetry={() => void refreshData()} className="mb-4" />
+          <ConnectionNotice status={dataStatus} className="mb-4" />
 
           {/* View Router */}
           <AppErrorBoundary resetKey={activeView}>

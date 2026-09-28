@@ -46,12 +46,9 @@ class ResilientNotesRepository implements NotesRepository {
   // remoto, rede).
   async getRemovedSectionNotes(): Promise<Record<string, RemovedSectionNote[]>> {
     if (!isSupabaseConfigured) return this.local.getRemovedSectionNotes();
-    try {
-      return await this.supa.getRemovedSectionNotes();
-    } catch (err) {
-      console.error('[NotesRepository] falha ao ler getRemovedSectionNotes do Supabase:', err);
-      return {};
-    }
+    // Sem `{}` numa falha (45-G, D-2): a tela diria "nenhuma anotação de seção
+    // removida" quando na verdade não conseguiu ler — a falha sobe e ela avisa.
+    return this.supa.getRemovedSectionNotes();
   }
 
   async saveNote(targetId: string, noteText: string): Promise<void> {

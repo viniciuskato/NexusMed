@@ -24,7 +24,8 @@ import { questionReactionsRepository } from '../../repositories/QuestionReaction
 import { GamificationService, CELEBRATION_STREAK_LENGTH } from '../../services/gamification';
 import { ContextualFeedbackPopover } from '../feedback/ContextualFeedbackPopover';
 import { ConnectionNotice } from '../common/ConnectionNotice';
-import { LoadStatus, loadStatusOf, onReconnect } from '../../services/connectivity';
+import { LoadStatus, loadStatusOf } from '../../services/connectivity';
+import { useAutoRetry } from '../../hooks/useAutoRetry';
 
 interface QuestionCardProps {
   question: Question;
@@ -89,6 +90,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const answerSubmissionRef = useRef(false);
   const correctionUnsubscribeRef = useRef<(() => void) | null>(null);
   const correctionAppliedRef = useRef(false);
+  // O estudante já respondeu neste card, nesta sessão (45-G, revisão do #93).
+  // A partir daí, recarregar os dados (nova tentativa sem rede, "Tentar
+  // agora", ou o pai hidratando de novo quando a carga dele volta) não mexe
+  // mais na resposta, na correção pendente nem na assinatura dela: o servidor
+  // pode ainda não ter a resposta que está na fila, e a releitura a apagaria da
+  // tela.
+  const sessionAnswerRef = useRef(false);
   const [myReaction, setMyReaction] = useState<QuestionReactionValue | null>(null);
   // Distingue "reidratado de uma tentativa já existente no servidor" de
   // "respondida agora, nesta sessão" — usado só para não confundir os dois
@@ -120,61 +128,55 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   // Carga do card avulso (sem `hydrated`), do servidor (45-G, D-2). Numa
   // falha, só o que chegou é aplicado; o resto fica como estava, o aviso
-  // aparece e a carga roda de novo quando a rede volta. Enquanto o favorito
-  // não é conhecido, o botão fica desativado — senão gravaria a partir de um
-  // estado que a tela não sabe (AUD-29).
+  // aparece e a carga tenta de novo sozinha (useAutoRetry). Enquanto o
+  // favorito não é conhecido, o botão fica desativado — senão gravaria a
+  // partir de um estado que a tela não sabe (AUD-29).
   const [hydrateStatus, setHydrateStatus] = useState<LoadStatus>('ok');
   const [bookmarkKnown, setBookmarkKnown] = useState(true);
   const [hydrateAttempt, setHydrateAttempt] = useState(0);
+  useAutoRetry(hydrateStatus, () => setHydrateAttempt((n) => n + 1));
 
+  // Troca de questão: zera o estado de envio. Só aqui — nunca numa nova
+  // tentativa de carga (ver sessionAnswerRef).
   useEffect(() => {
-    if (hydrateStatus === 'ok') return;
-    return onReconnect(() => setHydrateAttempt((n) => n + 1));
-  }, [hydrateStatus]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const applyInitialState = (
-      initialAnswer: QuestionAnswerRecord | null,
-      bookmarked: boolean,
-      reaction: QuestionReactionValue | null
-    ) => {
-      if (cancelled) return;
-      if (!isExamMode) {
-        setSelectedOption(initialAnswer?.selectedOption || selectedOptionInExam || null);
-        setIsSubmitted(!!initialAnswer);
-        setAnswerOrigin(initialAnswer ? 'hydrated' : null);
-      }
-      setIsBookmarked(bookmarked);
-      setErrorReason(initialAnswer?.errorReason || 'lacuna_teorica');
-      setMyReaction(reaction);
-    };
-
-    const loadReviewIfAnswered = async (initialAnswer: QuestionAnswerRecord | null) => {
-      if (isExamMode || !initialAnswer) return;
-      try {
-        const review = await questionsRepository.getQuestionReview(question.id);
-        if (!cancelled) setReviewResult(review);
-      } catch {
-        // Justificativa/gabarito não puderam ser recarregados agora (rede instável)
-      }
-    };
-
     setReviewResult(null);
     setIsCorrectionPending(false);
     setIsAnswerSubmitting(false);
     answerSubmissionRef.current = false;
     correctionAppliedRef.current = false;
+    sessionAnswerRef.current = false;
     correctionUnsubscribeRef.current?.();
     correctionUnsubscribeRef.current = null;
+  }, [question.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const applyAnswer = async (initialAnswer: QuestionAnswerRecord | null) => {
+      if (cancelled || sessionAnswerRef.current) return; // resposta desta sessão manda
+      if (!isExamMode) {
+        setSelectedOption(initialAnswer?.selectedOption || selectedOptionInExam || null);
+        setIsSubmitted(!!initialAnswer);
+        setAnswerOrigin(initialAnswer ? 'hydrated' : null);
+      }
+      setErrorReason(initialAnswer?.errorReason || 'lacuna_teorica');
+      setReviewResult(null);
+      if (isExamMode || !initialAnswer) return;
+      try {
+        const review = await questionsRepository.getQuestionReview(question.id);
+        if (!cancelled && !sessionAnswerRef.current) setReviewResult(review);
+      } catch {
+        // Justificativa/gabarito não puderam ser recarregados agora (rede instável)
+      }
+    };
 
     if (hydrated) {
       // O aviso de rede fica com o pai, que fez a carga (45-G).
       setHydrateStatus('ok');
       setBookmarkKnown(hydrated.known !== false);
-      applyInitialState(hydrated.answer, hydrated.bookmarked, hydrated.reaction);
-      loadReviewIfAnswered(hydrated.answer);
+      setIsBookmarked(hydrated.bookmarked);
+      setMyReaction(hydrated.reaction);
+      void applyAnswer(hydrated.answer);
       return () => {
         cancelled = true;
       };
@@ -194,16 +196,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
       if (bookmarksResult.status === 'fulfilled') setIsBookmarked(bookmarksResult.value.questions.includes(question.id));
       if (reactionResult.status === 'fulfilled') setMyReaction(reactionResult.value);
-      if (answersResult.status === 'fulfilled') {
-        const initialAnswer = answersResult.value[question.id] ?? null;
-        if (!isExamMode) {
-          setSelectedOption(initialAnswer?.selectedOption || selectedOptionInExam || null);
-          setIsSubmitted(!!initialAnswer);
-          setAnswerOrigin(initialAnswer ? 'hydrated' : null);
-        }
-        setErrorReason(initialAnswer?.errorReason || 'lacuna_teorica');
-        await loadReviewIfAnswered(initialAnswer);
-      }
+      if (answersResult.status === 'fulfilled') await applyAnswer(answersResult.value[question.id] ?? null);
     })();
 
     return () => {
@@ -312,6 +305,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const handleConfirmAnswer = useCallback(async () => {
     if (!selectedOption || isSubmitted || isCorrectionPending || answerSubmissionRef.current) return;
     answerSubmissionRef.current = true;
+    sessionAnswerRef.current = true;
     correctionAppliedRef.current = false;
     setIsAnswerSubmitting(true);
 
@@ -457,7 +451,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           : 'border-slate-300/80 dark:border-[#243652]'
       }`}
     >
-      <ConnectionNotice status={hydrateStatus} onRetry={() => setHydrateAttempt((n) => n + 1)} className="mb-4" />
+      <ConnectionNotice status={hydrateStatus} className="mb-4" />
 
       {/* Toast */}
       {toastMessage && (

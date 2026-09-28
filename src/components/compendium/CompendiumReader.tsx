@@ -99,6 +99,22 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   const [userNote, setUserNote] = useState('');
   // 45-D: anotações do aluno em seções que saíram do material (só leitura).
   const [removedSectionNotes, setRemovedSectionNotes] = useState<RemovedSectionNote[]>([]);
+  // Para qual material os dados acima vieram do servidor (45-G, revisão do
+  // #93). O leitor é reaproveitado ao navegar entre materiais: se a carga do
+  // novo falha, nada do anterior pode ficar na tela nem ser gravado no novo.
+  // Na troca, o estado zera na mesma renderização; as ações de gravar
+  // (anotação, favorito, seção lida) ficam bloqueadas até a carga deste
+  // material dar certo.
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const [shownFor, setShownFor] = useState(compendium.id);
+  if (shownFor !== compendium.id) {
+    setShownFor(compendium.id);
+    setReadSectionIds([]);
+    setIsBookmarked(false);
+    setUserNote('');
+    setRemovedSectionNotes([]);
+  }
+  const dataReady = loadedFor === compendium.id;
   const [showNoteDrawer, setShowNoteDrawer] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [isIndexOpen, setIsIndexOpen] = useState(false);
@@ -185,7 +201,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
     openCompendiumId.current = compendium.id;
   }, [compendium.id]);
 
-  const { status: loadStatus, reload } = useServerLoad(async () => {
+  const { status: loadStatus } = useServerLoad(async () => {
     const id = compendium.id;
     try {
       const [progress, bookmarks, notes, removedNotes] = await Promise.all([
@@ -194,12 +210,14 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
         notesRepository.getNotes(),
         notesRepository.getRemovedSectionNotes(),
       ]);
-      if (openCompendiumId.current !== id) return; // outro material já foi aberto
-      setRemovedSectionNotes(removedNotes[id] ?? []);
-
-      setReadSectionIds(progress[id]?.readSectionIds ?? []);
-      setIsBookmarked(bookmarks.compendiums.includes(id));
-      setUserNote(notes[id] || '');
+      return () => {
+        if (openCompendiumId.current !== id) return; // outro material já foi aberto
+        setRemovedSectionNotes(removedNotes[id] ?? []);
+        setReadSectionIds(progress[id]?.readSectionIds ?? []);
+        setIsBookmarked(bookmarks.compendiums.includes(id));
+        setUserNote(notes[id] || '');
+        setLoadedFor(id);
+      };
     } finally {
       if (targetSectionId && openCompendiumId.current === id) {
         setActiveSectionId(targetSectionId);
@@ -236,6 +254,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   };
 
   const handleToggleRead = async (sectionId: string) => {
+    if (!dataReady) return; // sem o estado deste material, não se sabe o que "inverter"
     // O estado desejado é o contrário do que a tela MOSTRA (vindo do
     // servidor), nunca da cópia local (45-G, AUD-29). A tela é atualizada
     // aqui mesmo, sem reler do servidor: sem rede, a marcação continua valendo
@@ -252,6 +271,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   };
 
   const handleToggleBookmark = async () => {
+    if (!dataReady) return;
     // Contrário do que a tela mostra, nunca da cópia local (45-G, AUD-29).
     const bookmarked = await bookmarksRepository.setBookmark('compendiums', compendium.id, !isBookmarked);
     setIsBookmarked(bookmarked);
@@ -259,6 +279,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   };
 
   const handleSaveNote = async () => {
+    if (!dataReady) return; // gravaria por cima da anotação que o servidor tem e a tela não mostrou
     await notesRepository.saveNote(compendium.id, userNote);
     showToast('Anotação salva com sucesso');
   };
@@ -321,7 +342,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
         style={{ width: `${scrollPercent}%` }}
       />
 
-      <ConnectionNotice status={loadStatus} onRetry={() => void reload()} className="mx-4 mt-3 sm:mx-6" />
+      <ConnectionNotice status={loadStatus} className="mx-4 mt-3 sm:mx-6" />
 
       {/* ── Toast Notification ───────────────────────────────────── */}
       {notification && (
@@ -432,8 +453,10 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
 
               {/* Favoritar */}
               <button
+                type="button"
                 onClick={handleToggleBookmark}
-                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                disabled={!dataReady}
+                className={`p-1.5 rounded-lg border transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
                   isBookmarked
                     ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-300 dark:border-teal-700 text-[#0F766E] dark:text-[#14B8A6]'
                     : 'bg-white dark:bg-[#111827] border-[#E2E8F0] dark:border-[#263244] text-[#64748B] dark:text-[#94A3B8] hover:bg-slate-50 dark:hover:bg-[#182235]'
@@ -519,11 +542,12 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
                     <button
                       type="button"
                       role="menuitem"
+                      disabled={!dataReady}
                       onClick={() => {
                         handleToggleBookmark();
                         setIsMoreMenuOpen(false);
                       }}
-                      className="w-full min-h-11 px-4 flex items-center gap-2.5 text-sm text-[#172033] dark:text-[#E5E7EB] hover:bg-slate-50 dark:hover:bg-[#182235] cursor-pointer"
+                      className="w-full min-h-11 px-4 flex items-center gap-2.5 disabled:cursor-not-allowed disabled:opacity-50 text-sm text-[#172033] dark:text-[#E5E7EB] hover:bg-slate-50 dark:hover:bg-[#182235] cursor-pointer"
                     >
                       <Bookmark
                         className={`w-4 h-4 shrink-0 ${
@@ -647,6 +671,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
             </div>
             <textarea
               value={userNote}
+              disabled={!dataReady}
               onChange={(e) => setUserNote(e.target.value)}
               placeholder="Escreva suas correlações clínicas, associações fisiopatológicas ou observações..."
               rows={4}
@@ -654,8 +679,10 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
             />
             <div className="mt-2.5 flex justify-end">
               <button
+                type="button"
                 onClick={handleSaveNote}
-                className="px-3 py-1.5 bg-[#0F766E] hover:bg-teal-800 dark:bg-[#14B8A6] dark:hover:bg-teal-400 text-white dark:text-[#0B1220] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                disabled={!dataReady}
+                className="disabled:cursor-not-allowed disabled:opacity-50 px-3 py-1.5 bg-[#0F766E] hover:bg-teal-800 dark:bg-[#14B8A6] dark:hover:bg-teal-400 text-white dark:text-[#0B1220] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
               >
                 Salvar anotação
               </button>
@@ -831,6 +858,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
                   <button
                     type="button"
                     aria-pressed={isRead}
+                    disabled={!dataReady}
                     onClick={() => handleToggleRead(sec.id)}
                     className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
                       isRead

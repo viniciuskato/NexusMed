@@ -958,7 +958,7 @@ A D-2 decidiu não sustentar leitura offline: sem rede, a tela avisa.
 **Depende de.** 45-C e 45-E (mesmos repositórios). A correção do favorito pode
 sair antes, sozinha.
 **Estado.** Concluída — PR #93.
-**Achados da execução.** A trilha 1 fez a unidade inteira, inclusive a leitura de materiais e questões e o carregamento do `App.tsx` (decisão do dono, 27/09). As cópias locais de leitura não são apagadas nos aparelhos (a fila e a recuperação legada ainda as usam); só deixam de ser lidas com Supabase configurado — a limpeza fica para a 46-A. `ErrorNotebookView` não é usado por nenhuma tela (o caderno real é o `IntegratedCadernoErros`).
+**Achados da execução.** A trilha 1 fez a unidade inteira, inclusive a leitura de materiais e questões e o carregamento do `App.tsx` (decisão do dono, 27/09). As cópias locais de leitura não são apagadas nos aparelhos (a fila e a recuperação legada ainda as usam); só deixam de ser lidas com Supabase configurado — a limpeza fica para a 46-A. `ErrorNotebookView` e `CadernoErrosView` não são usados por nenhuma tela (o caderno real é o `IntegratedCadernoErros`) e receberam a mesma correção; removê-los fica para a 46-A, que decompõe o componente raiz (triagem da revisão do #93). A nova tentativa automática ficou num hook só (`useAutoRetry`) por causa do item 4 da revisão; o `QuestionCard` e os cadernos ainda montam o próprio status em vez de usar `useServerLoad` — também para a 46-A.
 
 ---
 

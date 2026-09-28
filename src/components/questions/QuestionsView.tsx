@@ -127,16 +127,18 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
   // aparece. Até a primeira carga dar certo, os cards sabem que o favorito
   // não é conhecido (`known: false`) e não gravam a partir dele (AUD-29).
   const [loaded, setLoaded] = useState(false);
-  const { status: loadStatus, reload } = useServerLoad(async () => {
+  const { status: loadStatus } = useServerLoad(async () => {
     const [nextAnswers, nextBookmarks, nextReactions] = await Promise.all([
       answersRepository.getAnswers(),
       bookmarksRepository.getBookmarks(),
       questionReactionsRepository.getMyReactions(),
     ]);
-    setAnswers(nextAnswers);
-    setBookmarks(nextBookmarks);
-    setReactions(nextReactions);
-    setLoaded(true);
+    return () => {
+      setAnswers(nextAnswers);
+      setBookmarks(nextBookmarks);
+      setReactions(nextReactions);
+      setLoaded(true);
+    };
   });
 
   // If focusQuestionId exists, locate it
@@ -200,7 +202,7 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
 
   return (
     <div className="w-full max-w-[1600px] mx-auto space-y-6">
-      <ConnectionNotice status={loadStatus} onRetry={() => void reload()} />
+      <ConnectionNotice status={loadStatus} />
       {/* ── Retorno ao pack do Estudo Temático ─────────────────────── */}
       {onReturnToThematicStudy && (
         <div

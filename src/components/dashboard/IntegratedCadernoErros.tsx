@@ -34,7 +34,8 @@ import { ExportCadernoModal } from './ExportCadernoModal';
 import { parseInline } from '../common/SafeMarkdown';
 import { useServerLoad } from '../../hooks/useServerLoad';
 import { ConnectionNotice } from '../common/ConnectionNotice';
-import { LoadStatus, loadStatusOf, onReconnect } from '../../services/connectivity';
+import { LoadStatus, loadStatusOf } from '../../services/connectivity';
+import { useAutoRetry } from '../../hooks/useAutoRetry';
 
 interface IntegratedCadernoErrosProps {
   questions: Question[];
@@ -79,16 +80,26 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
       answersRepository.getAnswers(),
       errorNotebookRepository.getErrorLogs(),
     ]);
-    setAnswers(nextAnswers);
-    setErrorLogs(nextErrorLogs);
+    return () => {
+      setAnswers(nextAnswers);
+      setErrorLogs(nextErrorLogs);
+    };
   });
 
-  const [reviewStatus, setReviewStatus] = useState<LoadStatus>('ok');
+  // Status da última busca de gabaritos. Só vale enquanto ainda falta o
+  // gabarito de alguma questão errada: se a questão deixou de ser erro (ou saiu
+  // da lista), não sobra nada a buscar e o aviso não pode ficar preso (45-G,
+  // revisão do #93).
+  const [lastReviewStatus, setLastReviewStatus] = useState<LoadStatus>('ok');
   const [reviewAttempt, setReviewAttempt] = useState(0);
-  useEffect(() => {
-    if (reviewStatus === 'ok') return;
-    return onReconnect(() => setReviewAttempt((n) => n + 1));
-  }, [reviewStatus]);
+  const missingReviewIds = Object.keys(answers).filter((qid) => !answers[qid].isCorrect && !reviews[qid]);
+  const reviewStatus: LoadStatus = missingReviewIds.length > 0 ? lastReviewStatus : 'ok';
+  // Nova tentativa dos gabaritos também relê as respostas: a questão pode ter
+  // deixado de ser erro (ou saído da lista) desde a última carga.
+  useAutoRetry(reviewStatus, () => {
+    void reload();
+    setReviewAttempt((n) => n + 1);
+  });
 
 
   const showToast = (msg: string) => {
@@ -113,13 +124,13 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
     // `allSettled`: a falha ao carregar o gabarito de UMA questão (rede, RPC,
     // permissão) não esconde o das outras — com `Promise.all`, uma rejeição
     // derrubava todas (correção da branch antiga, 45-G). As que faltaram
-    // mostram o aviso e são buscadas de novo quando a rede volta.
+    // mostram o aviso e são buscadas de novo sozinhas (useAutoRetry).
     Promise.allSettled(
       mistakeIds.map((id) => questionsRepository.getQuestionReview(id).then((r) => [id, r] as const))
     ).then((results) => {
       if (cancelled) return;
       const failure = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
-      setReviewStatus(failure ? loadStatusOf(failure.reason) : 'ok');
+      setLastReviewStatus(failure ? loadStatusOf(failure.reason) : 'ok');
       setReviews((prev) => {
         const next = { ...prev };
         for (const result of results) {
@@ -278,13 +289,7 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
 
   return (
     <div className="space-y-6">
-      <ConnectionNotice
-        status={loadStatus !== 'ok' ? loadStatus : reviewStatus}
-        onRetry={() => {
-          void reload();
-          setReviewAttempt((n) => n + 1);
-        }}
-      />
+      <ConnectionNotice status={loadStatus !== 'ok' ? loadStatus : reviewStatus} />
       {/* Toast flutuante */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">

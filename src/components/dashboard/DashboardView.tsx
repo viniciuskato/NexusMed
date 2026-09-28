@@ -120,9 +120,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       readingProgressRepository.getReadingProgress(),
       errorNotebookRepository.getErrorLogs(),
     ]);
-    setAnswers(nextAnswers);
-    setReadingProgress(nextProgress);
-    setErrorLogs(nextErrorLogs);
+    return () => {
+      setAnswers(nextAnswers);
+      setReadingProgress(nextProgress);
+      setErrorLogs(nextErrorLogs);
+    };
   });
 
   const reloadData = async () => {
@@ -261,7 +263,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="w-full max-w-[1680px] mx-auto space-y-7 pb-12">
-      <ConnectionNotice status={loadStatus} onRetry={() => void reload()} />
+      <ConnectionNotice status={loadStatus} />
       {/* ── 1. Hero Pessoal de Desempenho & Nível ── */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950 border border-slate-800 text-white p-6 sm:p-8 2xl:p-10 elev-xl shadow-teal-950/20">
         <div className="absolute -top-24 -right-24 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />

@@ -104,14 +104,13 @@ export const ThematicStudyView: React.FC<ThematicStudyViewProps> = ({
   const [readingProgress, setReadingProgress] = useState<
     Record<string, { readSectionIds: string[]; percent: number }>
   >({});
-  // A tela continua utilizável sem o progresso de leitura; o aviso deixa
-  // explícito que a porcentagem exibida pode estar incompleta, em vez de
-  // mostrar 0% como se fosse um fato. Sem rede, recarrega quando ela volta
-  // (45-G, D-2).
-  const { status: loadStatus, reload } = useServerLoad(async () => {
-    setReadingProgress(await readingProgressRepository.getReadingProgress());
+  // A tela continua utilizável sem o progresso de leitura; o aviso (um só,
+  // ConnectionNotice) deixa explícito que a carga falhou, em vez de mostrar 0%
+  // como se fosse um fato. Tenta de novo sozinha (45-G, D-2).
+  const { status: loadStatus } = useServerLoad(async () => {
+    const progress = await readingProgressRepository.getReadingProgress();
+    return () => setReadingProgress(progress);
   });
-  const progressError = loadStatus !== 'ok';
 
   const data = useMemo(
     () =>
@@ -273,15 +272,8 @@ export const ThematicStudyView: React.FC<ThematicStudyViewProps> = ({
           </div>
         </div>
 
-        {progressError && (
-          <p
-            id="thematic-progress-warning"
-            className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-3"
-          >
-            Não foi possível carregar o progresso de leitura agora. As demais informações continuam
-            válidas; a porcentagem de leitura pode estar desatualizada.
-          </p>
-        )}
+        {/* Um aviso por falha (45-G): o ConnectionNotice substitui o aviso próprio desta tela. */}
+        <ConnectionNotice status={loadStatus} />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {/* Leitura */}
@@ -483,7 +475,7 @@ export const ThematicStudyView: React.FC<ThematicStudyViewProps> = ({
 
   return (
     <div id="thematic-study-view" className="space-y-6">
-      <ConnectionNotice status={loadStatus} onRetry={() => void reload()} />
+      <ConnectionNotice status={loadStatus} />
       <div className="bg-gradient-to-r from-teal-900 via-slate-900 to-slate-950 rounded-3xl p-6 sm:p-8 text-white elev-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 border border-teal-800/30">
         <div className="max-w-2xl space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 text-xs font-semibold border border-teal-400/30">
@@ -542,15 +534,6 @@ export const ThematicStudyView: React.FC<ThematicStudyViewProps> = ({
         </div>
       )}
 
-      {progressError && (
-        <p
-          id="thematic-progress-warning"
-          className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-3"
-        >
-          Não foi possível carregar o progresso de leitura agora. As porcentagens exibidas podem
-          estar desatualizadas.
-        </p>
-      )}
 
       {!hasAnyContent ? (
         <div className={`${cardShell} p-12 text-center space-y-2`}>
