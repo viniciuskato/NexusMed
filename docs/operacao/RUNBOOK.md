@@ -99,7 +99,12 @@ revisão.
    dele, o CLI só roda pelo caminho completo,
    `C:\Users\vinic\bin\supabase.exe db push --linked --yes`). O check
    `migration-no-remoto` (46-E) fica vermelho enquanto a migration do PR não
-   está no remoto; depois de aplicar, "Re-run jobs" nele o deixa verde. **Se o
+   está no remoto; depois de aplicar, "Re-run jobs" nele o deixa verde. O
+   check compara a versão, não o conteúdo: migration já aplicada no remoto
+   não se corrige no mesmo arquivo, porque o `db push` não a aplica de novo —
+   a correção vai numa migration nova. PR que altera (`modified`) uma
+   migration já aplicada reprova; migration nova do próprio PR editada depois
+   de aplicada continua verde, e o check não vê a diferença. **Se o
    frontend novo depende da migration (RPC nova, coluna nova), aplicar a
    migration ANTES do merge** — o deploy da Vercel é imediato. Conferir
    depois com uma query direta contra o schema remoto — não confiar só na
@@ -130,32 +135,55 @@ escreve.
 ## 3.2. Credencial do check de migrations (P-4, uma vez)
 
 O check `migration-no-remoto` (46-E) lê o histórico de migrations do Supabase
-de produção com um papel que não consegue ler mais nada nem escrever.
+de produção com um papel cujo único privilégio concedido é ler esse histórico
+(o que ele herda de `PUBLIC` está no passo 1).
+
+**Ordem.** Os passos 1 a 3 vêm **antes** do merge do PR que traz o workflow:
+sem o segredo, o push no `main` fica vermelho e todo PR com migration
+reprova. Os passos 4 e 5 vêm **só depois** desse merge, nessa ordem: o check
+roda pela versão do workflow que está no `main` (`pull_request_target`),
+então antes do merge ele não existe e não aparece no próprio PR — torná-lo
+obrigatório antes prende o PR para sempre.
 
 1. No Supabase, SQL Editor do projeto `synapsemed`, trocando a senha por uma
-   forte que você gerar (não a use em mais nada):
+   que você gerar (não a use em mais nada). **Só letras e números, com uns 40
+   caracteres, sem símbolos:** símbolo como `@`, `/` ou `%` quebra a URI do
+   passo 2, e a mensagem de erro de conexão pode mostrar pedaços da senha.
    ```sql
-   create role ci_migracoes_leitura with login password 'TROQUE-POR-UMA-SENHA-FORTE'
+   create role ci_migracoes_leitura with login password 'TROQUE-POR-UMA-SENHA-SO-LETRAS-E-NUMEROS'
      noinherit connection limit 3;
    grant usage on schema supabase_migrations to ci_migracoes_leitura;
    grant select on supabase_migrations.schema_migrations to ci_migracoes_leitura;
    alter role ci_migracoes_leitura set default_transaction_read_only = on;
    alter role ci_migracoes_leitura set statement_timeout = '10s';
    ```
-   O papel herda o que `PUBLIC` concede. Em 27/09 isso era só executar
-   `rls_auto_enable()`, que é gatilho de evento e não pode ser chamada, e
-   ler as estatísticas do `pg_stat_statements`, das quais cada papel só vê
-   as próprias consultas.
+   A barreira é o `grant`: o papel só tem `select` no histórico de
+   migrations. O `default_transaction_read_only` é uma camada a mais, não a
+   barreira — a própria sessão consegue desligá-lo. O papel também herda o
+   que `PUBLIC` concede, e isso não se fecha só para ele: o Postgres não tem
+   negação por papel (um `revoke` tira só o que foi dado ao próprio papel, e
+   tirar de `PUBLIC` tiraria de todos). Pelas migrations do repositório, em
+   27/09 o herdado era só executar `rls_auto_enable()`, que é gatilho de
+   evento e não pode ser chamada, e ler as estatísticas do
+   `pg_stat_statements`, das quais cada papel só vê as próprias consultas.
+   O limite: objeto novo com permissão para `PUBLIC` passa a valer para ele
+   também. Uma função `security definer` nova sem o `revoke ... from public`
+   (risco 14 do `AGENTS.md`; nenhuma guarda confere isso ainda, AUD-31) seria
+   chamável com esta credencial, e a sessão pode definir
+   `request.jwt.claims`, que é o que `auth.uid()` lê: a chamada valeria como
+   a de qualquer usuário, admin inclusive.
 2. No Supabase, botão "Connect", aba "Session pooler": copie a URI. Nela,
    troque `postgres.jfvhwwvixwvgjfqzlkkb` por
    `ci_migracoes_leitura.jfvhwwvixwvgjfqzlkkb` e `[YOUR-PASSWORD]` pela senha
    do passo 1. No fim, acrescente `?sslmode=require`.
 3. No GitHub: Settings → Secrets and variables → Actions → New repository
    secret. Nome `MIGRACOES_REMOTO_URL`, valor a URI do passo 2.
-4. No ruleset "Proteger main": inclua `migration-no-remoto` (e `revisado`)
-   entre os checks obrigatórios.
-5. Conferir: Actions → migracoes → Run workflow no `main`. Verde é "todas as
-   migrations do repositório estão no Supabase de produção".
+4. **Depois do merge**, conferir: Actions → migracoes → Run workflow no
+   `main`. Verde é "a versão de todas as migrations do repositório está no
+   histórico do Supabase de produção". Vermelho mostra só a categoria do erro
+   (senha recusada, URI inválida, não conectou), nunca a mensagem do psql.
+5. Com o passo 4 verde, no ruleset "Proteger main": inclua
+   `migration-no-remoto` (e `revisado`) entre os checks obrigatórios.
 
 ## 4. Rollback
 

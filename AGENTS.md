@@ -202,7 +202,8 @@ seção "Armadilhas já descobertas".
   Migration da qual o frontend depende é aplicada no remoto **antes** do
   merge. Detalhe em `docs/operacao/RUNBOOK.md`, seção 3.
 - **D-6 (25/09):** revisão com rótulo e check `revisado`, rótulo posto pela
-  sessão que revisou, nunca pela trilha nem pelo dono (regras em
+  sessão que revisou, nunca pela trilha (pelo dono só se o classificador
+  bloquear a sessão, depois do veredito postado no PR) (regras em
   `docs/operacao/EXECUTOR_PROTOCOL.md`, "Revisão"; atualizar branch só com
   merge, nunca rebase), merge por squash, no máximo duas trilhas e três PRs
   esperando o dono, processo congelado até 09/10.

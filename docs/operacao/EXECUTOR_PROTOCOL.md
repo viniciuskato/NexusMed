@@ -148,8 +148,8 @@ sincronização, RLS, migration que mexe em dado existente —, vale um segundo
 olhar de outro modelo (`MODELO-DIRETORIA.md`, "Verificação cruzada").
 
 **Rótulo "revisado" e check `revisado` (D-6).** Sem achado pendente, **a
-sessão que revisou** põe o rótulo no PR. Nem a trilha nem o dono põem: o dono
-só mescla quando `fast`, `full`, `revisado` e `migration-no-remoto` estão
+sessão que revisou** põe o rótulo no PR. A trilha nunca põe, e o dono só no
+caso do classificador, abaixo; o dono só mescla quando `fast`, `full`, `revisado` e `migration-no-remoto` estão
 verdes (INC-2026-006). O workflow `.github/workflows/revisao.yml` registra num
 comentário o commit rotulado; o check fica verde enquanto tudo depois dele
 forem só merges limpos do `main`. Na prática:
@@ -162,6 +162,10 @@ forem só merges limpos do `main`. Na prática:
   porque as sessões usam a conta do dono;
 - a trilha encerra o retorno com "pronto para revisão", sem listar rótulo e
   merge como passos do dono;
+- se o classificador do Claude Code bloquear a sessão de revisão na hora de
+  pôr o rótulo (aconteceu em 28/09, no #96), ela diz isso ao dono, e o dono
+  põe o rótulo — só depois de ler no PR o veredito "sem achado pendente"
+  postado por ela;
 - os checks só bloqueiam o merge quando o dono os inclui como obrigatórios no
   ruleset do `main`. Até lá, conferi-los à mão.
 

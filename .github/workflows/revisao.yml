@@ -63,7 +63,7 @@ jobs:
           rotulos=$(gh pr view "$PR" --json labels --jq '[.labels[].name] | join(",")')
           case ",$rotulos," in
             *,revisado,*) ;;
-            *) reprova "PR sem o rótulo 'revisado'. Depois da revisão em sessão nova, sem achado pendente, o dono põe o rótulo." ;;
+            *) reprova "PR sem o rótulo 'revisado'. Depois da revisão por uma sessão que não escreveu o PR, sem achado bloqueante, quem revisou põe o rótulo." ;;
           esac
 
           if [ "$ACTION" = labeled ] && [ "$LABEL" = revisado ]; then
@@ -77,7 +77,7 @@ jobs:
           rotulado=$(gh api "repos/$GH_REPO/issues/$PR/comments" --paginate \
               --jq '.[] | select(.user.login == "github-actions[bot]") | .body' \
             | grep -o 'revisao:commit=[0-9a-f]\{40\}' | tail -n 1 | cut -d= -f2 || true)
-          [ -n "$rotulado" ] || tira_rotulo "O rótulo 'revisado' não tem commit registrado (a execução que registra pode ter sido cancelada). Ponha o rótulo de novo."
+          [ -n "$rotulado" ] || tira_rotulo "O rótulo 'revisado' não tem commit registrado (a execução que registra pode ter sido cancelada). Quem revisou põe o rótulo de novo."
 
           git init -q repo && cd repo
           git remote add origin "https://github.com/$GH_REPO.git"
