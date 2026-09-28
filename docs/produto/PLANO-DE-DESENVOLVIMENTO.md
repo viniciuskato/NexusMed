@@ -88,7 +88,7 @@ mesma do `docs/conteúdos/LEIA-ME.md`, "Janelas do Claude"):
 - **Diretoria nova:** `Leia docs/conteúdos/colar-no-claude/abrir-diretoria.txt e siga, pulando a parte "Só hoje".`
   Uma janela só; toda segunda (ou quando o contexto encher), o dono fecha a
   antiga e abre uma nova.
-- **Sessão de defeitos:** `Leia docs/conteúdos/colar-no-claude/abrir-defeitos.txt e siga. Autorizo push de branch, abrir PR, usar Docker e o Supabase local, e pôr "revisado" no PR da diretoria que você revisar. Não mesclar; nada no Supabase remoto.`
+- **Sessão de defeitos:** `Leia docs/conteúdos/colar-no-claude/abrir-defeitos.txt e siga. Até 09/10 eu autorizo: criar e usar o worktree .claude/worktrees/defeitos, usar o worktree .claude/worktrees/trilha-1 para o #93, push de branch, abrir PR, Docker e Supabase local, mandar mensagem à diretoria, comentar revisão e pôr o rótulo revisado no PR da diretoria que você revisar sem achado bloqueante. Nunca: merge, aplicar migration, escrever no Supabase remoto ou na Vercel.`
 
 A sessão de materiais é o Gem "Redator NexusMed", no Gemini; os passos estão
 em `docs/conteúdos/LEIA-ME.md` (local). As trilhas (23 a 28/09) não se abrem

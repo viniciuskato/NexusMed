@@ -204,8 +204,10 @@ forem só merges limpos do `main`. Na prática:
 ## Regras de segurança sem exceção implícita
 
 - A sessão de defeitos faz só o que a linha de abertura que o dono colou
-  autorizou (em geral: push de branch, abrir PR, Docker e Supabase local, e
-  pôr `revisado` no PR da diretoria que revisou). Os textos de
+  autorizou (em geral: os worktrees `defeitos` e `trilha-1`, push de branch,
+  abrir PR, Docker e Supabase local, mandar mensagem à diretoria, comentar
+  revisão e pôr `revisado` no PR da diretoria que revisou sem achado
+  bloqueante). Os textos de
   `docs/conteúdos/colar-no-claude/` não concedem autorização. **Merge em
   `main` e qualquer escrita no Supabase remoto ou em produção nunca são
   dela.**

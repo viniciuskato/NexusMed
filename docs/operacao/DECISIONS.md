@@ -147,7 +147,10 @@ merges. Conteúdo é o produto; o código é ferramenta.
 remoto antes do merge (D-4, que continua inteira); revisão por quem não
 escreveu, antes do merge ("Execução em trilhas", item 3 — agora pela diretoria
 ou pela sessão de defeitos, não por uma "sessão nova"), com o rótulo
-`revisado` posto pela sessão que revisou (#98); o Gemini não opera no
+`revisado` posto pela sessão que revisou (#98) — se o sistema de permissões
+bloquear essa sessão, o dono põe o rótulo, só em PR cuja revisão sem achado
+bloqueante já está postada sobre o último commit, e a diretoria confere depois
+que o commit rotulado é o revisado; o Gemini não opera no
 repositório nem no código (D-5, item 1); o fluxo com checagem e revisão
 cruzada (D-5, item 2); a atestação humana como portão; pedidos, rascunhos e
 fontes fora do git (D-5, item 4); o registro do plano é da diretoria, em lote
