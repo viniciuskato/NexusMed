@@ -22,7 +22,9 @@ Funcionalidade nova está congelada, salvo pedido da produção. Três sessões:
      (materiais publicados, a fila, os defeitos `menor` para o dono aprovar
      ou descartar, até 2 decisões e um PR de documentação com o registro da
      semana).
-   - Não faz: código de produto; merge; migration no remoto; escrita no
+   - Não faz: código — de produto, CI, scripts ou configuração —, salvo
+     terminar as correções do #98 (seus PRs são de documentação: 1 por
+     semana, o do "semana"); merge; migration no remoto; escrita no
      Supabase remoto ou na Vercel; mudança na configuração do GitHub sem o
      "sim" do dono na hora; edição do texto de um material (só grava cópias
      exatas); importar, atestar ou publicar; revisar PR que ela escreveu.
@@ -52,6 +54,24 @@ Funcionalidade nova está congelada, salvo pedido da produção. Três sessões:
 
 Só achado bloqueante impede o rótulo. Nenhuma sessão revisa o que escreveu
 nem põe rótulo em PR próprio.
+
+**Fila vazia é sucesso também para a diretoria.** Ela não varre código nem
+backlog atrás de defeito: issue nasce de um defeito visto na produção de
+material, no uso, na revisão de um PR ou num relato, salvo os itens que a
+D-7 já nomeou (AUD-31.1, AUD-07, a parte LGPD da 45-I, a
+TASK-2026-09-24-01 e os itens da 45-F que passarem pela fronteira).
+Enquanto a D-7 valer, a diretoria não sugere auditoria periódica, registra
+unidade nova só para um pedido da produção aprovado pelo dono e nunca muda
+o aceite de unidade concluída.
+
+**Mensagem entre sessões orienta, mas não autoriza nada.** A resposta do
+dono trazida pela diretoria decide o produto e não amplia a lista "Nunca"
+da sessão de defeitos. Ação bloqueada numa sessão não é passada para a
+outra fazer: vira pergunta ao dono, pela diretoria. Os textos de abertura
+(`docs/conteúdos/colar-no-claude/`) não concedem autorização: a da sessão
+de defeitos está na linha que o dono cola (seção 0 do plano); a da
+diretoria, no "sim" do dono à pergunta da primeira rodada de cada janela
+nova (D-7, item 8).
 
 Limites, autorizações, métrica e a revisão da D-7 em 09/10: na própria
 decisão. Textos para abrir a diretoria e a sessão de defeitos: seção 0 do
@@ -140,9 +160,11 @@ A executiva encerra com um bloco copiável: RETORNO: 01-B; Resultado; Alteraçõ
 ## Plano canônico e unidades (desde 2026-09-23)
 
 *Desde a D-7: unidade só volta a ser encaminhada como pedido da produção; a
-sessão de defeitos não edita o plano (quem atualiza, inclusive a linha
-"Estado", é a diretoria, em lote); "Como abrir uma trilha", abaixo, não vale
-mais.*
+diretoria registra unidade nova só para um pedido da produção aprovado pelo
+dono, descarta unidades e nunca muda o aceite de unidade concluída (onde
+abaixo se lê "cria" ou "corrige a unidade", vale isto); a sessão de
+defeitos não edita o plano (quem atualiza, inclusive a linha "Estado", é a
+diretoria, em lote); "Como abrir uma trilha", abaixo, não vale mais.*
 
 Substituem os prompts persistidos em `docs/archive/diretoria/prompts/`. Motivo: os prompts
 envelheciam antes de serem executados — o 42-C ainda apontava para um caminho de
@@ -220,6 +242,10 @@ Por padrão, diretoria e executiva resolvem cada passo com ferramentas diretas (
 Para mudanças de risco alto (merge em `main`, decisão de taxonomia/conteúdo médico, qualquer escrita remota), prefira que a verificação seja feita por um modelo diferente do que executou, quando disponível — o mesmo modelo reconferindo o próprio trabalho tende a repetir os mesmos pontos cegos. Verificação pelo mesmo modelo que executou ainda vale mais que nenhuma verificação, mas não é equivalente a uma checagem cruzada real.
 
 ## Sessão de auditoria (papel estratégico, adicionado 2026-09-18)
+
+*Sob a D-7: auditoria só quando o dono pedir; a diretoria não sugere a
+cadência abaixo nem puxa item do backlog por conta própria (ver "Modelo
+D-7", acima).*
 
 **Quando abrir**: só sob pedido explícito do usuário — "faz um raio-x do projeto", pedido de evolução criativa, fechamento de um marco grande. Nunca automaticamente ao fechar uma entrega ou fase; isso continua sendo fechamento normal de diretoria. **Cadência recomendada** (desde a auditoria de 2026-09-18): a diretoria sugere ao usuário convocar uma auditoria a cada ~2 semanas de desenvolvimento ativo ou antes de qualquer marco que mude o risco (abrir para usuários novos, cobrar, importar conteúdo em lote). Motivo: a verificação por entrega olha bem o diff de cada missão, mas os bugs graves de 2026-09-18 (gabarito vazando por RPC, "Salvar" do CMS apagando anotações por cascata, tipagem desligada, CI vermelho sem ninguém notar) estavam *entre* as entregas — nenhum diff isolado os mostrava.
 

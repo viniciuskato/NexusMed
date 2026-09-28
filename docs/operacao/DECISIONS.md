@@ -40,24 +40,34 @@ merges. Conteúdo é o produto; o código é ferramenta.
    prevenção que o registro de um incidente lista como pendente; falha de
    segurança em dependência de produção. Não contam como promessa: princípio
    ou "Por quê" do plano, "a plataforma vai ganhar" do padrão, decisão cujo
-   mecanismo está numa unidade congelada. Toda issue de defeito traz "Hoje,
-   quando [quem] faz [o quê], acontece [X]. Deveria acontecer [Y], como
-   promete [onde].", o rótulo `bug` e um de gravidade, em duas faixas:
-   `grave` (dado do estudante; segurança ou privacidade; produção quebrada ou
-   em risco) entra direto na fila; `menor` (promessa quebrada sem dano;
-   cosmético) vai à lista do "semana" e só entra com o "sim" do dono. No
-   máximo 5 issues `bug` abertas; acima disso, só entra `grave`. Na mesma
-   faixa, primeiro o que está no caminho da produção. Evolução — tela ou
-   fluxo novo, "funciona, mas ficaria melhor", refatoração, desempenho sem
-   sintoma medido, dependência major sem falha, teste que falta sem defeito —
-   fica congelada.
+   mecanismo está numa unidade congelada. O aceite vale como estava quando a
+   unidade foi concluída; risco numerado novo só vale como promessa depois
+   do "sim" do dono. Toda issue de defeito traz "Hoje, quando [quem] faz
+   [o quê], acontece [X]. Deveria acontecer [Y], como promete [onde].", o
+   rótulo `bug` e um de gravidade, em duas faixas: `grave` (dado do
+   estudante; segurança ou privacidade; produção quebrada ou em risco) entra
+   direto na fila; `menor` (promessa quebrada sem dano; cosmético) vai à
+   lista do "semana" e só entra com o "sim" do dono — a diretoria só abre a
+   issue `menor` depois desse "sim". No máximo 5 issues `bug` abertas; acima
+   disso, só entra `grave`. Na mesma faixa, primeiro o que está no caminho
+   da produção. O repositório é público: issue e PR nunca levam dado de
+   estudante (nome, e-mail, id, resposta, saída de consulta com linhas) nem
+   valor de `.env`, e defeito de segurança ou privacidade ainda aberto vai
+   sem o passo a passo de exploração (o detalhe segue por mensagem entre as
+   sessões). Evolução — tela ou fluxo novo, "funciona, mas ficaria melhor",
+   refatoração, desempenho sem sintoma medido, dependência major sem falha,
+   teste que falta sem defeito — fica congelada.
 4. **Pedido da produção** (rótulo `pedido-da-producao`), a única porta para
    evolução. Gatilho, com evidência: um passo da produção não se faz, ou só se
    faz violando uma regra de qualidade; um contorno manual custa ao dono mais
    de 30 minutos por semana, medido em dois materiais; um estudante relatou
    ter sido prejudicado. A diretoria propõe em até 5 linhas (o que travou, o
    custo, o aceite, o tamanho); o dono diz "sim"; cabe em 1 PR; executa a
-   sessão de defeitos; 1 aberto por vez.
+   sessão de defeitos; 1 aberto por vez. A issue traz a evidência — o
+   material e o passo que travou; os minutos que o dono informou em cada um
+   dos dois materiais; o relato do estudante, sem dado dele — e a data do
+   "sim". Unidade congelada não volta em pedaços: o pedido inteiro cabe em
+   1 PR, e um pedido novo precisa de evidência nova.
 5. **Congeladas** (só voltam por pedido da produção): 45-K (volta com erro de
    fato ou dose em material publicado que ficou mais de 1 dia no ar sem
    atestação, ou com 3 ou mais correções de material publicado em 2 semanas),
@@ -65,6 +75,10 @@ merges. Conteúdo é o produto; o código é ferramenta.
    AUD-31.1 e AUD-07, que viram defeito `grave`) e a 45-I (salvo a parte LGPD,
    AUD-30.3 e 30.4, que vira defeito `grave`). **Não congelam:** 46-E (#98,
    prevenção de incidente) e 45-G (#93, defeitos); a 43-C (#96) é a meta.
+   Ajustes ao conferir contra o plano: a 45-F (conta e sessão) não congela
+   nem entra inteira — cada item vira issue se passar pela fronteira; a 46-C
+   (backup), fora da lista, não é decidida aqui: continua esperando a P-2, e
+   a diretoria pergunta ao dono se ela entra como prevenção de perda de dado.
    Detalhe e gatilhos: seção 5 do plano.
 6. **Conteúdo.** A atestação humana, presa ao hash, continua o único portão;
    nada é importado sem o dono ter lido o material inteiro. Afirmação de alto
@@ -84,18 +98,26 @@ merges. Conteúdo é o produto; o código é ferramenta.
    de o check `migration-no-remoto` existir e ser obrigatório; até 02/10, nada
    que mexa em importar, atestar, publicar ou ligar questão, salvo o #96, o
    #93 e defeito grave nesse caminho, e nenhuma atualização de dependência de
-   produção; 1 PR de documentação da diretoria por semana (o do "semana"),
-   fora o desta decisão.
-8. **Autorizações da diretoria.** Na primeira rodada, ela pede ao dono, uma
-   vez só, as que valem até 09/10: postar revisão e pôr ou tirar `revisado`
-   em PR que não escreveu; atualizar a branch de PR rotulado; mandar mensagem
-   à sessão de defeitos; criar e editar issues e rótulos; comentar, pôr em
-   rascunho e fechar PR quando o dono já decidiu; escrever em `docs/conteúdos`
-   e fazer a cópia semanal dela; ler a área de transferência quando o dono
-   digitar os comandos de material; ler o Supabase remoto só com consulta que
-   não devolve dado pessoal. É exceção explícita e com prazo à autorização por
-   ação (`SESSION_PROTOCOL.md`); merge, migration e escrita remota nunca
-   entram.
+   produção; a diretoria não escreve código (de produto, CI, scripts ou
+   configuração), salvo terminar as correções do #98, e abre 1 PR de
+   documentação por semana (o do "semana"), fora o desta decisão.
+8. **Autorizações.** A da sessão de defeitos está na linha de abertura que o
+   dono cola (seção 0 do plano); os textos de abertura, locais, não concedem
+   autorização. Mensagem entre sessões orienta, mas não autoriza nada: ação
+   bloqueada numa sessão não é passada para a outra fazer; vira pergunta ao
+   dono, pela diretoria. A diretoria, na primeira rodada de cada janela
+   nova, pede ao dono, numa pergunta só, as que valem até 09/10: postar
+   revisão e pôr ou tirar `revisado` em PR que não escreveu; atualizar a
+   branch de PR rotulado; mandar mensagem à sessão de defeitos; criar e
+   editar issues e rótulos; comentar, pôr em rascunho e fechar PR quando o
+   dono já decidiu; escrever em `docs/conteúdos` e fazer a cópia semanal
+   dela; ler a área de transferência quando o dono digitar os comandos de
+   material; ler o Supabase remoto só com consulta que não devolve dado
+   pessoal (materiais, questões, contagens, histórico de migrations), sempre
+   dentro de uma transação só de leitura
+   (`begin transaction read only;` … `rollback;`). É exceção explícita e com
+   prazo à autorização por ação (`SESSION_PROTOCOL.md`); merge, migration e
+   escrita remota nunca entram.
 9. **Métrica e revisão.** Número principal: materiais publicados por semana.
    Apoio: questões publicadas ligadas a material publicado; erros médicos
    achados depois de publicar (meta 0); PRs mesclados sem revisão (meta 0).

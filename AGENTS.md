@@ -24,8 +24,9 @@ faltar um fato — leitura desnecessária custa tokens em toda sessão. A lista
 completa é da diretoria, que lê também o `MODELO-DIRETORIA.md`.
 
 1. [`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](docs/produto/PLANO-DE-DESENVOLVIMENTO.md)
-   — plano canônico: o que está sendo construído, por quê, em que ordem e
-   em que estado; todas as unidades de implementação.
+   — plano canônico: o que existe, o que está congelado e por quê (desde a
+   D-7, código só por defeito ou pedido da produção), e em que estado está
+   cada unidade.
 2. [`docs/operacao/PROJECT_STATE.md`](docs/operacao/PROJECT_STATE.md) —
    estado presente verificável, ambientes, baseline, riscos abertos.
 3. [`docs/operacao/DECISIONS.md`](docs/operacao/DECISIONS.md) — decisões
@@ -197,9 +198,10 @@ seção "Armadilhas já descobertas".
     atualize o padrão no mesmo PR e rode o exemplo do bloco de formato pelo
     importador para conferir. O padrão tem versão (v2 desde 2026-09-23):
     mudança editorial sobe a versão e ganha entrada na seção 2.7; depois da
-    unidade 44-C1, regra mecânica nova vem com a checagem correspondente.
-    Desde 24/09 (D-5) quem escreve é o Gemini, fora do repositório: o padrão é
-    a interface entre ele e o sistema.
+    unidade 44-C1, regra mecânica nova vem com a checagem correspondente
+    (sob a D-7, essa checagem é pedido da produção; até lá, a revisão
+    confere à mão). Desde 24/09 (D-5) quem escreve é o Gemini, fora do
+    repositório: o padrão é a interface entre ele e o sistema.
 
 ## Convenções de trabalho
 
@@ -242,7 +244,8 @@ probabilidade de recorrência deve gerar registro em
 `docs/operacao/standards/` ou `RUNBOOK.md`; somente um resumo curto e um
 link entram aqui quando todo agente precisar conhecê-los.
 
-O que construir e em que ordem vive no plano canônico
+O que existe, o que está congelado e por quê (desde a D-7, código só por
+defeito ou pedido da produção) vive no plano canônico
 (`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`); estado dos ambientes,
 decisões e fila operacional, em `PROJECT_STATE.md`, `DECISIONS.md` e
 `TASKS.md`, conforme `SESSION_PROTOCOL.md`. `docs/archive/diretoria/registro.md` é

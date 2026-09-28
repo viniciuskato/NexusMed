@@ -1,8 +1,9 @@
 # Plano de desenvolvimento do NexusMed
 
-**Documento canônico.** Diz o que está sendo construído, por quê, em que ordem
-e em que estado está cada parte. Substitui a antiga sequência de prompts e os
-documentos por iniciativa.
+**Documento canônico.** Diz o que existe, o que está congelado e por quê
+(desde a D-7, código só por defeito ou pedido da produção), e em que estado
+está cada parte. Substitui a antiga sequência de prompts e os documentos por
+iniciativa.
 
 **Última revisão da diretoria:** 25/09/2026. **Revisão pela D-7:** 28/09/2026.
 **Estado verificado no código:** 24/09/2026.
@@ -50,7 +51,7 @@ branch nem passo a passo.
 | Estado | Significa |
 |---|---|
 | Planejada | Definida, mas falta dependência ou decisão |
-| Pronta | Pode ser encaminhada agora |
+| Pronta | Definida e sem dependência pendente. Desde a D-7, só é encaminhada por pedido da produção |
 | Em execução | Uma sessão de execução está trabalhando nela |
 | Em PR | Implementada, esperando revisão e merge |
 | Concluída | Mesclada em `main`; a coluna "publicado" do registro diz se já está em produção |
@@ -61,29 +62,33 @@ branch nem passo a passo.
 
 | Quem | Quando | O que muda aqui |
 |---|---|---|
-| **Diretoria** | Em lote, no PR de documentação da semana (D-7) | Cria, corrige ou descarta unidades; muda a sequência (seção 5); registra e resolve decisões em aberto (seção 6); atualiza "Onde o sistema está" (seção 2), a linha "Estado" das unidades e o registro (seção 13). Toda decisão durável também vai para `docs/operacao/DECISIONS.md`. |
+| **Diretoria** | Em lote, no PR de documentação da semana (D-7) | Registra unidade nova só para um pedido da produção aprovado pelo dono; descarta unidades; nunca muda o aceite de unidade concluída; atualiza a seção 5 conforme as decisões do dono; registra e resolve decisões em aberto (seção 6); atualiza "Onde o sistema está" (seção 2), a linha "Estado" das unidades e o registro (seção 13). Toda decisão durável também vai para `docs/operacao/DECISIONS.md`. |
 | **Sessão de defeitos** | — | Nada aqui (D-7): conserta pela fila de issues; o registro é da diretoria. |
 | **Revisão** | Antes do merge, por quem não escreveu o PR | Nada aqui — comenta o PR. |
 | **Dono do produto** | Quando quiser | Lê, decide (seção 6), aplica migration no remoto, mescla e faz as pendências que só ele pode fazer (seção 11). |
 
 ### Como o código anda (D-7)
 
-Unidade nova não é encaminhada. O código vem da fila de defeitos (issues
-`bug` com gravidade, seção 5) e, com o "sim" do dono, de um pedido da
-produção: a sessão de defeitos conserta com teste e abre o PR → a diretoria
-revisa e põe o rótulo → o dono aplica a migration, se houver, e mescla.
+Nenhuma unidade é encaminhada, salvo por pedido da produção. O código vem da
+fila de defeitos (issues `bug` com gravidade, seção 5) e, com o "sim" do
+dono, de um pedido da produção: a sessão de defeitos conserta com teste e
+abre o PR → a diretoria revisa e põe o rótulo → o dono aplica a migration,
+se houver, e mescla.
 Protocolo: `docs/operacao/EXECUTOR_PROTOCOL.md`.
 
 ### Como abrir a diretoria e a sessão de defeitos
 
 Os textos de abertura ficam em `docs/conteúdos/colar-no-claude/`, pasta local
 que o git ignora (D-5): existem só no computador do dono, e a diretoria os
-mantém sem PR. Cada sessão é aberta no Claude Code, na pasta do NexusMed, com
-o modelo mais capaz, colando uma linha:
-- **Diretoria:** `Leia docs/conteúdos/colar-no-claude/abrir-diretoria.txt e siga.`
+mantém sem PR. Por isso eles não concedem autorização: a da sessão de
+defeitos está na linha que o dono cola; a da diretoria, no "sim" do dono à
+pergunta da primeira rodada (D-7, item 8). Cada sessão é aberta no Claude
+Code, na pasta do NexusMed, com o modelo mais capaz, colando uma linha (a
+mesma do `docs/conteúdos/LEIA-ME.md`, "Janelas do Claude"):
+- **Diretoria nova:** `Leia docs/conteúdos/colar-no-claude/abrir-diretoria.txt e siga, pulando a parte "Só hoje".`
   Uma janela só; toda segunda (ou quando o contexto encher), o dono fecha a
   antiga e abre uma nova.
-- **Sessão de defeitos:** `Leia docs/conteúdos/colar-no-claude/abrir-defeitos.txt e siga.`
+- **Sessão de defeitos:** `Leia docs/conteúdos/colar-no-claude/abrir-defeitos.txt e siga. Autorizo push de branch, abrir PR, usar Docker e o Supabase local, e pôr "revisado" no PR da diretoria que você revisar. Não mesclar; nada no Supabase remoto.`
 
 A sessão de materiais é o Gem "Redator NexusMed", no Gemini; os passos estão
 em `docs/conteúdos/LEIA-ME.md` (local). As trilhas (23 a 28/09) não se abrem
@@ -93,7 +98,7 @@ mais.
 
 | Documento | Papel |
 |---|---|
-| Este plano | O que fazer, por quê, em que ordem e em que estado |
+| Este plano | O que existe, o que está congelado e por quê, e em que estado |
 | `docs/operacao/DECISIONS.md` | Por que cada decisão durável foi tomada (log) |
 | `docs/diretoria/BACKLOG-ESTRATEGICO.md` | Achados da auditoria, com o detalhe técnico de cada um (AUD-nn). A unidade que resolve cada achado mora aqui |
 | `docs/operacao/TASKS.md` | Fila operacional: incidentes e pendências avulsas. Não repete as unidades deste plano |
@@ -295,19 +300,31 @@ mantidas pela diretoria; a sessão de defeitos conserta uma por vez
   Também: CI do `main` vermelho; prevenção que o registro de um incidente
   lista como pendente; falha de segurança em dependência de produção. Não
   contam como promessa: princípio ou "Por quê" deste plano, "a plataforma vai
-  ganhar" do padrão, decisão cujo mecanismo está numa unidade congelada.
+  ganhar" do padrão, decisão cujo mecanismo está numa unidade congelada. O
+  aceite vale como estava quando a unidade foi concluída; risco numerado
+  novo só vale como promessa depois do "sim" do dono.
 - Toda issue traz: "Hoje, quando [quem] faz [o quê], acontece [X]. Deveria
-  acontecer [Y], como promete [onde]."
+  acontecer [Y], como promete [onde]." O repositório é público: issue e PR
+  nunca levam dado de estudante (nome, e-mail, id, resposta, saída de
+  consulta com linhas) nem valor de `.env`; defeito de segurança ou
+  privacidade ainda aberto vai sem o passo a passo de exploração (o detalhe
+  segue por mensagem entre as sessões).
 - **`grave`** — dado do estudante (perde, grava errado, mostra de outro);
   segurança ou privacidade; produção quebrada ou em risco: entra direto.
   **`menor`** — promessa quebrada sem dano; cosmético: vai à lista do
-  "semana" e só entra com o "sim" do dono.
+  "semana" e só entra com o "sim" do dono. A diretoria só abre a issue
+  `menor` depois desse "sim"; até lá, o defeito fica só na lista do
+  "semana".
 - No máximo 5 issues `bug` abertas; acima disso, só entra `grave`. Na mesma
   faixa, primeiro o que está no caminho da produção (importar, checar,
   atestar, publicar, ligar questão, corrigir material).
 - **Evolução** (congelada): tela ou fluxo novo; "funciona, mas ficaria
   melhor"; refatoração; desempenho sem sintoma medido; dependência major sem
   falha; teste que falta sem defeito.
+- **PR do Dependabot:** major fecha com o comentário "congelada pela D-7
+  (46-B)", salvo falha de segurança, que é defeito; minor e patch vão à
+  lista do "semana", e o dono aprova ou fecha (dependência de produção, só
+  depois de 02/10).
 
 **Pedido da produção** (rótulo `pedido-da-producao`) — a única porta para
 evolução. Gatilho, com evidência: (a) a produção de materiais travou — um
@@ -315,7 +332,12 @@ passo não se faz, ou só se faz violando uma regra de qualidade; (b) um
 contorno manual custa ao dono mais de 30 minutos por semana, medido em dois
 materiais; (c) um estudante relatou ter sido prejudicado. A diretoria propõe
 em até 5 linhas (o que travou, o custo, o aceite, o tamanho); o dono diz
-"sim"; cabe em 1 PR; executa a sessão de defeitos; 1 aberto por vez.
+"sim"; cabe em 1 PR; executa a sessão de defeitos; 1 aberto por vez. A
+issue traz a evidência do gatilho — (a) o material e o passo que travou;
+(b) os minutos que o dono informou em cada um dos dois materiais; (c) o
+relato do estudante, sem dado dele — e a data do "sim" do dono. Unidade
+congelada não volta em pedaços: o pedido inteiro cabe em 1 PR, e um pedido
+novo precisa de evidência nova.
 
 **Congeladas** — linha "Estado": "Congelada (D-7, 28/09)".
 
@@ -326,10 +348,12 @@ em até 5 linhas (o que travou, o custo, o aceite, o tamanho); o dono diz
 | 46-B, só as majors que faltam (TypeScript e ESLint) | Pedido da produção, ou falha de segurança (aí é defeito) |
 | 45-H, salvo AUD-31.1 e AUD-07 | Pedido da produção. AUD-31.1 e AUD-07 viram defeito `grave` (issues) |
 | 45-I, salvo a parte LGPD (AUD-30.3 e 30.4) | Pedido da produção. A parte LGPD vira defeito `grave` (issue) |
-| 46-C | Fora da lista da D-7, mas é evolução e depende da P-2: pedido da produção |
 
 **Sem lista:** a 45-F não congela inteira nem entra inteira — cada item dela
-que passar pela fronteira vira issue (a diretoria classifica).
+que passar pela fronteira vira issue (a diretoria classifica). A 46-C
+(backup com restauração ensaiada) não é decidida aqui: continua esperando a
+P-2; quando o dono resolver a P-2, a diretoria pergunta a ele se ela entra
+como prevenção de perda de dado ou só por pedido da produção.
 
 O Supabase local continua um só para todas as worktrees: banco de teste,
 pgTAP e E2E com a trava de `EXECUTOR_PROTOCOL.md`. Migration com data
@@ -936,7 +960,8 @@ computador compartilhado de hospital.
 risco 9). A URL de retorno do e-mail precisa ser liberada no painel do
 Supabase (P-1).
 **Depende de.** P-1, só para testar a senha nova em produção.
-**Estado.** Pronta.
+**Estado.** Pronta. D-7: não se encaminha como unidade; cada item que passar
+pela fronteira vira issue (seção 5).
 
 ---
 
@@ -1176,8 +1201,8 @@ escrita errada em massa, não tem volta.
 **Aceite.** Uma cópia semanal do banco guardada fora do Supabase, e uma
 restauração ensaiada no ambiente local, com o passo a passo no RUNBOOK.
 **Depende de.** P-2.
-**Estado.** Planejada — aguarda P-2. Congelada (D-7, 28/09): fora da lista da
-D-7, mas é evolução (seção 5).
+**Estado.** Planejada — aguarda P-2. Fora da lista da D-7; como ela entra,
+depois da P-2, é pergunta ao dono (seção 5).
 
 ---
 
@@ -1299,28 +1324,33 @@ e escreve o roteiro de atestação; o dono lê o material inteiro antes de
 importar; fontes só on-line; no máximo 2 materiais escritos e ainda não
 publicados. Passo a passo: `docs/conteúdos/LEIA-ME.md` (local, fora do git).
 
-**Fluxo de cada material:**
-1. **Escrever** — o Gemini recebe o padrão de conteúdos, as fontes e o bloco
-   do material (no plano editorial do ramo) e entrega um `.md`.
-2. **Checar o formato** — a checagem do padrão sobre o arquivo (44-C1). Até
-   ela existir, o checklist da seção 1.9 do padrão.
-3. **Revisão cruzada** — outro modelo (Claude), sem editar o arquivo: fato
-   contra referência, referência que existe, escopo do nível. Os achados
-   voltam ao Gemini, que entrega o arquivo corrigido.
-4. **Importar, atestar e publicar** — o dono, na plataforma, de cima para
-   baixo na árvore. A atestação humana continua o único portão.
+**Fluxo de cada material** (revisto pela D-7):
+1. **Escrever** — o Gemini (Gem "Redator NexusMed", que já tem o padrão)
+   recebe o pedido, o rascunho antigo e, do 02 em diante, o material do pai;
+   busca as fontes on-line e entrega o `.md` e a lista de pontos de risco. O
+   dono não anexa fonte.
+2. **Checar o formato** — a diretoria roda a checagem do padrão sobre o
+   arquivo (44-C1).
+3. **Revisão cruzada** — a diretoria, com um subagente Claude de contexto
+   limpo, sem editar o arquivo: fato contra referência, referência que
+   existe, escopo do nível. Os achados voltam ao Gemini, que entrega o
+   arquivo corrigido; no máximo 2 voltas.
+4. **Ler, importar, atestar e publicar** — o dono lê o material inteiro
+   antes de importar; depois importa, atesta e publica na plataforma, de
+   cima para baixo na árvore. A atestação humana continua o único portão.
 
 **Regras da frente:**
 - O Gemini não opera no repositório. A interface é o padrão e o arquivo: se o
   importador ou o leitor mudar, o padrão muda no mesmo PR (AGENTS.md, risco
   19) e o dono atualiza a cópia do padrão que o Gemini usa.
 - Pedidos, rascunhos e fontes ficam em `docs/conteúdos/`, ignorada pelo git:
-  o repositório é público e fontes de livro-texto têm direito autoral. O que
-  vale é a plataforma; a lista do que produzir é o plano editorial do ramo.
-- No máximo uma leva produzida à frente da revisão — o gargalo é a atestação,
-  não a escrita.
-- Questões depois dos materiais; ligadas a vários materiais quando a 43-B
-  existir.
+  o repositório é público. Desde 28/09, fontes só on-line, nenhum
+  livro-texto (D-7). O que vale é a plataforma; a lista do que produzir é o
+  plano editorial do ramo.
+- No máximo 2 materiais escritos e ainda não publicados (D-7; antes, uma
+  leva à frente da revisão) — o gargalo é a atestação, não a escrita.
+- Questões depois dos materiais: só as já publicadas, ligadas uma a uma
+  (D-7). O Gemini não escreve questões.
 
 | Frente editorial | Plano | Estado | Se beneficia de |
 |---|---|---|---|
@@ -1341,32 +1371,36 @@ resumo, atualizado pela diretoria em lote — assim PRs paralelos não
 conflitam aqui. "Publicado" significa em produção
 (deploy confirmado e, quando houver, migration aplicada no remoto).
 
+*Em 28/09, a D-7 atualizou só as colunas "Estado" e "PR" pelas linhas
+"Estado" das unidades; "Publicado" dos merges de 26 e 27/09 fica para o
+próximo "semana". Em dúvida, vale a linha "Estado" de cada unidade.*
+
 | Unidade | Estado | PR | Publicado |
 |---|---|---|---|
 | 43-A | Concluída | #79 | 24/09 |
-| 43-B | Planejada | — | — |
-| 43-C | Planejada | — | — |
+| 43-B | Concluída | #94 | a conferir |
+| 43-C | Planejada (em PR: #96, a meta da D-7) | — | — |
 | 43-D | Concluída | #80 | 25/09 (migration aplicada ~13h45 depois do merge — INC-2026-005) |
-| 43-E | Planejada | — | — |
-| 44-A | Planejada | — | — |
-| 44-B | Planejada | — | — |
-| 44-C1 | Pronta (próxima da trilha 2) | — | — |
-| 44-C2 | Planejada (antes 44-C) | — | — |
+| 43-E | Congelada (D-7) | — | — |
+| 44-A | Congelada (D-7) | — | — |
+| 44-B | Congelada (D-7) | — | — |
+| 44-C1 | Concluída | #85 | a conferir |
+| 44-C2 | Congelada (D-7) (antes 44-C) | — | — |
 | 45-A | Concluída; correções da revisão do #76 no #81 | #74, #76, #81 | 24/09 (parte 2: migration depois do merge — INC-2026-004); correções: 25/09 (INC-2026-005) |
 | 45-B | Concluída | #71 | 24/09 |
 | 45-C | Concluída (item de desempenho movido para a 46-D) | #73 | 24/09 |
-| 45-D | Pronta | — | — |
-| 45-E | Pronta | — | — |
-| 45-F | Pronta | — | — |
-| 45-G | Planejada | — | — |
-| 45-H | Pronta | — | — |
-| 45-I | Planejada | — | — |
+| 45-D | Concluída | #92 | a conferir |
+| 45-E | Concluída | #86 | a conferir |
+| 45-F | Pronta; D-7: item a item, como issue | — | — |
+| 45-G | Planejada (em PR: #93) | — | — |
+| 45-H | Congelada (D-7), salvo AUD-31.1 e AUD-07 | — | — |
+| 45-I | Congelada (D-7), salvo a parte LGPD | — | — |
 | 45-J | Concluída | #72 | 24/09 |
-| 45-K | Planejada (após 45-D) | — | — |
-| 46-A | Planejada | — | — |
-| 46-B | Em andamento | vários (Dependabot) | parcial |
+| 45-K | Congelada (D-7); #97 em rascunho | — | — |
+| 46-A | Congelada (D-7) | — | — |
+| 46-B | Em andamento; majors que faltam congeladas (D-7) | vários (Dependabot) | parcial |
 | 46-C | Planejada (P-2) | — | — |
-| 46-D | Planejada | — | — |
+| 46-D | Congelada (D-7) | — | — |
 | 46-E | Pronta (P-4 no meio do caminho) | — | — |
 
 **Concluído antes deste plano** (resumo; o detalhe está em

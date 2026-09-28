@@ -7,7 +7,7 @@ Onde está cada coisa em `docs/`. Agente de IA começa pelo
 
 | Quero… | Abra |
 |---|---|
-| saber o que está sendo construído, em que ordem e em que estado | [`produto/PLANO-DE-DESENVOLVIMENTO.md`](produto/PLANO-DE-DESENVOLVIMENTO.md) |
+| saber o que existe, o que está congelado (D-7) e em que estado | [`produto/PLANO-DE-DESENVOLVIMENTO.md`](produto/PLANO-DE-DESENVOLVIMENTO.md) |
 | ver as decisões que só o dono do produto toma, e as métricas | [`produto/PRODUTO.md`](produto/PRODUTO.md), [`produto/METRICAS.md`](produto/METRICAS.md) |
 | saber por que algo foi decidido | [`operacao/DECISIONS.md`](operacao/DECISIONS.md) |
 | ver o estado da produção e do Supabase, e os riscos abertos | [`operacao/PROJECT_STATE.md`](operacao/PROJECT_STATE.md) |
