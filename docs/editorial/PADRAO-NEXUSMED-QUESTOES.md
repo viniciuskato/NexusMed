@@ -117,21 +117,16 @@ explicitamente se o import resolve ou não.
   campo de tags. **Resolvido no import**: bloco `### Tags` opcional
   (mesma convenção de crases do import de conteúdo); sem ele, cai nas
   mesmas três tags fixas de hoje.
-- **O vínculo com o compêndio é um palpite, não uma escolha** no
-  cadastro unitário. Ao salvar, o sistema vincula a questão ao
-  **primeiro compêndio encontrado na mesma disciplina** — se a
-  disciplina tiver mais de um compêndio (ex. Pneumologia com vários
-  temas além de Espirometria), pode vincular no compêndio errado.
-  **Corrija na hora**: depois de criar a questão, clique **"Vínculo"**
-  na listagem — ali sim há dois dropdowns reais (Material e Seção, com
-  as seções do material escolhido) para apontar pro compêndio/seção
-  certos. O botão "Vínculo" só mexe nesses dois campos — nunca
-  reescreve enunciado, alternativas, gabarito ou status. **Não
-  "resolvido" no import, de propósito**: repetir esse palpite em lote
-  multiplicaria o risco de errar (uma disciplina com vários compêndios
-  erra N vezes de uma vez, em vez de uma). Toda questão que sai do
-  import nasce **sem vínculo** ("Material: Pendente") — use o botão
-  "Vínculo" linha a linha depois, mesmo fluxo de sempre.
+- **O vínculo com material é uma escolha, nunca um palpite (desde a
+  43-B).** Uma questão pode cobrar **um ou vários** materiais, cada um com
+  uma seção opcional. O cadastro unitário e a importação não adivinham
+  material pela disciplina: no import, os materiais escolhidos em
+  **"Materiais cobrados por este lote"** (busca e clique) valem para todas
+  as questões do arquivo; sem escolha, a questão nasce **sem vínculo**
+  ("Sem material" na lista). Ajuste questão por questão pelo botão
+  **"Vínculo"** na listagem — ele só mexe nos materiais cobrados, nunca em
+  enunciado, alternativas, gabarito ou status, e funciona também em questão
+  publicada (o vínculo não entra no conteúdo atestado).
 - **Markdown inline funciona (desde 2026-09-20); Markdown de bloco,
   não.** Vinheta, enunciado, cada alternativa, cada explicação,
   Comentário Geral e Pérola High-Yield passam por `parseInline`
@@ -156,7 +151,7 @@ explicitamente se o import resolve ou não.
   um link real (`[nome da fonte](https://...)`), que funciona de
   verdade.
 - **Sem edição depois de criada.** O Admin não tem uma tela de
-  "Editar questão" — só dá pra: vincular material/seção, revisar/
+  "Editar questão" — só dá pra: vincular materiais/seções, revisar/
   atestar, publicar/despublicar e excluir. Se errar algo no enunciado
   ou numa alternativa, a única forma de corrigir hoje é **excluir a
   questão em rascunho e cadastrar de novo** (questão publicada nem
@@ -239,8 +234,9 @@ de publicar (Passo 3). O botão final só importa as linhas **Prontas**;
 as demais ficam de fora e continuam disponíveis pelo cadastro unitário
 se preferir corrigi-las à mão.
 
-Cada questão importada nasce **rascunho**, sem vínculo com compêndio
-("Material: Pendente" — ver o bullet sobre vínculo acima) e sem
+Cada questão importada nasce **rascunho**, cobrando os materiais
+escolhidos para o lote (ou sem vínculo, se nenhum foi escolhido — ver o
+bullet sobre vínculo acima) e sem
 revisão/atestação — Passo 2 e Passo 3 abaixo continuam obrigatórios,
 questão por questão, exatamente como no cadastro unitário. Importar o
 arquivo não publica nada.
@@ -341,9 +337,11 @@ Faltando qualquer um desses, a publicação falha com um erro descritivo
 — não falha silenciosamente.
 
 **Questão publicada (ou arquivada) fica com o conteúdo congelado no
-banco**: enunciado, alternativas, gabarito, explicações, vínculo de
-material/seção etc. não podem mais ser alterados enquanto o status for
-`published`/`archived` — é bloqueado no banco, não só desencorajado.
+banco**: enunciado, alternativas, gabarito, explicações etc. não podem
+mais ser alterados enquanto o status for `published`/`archived` — é
+bloqueado no banco, não só desencorajado. Os materiais cobrados (botão
+"Vínculo") são a exceção: ajustáveis a qualquer momento, sem invalidar a
+revisão aprovada (43-B).
 Para corrigir algo depois de publicada: **Despublicar** (volta a
 `draft`), editar (hoje só recriando a questão, ver Passo 1), e repetir
 Revisão + Publicar.

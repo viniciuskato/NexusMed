@@ -429,7 +429,8 @@ questões sem vínculo e ter de revisitá-las depois.
 **Fora de escopo.** A tela "Testar o que li" (43-C). Vincular em massa as 420
 questões antigas (tarefa editorial; sugestão automática pode vir depois).
 **Depende de.** 43-A.
-**Estado.** Planejada.
+**Estado.** Concluída — PR #94.
+**Achados da execução.** Decisão registrada (migration e PR): o vínculo mora em `question_materials`, fora do hash de atestação — mesma regra dos materiais; `app.build_question_snapshot` não mudou e as colunas antigas `questions.material_id`/`material_section_id` ficam congeladas só como registro, então nenhuma aprovação muda. Consequência: o vínculo passa a ser ajustável com a questão publicada (o E2E do 21-D que provava o bloqueio foi reescrito). O botão "Resolver questões" do leitor abre as questões do material e cai no tema quando nenhuma o cobra; o "Resolver Questões deste Tema" do fim do material continua por tema. Isso tocou `App.tsx` (área da trilha 3, pausada). Material cobrado por questões não é excluído (entrou na guarda da 45-D). O formulário de questão nova vinculava sozinho ao primeiro material da disciplina (ou a um id inválido); o palpite saiu. O #94 foi mesclado antes da triagem da revisão; as 8 correções vieram em PR próprio, com o SQL em migration nova (`20260927130000`). Revisão do PR #94, adiado por triagem da diretoria: a lista de questões do Admin recalcula os materiais de cada questão com busca linear no catálogo a cada render (custo cresce com questões × vínculos × materiais).
 
 ---
 
@@ -862,7 +863,8 @@ Associar uma fonte curada sem URL apaga a URL da referência.
 **Fora de escopo.** Lixeira ou restauração de material excluído; a edição
 pendente de material publicado (45-K).
 **Depende de.** Nada.
-**Estado.** Pronta.
+**Estado.** Concluída — PR #92.
+**Achados da execução.** Decisões do dono em 26/09: anotação de seção removida em linha própria (o app hoje só grava anotação do material, então isso protege dado vindo de outro caminho); material com trilha de revisão, ligações ou filhos também não é excluído (a trilha não pode existir sem o material, e as ligações estão congeladas). Bug anterior corrigido: desde a 43-A nenhuma exclusão de material pela Área Editorial funcionava (`clear_symmetric_material_links` sem permissão em `material_links`). Fica de fora: remover seção ainda apaga o histórico dela (`material_section_versions`), e excluir questão não publicada ainda apaga a trilha dela. Revisão do a4af38c, adiado por triagem da diretoria: o leitor faz uma segunda consulta a `notes` só para as anotações de seção removida; a dica de `material_links_target_fkey` ficou inalcançável pelo app (a guarda responde antes) e as FKs RESTRICT novas não têm dica.
 
 ---
 

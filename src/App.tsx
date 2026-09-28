@@ -34,6 +34,7 @@ import { feedbackRepository } from './repositories/FeedbackRepository';
 import { questionReactionsRepository } from './repositories/QuestionReactionsRepository';
 import { buildSimuladoSelection, SimuladoSelectionResult } from './services/simuladoSelection';
 import { packIdForCompendium, SCOPE_CUSTOM, SCOPE_UNLINKED } from './services/thematicPacks';
+import { questionMatchesMaterialScope } from './utils/questionMaterials';
 
 registerSyncHandlers();
 
@@ -541,6 +542,24 @@ function AuthenticatedApp() {
   const handleOpenQuestionsForTheme = (themeId: string) => {
     setFilterThemeForQuestions(themeId);
     setFocusQuestionId(undefined);
+    // Recorte por tema, nunca herdado de um pack aberto antes.
+    setScopeCompendiumForQuestions(undefined);
+    setPackReturnContext(null);
+    setActiveView('questions');
+  };
+
+  // 43-B: "Resolver questões" a partir de um material traz as questões que
+  // cobram aquele material (uma questão pode cobrar vários). Sem nenhuma,
+  // cai no tema, como antes — questões sem vínculo seguem acessíveis por lá.
+  const handleOpenQuestionsForMaterial = (compendiumId: string, themeId: string) => {
+    if (!questions.some((q) => questionMatchesMaterialScope(q, compendiumId))) {
+      handleOpenQuestionsForTheme(themeId);
+      return;
+    }
+    setFilterThemeForQuestions(undefined);
+    setFocusQuestionId(undefined);
+    setScopeCompendiumForQuestions(compendiumId);
+    setPackReturnContext(null);
     setActiveView('questions');
   };
 
@@ -549,12 +568,22 @@ function AuthenticatedApp() {
     setActiveView('flashcards');
   };
 
+  // Abrir uma questão ou "Treinar erradas" é saída explícita de qualquer
+  // recorte por material: senão a questão focada que não cobre o material
+  // sumia da lista, e os erros ficavam só os daquele material (43-B).
+  const clearQuestionsScope = () => {
+    setScopeCompendiumForQuestions(undefined);
+    setPackReturnContext(null);
+  };
+
   const handleOpenQuestion = (questionId: string) => {
+    clearQuestionsScope();
     setFocusQuestionId(questionId);
     setActiveView('questions');
   };
 
   const handleTrainMistakesUntimed = () => {
+    clearQuestionsScope();
     setFilterThemeForQuestions(undefined);
     setFocusQuestionId(undefined);
     setFilterStatusForQuestions('incorrect');
@@ -746,6 +775,7 @@ function AuthenticatedApp() {
                 }
               }}
               onOpenQuestionsForTheme={handleOpenQuestionsForTheme}
+              onOpenQuestionsForMaterial={handleOpenQuestionsForMaterial}
               onOpenFlashcardsForTheme={handleOpenFlashcardsForTheme}
               targetSectionId={selectedSectionId}
               onSectionJumpHandled={() => setSelectedSectionId(undefined)}
@@ -767,6 +797,7 @@ function AuthenticatedApp() {
               focusQuestionId={focusQuestionId}
               initialStatusFilter={filterStatusForQuestions}
               onReturnToThematicStudy={packReturnContext ? handleReturnToThematicStudy : undefined}
+              onClearScope={clearQuestionsScope}
               returnToCompendiumContext={lastReadingSession}
               onReturnToCompendium={() => {
                 if (lastReadingSession) {

@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
-import { NotesRepository } from './NotesRepository';
+import type { NotesRepository, RemovedSectionNote } from './NotesRepository';
 import { StorageService } from '../services/storage';
 
 // ============================================================================
@@ -48,6 +48,8 @@ interface NoteRow {
   flashcard_id: string | null;
   note_text: string;
   updated_at: string;
+  /** 45-D: preenchido quando a seção da anotação saiu do material. */
+  removed_section_title: string | null;
 }
 
 async function resolveNoteColumn(targetId: string): Promise<NoteTargetColumn> {
@@ -66,11 +68,14 @@ export class SupabaseNotesRepository implements NotesRepository {
   async getNotes(): Promise<Record<string, string>> {
     const { data, error } = await supabase
       .from('notes')
-      .select('material_id, material_section_id, question_id, flashcard_id, note_text, updated_at');
+      .select('material_id, material_section_id, question_id, flashcard_id, note_text, updated_at, removed_section_title');
     if (error) throw error;
 
     const result: Record<string, string> = {};
     for (const row of (data ?? []) as NoteRow[]) {
+      // Anotação de seção removida aponta para o material, mas não é a
+      // anotação do material: é lida à parte (getRemovedSectionNotes).
+      if (row.removed_section_title) continue;
       const targetId = row.material_id ?? row.material_section_id ?? row.question_id ?? row.flashcard_id;
       if (targetId) {
         result[targetId] = row.note_text;
@@ -80,6 +85,20 @@ export class SupabaseNotesRepository implements NotesRepository {
         // vez que ele viu esta nota, sem precisar de um editor colaborativo.
         StorageService.setNoteBaseVersion(targetId, row.updated_at);
       }
+    }
+    return result;
+  }
+
+  async getRemovedSectionNotes(): Promise<Record<string, RemovedSectionNote[]>> {
+    const { data, error } = await supabase
+      .from('notes')
+      .select('material_id, note_text, removed_section_title')
+      .not('removed_section_title', 'is', null)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    const result: Record<string, RemovedSectionNote[]> = {};
+    for (const r of (data ?? []) as Array<{ material_id: string; note_text: string; removed_section_title: string }>) {
+      (result[r.material_id] ??= []).push({ sectionTitle: r.removed_section_title, noteText: r.note_text });
     }
     return result;
   }

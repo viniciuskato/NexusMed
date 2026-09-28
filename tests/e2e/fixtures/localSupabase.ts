@@ -322,6 +322,16 @@ export function deleteE2EMaterials(): void {
       `(select id from public.materials where title like '${MATERIAL_PREFIX}%') ` +
       `or target_material_id in (select id from public.materials where title like '${MATERIAL_PREFIX}%');`
   );
+  // Desde a 45-D a trilha de revisão, e desde a 43-B o vínculo com questões,
+  // não saem em cascata com o material (restrict): apagá-los antes.
+  psqlLocal(
+    `delete from public.question_materials where material_id in ` +
+      `(select id from public.materials where title like '${MATERIAL_PREFIX}%');`
+  );
+  psqlLocal(
+    `delete from public.content_revisions where material_id in ` +
+      `(select id from public.materials where title like '${MATERIAL_PREFIX}%');`
+  );
   psqlLocal(`delete from public.materials where title like '${MATERIAL_PREFIX}%';`);
 }
 

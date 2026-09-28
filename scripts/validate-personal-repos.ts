@@ -30,6 +30,7 @@ import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createClient } from '@supabase/supabase-js';
+import { deleteSeededMaterial } from './maintenance';
 
 const execFileAsync = promisify(execFile);
 
@@ -189,7 +190,15 @@ async function cleanup() {
   // guard_question_content_immutable.
   await tryDelete(() => admin.from('questions').update({ status: 'draft' }).eq('id', ids.questionId));
   await tryDelete(() => admin.from('questions').delete().eq('id', ids.questionId));
-  await tryDelete(() => admin.from('materials').delete().eq('id', ids.materialId));
+  // Material publicado não sai pela exclusão comum (45-D): caminho explícito
+  // de manutenção, e a falha aparece — nunca best-effort silencioso, senão o
+  // material de teste publicado fica visível para os estudantes.
+  try {
+    await deleteSeededMaterial(admin, ids.materialId);
+  } catch (err) {
+    console.error(`LIMPEZA FALHOU: ${(err as Error).message}`);
+    process.exitCode = 1;
+  }
   await tryDelete(() => admin.from('themes').delete().eq('id', ids.themeId));
   await tryDelete(() => admin.from('disciplines').delete().eq('id', ids.disciplineId));
 }

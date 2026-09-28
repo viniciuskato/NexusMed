@@ -44,6 +44,11 @@ function insertDraftMaterial(title: string): string {
 }
 
 function deleteE2EMaterials(): void {
+  // Desde a 45-D a trilha de revisão não sai em cascata com o material.
+  psqlLocal(
+    `delete from public.content_revisions where material_id in ` +
+      `(select id from public.materials where title like '${MATERIAL_PREFIX}%');`
+  );
   psqlLocal(`delete from public.materials where title like '${MATERIAL_PREFIX}%';`);
 }
 

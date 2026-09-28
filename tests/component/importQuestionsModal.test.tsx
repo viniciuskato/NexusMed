@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { Discipline, Question, Theme } from '../../src/types';
+import type { Compendium, Discipline, Question, Theme } from '../../src/types';
 
 // Importação assistida de QUESTÕES ("Importar questões" — equivalente de
 // ImportMaterialModal, antes inexistente para questões).
@@ -89,11 +89,55 @@ afterEach(() => {
   importQuestionDraftMock.mockClear();
 });
 
+const material = (id: string, title: string): Compendium => ({
+  id, disciplineId: 'disc-pneumo', themeId: 'tema-espirometria', title, subtitle: '',
+  estimatedReadTimeMinutes: 10, lastUpdated: '', author: '', sections: [], references: [],
+  publicationStatus: 'published',
+});
+const materiais = [material('mat-espiro', 'Espirometria'), material('mat-dpoc', 'DPOC')];
+
+describe('ImportQuestionsModal — materiais cobrados pelo lote (43-B)', () => {
+  it('os materiais escolhidos por busca e clique valem para todas as questões do lote', async () => {
+    render(
+      <ImportQuestionsModal disciplines={[discipline]} themes={[theme]} compendiums={materiais} onClose={vi.fn()} onImported={vi.fn()} />
+    );
+    await selectFile(makeMarkdownFile(validBatch));
+    await waitFor(() => screen.getByText(/2 questão\(ões\) encontrada\(s\)/i));
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'tema-espirometria' } });
+
+    const busca = screen.getByLabelText(/Materiais cobrados por este lote/i);
+    fireEvent.change(busca, { target: { value: 'espiro' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Espirometria/ }));
+    fireEvent.change(busca, { target: { value: 'dpoc' } });
+    fireEvent.click(screen.getByRole('button', { name: /^DPOC/ }));
+
+    fireEvent.click(screen.getByRole('button', { name: /importar 2 rascunho/i }));
+    await waitFor(() => expect(importQuestionDraftMock).toHaveBeenCalledTimes(2));
+    for (const call of importQuestionDraftMock.mock.calls) {
+      const saved = call[0] as Question;
+      expect(saved.materialLinks).toEqual([{ materialId: 'mat-espiro' }, { materialId: 'mat-dpoc' }]);
+      // "O" material da questão (cartão, caderno de erros, flashcard) é o primeiro do lote.
+      expect(saved.compendiumRefId).toBe('mat-espiro');
+    }
+  });
+
+  it('sem material escolhido, as questões entram sem vínculo', async () => {
+    render(
+      <ImportQuestionsModal disciplines={[discipline]} themes={[theme]} compendiums={materiais} onClose={vi.fn()} onImported={vi.fn()} />
+    );
+    await selectFile(makeMarkdownFile(validBatch));
+    await waitFor(() => screen.getByText(/2 questão\(ões\) encontrada\(s\)/i));
+    fireEvent.click(screen.getByRole('button', { name: /importar 1 rascunho/i }));
+    await waitFor(() => expect(importQuestionDraftMock).toHaveBeenCalledTimes(1));
+    expect((importQuestionDraftMock.mock.calls[0][0] as Question).materialLinks).toEqual([]);
+  });
+});
+
 describe('ImportQuestionsModal', () => {
   it('mostra a lista de questões do lote e só grava as prontas após confirmar', async () => {
     const onImported = vi.fn();
     render(
-      <ImportQuestionsModal disciplines={[discipline]} themes={[theme]} onClose={vi.fn()} onImported={onImported} />
+      <ImportQuestionsModal disciplines={[discipline]} themes={[theme]} compendiums={[]} onClose={vi.fn()} onImported={onImported} />
     );
 
     await selectFile(makeMarkdownFile(validBatch));
@@ -120,7 +164,7 @@ describe('ImportQuestionsModal', () => {
 
   it('selecionar o tema manualmente na linha incompleta a torna pronta e importável', async () => {
     render(
-      <ImportQuestionsModal disciplines={[discipline]} themes={[theme]} onClose={vi.fn()} onImported={vi.fn()} />
+      <ImportQuestionsModal disciplines={[discipline]} themes={[theme]} compendiums={[]} onClose={vi.fn()} onImported={vi.fn()} />
     );
 
     await selectFile(makeMarkdownFile(validBatch));
@@ -137,7 +181,7 @@ describe('ImportQuestionsModal', () => {
 
   it('mostra erro em linguagem simples quando o arquivo não tem nenhum bloco "## Questão"', async () => {
     render(
-      <ImportQuestionsModal disciplines={[discipline]} themes={[theme]} onClose={vi.fn()} onImported={vi.fn()} />
+      <ImportQuestionsModal disciplines={[discipline]} themes={[theme]} compendiums={[]} onClose={vi.fn()} onImported={vi.fn()} />
     );
 
     await selectFile(makeMarkdownFile('Só um texto solto, sem heading nenhum.'));
@@ -165,7 +209,7 @@ Pergunta incompleta.
 **B)** Y [GABARITO]
 `;
     render(
-      <ImportQuestionsModal disciplines={[discipline]} themes={[theme]} onClose={vi.fn()} onImported={vi.fn()} />
+      <ImportQuestionsModal disciplines={[discipline]} themes={[theme]} compendiums={[]} onClose={vi.fn()} onImported={vi.fn()} />
     );
 
     await selectFile(makeMarkdownFile(batch));
@@ -177,7 +221,7 @@ Pergunta incompleta.
   it('cancelar antes de confirmar fecha sem gravar nada', async () => {
     const onClose = vi.fn();
     render(
-      <ImportQuestionsModal disciplines={[discipline]} themes={[theme]} onClose={onClose} onImported={vi.fn()} />
+      <ImportQuestionsModal disciplines={[discipline]} themes={[theme]} compendiums={[]} onClose={onClose} onImported={vi.fn()} />
     );
 
     await selectFile(makeMarkdownFile(validBatch));
@@ -202,7 +246,7 @@ Pergunta incompleta.
 **B)** Y [GABARITO]
 `;
     render(
-      <ImportQuestionsModal disciplines={[discipline]} themes={[theme]} onClose={vi.fn()} onImported={onImported} />
+      <ImportQuestionsModal disciplines={[discipline]} themes={[theme]} compendiums={[]} onClose={vi.fn()} onImported={onImported} />
     );
 
     await selectFile(makeMarkdownFile(batch));

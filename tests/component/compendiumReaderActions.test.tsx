@@ -27,6 +27,7 @@ vi.mock('../../src/repositories/BookmarksRepository', () => ({
 vi.mock('../../src/repositories/NotesRepository', () => ({
   notesRepository: {
     getNotes: vi.fn().mockResolvedValue({}),
+    getRemovedSectionNotes: vi.fn().mockResolvedValue({}),
     saveNote: vi.fn().mockResolvedValue(undefined),
   },
 }));
@@ -111,6 +112,7 @@ describe('CompendiumReader — ações de cada tópico', () => {
         themes={[theme]}
         onBack={vi.fn()}
         onOpenQuestionsForTheme={vi.fn()}
+        onOpenQuestionsForMaterial={vi.fn()}
         onOpenFlashcardsForTheme={vi.fn()}
       />
     );

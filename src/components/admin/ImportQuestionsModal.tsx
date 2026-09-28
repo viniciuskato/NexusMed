@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { useDialogA11y } from '../../hooks/useDialogA11y';
 import { FileUp, X, CheckCircle2, AlertTriangle, Upload } from 'lucide-react';
-import { Discipline, Theme } from '../../types';
+import { Compendium, Discipline, QuestionMaterialLink, Theme } from '../../types';
+import { QuestionMaterialLinksEditor } from './QuestionMaterialLinksEditor';
 import { questionsRepository } from '../../repositories/QuestionsRepository';
 import { getErrorMessage } from '../../utils/errorMessage';
 import {
@@ -24,6 +25,8 @@ import {
 interface ImportQuestionsModalProps {
   disciplines: Discipline[];
   themes: Theme[];
+  /** Materiais disponíveis para "Materiais cobrados por este lote" (43-B). */
+  compendiums: Compendium[];
   onClose: () => void;
   onImported: () => void;
 }
@@ -48,10 +51,14 @@ function isRowReady(row: RowState): boolean {
 export const ImportQuestionsModal: React.FC<ImportQuestionsModalProps> = ({
   disciplines,
   themes,
+  compendiums,
   onClose,
   onImported,
 }) => {
   const [state, setState] = useState<WizardState>({ step: 'pick' });
+  // 43-B: materiais que valem para todas as questões do arquivo. Ajuste por
+  // questão, depois, pelo botão "Vínculo" na lista de questões.
+  const [lotLinks, setLotLinks] = useState<QuestionMaterialLink[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useDialogA11y<HTMLDivElement>({ onClose });
 
@@ -97,7 +104,14 @@ export const ImportQuestionsModal: React.FC<ImportQuestionsModalProps> = ({
     for (const row of rows) {
       if (!isRowReady(row)) continue;
       try {
-        const question = buildQuestionFromImportRow(row.preview, row.overrideDisciplineId, row.overrideThemeId);
+        const question = {
+          ...buildQuestionFromImportRow(row.preview, row.overrideDisciplineId, row.overrideThemeId),
+          materialLinks: lotLinks,
+          // "O" material da questão (cartão, caderno de erros, flashcard):
+          // o primeiro do lote, como em setQuestionMaterialLinks.
+          compendiumRefId: lotLinks[0]?.materialId ?? '',
+          compendiumSectionId: lotLinks[0]?.sectionId,
+        };
         await questionsRepository.importQuestionDraft(question);
         successCount++;
       } catch (err) {
@@ -317,6 +331,18 @@ export const ImportQuestionsModal: React.FC<ImportQuestionsModalProps> = ({
                   </div>
                 );
               })}
+            </div>
+
+            <div className="p-3.5 rounded-xl border border-stone-200 dark:border-[#243452]">
+              <QuestionMaterialLinksEditor
+                htmlId="import-questions-lot-materials"
+                label="Materiais cobrados por este lote"
+                helperText="Valem para todas as questões do arquivo. Ajuste por questão depois, pelo botão Vínculo na lista de questões. Sem material escolhido, as questões entram sem vínculo."
+                compendiums={compendiums}
+                value={lotLinks}
+                onChange={setLotLinks}
+                withoutSections
+              />
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t border-stone-200 dark:border-[#243452]">

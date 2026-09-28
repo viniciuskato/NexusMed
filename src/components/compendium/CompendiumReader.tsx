@@ -27,7 +27,7 @@ import {
 import { Compendium, CompendiumSection, Discipline, Theme } from '../../types';
 import { StorageService } from '../../services/storage';
 import { bookmarksRepository } from '../../repositories/BookmarksRepository';
-import { notesRepository } from '../../repositories/NotesRepository';
+import { notesRepository, type RemovedSectionNote } from '../../repositories/NotesRepository';
 import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { readingProgressRepository } from '../../repositories/ReadingProgressRepository';
 import { SafeMarkdown, parseInline } from '../common/SafeMarkdown';
@@ -51,6 +51,8 @@ interface CompendiumReaderProps {
   themes: Theme[];
   onBack: () => void;
   onOpenQuestionsForTheme: (themeId: string) => void;
+  /** "Resolver questões": as que cobram este material, ou as do tema se nenhuma cobra (43-B). */
+  onOpenQuestionsForMaterial: (compendiumId: string, themeId: string) => void;
   onOpenFlashcardsForTheme: (themeId: string) => void;
   targetSectionId?: string;
   /**
@@ -79,6 +81,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   themes,
   onBack,
   onOpenQuestionsForTheme,
+  onOpenQuestionsForMaterial,
   onOpenFlashcardsForTheme,
   targetSectionId,
   onSectionJumpHandled,
@@ -94,6 +97,8 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   const [readSectionIds, setReadSectionIds] = useState<string[]>([]);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [userNote, setUserNote] = useState('');
+  // 45-D: anotações do aluno em seções que saíram do material (só leitura).
+  const [removedSectionNotes, setRemovedSectionNotes] = useState<RemovedSectionNote[]>([]);
   const [showNoteDrawer, setShowNoteDrawer] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [isIndexOpen, setIsIndexOpen] = useState(false);
@@ -183,12 +188,14 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   const { status: loadStatus, reload } = useServerLoad(async () => {
     const id = compendium.id;
     try {
-      const [progress, bookmarks, notes] = await Promise.all([
+      const [progress, bookmarks, notes, removedNotes] = await Promise.all([
         readingProgressRepository.getReadingProgress(),
         bookmarksRepository.getBookmarks(),
         notesRepository.getNotes(),
+        notesRepository.getRemovedSectionNotes(),
       ]);
       if (openCompendiumId.current !== id) return; // outro material já foi aberto
+      setRemovedSectionNotes(removedNotes[id] ?? []);
 
       setReadSectionIds(progress[id]?.readSectionIds ?? []);
       setIsBookmarked(bookmarks.compendiums.includes(id));
@@ -375,7 +382,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
             </button>
           ) : (
             <button
-              onClick={() => onOpenQuestionsForTheme(compendium.themeId)}
+              onClick={() => onOpenQuestionsForMaterial(compendium.id, compendium.themeId)}
               className="order-2 sm:order-3 shrink-0 min-h-11 sm:min-h-0 px-3.5 py-2 sm:px-3 sm:py-1.5 rounded-lg bg-[#0F766E] hover:bg-teal-800 dark:bg-[#14B8A6] dark:hover:bg-teal-400 text-white dark:text-[#0B1220] text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <HelpCircle className="w-3.5 h-3.5" />
@@ -653,6 +660,21 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
                 Salvar anotação
               </button>
             </div>
+            {removedSectionNotes.length > 0 && (
+              <ul className="mt-4 space-y-2.5">
+                {removedSectionNotes.map((n, idx) => (
+                  <li
+                    key={idx}
+                    className="p-3 rounded-lg border border-dashed border-[#E2E8F0] dark:border-[#263244] bg-[#F6F7F9] dark:bg-[#182235]"
+                  >
+                    <p className="text-[11px] font-semibold text-[#64748B] dark:text-[#94A3B8] mb-1">
+                      De uma seção removida: {n.sectionTitle}
+                    </p>
+                    <p className="text-sm text-[#172033] dark:text-[#E5E7EB] whitespace-pre-wrap">{n.noteText}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
 
@@ -858,7 +880,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
               </button>
             ) : (
               <button
-                onClick={() => onOpenQuestionsForTheme(compendium.themeId)}
+                onClick={() => onOpenQuestionsForMaterial(compendium.id, compendium.themeId)}
                 className="px-3 py-1.5 rounded-lg bg-[#0F766E] hover:bg-teal-800 dark:bg-[#14B8A6] dark:hover:bg-teal-400 text-white dark:text-[#0B1220] text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <HelpCircle className="w-3.5 h-3.5" />

@@ -55,11 +55,11 @@ begin
   update public.materials set status = 'published' where id = v_material_id;
 
   insert into public.questions (
-    discipline_id, theme_id, material_id, cycle, difficulty, institution, year,
+    discipline_id, theme_id, cycle, difficulty, institution, year,
     clinical_vignette, question_stem, tags, provenance, source, license
   )
   values (
-    v_discipline_id, v_theme_id, v_material_id, 'clinico', 'medio', 'SEED', 2026,
+    v_discipline_id, v_theme_id, 'clinico', 'medio', 'SEED', 2026,
     'Paciente fictício de demonstração, sem relação com caso real.',
     'Questão demonstrativa de seed — qual alternativa está correta?',
     array['seed', 'demo'], 'seed-local', 'Conteúdo fictício de demonstração', 'uso interno'
@@ -91,6 +91,10 @@ begin
   update public.question_option_keys set is_correct = true, explanation = 'Explicação demonstrativa: por que A está correta.' where option_id = v_option_a;
   update public.question_option_keys set explanation = 'Explicação demonstrativa: por que B está incorreta.' where option_id = v_option_b;
   update public.question_option_keys set explanation = 'Explicação demonstrativa: por que C está incorreta.' where option_id = v_option_c;
+
+  -- 43-B: a questão cobra o material pela tabela de vínculos, não pela coluna antiga.
+  insert into public.question_materials (question_id, material_id, sort_order)
+  values (v_question_id, v_material_id, 0);
 
   update public.questions set status = 'published' where id = v_question_id;
 end $$;
