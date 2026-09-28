@@ -6,7 +6,7 @@
 -- ============================================================================
 
 create extension if not exists pgtap;
-select plan(36);
+select plan(46);
 
 select tests.clear_auth();
 select tests.create_user('pendente.admin@test.local', 'admin', 'active') as v_admin \gset
@@ -144,6 +144,96 @@ select tests.authenticate_as(:'v_admin');
 select public.unpublish_material(:v_mat);
 select lives_ok(format($$ update public.material_sections set content = 'rascunho direto' where id = %L $$, :v_s1),
   'seção de rascunho continua editável direto');
+select tests.clear_auth();
+
+-- ----------------------------------------------------------------------------
+-- Revisão do 8e71e5f (triagem de 27/09)
+-- ----------------------------------------------------------------------------
+\set v_m2 '\'45000000-0000-4000-8000-000000000002\''
+\set v_m2s1 '\'45000000-0000-4000-8000-0000000000b1\''
+insert into cargas
+select 'm2_base',
+  (m || jsonb_build_object('id', :v_m2, 'title', 'Ceftazidima')),
+  jsonb_build_array(jsonb_build_object('id', :v_m2s1, 'title', 'Espectro', 'content', 'Atestado m2.', 'key_takeaways', '[]'::jsonb)),
+  '[{"citation_text": "Ref A"}]'::jsonb
+from cargas where nome = 'base';
+insert into cargas
+select 'm2_v2', m,
+  jsonb_build_array(jsonb_build_object('id', :v_m2s1, 'title', 'Espectro', 'content', 'Edição v2 m2.', 'key_takeaways', '[]'::jsonb)),
+  '[{"citation_text": "Ref A"}, {"citation_text": "Ref nova m2"}]'::jsonb
+from cargas where nome = 'm2_base';
+insert into cargas
+select 'm2_v3', m,
+  jsonb_build_array(jsonb_build_object('id', :v_m2s1, 'title', 'Espectro', 'content', 'Edição v3 m2.', 'key_takeaways', '[]'::jsonb)),
+  r
+from cargas where nome = 'm2_v2';
+
+select tests.authenticate_as(:'v_admin');
+select public.save_compendium(m, s, r) from cargas where nome = 'm2_base';
+select tests.clear_auth();
+select tests.force_publish_material(:v_m2);
+select tests.authenticate_as(:'v_admin');
+
+-- Item 1: reabrir e salvar a mesma edição (com referência nova) é no-op.
+select public.save_compendium(m, s, r) from cargas where nome = 'm2_v2';
+select snapshot_hash as v_m2_pend from public.material_pending_edits where material_id = :v_m2 \gset
+select id as v_r1 from public.create_content_revision(:v_m2, null) \gset
+select public.save_compendium(m, s, r) from cargas where nome = 'm2_v2';
+select is((select snapshot_hash from public.material_pending_edits where material_id = :v_m2), :'v_m2_pend',
+  'salvar a mesma edição pendente não muda o hash (referência nova mantém o id)');
+select is(public.get_provenance_status(:v_m2, null), 'edicao_pendente_em_revisao', 'a revisão aberta continua valendo');
+
+-- Item 4: a navegação vale na hora e a aprovação não a desfaz.
+select public.save_compendium(m || '{"tree_sort_order": 30}'::jsonb, s, r) from cargas where nome = 'm2_v2';
+select is((select tree_sort_order from public.materials where id = :v_m2), 30, 'posição nova vale na hora, com edição pendente');
+select lives_ok(format($$ select public.attest_content_revision(%L, 'aprovado') $$, :'v_r1'), 'aprovar a edição');
+select is((select tree_sort_order from public.materials where id = :v_m2), 30, 'aprovar não volta a posição do momento do salvamento');
+
+-- Item 3: revisão reprovada não prende o painel em "em revisão".
+select public.save_compendium(m || '{"tree_sort_order": 30}'::jsonb, s, r) from cargas where nome = 'm2_v3';
+select id as v_r2 from public.create_content_revision(:v_m2, null) \gset
+select public.attest_content_revision(:'v_r2', 'rejeitado');
+select is(public.get_provenance_status(:v_m2, null), 'edicao_pendente', 'revisão reprovada: volta a oferecer criar revisão');
+
+-- Item 2: aprovar revisão que não é da edição pendente atual é recusado.
+select id as v_r3 from public.create_content_revision(:v_m2, null) \gset
+select public.save_compendium(m || '{"tree_sort_order": 30}'::jsonb,
+  jsonb_build_array(jsonb_build_object('id', :v_m2s1, 'title', 'Espectro', 'content', 'Edição v4 m2.', 'key_takeaways', '[]'::jsonb)), r)
+  from cargas where nome = 'm2_v3';
+select throws_like(format($$ select public.attest_content_revision(%L, 'aprovado') $$, :'v_r3'),
+  '%não é a da edição pendente%', 'aprovação sem efeito é recusada com mensagem');
+
+-- Item 6: despublicar descarta a edição pendente.
+select public.unpublish_material(:v_m2);
+select is((select count(*)::int from public.material_pending_edits where material_id = :v_m2), 0,
+  'despublicar descarta a edição pendente');
+select tests.clear_auth();
+
+-- Item 4, sem referência nova (não depende do item 1): a posição mudada
+-- depois de guardar a edição sobrevive à aprovação.
+\set v_m3 '\'45000000-0000-4000-8000-000000000003\''
+\set v_m3s1 '\'45000000-0000-4000-8000-0000000000c1\''
+insert into cargas
+select 'm3_base', (m || jsonb_build_object('id', :v_m3, 'title', 'Cefepima', 'tree_sort_order', 0)),
+  jsonb_build_array(jsonb_build_object('id', :v_m3s1, 'title', 'Espectro', 'content', 'Atestado m3.', 'key_takeaways', '[]'::jsonb)),
+  '[{"citation_text": "Ref A"}]'::jsonb
+from cargas where nome = 'base';
+select tests.authenticate_as(:'v_admin');
+select public.save_compendium(m, s, r) from cargas where nome = 'm3_base';
+select tests.clear_auth();
+select tests.force_publish_material(:v_m3);
+select tests.authenticate_as(:'v_admin');
+select public.save_compendium(m,
+  jsonb_build_array(jsonb_build_object('id', :v_m3s1, 'title', 'Espectro', 'content', 'Edição m3.', 'key_takeaways', '[]'::jsonb)), r)
+  from cargas where nome = 'm3_base';
+select id as v_r4 from public.create_content_revision(:v_m3, null) \gset
+select public.save_compendium(m || '{"tree_sort_order": 50}'::jsonb,
+  jsonb_build_array(jsonb_build_object('id', :v_m3s1, 'title', 'Espectro', 'content', 'Edição m3.', 'key_takeaways', '[]'::jsonb)), r)
+  from cargas where nome = 'm3_base';
+select public.attest_content_revision(:'v_r4', 'aprovado');
+select is((select string_agg(content, '') from public.material_sections where material_id = :v_m3), 'Edição m3.', 'edição m3 entrou');
+select is((select tree_sort_order from public.materials where id = :v_m3), 50,
+  'a aprovação não volta a posição que a edição tinha ao ser guardada');
 select tests.clear_auth();
 
 select * from finish();

@@ -220,7 +220,10 @@ revoke all on function app.apply_compendium(jsonb, jsonb, jsonb) from public, an
 -- Dá id a cada referência da carga: o da referência existente de texto
 -- idêntico (mesma regra de apply_compendium) ou um novo. Assim o snapshot
 -- calculado agora é o mesmo que a aplicação produzirá depois.
-create or replace function app.resolve_reference_ids(p_material_id uuid, p_references jsonb)
+-- `p_pending_refs`: referências da edição pendente atual. Uma referência nova
+-- que já estava nela reaproveita o id de lá — senão reabrir e salvar a mesma
+-- edição daria outro id, outro hash, e deixaria órfã a revisão aberta.
+create or replace function app.resolve_reference_ids(p_material_id uuid, p_references jsonb, p_pending_refs jsonb default '[]'::jsonb)
 returns jsonb
 language plpgsql
 stable
@@ -245,6 +248,15 @@ begin
       limit 1;
     end if;
     if v_id is null then
+      select (p.value->>'id')::uuid into v_id
+      from jsonb_array_elements(coalesce(p_pending_refs, '[]'::jsonb)) with ordinality as p(value, ord)
+      where p.value->>'citation_text' = v_ref->>'citation_text'
+        and nullif(p.value->>'id', '') is not null
+        and not ((p.value->>'id')::uuid = any(v_used))
+      order by p.ord
+      limit 1;
+    end if;
+    if v_id is null then
       v_id := gen_random_uuid();
     end if;
     v_used := v_used || v_id;
@@ -254,7 +266,7 @@ begin
 end;
 $$;
 
-revoke all on function app.resolve_reference_ids(uuid, jsonb) from public, anon, authenticated;
+revoke all on function app.resolve_reference_ids(uuid, jsonb, jsonb) from public, anon, authenticated;
 
 -- Snapshot que a carga produziria, sem gravar nada: aplica num bloco que é
 -- desfeito ao fim (as variáveis PL/pgSQL sobrevivem ao desfazer).
@@ -346,7 +358,10 @@ begin
     return 'aplicado';
   end if;
 
-  v_references := app.resolve_reference_ids(v_id, p_references);
+  v_references := app.resolve_reference_ids(
+    v_id, p_references,
+    (select payload->'references' from public.material_pending_edits where material_id = v_id)
+  );
   v_current_hash := encode(extensions.digest(app.build_material_snapshot(v_id)::text, 'sha256'), 'hex');
   v_new_snapshot := app.simulate_compendium_snapshot(p_material, p_sections, v_references);
   v_new_hash := encode(extensions.digest(v_new_snapshot::text, 'sha256'), 'hex');
@@ -483,12 +498,24 @@ begin
   end if;
   select * into v_pending from public.material_pending_edits
   where material_id = v_revision.material_id for update;
-  if v_pending.material_id is null or v_pending.snapshot_hash <> v_revision.snapshot_hash then
+  if v_pending.material_id is null then
+    return new;
+  end if;
+  if v_pending.snapshot_hash <> v_revision.snapshot_hash then
+    -- Aprovar a versão que já está no ar não muda nada e vale; aprovar outra
+    -- (uma edição pendente que já foi trocada) seria "aprovado" sem efeito.
+    if v_revision.snapshot_hash <> encode(extensions.digest(app.build_material_snapshot(v_revision.material_id)::text, 'sha256'), 'hex') then
+      raise exception 'esta revisão não é a da edição pendente atual (a edição mudou depois que ela foi criada). Crie uma revisão nova da edição.';
+    end if;
     return new;
   end if;
 
+  -- Só o conteúdo atestado entra: pai, posição, tipo do nó e ligações valem
+  -- na hora em que são salvos (fora do hash) e a aprovação não os volta ao
+  -- que eram quando a edição foi guardada.
   perform app.apply_compendium(
-    v_pending.payload->'material', v_pending.payload->'sections', v_pending.payload->'references'
+    (v_pending.payload->'material') - 'parent_material_id' - 'tree_sort_order' - 'taxonomy_kind' - 'navigation_links',
+    v_pending.payload->'sections', v_pending.payload->'references'
   );
   v_after := encode(extensions.digest(app.build_material_snapshot(v_revision.material_id)::text, 'sha256'), 'hex');
   if v_after <> v_revision.snapshot_hash then
@@ -532,8 +559,11 @@ begin
   if p_material_id is not null then
     select snapshot_hash into v_pending_hash from public.material_pending_edits where material_id = p_material_id;
     if v_pending_hash is not null then
-      if exists (select 1 from public.content_revisions
-                 where material_id = p_material_id and snapshot_hash = v_pending_hash) then
+      -- Só revisão ainda não atestada: uma reprovada volta a oferecer
+      -- "Criar revisão", em vez de prender o painel.
+      if exists (select 1 from public.content_revisions cr
+                 where cr.material_id = p_material_id and cr.snapshot_hash = v_pending_hash
+                   and not exists (select 1 from public.content_reviews rv where rv.content_revision_id = cr.id)) then
         return 'edicao_pendente_em_revisao';
       end if;
       return 'edicao_pendente';
@@ -634,3 +664,28 @@ create trigger trg_guard_published_material_content
 create trigger trg_guard_published_section_content
   before insert or update or delete on public.material_sections
   for each row execute function public.guard_published_material_content();
+
+-- ----------------------------------------------------------------------------
+-- 5. Despublicar descarta a edição pendente
+-- ----------------------------------------------------------------------------
+-- Despublicado, o material volta a ser editado direto; uma edição pendente
+-- que sobrasse seria atestada e aplicada por cima dessas edições diretas.
+create or replace function app.discard_pending_edit_on_unpublish()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if old.status = 'published' and new.status is distinct from 'published' then
+    delete from public.material_pending_edits where material_id = new.id;
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function app.discard_pending_edit_on_unpublish() from public, anon, authenticated;
+
+create trigger trg_discard_pending_edit_on_unpublish
+  after update of status on public.materials
+  for each row execute function app.discard_pending_edit_on_unpublish();

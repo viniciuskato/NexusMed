@@ -50,7 +50,8 @@ describe('carga do save_compendium: ida e volta', () => {
     const reaberto = compendiumFromSavePayload(material, { material: p.p_material, sections: p.p_sections, references: p.p_references });
     expect(reaberto.sections.map((s) => s.content)).toEqual(['Texto NOVO.']);
     expect(reaberto.publicationStatus).toBe('published');
-    expect(reaberto.referenceSources).toBeUndefined();
+    // Mesmas referências: os vínculos com fonte curada continuam (item 7 da revisão).
+    expect(reaberto.referenceSources).toEqual(material.referenceSources);
   });
 
   it('referências resolvidas pelo banco (com id) voltam só como texto', () => {
@@ -94,5 +95,58 @@ describe('ResilientMaterialsRepository.saveCompendium — edição pendente', ()
     const { materialsRepository, localSave } = await repoCom('aplicado');
     expect(await materialsRepository.saveCompendium(material)).toBe('aplicado');
     expect(localSave).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('reabrir a edição pendente (revisão do 8e71e5f, itens 5 e 7)', () => {
+  it('a navegação vem sempre do material atual, não da carga guardada', () => {
+    const guardada = buildSaveCompendiumPayload({ ...material, parentMaterialId: 'pai-velho', treeSortOrder: 0, navigationLinks: [] });
+    const atual: Compendium = { ...material, parentMaterialId: 'pai-novo', treeSortOrder: 40, taxonomyKind: 'classe' };
+    const reaberto = compendiumFromSavePayload(atual, { material: guardada.p_material, sections: guardada.p_sections, references: guardada.p_references });
+    expect(reaberto.parentMaterialId).toBe('pai-novo');
+    expect(reaberto.treeSortOrder).toBe(40);
+    expect(reaberto.taxonomyKind).toBe('classe');
+    expect(reaberto.navigationLinks).toEqual(atual.navigationLinks);
+  });
+
+  it('o vínculo com fonte curada acompanha a referência pelo texto', () => {
+    const p = buildSaveCompendiumPayload({ ...material, references: ['Ref nova', 'Ref A'] });
+    const reaberto = compendiumFromSavePayload(material, { material: p.p_material, sections: p.p_sections, references: p.p_references });
+    expect(reaberto.referenceSources).toEqual([{ linked: false }, { linked: true, sourceId: 'x' }]);
+  });
+});
+
+describe('getCompendiums — edições pendentes só para admin (revisão do 8e71e5f, item 9)', () => {
+  beforeEach(() => vi.resetModules());
+  afterEach(() => vi.doUnmock('../../src/lib/supabaseClient'));
+
+  async function repoComTabelas() {
+    const { makeFakeSupabase } = await import('./helpers/fakePostgrest');
+    const state = {
+      tables: {
+        materials: [{ id: 'mat-1', discipline_id: 'd', theme_id: 't', title: 'M', status: 'published', tags: [] }],
+        material_sections: [],
+        material_references: [],
+        material_links: [],
+        material_pending_edits: [{ material_id: 'mat-1' }],
+      },
+      requests: [],
+    } as unknown as import('./helpers/fakePostgrest').FakePostgrestState;
+    vi.doMock('../../src/lib/supabaseClient', () => ({ isSupabaseConfigured: true, supabase: makeFakeSupabase(state) }));
+    const { SupabaseMaterialsRepository } = await import('../../src/repositories/SupabaseMaterialsRepository');
+    return { repo: new SupabaseMaterialsRepository(), state };
+  }
+
+  it('estudante: nenhuma consulta às edições pendentes', async () => {
+    const { repo, state } = await repoComTabelas();
+    const [c] = await repo.getCompendiums();
+    expect(c.hasPendingEdit).toBeUndefined();
+    expect(state.requests.some((r) => r.table === 'material_pending_edits')).toBe(false);
+  });
+
+  it('admin: marca o material com edição pendente', async () => {
+    const { repo } = await repoComTabelas();
+    const [c] = await repo.getCompendiums({ includePendingEdits: true });
+    expect(c.hasPendingEdit).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import type { Compendium, CompendiumSection, MaterialNavigationLink } from '../types';
+import type { Compendium, CompendiumSection } from '../types';
 
 // Carga do `save_compendium` — montada aqui, e não no repositório, porque a
 // 45-K guarda essa mesma carga como edição pendente de material publicado, e
@@ -63,8 +63,10 @@ const num = (v: unknown): number | undefined => (typeof v === 'number' ? v : und
 
 /**
  * Material como a edição pendente o deixaria, a partir da carga guardada e do
- * material atestado (que fornece o que a carga não carrega: status, data,
- * vínculos de referência com fonte curada).
+ * material atual. Do material atual vêm: status e data; a navegação (pai,
+ * posição, tipo do nó, ligações), que vale na hora e pode ter mudado depois
+ * que a edição foi guardada; e o vínculo de cada referência com fonte
+ * curada, casado pelo texto (o aviso de vínculo que se perde depende dele).
  */
 export function compendiumFromSavePayload(
   current: Compendium,
@@ -80,7 +82,16 @@ export function compendiumFromSavePayload(
     ...(str(s.clinical_pearl) ? { clinicalPearl: str(s.clinical_pearl) } : {}),
     ...(str(s.warning_alert) ? { warningAlert: str(s.warning_alert) } : {}),
   }));
-  const links = Array.isArray(m.navigation_links) ? (m.navigation_links as Array<Record<string, unknown>>) : [];
+  const references = payload.references.map((r) => String(r.citation_text ?? ''));
+  const used = new Set<number>();
+  const referenceSources = current.referenceSources
+    ? references.map((text) => {
+        const i = current.references.findIndex((t, idx) => t === text && !used.has(idx));
+        if (i === -1) return { linked: false };
+        used.add(i);
+        return current.referenceSources?.[i] ?? { linked: false };
+      })
+    : undefined;
   return {
     ...current,
     disciplineId: String(m.discipline_id ?? current.disciplineId),
@@ -93,20 +104,14 @@ export function compendiumFromSavePayload(
     estimatedReadTimeMinutes: num(m.estimated_read_time_minutes) ?? 0,
     author: str(m.author) ?? '',
     tags: Array.isArray(m.tags) ? (m.tags as string[]) : [],
-    parentMaterialId: str(m.parent_material_id) ?? null,
-    treeSortOrder: num(m.tree_sort_order) ?? 0,
     navShortTitle: str(m.nav_short_title),
-    taxonomyKind: str(m.taxonomy_kind) as Compendium['taxonomyKind'],
-    navigationLinks: links.map(
-      (l): MaterialNavigationLink => ({
-        materialId: String(l.material_id),
-        linkType: l.link_type as MaterialNavigationLink['linkType'],
-        sortOrder: Number(l.sort_order ?? 0),
-      })
-    ),
+    // Navegação: a do material atual (ver acima).
+    parentMaterialId: current.parentMaterialId,
+    treeSortOrder: current.treeSortOrder,
+    taxonomyKind: current.taxonomyKind,
+    navigationLinks: current.navigationLinks,
     sections,
-    references: payload.references.map((r) => String(r.citation_text ?? '')),
-    // Alinhado por índice às referências atestadas: não vale para a edição.
-    referenceSources: undefined,
+    references,
+    referenceSources,
   };
 }

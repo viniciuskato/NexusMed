@@ -412,7 +412,12 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   };
 
   // ── Compendium Form Handlers ────────────────────────────────────
+  // Cada abertura de edição ganha um número; a resposta da edição pendente
+  // que chega depois de outra abertura (troca rápida de material) é descartada.
+  const editRequestRef = useRef(0);
+
   const handleOpenNewCompendium = () => {
+    ++editRequestRef.current;
     setEditingCompId(null);
     setCompTitle('');
     setCompSubtitle('');
@@ -441,6 +446,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   };
 
   const handleEditCompendium = async (comp: Compendium) => {
+    const request = ++editRequestRef.current;
     // 45-K: com edição pendente, o formulário abre a edição (para continuar,
     // mandar à revisão ou descartar), não a versão atestada. A edição é o
     // "original" da comparação: reabrir e salvar sem mexer é no-op.
@@ -449,9 +455,10 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       try {
         source = (await materialsRepository.getPendingEdit(comp)) ?? comp;
       } catch (err) {
-        showToast(`Não foi possível abrir a edição pendente: ${getErrorMessage(err)}`);
+        if (request === editRequestRef.current) showToast(`Não foi possível abrir a edição pendente: ${getErrorMessage(err)}`);
         return;
       }
+      if (request !== editRequestRef.current) return;
     }
     const form = formStateFromCompendium(source);
     setEditingCompId(comp.id);

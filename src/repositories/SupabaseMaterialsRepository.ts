@@ -1,7 +1,7 @@
 import { sourceUrl } from '../utils/bibliographicSources';
 import { Discipline, Theme, Compendium, CompendiumSection, CompendiumSectionSnapshot, MaterialSectionVersion } from '../types';
 import { supabase } from '../lib/supabaseClient';
-import type { MaterialsRepository, SaveCompendiumResult } from './MaterialsRepository';
+import type { GetCompendiumsOptions, MaterialsRepository, SaveCompendiumResult } from './MaterialsRepository';
 import { fetchAllRows, fetchAllRowsByIds } from './supabasePaging';
 import { buildSaveCompendiumPayload, compendiumFromSavePayload } from '../utils/compendiumSavePayload';
 
@@ -323,11 +323,11 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
     if (error) throw error;
   }
 
-  async getCompendiums(): Promise<Compendium[]> {
+  async getCompendiums(options: GetCompendiumsOptions = {}): Promise<Compendium[]> {
     // Leitura completa (45-C): o acervo já passa de 800 seções; acima de
     // 1000, materiais apareceriam sem as últimas seções para todo mundo.
     // Materiais em ordem de criação, como o banco devolvia sem ordenação.
-    const [materials, sections, refs, links] = await Promise.all([
+    const [materials, sections, refs, links, pendingIds] = await Promise.all([
       fetchAllRows<MaterialRow>((from, to) =>
         supabase
           .from('materials')
@@ -358,6 +358,9 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
       fetchAllRows<MaterialLinkRow>((from, to) =>
         supabase.from('material_links').select('*').order('id', { ascending: true }).range(from, to)
       ),
+      // 45-K: só admin tem edição pendente para ver; para o estudante nem se
+      // consulta. Tolerante a erro: uma falha só esconde o selo.
+      options.includePendingEdits ? this.getPendingEditIds() : Promise.resolve(new Set<string>()),
     ]);
 
     // sources só é buscado para os ids realmente referenciados (hoje, tipicamente
@@ -378,21 +381,19 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
       sourcesById = new Map(sources.map((s) => [s.id, s]));
     }
 
-    // 45-K: só admin enxerga edição pendente (RLS); para o estudante a lista
-    // vem vazia. À parte e tolerante a erro: uma falha aqui só esconde o selo
-    // "Edição pendente", nunca a biblioteca.
-    const pending = new Set<string>();
-    const { data: pendingRows, error: pendingError } = await supabase.from('material_pending_edits').select('material_id');
-    if (pendingError) {
-      console.error('[SupabaseMaterialsRepository] falha ao ler edições pendentes:', pendingError);
-    } else {
-      for (const r of (pendingRows ?? []) as Array<{ material_id: string }>) pending.add(r.material_id);
-    }
-
     return materials.map((m) => {
       const c = buildCompendium(m, sections, refs, sourcesById, links);
-      return pending.has(c.id) ? { ...c, hasPendingEdit: true } : c;
+      return pendingIds.has(c.id) ? { ...c, hasPendingEdit: true } : c;
     });
+  }
+
+  private async getPendingEditIds(): Promise<Set<string>> {
+    const { data, error } = await supabase.from('material_pending_edits').select('material_id');
+    if (error) {
+      console.error('[SupabaseMaterialsRepository] falha ao ler edições pendentes:', error);
+      return new Set();
+    }
+    return new Set(((data ?? []) as Array<{ material_id: string }>).map((r) => r.material_id));
   }
 
   async saveCompendiums(compendiums: Compendium[]): Promise<void> {

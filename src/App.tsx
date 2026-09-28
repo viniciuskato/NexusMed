@@ -245,12 +245,17 @@ function AuthenticatedApp() {
   const [stats, setStats] = useState<UserStats>(() => StorageService.getStats());
   const [dataLoading, setDataLoading] = useState(true);
 
+  // 45-K: a lista de materiais só traz o selo de edição pendente para admin
+  // (ref para o callback estável ler o valor atual sem refazer a carga).
+  const includePendingEditsRef = useRef(false);
+  includePendingEditsRef.current = profile?.role === 'admin' && profile?.status === 'active';
+
   const refreshData = useCallback(async () => {
     const [nextDisciplines, nextThemes, nextCompendiums, nextQuestions, nextFlashcards, nextAnswers] =
       await Promise.all([
         materialsRepository.getDisciplines(),
         materialsRepository.getThemes(),
-        materialsRepository.getCompendiums(),
+        materialsRepository.getCompendiums({ includePendingEdits: includePendingEditsRef.current }),
         questionsRepository.getQuestions(),
         flashcardsRepository.getFlashcards(),
         answersRepository.getAnswers(),
@@ -265,6 +270,14 @@ function AuthenticatedApp() {
     setPlan(StorageService.getUserPlan());
     setTheme(StorageService.getTheme());
   }, []);
+
+  // Perfil de admin conhecido depois da primeira carga: recarrega uma vez
+  // para trazer o selo de edição pendente (45-K).
+  const isActiveAdmin = profile?.role === 'admin' && profile?.status === 'active';
+  useEffect(() => {
+    if (isActiveAdmin && user?.id) refreshData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActiveAdmin]);
 
   // Quando o usuário autenticado muda, recarrega os dados do namespace dele
   useEffect(() => {

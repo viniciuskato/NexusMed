@@ -7,12 +7,17 @@ import { isSupabaseConfigured } from '../lib/supabaseClient';
 /** 'pendente': material publicado, mudança de conteúdo guardada à parte até ser atestada (45-K). */
 export type SaveCompendiumResult = 'aplicado' | 'pendente';
 
+export interface GetCompendiumsOptions {
+  /** Marca `hasPendingEdit` (45-K). Só para admin: o estudante nunca tem o que ver. */
+  includePendingEdits?: boolean;
+}
+
 export interface MaterialsRepository {
   getDisciplines(): Promise<Discipline[]>;
   saveDisciplines(disciplines: Discipline[]): Promise<void>;
   getThemes(): Promise<Theme[]>;
   saveThemes(themes: Theme[]): Promise<void>;
-  getCompendiums(): Promise<Compendium[]>;
+  getCompendiums(options?: GetCompendiumsOptions): Promise<Compendium[]>;
   saveCompendiums(compendiums: Compendium[]): Promise<void>;
   saveCompendium(compendium: Compendium): Promise<SaveCompendiumResult>;
   /** Material como a edição pendente o deixaria, ou null (45-K). */
@@ -116,10 +121,10 @@ class ResilientMaterialsRepository implements MaterialsRepository {
     }
   }
 
-  async getCompendiums(): Promise<Compendium[]> {
+  async getCompendiums(options?: GetCompendiumsOptions): Promise<Compendium[]> {
     if (!isSupabaseConfigured) return this.local.getCompendiums();
     try {
-      const res = await this.supa.getCompendiums();
+      const res = await this.supa.getCompendiums(options);
       return res;
     } catch {
       return this.local.getCompendiums();
