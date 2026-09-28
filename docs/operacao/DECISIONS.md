@@ -115,7 +115,9 @@ merges. Conteúdo é o produto; o código é ferramenta.
    material; ler o Supabase remoto só com consulta que não devolve dado
    pessoal (materiais, questões, contagens, histórico de migrations), sempre
    dentro de uma transação só de leitura
-   (`begin transaction read only;` … `rollback;`). É exceção explícita e com
+   (`begin transaction read only;` … `rollback;`); enviar ao GitHub, sempre
+   como PR para o dono mesclar, as correções do #98 e as mudanças de
+   documentação dela. É exceção explícita e com
    prazo à autorização por ação (`SESSION_PROTOCOL.md`); merge, migration e
    escrita remota nunca entram.
 9. **Métrica e revisão.** Número principal: materiais publicados por semana.
