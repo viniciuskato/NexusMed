@@ -2,7 +2,68 @@
 
 Convenção aprovada pelo usuário em 2026-09-07. Este modelo substitui formatos anteriores de acompanhamento que conflitem com ele.
 
+## Modelo D-7 (desde 28/09/2026)
+
+Decisão do dono: conteúdo é o produto (`docs/operacao/DECISIONS.md`, D-7).
+Funcionalidade nova está congelada, salvo pedido da produção. Três sessões:
+
+1. **Diretoria** — Claude Code, modelo mais capaz, no checkout principal; PR
+   próprio em worktree próprio. **É a única janela em que o dono fala no dia
+   a dia; ele não carrega texto entre sessões Claude.**
+   - Faz: a rodada "bom dia" (painel de até ~10 linhas: o que mesclar agora,
+     um PR por vez, com link; no máximo uma decisão pendente, com
+     recomendação; a pergunta da sessão de defeitos; o estado de cada
+     material; a próxima ação do dono); revisa os PRs que não escreveu e põe
+     o rótulo; atualiza com o `main` (merge, nunca rebase) o PR rotulado que
+     ficou atrás; confere CI e deploy depois de cada merge do dono; é a mesa
+     editorial (fluxo em `docs/conteúdos/LEIA-ME.md`, local); mantém a fila de
+     defeitos (issues) e decide defeito × evolução; leva ao dono as perguntas
+     da sessão de defeitos e devolve a resposta; às segundas, o "semana"
+     (materiais publicados, a fila, os defeitos `menor` para o dono aprovar
+     ou descartar, até 2 decisões e um PR de documentação com o registro da
+     semana).
+   - Não faz: código de produto; merge; migration no remoto; escrita no
+     Supabase remoto ou na Vercel; mudança na configuração do GitHub sem o
+     "sim" do dono na hora; edição do texto de um material (só grava cópias
+     exatas); importar, atestar ou publicar; revisar PR que ela escreveu.
+   - Propõe ao dono tornar `revisado` obrigatório nas regras do `main` e,
+     depois do #98, também `migration-no-remoto`.
+2. **Sessão de defeitos** — Claude Code, modelo mais capaz, worktree
+   próprio, nunca o checkout principal. **É a única que escreve código de
+   produto**: conserta, um de cada vez, o que está no ar e não faz o que já
+   promete, ou põe em risco dado do estudante, segurança ou a produção. Não
+   constrói nada novo. Fala com a diretoria por mensagem entre sessões e
+   pergunta ao dono só pela diretoria. Protocolo:
+   [`../operacao/EXECUTOR_PROTOCOL.md`](../operacao/EXECUTOR_PROTOCOL.md).
+3. **Sessão de materiais** — o Gemini, no Gem "Redator NexusMed", uma
+   conversa por material. Escreve cada material no padrão de conteúdos e o
+   corrige pelos achados da revisão. Sem acesso ao computador, ao
+   repositório, ao banco nem ao GitHub; não escreve questões; não decide
+   tema nem escopo. O dono leva o pedido ao Gem e traz a resposta à
+   diretoria.
+
+**Quem revisa quem** (sempre antes do merge; só o dono mescla):
+
+| Autor | Quem revisa | Quem põe o rótulo `revisado` |
+|---|---|---|
+| Sessão de defeitos | Diretoria, com subagentes de contexto limpo; achado grave conferido por um segundo leitor que tenta derrubá-lo; de novo no diff das correções | Diretoria |
+| Diretoria | Sessão de defeitos, quando a diretoria pede | Sessão de defeitos |
+| Gemini (material) | Diretoria (checagem e revisão médica por subagente de contexto limpo); depois o dono, que lê o material inteiro antes de importar | Não há rótulo: o portão é a atestação humana, presa ao hash |
+
+Só achado bloqueante impede o rótulo. Nenhuma sessão revisa o que escreveu
+nem põe rótulo em PR próprio.
+
+Limites, autorizações, métrica e a revisão da D-7 em 09/10: na própria
+decisão. Textos para abrir a diretoria e a sessão de defeitos: seção 0 do
+plano canônico. A sessão de auditoria continua só sob pedido explícito do
+dono (seção própria, abaixo). As seções "Três papéis" e "Trilhas e revisão"
+ficam como histórico; o resto deste documento vale onde não contradiz esta
+seção.
+
 ## Três papéis, não dois (atualização 2026-09-18)
+
+*Substituída pela D-7 (28/09/2026) — ver "Modelo D-7", acima. Mantida como
+histórico.*
 
 Desde 2026-09-18 existem três papéis de sessão, não dois. O que este
 documento chama de "diretoria" abaixo permanece **exatamente como
@@ -31,6 +92,9 @@ inflar o laço barato e frequente diretoria→executiva com mais uma troca
 de sessão obrigatória a cada entrega.
 
 ## Trilhas e revisão (desde 2026-09-23)
+
+*Substituída pela D-7 (28/09/2026) — ver "Modelo D-7", acima. Mantida como
+histórico.*
 
 A execução deixou de ser uma sessão por unidade e passou a ser **uma sessão
 por área do código**. Motivo: o custo dominante deste projeto não era o preço
@@ -74,6 +138,11 @@ Não detalhe o *como* com antecedência: arquivos, SQL, comandos e ordem de pass
 A executiva encerra com um bloco copiável: RETORNO: 01-B; Resultado; Alterações; Validações; Pendências; Estado de publicação. Aceite retornos legados e linguagem natural.
 
 ## Plano canônico e unidades (desde 2026-09-23)
+
+*Desde a D-7: unidade só volta a ser encaminhada como pedido da produção; a
+sessão de defeitos não edita o plano (quem atualiza, inclusive a linha
+"Estado", é a diretoria, em lote); "Como abrir uma trilha", abaixo, não vale
+mais.*
 
 Substituem os prompts persistidos em `docs/archive/diretoria/prompts/`. Motivo: os prompts
 envelheciam antes de serem executados — o 42-C ainda apontava para um caminho de
@@ -134,7 +203,7 @@ Aceite “ENVIEI: 06-B” ou “mandei para rodar”. Só marque Em execução a
 ## Liberação e concorrência
 Avalie separadamente: há informações suficientes para enviar? Pode executar junto das sessões ativas? Confira dependências e sobreposição de arquivos, dados, migrações e decisões. Sem evidência de isolamento, não libere implementações conflitantes na mesma árvore. Diagnósticos somente leitura podem avançar em paralelo quando independentes. Não presuma que branches na mesma pasta isolam executivas.
 
-A tabela final deve conter: Trilha | Unidade atual | Estado | Próxima ação / dependência. Diga explicitamente “Pode enviar”, “Aguarda retorno de NN — motivo”, “Definir isolamento antes de enviar” ou “Já enviado; aguardar retorno”. Indique prioridade quando útil. Mostre apenas o histórico necessário na conversa.
+*Sob a D-7, o painel da rodada "bom dia" substitui a tabela a seguir.* A tabela final deve conter: Trilha | Unidade atual | Estado | Próxima ação / dependência. Diga explicitamente “Pode enviar”, “Aguarda retorno de NN — motivo”, “Definir isolamento antes de enviar” ou “Já enviado; aguardar retorno”. Indique prioridade quando útil. Mostre apenas o histórico necessário na conversa.
 
 ## Persistência
 Use o plano canônico (`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`) como painel atual: sequência, estados, decisões em aberto e registro. Retornos vão na descrição do PR da unidade. Desde 2026-09-23; antes, o painel era docs/archive/diretoria/registro.md, com prompts em docs/archive/diretoria/prompts/ e retornos em docs/archive/diretoria/retornos/ — todos mantidos como histórico. Não fabrique transcrições completas a partir de resumos; rotule resumos. Atualize o acompanhamento quando houver envio confirmado, retorno ou decisão, preservando trabalho concorrente e fatos anteriores.

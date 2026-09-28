@@ -19,7 +19,7 @@ Onde está cada coisa em `docs/`. Agente de IA começa pelo
 | ver o que produzir de antimicrobianos, e em que ordem | [`editorial/PLANO-ANTIMICROBIANOS.md`](editorial/PLANO-ANTIMICROBIANOS.md) |
 | ver ideias de temas para depois | [`editorial/BANCO-EDITORIAL-TEMAS-FUTUROS.md`](editorial/BANCO-EDITORIAL-TEMAS-FUTUROS.md) |
 | produzir conteúdo com o Gemini agora | `conteúdos/LEIA-ME.md` (só no seu computador) |
-| entender os papéis: diretoria, trilhas e auditoria | [`diretoria/MODELO-DIRETORIA.md`](diretoria/MODELO-DIRETORIA.md) |
+| entender os papéis: diretoria, sessão de defeitos, sessão de materiais (D-7) e auditoria | [`diretoria/MODELO-DIRETORIA.md`](diretoria/MODELO-DIRETORIA.md) |
 | ver o que a auditoria propôs | [`diretoria/BACKLOG-ESTRATEGICO.md`](diretoria/BACKLOG-ESTRATEGICO.md) |
 | achar algo antigo | [`archive/`](archive/) |
 

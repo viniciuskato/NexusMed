@@ -6,6 +6,142 @@
 > `docs/archive/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-28 — Conteúdo é o produto: diretoria, sessão de defeitos e sessão de materiais (D-7)
+
+Origem: pedido do dono em 28/09, para não gastar todo o tempo dele num
+desenvolvimento de software sem fim. De 23 a 27/09 entraram 33 PRs no `main`
+e nenhum dos 7 materiais do piloto foi escrito (as pastas só tinham o pedido e
+o rascunho antigo; nenhuma fonte reunida). O que o material 01 precisa para ir
+ao ar — importar, checar, atestar, publicar, ligar questão — já está no
+`main`. O gargalo era o tempo do dono, gasto roteando três trilhas, revisões e
+merges. Conteúdo é o produto; o código é ferramenta.
+
+1. **Três sessões** (papéis em `MODELO-DIRETORIA.md`, "Modelo D-7"):
+   - **diretoria** (Claude Code): a única janela em que o dono fala no dia a
+     dia; revisa os PRs que não escreveu, mantém a fila de defeitos, é a mesa
+     editorial e leva ao dono as perguntas da sessão de defeitos;
+   - **sessão de defeitos** (Claude Code): a única que escreve código de
+     produto; conserta um defeito por vez e não constrói nada novo
+     (`EXECUTOR_PROTOCOL.md`);
+   - **sessão de materiais** (Gemini, num Gem, fora do repositório): escreve
+     e corrige os materiais; não escreve questões.
+2. **Decisões do dono em 28/09:** (a) as três sessões acima; (b) meta:
+   materiais 01 a 03 publicados, com questões ligadas, e o "Testar o que li"
+   (43-C, #96) no ar até 02/10; 04 a 07 até 09/10 — nunca encurtar a
+   atestação para bater data: se não couber, passa para a semana seguinte;
+   (c) a 45-K (#97) fica estacionada como rascunho, sem aplicar a migration;
+   (d) fontes dos materiais só on-line, nenhum livro-texto.
+3. **Fronteira: defeito × evolução.** Defeito é comportamento de hoje (no
+   `main`, em produção ou num PR em voo) que contradiz o texto que a tela
+   mostra, o aceite de uma unidade já concluída, a política de privacidade ou
+   os termos publicados, ou uma regra de segurança escrita (riscos numerados
+   do `AGENTS.md`, regras de segurança dos protocolos) — e que dá um teste
+   que falha antes do conserto. Também é defeito: CI do `main` vermelho;
+   prevenção que o registro de um incidente lista como pendente; falha de
+   segurança em dependência de produção. Não contam como promessa: princípio
+   ou "Por quê" do plano, "a plataforma vai ganhar" do padrão, decisão cujo
+   mecanismo está numa unidade congelada. Toda issue de defeito traz "Hoje,
+   quando [quem] faz [o quê], acontece [X]. Deveria acontecer [Y], como
+   promete [onde].", o rótulo `bug` e um de gravidade, em duas faixas:
+   `grave` (dado do estudante; segurança ou privacidade; produção quebrada ou
+   em risco) entra direto na fila; `menor` (promessa quebrada sem dano;
+   cosmético) vai à lista do "semana" e só entra com o "sim" do dono. No
+   máximo 5 issues `bug` abertas; acima disso, só entra `grave`. Na mesma
+   faixa, primeiro o que está no caminho da produção. Evolução — tela ou
+   fluxo novo, "funciona, mas ficaria melhor", refatoração, desempenho sem
+   sintoma medido, dependência major sem falha, teste que falta sem defeito —
+   fica congelada.
+4. **Pedido da produção** (rótulo `pedido-da-producao`), a única porta para
+   evolução. Gatilho, com evidência: um passo da produção não se faz, ou só se
+   faz violando uma regra de qualidade; um contorno manual custa ao dono mais
+   de 30 minutos por semana, medido em dois materiais; um estudante relatou
+   ter sido prejudicado. A diretoria propõe em até 5 linhas (o que travou, o
+   custo, o aceite, o tamanho); o dono diz "sim"; cabe em 1 PR; executa a
+   sessão de defeitos; 1 aberto por vez.
+5. **Congeladas** (só voltam por pedido da produção): 45-K (volta com erro de
+   fato ou dose em material publicado que ficou mais de 1 dia no ar sem
+   atestação, ou com 3 ou mais correções de material publicado em 2 semanas),
+   44-A, 44-B, 44-C2, 43-E, 46-A, 46-D, as majors da 46-B, a 45-H (salvo
+   AUD-31.1 e AUD-07, que viram defeito `grave`) e a 45-I (salvo a parte LGPD,
+   AUD-30.3 e 30.4, que vira defeito `grave`). **Não congelam:** 46-E (#98,
+   prevenção de incidente) e 45-G (#93, defeitos); a 43-C (#96) é a meta.
+   Detalhe e gatilhos: seção 5 do plano.
+6. **Conteúdo.** A atestação humana, presa ao hash, continua o único portão;
+   nada é importado sem o dono ter lido o material inteiro. Afirmação de alto
+   risco (dose, corte numérico, ajuste renal ou hepático, gestação, lactação,
+   recém-nascido, idoso, contraindicação, interação) só com fonte primária
+   pública identificável, citada na mesma frase; sem ela,
+   LACUNA_DOCUMENTAL. No máximo 2 materiais escritos e ainda não publicados.
+   Questões: só as já publicadas, ligadas uma a uma, depois de a sessão de
+   defeitos revisar o que entrou sem revisão no #95. Enquanto a 45-K estiver
+   congelada, erro de fato ou dose em material publicado é corrigido no mesmo
+   dia pelo formulário e reatestado em seguida; erro menor, em lote. Passo a
+   passo: `docs/conteúdos/LEIA-ME.md` (local, fora do git).
+7. **Limites:** 2 sessões Claude do NexusMed abertas (diretoria e defeitos),
+   mais o Gem; até 2 PRs prontos esperando o dono, mostrados um por vez; até
+   2 merges por dia, nunca à noite; sessão de defeitos com até 2 PRs próprios
+   abertos e um defeito grave por PR; nenhum PR com migration mesclado antes
+   de o check `migration-no-remoto` existir e ser obrigatório; até 02/10, nada
+   que mexa em importar, atestar, publicar ou ligar questão, salvo o #96, o
+   #93 e defeito grave nesse caminho, e nenhuma atualização de dependência de
+   produção; 1 PR de documentação da diretoria por semana (o do "semana"),
+   fora o desta decisão.
+8. **Autorizações da diretoria.** Na primeira rodada, ela pede ao dono, uma
+   vez só, as que valem até 09/10: postar revisão e pôr ou tirar `revisado`
+   em PR que não escreveu; atualizar a branch de PR rotulado; mandar mensagem
+   à sessão de defeitos; criar e editar issues e rótulos; comentar, pôr em
+   rascunho e fechar PR quando o dono já decidiu; escrever em `docs/conteúdos`
+   e fazer a cópia semanal dela; ler a área de transferência quando o dono
+   digitar os comandos de material; ler o Supabase remoto só com consulta que
+   não devolve dado pessoal. É exceção explícita e com prazo à autorização por
+   ação (`SESSION_PROTOCOL.md`); merge, migration e escrita remota nunca
+   entram.
+9. **Métrica e revisão.** Número principal: materiais publicados por semana.
+   Apoio: questões publicadas ligadas a material publicado; erros médicos
+   achados depois de publicar (meta 0); PRs mesclados sem revisão (meta 0).
+   Alarme: semana com 0 material publicado e mais de 5 merges; 3 dias úteis
+   sem nenhum material mudar de estado. A D-7 é revista em 09/10 (manter,
+   ajustar ou reverter, pelos números) e, depois, a cada 4 semanas.
+
+**Revê:**
+- D-6 (25/09): item 2 (duas trilhas e três PRs esperando o dono — valem as
+  sessões e os limites acima); item 4, na meta e na "ordem das trilhas" (a
+  meta é a do item 2 acima); e, no item 3, a frase "Processo congelado até
+  09/10" — a D-7 é a mudança de processo, por decisão do dono, e 09/10 fica
+  como a data da primeira revisão dela.
+- D-5 (24/09), item 1: a frase "O sistema segue nas trilhas" — o sistema
+  passa a ser a sessão de defeitos; o conteúdo continua com o dono e o
+  Gemini como redator, com a diretoria como mesa editorial.
+- "Execução em trilhas" (23/09): item 1 (três trilhas por área do código);
+  item 4 (a diretoria deixa de ser sob demanda — é a janela diária do dono —,
+  e quem executa não pergunta ao dono na própria sessão: toda pergunta vai
+  pela diretoria); e, no item 5, "No PR, a trilha atualiza só a linha
+  'Estado' da unidade" — a sessão de defeitos não edita o plano.
+- "Plano canônico único" (23/09), no ponto "A execução atualiza, no mesmo PR
+  da implementação, o estado da unidade, o registro e os achados da
+  execução": pelo mesmo motivo, quem registra é a diretoria.
+
+**Mantém:** só o dono mescla e aplica migration no remoto; migration no
+remoto antes do merge (D-4, que continua inteira); revisão por quem não
+escreveu, antes do merge ("Execução em trilhas", item 3 — agora pela diretoria
+ou pela sessão de defeitos, não por uma "sessão nova"), com o rótulo
+`revisado` posto pela sessão que revisou (#98); o Gemini não opera no
+repositório nem no código (D-5, item 1); o fluxo com checagem e revisão
+cruzada (D-5, item 2); a atestação humana como portão; pedidos, rascunhos e
+fontes fora do git (D-5, item 4); o registro do plano é da diretoria, em lote
+("Execução em trilhas", item 5); o modelo mais capaz ("Execução em trilhas",
+item 2); D-6, itens 1, 3 (salvo a frase acima) e 5. A D-5, item 5 (no máximo
+uma leva à frente da revisão), fica mais estreita: 2 materiais.
+
+**Adia**, sem revogar, o mecanismo da D-1 (45-K), o de "também aparece em" e
+"padrão versionado" (44-A, 44-B e 44-C2) e a D-3 (46-A): as decisões valem, e
+as unidades voltam só por pedido da produção. Nenhuma entrada abaixo foi
+editada.
+
+**Como aplicar:** `docs/diretoria/MODELO-DIRETORIA.md` ("Modelo D-7"),
+`docs/operacao/EXECUTOR_PROTOCOL.md` (protocolo da sessão de defeitos) e a
+seção 5 do plano canônico.
+
 ## 2026-09-25 — Travas por mecanismo, menos coisa em paralelo, volta ao produto (D-6, PR #84)
 
 Origem: relatório dos commits de 20 a 24/09 e INC-2026-005; o dono delegou à

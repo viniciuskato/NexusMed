@@ -9,11 +9,19 @@ mais a porta de entrada abaixo.
 
 ## Leia primeiro, nesta ordem
 
-**Se você é uma trilha de execução** (implementa unidades do plano): este
-arquivo, [`docs/operacao/EXECUTOR_PROTOCOL.md`](docs/operacao/EXECUTOR_PROTOCOL.md)
-e, a cada unidade, a própria unidade no plano e os achados que ela cita. O
-resto da lista abaixo só quando a unidade apontar ou faltar um fato — leitura
-desnecessária custa tokens em toda sessão. A lista completa é da diretoria.
+**Modelo D-7 (desde 28/09/2026): conteúdo é o produto.** Três sessões: a
+**diretoria** (a única janela do dono; revisa, mantém a fila de defeitos e é
+a mesa editorial), a **sessão de defeitos** (a única que escreve código de
+produto; conserta, não constrói) e a **sessão de materiais** (o Gemini, fora
+do repositório). Funcionalidade nova está congelada, salvo pedido da
+produção. Papéis: [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md),
+"Modelo D-7"; decisão: `DECISIONS.md`, D-7.
+
+**Se você é a sessão de defeitos:** este arquivo,
+[`docs/operacao/EXECUTOR_PROTOCOL.md`](docs/operacao/EXECUTOR_PROTOCOL.md)
+e, a cada item, a issue e o que ela aponta. O resto da lista abaixo só quando
+faltar um fato — leitura desnecessária custa tokens em toda sessão. A lista
+completa é da diretoria, que lê também o `MODELO-DIRETORIA.md`.
 
 1. [`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](docs/produto/PLANO-DE-DESENVOLVIMENTO.md)
    — plano canônico: o que está sendo construído, por quê, em que ordem e
@@ -209,11 +217,12 @@ seção "Armadilhas já descobertas".
 - **Incidente documenta falha relevante; standard guarda regra
   generalizável; runbook guarda procedimento; teste/CI torna a prevenção
   executável.** Não duplicar a mesma narrativa entre camadas.
-- **Modelo "auditoria / diretoria / trilhas"** (trilhas desde
-  2026-09-23): a diretoria decide produto e mantém o plano, sob demanda; três
-  trilhas de execução, cada uma dona de uma área do código, implementam as
-  unidades uma por PR; toda PR passa por revisão em sessão nova antes do
-  merge, e só o dono mescla. Modelo:
+- **Modelo D-7 (28/09): diretoria, sessão de defeitos e sessão de
+  materiais** — substitui as trilhas (23/09) e revê a D-6 acima no que fala
+  de trilhas, de PRs esperando, da meta e de "processo congelado até 09/10"
+  (09/10 passa a ser a revisão da D-7). O código vem da fila de defeitos;
+  todo PR é revisado por quem não o escreveu, antes do merge; só o dono
+  mescla. Modelo:
   [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md).
 - **Testar contra Supabase LOCAL** antes de considerar qualquer mudança
   de schema/RPC pronta. Nunca validar escrita direto no remoto.
@@ -239,21 +248,22 @@ decisões e fila operacional, em `PROJECT_STATE.md`, `DECISIONS.md` e
 `TASKS.md`, conforme `SESSION_PROTOCOL.md`. `docs/archive/diretoria/registro.md` é
 o painel legado da diretoria (histórico até 2026-09-17).
 
-## Comunicação entre diretoria e executivas
+## Comunicação entre as sessões
 
-Toda sessão de diretoria deve ler e seguir
+O dono fala só com a diretoria. A sessão de defeitos fala com a diretoria
+por mensagem entre sessões e pelo PR; o Gemini recebe o pedido e devolve a
+resposta pelas mãos do dono. Toda sessão de diretoria deve ler e seguir
 [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md)
 e consultar [`docs/archive/diretoria/registro.md`](docs/archive/diretoria/registro.md)
 para o histórico. Preserve os identificadores já emitidos ao continuar
 esse histórico.
 
-**Desde 2026-09-23 o trabalho é encaminhado por unidades do plano
-canônico, não por prompts:**
+**Desde 2026-09-28 (D-7) o código vem da fila de defeitos** — issues com o
+rótulo `bug` e a gravidade (`grave` ou `menor`) — e, com o "sim" do dono, de
+um pedido da produção (`pedido-da-producao`), não das unidades do plano
+canônico:
 [`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](docs/produto/PLANO-DE-DESENVOLVIMENTO.md).
-Um documento só, com a visão, o estado verificado, as decisões em vigor, as
-frentes, as trilhas e a ordem, as decisões em aberto, as unidades (por quê,
-critério de aceite, restrições, dependências) e o registro. A unidade diz o
-quê e por quê; o como é derivado lendo o código na hora, pela trilha dona da
-área. A diretoria planeja nele; a trilha atualiza só a linha "Estado" da
-unidade no mesmo PR da implementação. `docs/archive/diretoria/prompts/` e
-`registro.md` são histórico — nada novo entra lá.
+O plano continua dizendo o que existe, o que está congelado e por quê, com a
+fronteira defeito × evolução na seção 5; quem o atualiza é a diretoria, em
+lote. `docs/archive/diretoria/prompts/` e `registro.md` são histórico — nada
+novo entra lá.

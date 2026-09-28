@@ -4,6 +4,8 @@
 > operacionais que não são unidades do plano. **As unidades de implementação
 > não entram aqui** — estão no plano canônico,
 > [`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](../produto/PLANO-DE-DESENVOLVIMENTO.md).
+> Desde a D-7 (28/09), **defeito de código vai para uma issue** com o rótulo
+> `bug` e a gravidade, não para cá.
 > Tarefa concluída sai desta tabela; o PR é o registro dela. Tudo que foi
 > executado até 2026-09-23 está preservado em
 > [`docs/archive/TASKS-HISTORICO-2026-09-23.md`](../archive/TASKS-HISTORICO-2026-09-23.md).
@@ -16,7 +18,7 @@
 
 | ID | Prioridade | Estado | Dependência | Impacto em produção | Próxima ação |
 |---|---|---|---|---|---|
-| TASK-2026-09-24-01 — Simulados finalizados na janela do INC-2026-004 podem ter ficado com nota vazia | P2 | pendente | Nenhuma | Nota exibida como 0 para quem finalizou simulado entre 19:03 e 19:15 UTC de 24/09 | Dono roda no SQL Editor, só leitura: simulados com `completed_at` nessa janela e `score` nulo. Nenhum → encerrar; havendo → a trilha 1 recalcula a nota a partir das tentativas gravadas |
+| TASK-2026-09-24-01 — Simulados finalizados na janela do INC-2026-004 podem ter ficado com nota vazia | P2 | pendente | Nenhuma | Nota exibida como 0 para quem finalizou simulado entre 19:03 e 19:15 UTC de 24/09 | A diretoria conta, só lendo e sem dado pessoal: simulados com `completed_at` nessa janela e `score` nulo. Nenhum → encerrar; havendo → vira issue `bug` `grave`: a sessão de defeitos escreve o SQL que recalcula a nota a partir das tentativas gravadas e a consulta de conferência; quem roda é o dono, guiado pela diretoria |
 | AS1 — primeira onda editorial: auditoria científica e conversão dos temas 12 (Dispneia) e 19 (Endocardite Infecciosa); decidir a duplicata da Endocardite antes de fechar o tema 19 | P2 | pendente | Nenhuma | Nenhum até publicação | A prova de 21/09 passou; o conteúdo continua valendo (cobertura de todo o conhecimento médico, por partes — `DECISIONS.md`, 2026-09-23). Entra na produção editorial (seção 12 do plano) quando a diretoria ordenar os ramos |
 | AS1 — segunda onda editorial: auditoria dos materiais dos temas 1 (Avaliação da Função Renal), 8 a 11 (Hemograma/Anemias) e 16 (Semiologia Cardíaca); decidir as duplicatas de Função Renal e de Semiologia Cardíaca | P2 | pendente | Nenhuma | Nenhum até publicação | Idem à primeira onda |
 
