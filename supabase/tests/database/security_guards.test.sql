@@ -8,13 +8,15 @@
 -- Ver 20260918140000_revoke_anon_grants.sql.
 --
 -- AUD-31.1 (herança de EXECUTE por PUBLIC, AGENTS.md risco 14): as duas
--- últimas guardas falham, nomeando as funções, se alguma função chamável
--- (não de gatilho) de um schema que o repositório cria e onde PUBLIC tem
--- USAGE ficar com EXECUTE para PUBLIC ou para anon sem
--- `revoke ... from public[, anon]` explícito. `app` está na lista por ser
--- criado por `20260903120100_rls_policies.sql`, mesmo sem PUBLIC ter USAGE
--- nele hoje — outros schemas (auth, storage, extensions, …) são geridos
--- pelo Supabase fora do repositório e não entram. Ver RUNBOOK.md, 3.2.
+-- últimas guardas falham, nomeando a função ou procedure, se alguma função
+-- ou procedure chamável (não de gatilho) de um schema que o repositório
+-- cria ficar com EXECUTE para PUBLIC ou para anon sem
+-- `revoke ... from public[, anon]` explícito — a de PUBLIC olha os schemas
+-- onde PUBLIC tem USAGE, a de anon olha onde anon tem USAGE (que já inclui
+-- o que anon herda de PUBLIC). `app` está na lista por ser criado por
+-- `20260903120100_rls_policies.sql`, mesmo sem PUBLIC/anon terem USAGE nele
+-- hoje — outros schemas (auth, storage, extensions, …) são geridos pelo
+-- Supabase fora do repositório e não entram. Ver RUNBOOK.md, 3.2.
 -- ============================================================================
 
 select plan(5);
@@ -57,11 +59,11 @@ select is(
      join pg_namespace n on n.oid = p.pronamespace
     where n.nspname in ('public', 'app')
       and has_schema_privilege('public', n.oid, 'usage')
-      and p.prokind = 'f'
+      and p.prokind in ('f', 'p')
       and p.prorettype::regtype::text not in ('trigger', 'event_trigger')
       and has_function_privilege('public', p.oid, 'execute')),
   '',
-  'nenhuma função chamável (não-gatilho), em schema do repositório onde PUBLIC tem USAGE, tem EXECUTE para PUBLIC'
+  'nenhuma função/procedure chamável (não-gatilho), em schema do repositório onde PUBLIC tem USAGE, tem EXECUTE para PUBLIC'
 );
 
 select is(
@@ -69,12 +71,12 @@ select is(
      from pg_proc p
      join pg_namespace n on n.oid = p.pronamespace
     where n.nspname in ('public', 'app')
-      and has_schema_privilege('public', n.oid, 'usage')
-      and p.prokind = 'f'
+      and has_schema_privilege('anon', n.oid, 'usage')
+      and p.prokind in ('f', 'p')
       and p.prorettype::regtype::text not in ('trigger', 'event_trigger')
       and has_function_privilege('anon', p.oid, 'execute')),
   '',
-  'nenhuma função chamável (não-gatilho), em schema do repositório onde PUBLIC tem USAGE, tem EXECUTE para anon'
+  'nenhuma função/procedure chamável (não-gatilho), em schema do repositório onde anon tem USAGE, tem EXECUTE para anon'
 );
 
 select * from finish();

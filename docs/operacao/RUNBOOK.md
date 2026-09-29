@@ -170,12 +170,14 @@ obrigatório antes prende o PR para sempre.
    valeria como a de qualquer usuário, admin inclusive. **Isso está fechado
    por mecanismo (AUD-31.1):** a guarda pgTAP
    `supabase/tests/database/security_guards.test.sql` reprova, nomeando a
-   função, qualquer função chamável (que não seja de gatilho) de um schema
-   que o repositório cria e onde `PUBLIC` tem `USAGE` (`public`; `app` entra
-   pela mesma lista, mesmo sem ter `USAGE` hoje) que fique com `EXECUTE`
-   para `PUBLIC` ou para `anon` — o PR que criar essa função fica com o
-   check full vermelho e não é mesclado nem tem a migration aplicada. Função
-   de gatilho (`returns trigger`/`returns event trigger`) de `public` com
+   função ou procedure, qualquer função ou procedure chamável (que não seja
+   de gatilho) de um schema que o repositório cria e onde `PUBLIC`/`anon`
+   tem `USAGE` (`public`; `app` entra pela mesma lista, mesmo sem ter
+   `USAGE` hoje) que fique com `EXECUTE` para `PUBLIC` ou para `anon` — o PR
+   que criar essa função ou procedure fica com o check full vermelho, o que
+   impede o merge; pelo RUNBOOK, seção 3, a migration só se aplica no
+   remoto com o CI verde. Função de gatilho (`returns trigger`/`returns
+   event trigger`) de `public` com
    `EXECUTE` para `PUBLIC` não é risco, porque não é chamável fora do
    disparo do gatilho — em 28/09 há 15 assim, todas sem esse revoke, como
    esperado; `rls_auto_enable()` não é uma delas, porque não está em nenhuma
