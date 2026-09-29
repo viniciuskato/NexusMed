@@ -46,7 +46,7 @@ import { getBreadcrumbTrail, breadcrumbLabel } from '../../utils/materialTree';
 import { formStateFromCompendium, compendiumFromFormState, linkedReferencesThatWillBeLost } from '../../utils/compendiumForm';
 import { StorageService } from '../../services/storage';
 import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
-import { materialsRepository } from '../../repositories/MaterialsRepository';
+import { materialsRepository, type SaveCompendiumResult } from '../../repositories/MaterialsRepository';
 import { questionsRepository } from '../../repositories/QuestionsRepository';
 import { feedbackRepository } from '../../repositories/FeedbackRepository';
 import { supabase } from '../../lib/supabaseClient';
@@ -412,7 +412,12 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   };
 
   // ── Compendium Form Handlers ────────────────────────────────────
+  // Cada abertura de edição ganha um número; a resposta da edição pendente
+  // que chega depois de outra abertura (troca rápida de material) é descartada.
+  const editRequestRef = useRef(0);
+
   const handleOpenNewCompendium = () => {
+    ++editRequestRef.current;
     setEditingCompId(null);
     setCompTitle('');
     setCompSubtitle('');
@@ -440,10 +445,24 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     setIsCompendiumFormOpen(true);
   };
 
-  const handleEditCompendium = (comp: Compendium) => {
-    const form = formStateFromCompendium(comp);
+  const handleEditCompendium = async (comp: Compendium) => {
+    const request = ++editRequestRef.current;
+    // 45-K: com edição pendente, o formulário abre a edição (para continuar,
+    // mandar à revisão ou descartar), não a versão atestada. A edição é o
+    // "original" da comparação: reabrir e salvar sem mexer é no-op.
+    let source = comp;
+    if (comp.hasPendingEdit) {
+      try {
+        source = (await materialsRepository.getPendingEdit(comp)) ?? comp;
+      } catch (err) {
+        if (request === editRequestRef.current) showToast(`Não foi possível abrir a edição pendente: ${getErrorMessage(err)}`);
+        return;
+      }
+      if (request !== editRequestRef.current) return;
+    }
+    const form = formStateFromCompendium(source);
     setEditingCompId(comp.id);
-    setEditingOriginal(comp);
+    setEditingOriginal(source);
     setCompTitle(form.title);
     setCompSubtitle(form.subtitle);
     setCompDisciplineId(form.disciplineId);
@@ -551,8 +570,9 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       compId
     );
 
+    let result: SaveCompendiumResult;
     try {
-      await materialsRepository.saveCompendium(newComp);
+      result = await materialsRepository.saveCompendium(newComp);
     } catch (err) {
       showToast(getErrorMessage(err));
       return;
@@ -561,7 +581,28 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
     setEditingCompId(null);
     setEditingOriginal(null);
     onRefreshData();
-    showToast(editingCompId ? 'Conteúdo atualizado com sucesso!' : 'Novo conteúdo incluído e indexado com sucesso!');
+    showToast(
+      result === 'pendente'
+        ? 'Edição guardada à parte: os alunos seguem lendo a versão atestada até a revisão da edição ser aprovada.'
+        : editingCompId
+          ? 'Conteúdo atualizado com sucesso!'
+          : 'Novo conteúdo incluído e indexado com sucesso!'
+    );
+  };
+
+  const handleDiscardPendingEdit = async (id: string) => {
+    if (!window.confirm('Descartar a edição pendente? O material volta ao conteúdo atestado, que é o que os alunos já leem.')) return;
+    try {
+      await materialsRepository.discardPendingEdit(id);
+    } catch (err) {
+      showToast(`Edição não descartada: ${getErrorMessage(err)}`);
+      return;
+    }
+    setIsCompendiumFormOpen(false);
+    setEditingCompId(null);
+    setEditingOriginal(null);
+    onRefreshData();
+    showToast('Edição pendente descartada. O material segue com o conteúdo atestado.');
   };
 
   const handleDeleteCompendium = async (id: string, title: string) => {
@@ -1116,6 +1157,25 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                 </button>
               </div>
 
+              {editingOriginal?.hasPendingEdit && editingCompId && (
+                <div
+                  id="compendium-form-pending-edit"
+                  className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-300 flex flex-wrap items-center justify-between gap-2"
+                >
+                  <p>
+                    <strong>Edição pendente de atestação</strong> — os alunos leem a versão atestada. Continue a edição e salve,
+                    mande à revisão (botão Revisão no cartão do material) ou descarte.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleDiscardPendingEdit(editingCompId)}
+                    className="px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 font-bold hover:bg-amber-100 dark:hover:bg-amber-900/40 cursor-pointer"
+                  >
+                    Descartar edição pendente
+                  </button>
+                </div>
+              )}
+
               {/* General Metadata */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-2">
@@ -1318,8 +1378,9 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                     >
                       <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                       <span>
-                        Disciplina ou tema mudaram. Eles fazem parte do conteúdo atestado: se este material tem revisão
-                        aprovada, ela deixa de valer ao salvar e ele precisa ser revisado de novo.
+                        {editingOriginal.publicationStatus === 'published'
+                          ? 'Disciplina ou tema mudaram. Eles fazem parte do conteúdo atestado: ao salvar, a mudança fica pendente de atestação, e os alunos seguem vendo a versão atestada até a revisão ser aprovada.'
+                          : 'Disciplina ou tema mudaram. Eles fazem parte do conteúdo atestado: se este material tem revisão aprovada, ela deixa de valer ao salvar e ele precisa ser revisado de novo.'}
                       </span>
                     </p>
                   )}
@@ -1576,6 +1637,14 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                         >
                           {c.publicationStatus === 'published' ? 'publicado' : 'rascunho'}
                         </span>
+                        {c.hasPendingEdit && (
+                          <span
+                            data-testid={`compendium-pending-edit-${c.id}`}
+                            className="text-[9px] px-2 py-0.5 rounded font-bold border bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900"
+                          >
+                            Edição pendente de atestação — os alunos leem a versão atestada
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-1 text-[11px] text-stone-400 font-mono-code">
@@ -1699,7 +1768,11 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                             <div className="absolute right-0 bottom-full mb-1 w-56 rounded-lg border border-stone-200 dark:border-[#243452] bg-white dark:bg-[#0F172A] elev-md z-50 overflow-hidden">
                               <button
                                 onClick={() => {
-                                  setEditingSectionsCompId(c.id);
+                                  // 45-K: publicado não muda pelo editor de seção
+                                  // (grava direto); o formulário guarda a edição à
+                                  // parte até ser atestada.
+                                  if (c.publicationStatus === 'published') handleEditCompendium(c);
+                                  else setEditingSectionsCompId(c.id);
                                   setOpenEditMenuCompId(null);
                                 }}
                                 className="w-full text-left px-3 py-2.5 hover:bg-stone-100 dark:hover:bg-[#1A2845] text-stone-700 dark:text-slate-300 text-xs flex items-center gap-2 transition-colors"
@@ -1707,7 +1780,11 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                                 <Layers className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                                 <span>
                                   <span className="block font-semibold">Conteúdo</span>
-                                  <span className="block text-[10px] text-stone-400">Texto das seções, com histórico e reversão</span>
+                                  <span className="block text-[10px] text-stone-400">
+                                    {c.publicationStatus === 'published'
+                                      ? 'Texto das seções — fica pendente até ser atestado'
+                                      : 'Texto das seções, com histórico e reversão'}
+                                  </span>
                                 </span>
                               </button>
                               <button

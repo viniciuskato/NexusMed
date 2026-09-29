@@ -4,14 +4,25 @@ import { SupabaseMaterialsRepository } from './SupabaseMaterialsRepository';
 
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 
+/** 'pendente': material publicado, mudança de conteúdo guardada à parte até ser atestada (45-K). */
+export type SaveCompendiumResult = 'aplicado' | 'pendente';
+
+export interface GetCompendiumsOptions {
+  /** Marca `hasPendingEdit` (45-K). Só para admin: o estudante nunca tem o que ver. */
+  includePendingEdits?: boolean;
+}
+
 export interface MaterialsRepository {
   getDisciplines(): Promise<Discipline[]>;
   saveDisciplines(disciplines: Discipline[]): Promise<void>;
   getThemes(): Promise<Theme[]>;
   saveThemes(themes: Theme[]): Promise<void>;
-  getCompendiums(): Promise<Compendium[]>;
+  getCompendiums(options?: GetCompendiumsOptions): Promise<Compendium[]>;
   saveCompendiums(compendiums: Compendium[]): Promise<void>;
-  saveCompendium(compendium: Compendium): Promise<void>;
+  saveCompendium(compendium: Compendium): Promise<SaveCompendiumResult>;
+  /** Material como a edição pendente o deixaria, ou null (45-K). */
+  getPendingEdit(current: Compendium): Promise<Compendium | null>;
+  discardPendingEdit(materialId: string): Promise<void>;
   /** Missão 42-B: grava material+seções+referências atomicamente (tudo ou nada) — usado pela importação assistida. */
   importCompendiumDraft(compendium: Compendium): Promise<Compendium>;
   deleteCompendium(id: string): Promise<void>;
@@ -42,9 +53,15 @@ class LocalStorageMaterialsRepository implements MaterialsRepository {
   async saveCompendiums(compendiums: Compendium[]): Promise<void> {
     StorageService.saveCompendiums(compendiums);
   }
-  async saveCompendium(compendium: Compendium): Promise<void> {
+  async saveCompendium(compendium: Compendium): Promise<SaveCompendiumResult> {
     StorageService.saveCompendium(compendium);
+    return 'aplicado';
   }
+  // Sem banco não há atestação: nada fica pendente.
+  async getPendingEdit(): Promise<Compendium | null> {
+    return null;
+  }
+  async discardPendingEdit(): Promise<void> {}
   async importCompendiumDraft(compendium: Compendium): Promise<Compendium> {
     StorageService.saveCompendium({ ...compendium, publicationStatus: 'draft' });
     return compendium;
@@ -104,10 +121,10 @@ class ResilientMaterialsRepository implements MaterialsRepository {
     }
   }
 
-  async getCompendiums(): Promise<Compendium[]> {
+  async getCompendiums(options?: GetCompendiumsOptions): Promise<Compendium[]> {
     if (!isSupabaseConfigured) return this.local.getCompendiums();
     try {
-      const res = await this.supa.getCompendiums();
+      const res = await this.supa.getCompendiums(options);
       return res;
     } catch {
       return this.local.getCompendiums();
@@ -123,13 +140,26 @@ class ResilientMaterialsRepository implements MaterialsRepository {
 
   // Como importCompendiumDraft: com Supabase configurado, a cópia local só é
   // atualizada depois do sucesso remoto (a RPC save_compendium é atômica).
-  async saveCompendium(compendium: Compendium): Promise<void> {
+  async saveCompendium(compendium: Compendium): Promise<SaveCompendiumResult> {
     if (!isSupabaseConfigured) {
-      this.local.saveCompendium(compendium);
-      return;
+      return this.local.saveCompendium(compendium);
     }
-    try { await this.supa.saveCompendium(compendium); } catch (err) { console.error(`[MaterialsRepository] falha ao sincronizar saveCompendium com Supabase:`, err); throw err; }
-    this.local.saveCompendium(compendium);
+    let result: SaveCompendiumResult;
+    try { result = await this.supa.saveCompendium(compendium); } catch (err) { console.error(`[MaterialsRepository] falha ao sincronizar saveCompendium com Supabase:`, err); throw err; }
+    // Edição pendente (45-K): a cópia local fica com a versão atestada — é a
+    // que o banco ainda serve, e é o que este aparelho deve mostrar.
+    if (result === 'aplicado') this.local.saveCompendium(compendium);
+    return result;
+  }
+
+  async getPendingEdit(current: Compendium): Promise<Compendium | null> {
+    if (!isSupabaseConfigured) return null;
+    return this.supa.getPendingEdit(current);
+  }
+
+  async discardPendingEdit(materialId: string): Promise<void> {
+    if (!isSupabaseConfigured) return;
+    await this.supa.discardPendingEdit(materialId);
   }
 
   // Remoto antes do local: desde a 45-D o banco recusa excluir material
