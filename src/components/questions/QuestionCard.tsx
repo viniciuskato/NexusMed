@@ -174,11 +174,11 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   useEffect(() => {
     let cancelled = false;
 
-    // `ownsStatus`: só o card hidratado (nada mais por carregar aqui, além
-    // do gabarito) pode marcar `hydrateStatus` 'ok' quando o gabarito chega
-    // ou quando não há nada pra buscar. No card avulso, quem decide 'ok' é
-    // só o Promise.allSettled abaixo — um gabarito que chega depois de um
-    // favorito/reação que falhou não pode apagar aquele aviso.
+    // `ownsStatus`: marca `hydrateStatus` 'ok' quando o gabarito chega ou
+    // quando não há nada pra buscar — no card hidratado (nada mais por
+    // carregar aqui) e no avulso quando as três cargas abaixo deram certo. Um
+    // gabarito que chega depois de um favorito/reação que falhou não pode
+    // apagar aquele aviso.
     const applyAnswer = async (initialAnswer: QuestionAnswerRecord | null, ownsStatus: boolean) => {
       if (cancelled || sessionAnswerRef.current) return; // resposta desta sessão manda
       if (!isExamMode) {
@@ -237,13 +237,18 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       if (cancelled) return;
 
       const failure = [answersResult, bookmarksResult, reactionResult].find((r) => r.status === 'rejected');
-      setHydrateStatus(failure ? loadStatusOf((failure as PromiseRejectedResult).reason) : 'ok');
+      // Sem falha, quem põe 'ok' é o `applyAnswer` (`ownsStatus`), só depois
+      // do gabarito — pôr 'ok' aqui e o erro de novo quando o gabarito falha
+      // fazia o aviso piscar e zerava a espera do useAutoRetry a cada
+      // tentativa (#93-R1). Resposta desta sessão: não há gabarito a buscar.
+      if (failure) setHydrateStatus(loadStatusOf((failure as PromiseRejectedResult).reason));
+      else if (sessionAnswerRef.current) setHydrateStatus('ok');
       setBookmarkKnown(bookmarksResult.status === 'fulfilled');
       setReactionKnown(reactionResult.status === 'fulfilled');
 
       if (bookmarksResult.status === 'fulfilled') setIsBookmarked(bookmarksResult.value.questions.includes(question.id));
       if (reactionResult.status === 'fulfilled') setMyReaction(reactionResult.value);
-      if (answersResult.status === 'fulfilled') await applyAnswer(answersResult.value[question.id] ?? null, false);
+      if (answersResult.status === 'fulfilled') await applyAnswer(answersResult.value[question.id] ?? null, !failure);
     })();
 
     return () => {

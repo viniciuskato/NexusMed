@@ -12,7 +12,7 @@
 // A gravação offline não passa por aqui: continua na fila (`syncQueue`).
 // ============================================================================
 
-import { classifySyncError, flush } from './syncQueue';
+import { classifySyncError, flush, getSummary } from './syncQueue';
 import { getStorageUser } from './storage';
 
 /** Resultado da última carga: `ok`, sem rede (`offline`) ou outro erro (`error`). */
@@ -26,6 +26,21 @@ export function isConnectionError(err: unknown): boolean {
 
 export function loadStatusOf(err: unknown): LoadStatus {
   return isConnectionError(err) ? 'offline' : 'error';
+}
+
+/**
+ * Há gravação do estudante ainda por subir na fila (pendente ou em envio).
+ * Só lê a fila — não a envia nem mexe no ritmo dela. Enquanto for verdade, a
+ * nova tentativa pelo relógio (`useAutoRetry`) não relê o servidor: o dado
+ * relido chegaria sem essa gravação e a tela o mostraria como atualizado
+ * (ex.: seção marcada como lida voltando a "não lida"). A operação sai daqui
+ * quando é enviada ou falha de vez (#93-R1).
+ */
+export function hasPendingWrites(): boolean {
+  const uid = getStorageUser();
+  if (!uid) return false;
+  const { pending, syncing } = getSummary(uid);
+  return pending + syncing > 0;
 }
 
 /**

@@ -1,3 +1,4 @@
+import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
 
@@ -12,8 +13,23 @@ import { act, cleanup, render, screen } from '@testing-library/react';
 
 vi.mock('../../src/components/feedback/ContextualFeedbackPopover', () => ({ ContextualFeedbackPopover: () => null }));
 const flush = vi.fn(() => Promise.resolve());
-vi.mock('../../src/services/syncQueue', () => ({ flush: (...a: unknown[]) => flush(...(a as [])), classifySyncError: () => 'network' }));
+vi.mock('../../src/services/syncQueue', () => ({
+  flush: (...a: unknown[]) => flush(...(a as [])),
+  classifySyncError: () => 'network',
+  getSummary: () => ({ pending: 0, syncing: 0, failed: 0, synced: 0, failedNeedsLogin: false, failedNeedsSupport: 0, status: 'synced' }),
+}));
 vi.mock('../../src/services/storage', () => ({ getStorageUser: () => 'u1' }));
+// Cada status que o aviso recebe, em todo render — pega qualquer volta a 'ok'
+// entre tentativas, não só a que durasse até uma amostra (#93-R1).
+const notice = vi.hoisted(() => ({ statuses: [] as string[] }));
+vi.mock('../../src/components/common/ConnectionNotice', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/components/common/ConnectionNotice')>();
+  const Recorder: typeof actual.ConnectionNotice = (props) => {
+    notice.statuses.push(props.status);
+    return React.createElement(actual.ConnectionNotice, props);
+  };
+  return { ...actual, ConnectionNotice: Recorder };
+});
 const getQuestionReview = vi.fn(() => Promise.reject(new Error('Failed to fetch')));
 vi.mock('../../src/repositories/AnswersRepository', () => ({
   answersRepository: { getAnswers: vi.fn(), recordAnswer: vi.fn(), subscribeToCorrection: vi.fn(() => () => {}) },
@@ -54,6 +70,7 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.clearAllMocks();
+  notice.statuses.length = 0;
 });
 
 describe('45-G — QuestionCard, gabarito falhando não reinicia o backoff (rodada 2, item 3)', () => {
@@ -93,6 +110,9 @@ describe('45-G — QuestionCard, gabarito falhando não reinicia o backoff (roda
     }
 
     expect(sawGone).toBe(false); // nunca piscou
+    const firstFailure = notice.statuses.indexOf('offline');
+    expect(firstFailure).toBeGreaterThanOrEqual(0);
+    expect(notice.statuses.slice(firstFailure).filter((s) => s === 'ok')).toEqual([]); // nem por um render
     // Backoff 5,10,20,40,60s -> tentativas cumulativas em t=5,15,35,75,135s.
     // Em 120s (t=125 no total, incluindo a carga inicial em t=0), no máximo
     // 5 buscas do gabarito (inicial + 4 retentativas).
