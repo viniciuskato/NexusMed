@@ -32,17 +32,15 @@ class LocalStorageFeedbackRepository implements FeedbackRepository {
   }
 }
 
+// Leitura (45-G, D-2): com Supabase configurado, só do servidor. A falha sobe
+// para a tela, que diz "sem conexão" — nunca cai numa cópia local vazia ou velha.
 class ResilientFeedbackRepository implements FeedbackRepository {
   private supa = new SupabaseFeedbackRepository();
   private local = new LocalStorageFeedbackRepository();
 
   async getFeedbacks(): Promise<UserFeedback[]> {
     if (!isSupabaseConfigured) return this.local.getFeedbacks();
-    try {
-      return await this.supa.getFeedbacks();
-    } catch {
-      return this.local.getFeedbacks();
-    }
+    return this.supa.getFeedbacks();
   }
 
   // Categoria 9 (feedback, envio) — Prompt 07-F. Antes desta correção, uma

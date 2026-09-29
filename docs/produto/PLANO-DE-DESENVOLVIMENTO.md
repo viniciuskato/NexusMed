@@ -893,7 +893,7 @@ antes de corrigir. Testes E2E de recarregar com operação pendente e de login
 novamente com reenvio.
 **Depende de.** 45-A (mesmo caminho de gravação de respostas) — concluída.
 **Estado.** Concluída — PR #86.
-**Achados da execução.** O envio e o enfileiramento da fila ficaram O(n²) no tamanho da fila (`findIndex`/`some` por operação); não pesa com a fila pequena do uso real — volta quando alguém medir fila longa (revisão do #86, item 9).
+**Achados da execução.** O envio e o enfileiramento da fila ficaram O(n²) no tamanho da fila (`findIndex`/`some` por operação); não pesa com a fila pequena do uso real — volta quando alguém medir fila longa (revisão do #86, item 9). `enqueueBefore` (recuperação legada de card antigo) ignora dependentes em `syncing`: se a recuperação rodar com o SRS do card em voo, a criação vai para o fim da fila e o SRS em backoff pode segurá-la — corrida de login rara; incluir `syncing` na busca resolve sem efeito colateral (observação da diretoria no #86).
 
 ---
 
@@ -958,7 +958,8 @@ A D-2 decidiu não sustentar leitura offline: sem rede, a tela avisa.
 
 **Depende de.** 45-C e 45-E (mesmos repositórios). A correção do favorito pode
 sair antes, sozinha.
-**Estado.** Planejada.
+**Estado.** Concluída — PR #93.
+**Achados da execução.** A trilha 1 fez a unidade inteira, inclusive a leitura de materiais e questões e o carregamento do `App.tsx` (decisão do dono, 27/09). As cópias locais de leitura não são apagadas nos aparelhos (a fila e a recuperação legada ainda as usam); só deixam de ser lidas com Supabase configurado — a limpeza fica para a 46-A. `ErrorNotebookView` e `CadernoErrosView` não são usados por nenhuma tela (o caderno real é o `IntegratedCadernoErros`) e receberam a mesma correção; removê-los fica para a 46-A, que decompõe o componente raiz (triagem da revisão do #93). A nova tentativa automática ficou num hook só (`useAutoRetry`) por causa do item 4 da revisão; o `QuestionCard` e os cadernos ainda montam o próprio status em vez de usar `useServerLoad` — também para a 46-A.
 
 ---
 

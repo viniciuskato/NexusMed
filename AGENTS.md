@@ -72,8 +72,12 @@ protótipo).
 
 ## Arquitetura em uma tela
 
-- `src/repositories/*Repository.ts` — interface + wrapper "Resilient"
-  (tenta Supabase, cai pra localStorage em erro/config ausente).
+- `src/repositories/*Repository.ts` — interface + wrapper "Resilient".
+  Leitura: com Supabase configurado, só do servidor — a falha sobe para a
+  tela, que avisa "sem conexão" e tenta de novo sozinha (`useServerLoad`,
+  `ConnectionNotice`; D-2, desde a 45-G). Gravação: local primeiro e fila de
+  sincronização (`src/services/syncQueue.ts`). localStorage puro só sem
+  Supabase configurado.
 - `src/repositories/Supabase*Repository.ts` — implementação real contra
   o Supabase, é o que efetivamente importa em produção.
 - `src/services/gamification.ts` — XP/nível/ofensiva calculados a partir

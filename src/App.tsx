@@ -4,12 +4,7 @@ import {
 } from 'lucide-react';
 import {
   UserPlan,
-  Discipline,
-  Theme,
-  Compendium,
-  Question,
   Flashcard,
-  UserStats,
   SimuladoConfig,
   ThemeMode,
   MigrationSummary,
@@ -17,10 +12,6 @@ import {
   LastReadingSession,
 } from './types';
 import { StorageService } from './services/storage';
-import { materialsRepository } from './repositories/MaterialsRepository';
-import { questionsRepository } from './repositories/QuestionsRepository';
-import { flashcardsRepository } from './repositories/FlashcardsRepository';
-import { answersRepository } from './repositories/AnswersRepository';
 import { registerSyncHandlers } from './services/syncHandlers';
 import { isCardDueToday } from './services/srsAlgorithm';
 import * as syncQueueDebug from './services/syncQueue';
@@ -69,7 +60,6 @@ if (import.meta.env.DEV) {
     storage: StorageService,
   };
 }
-import { GamificationService } from './services/gamification';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LoadingScreen } from './components/common/LoadingScreen';
 import { LoginView } from './components/auth/LoginView';
@@ -92,6 +82,8 @@ import { CreateFlashcardModal } from './components/flashcards/CreateFlashcardMod
 import { ClinicalPomodoroWidget } from './components/common/ClinicalPomodoroWidget';
 import { TestarOQueLiModal } from './components/testar/TestarOQueLiModal';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
+import { ConnectionNotice } from './components/common/ConnectionNotice';
+import { useAppData } from './hooks/useAppData';
 import { lazyWithReload } from './lib/lazyWithReload';
 
 // Telas carregadas sob demanda: o bundle inicial leva só o painel. O CMS
@@ -238,51 +230,101 @@ function AuthenticatedApp() {
     StorageService.getLastReadingSession()
   );
 
+  // Estado de SESSÃO deste componente raiz, que nunca desmonta entre logout
+  // e login (`App()` monta `<AuthenticatedApp/>` uma única vez). Sem isto,
+  // trocar de conta com a carga do usuário novo falhando deixava a tela na
+  // view (e no conteúdo em memória: fila de flashcards, seleção de simulado,
+  // compêndio aberto...) que a conta ANTERIOR tinha — o único portão antes do
+  // render normal era `dataLoading`, que `useAppData` volta a `false` ao fim
+  // de toda tentativa, mesmo numa carga que falhou (revisão do #93, item 2).
+  const [shownForUserId, setShownForUserId] = useState<string | null>(user?.id ?? null);
+  if (shownForUserId !== (user?.id ?? null)) {
+    setShownForUserId(user?.id ?? null);
+    setActiveView('dashboard');
+    setDashboardTab('overview');
+    setNavStateRestored(false);
+    setReviewCardsQueue([]);
+    setActiveSimuladoConfig(null);
+    setActiveSimuladoSelection(null);
+    setSelectedCompendiumId(null);
+    setSelectedSectionId(undefined);
+    setLibraryLastView('list');
+    setLibraryOrigin(null);
+    setFocusQuestionId(undefined);
+    setFilterThemeForQuestions(undefined);
+    setFilterThemeForFlashcards(undefined);
+    setFilterStatusForQuestions(undefined);
+    setScopeCompendiumForQuestions(undefined);
+    // Recorte "Testar o que li" (43-C): escolhido a partir das leituras desta
+    // conta.
+    setScopeQuestionIdsForQuestions(undefined);
+    setScopeCompendiumForFlashcards(undefined);
+    setPackReturnContext(null);
+    setFlashcardOriginView('flashcards');
+    setSelectedPackId(null);
+    setInvalidSavedPackId(null);
+    // "Continuar lendo" e o aviso de dados antigos são desta conta
+    // especificamente — sem isto, a conta B via o card de retomada de
+    // leitura e/ou o modal de migração da conta A (achado do revisor e meu,
+    // rodada 2). `lastReadingSession` é relido (não só zerado): o
+    // `StorageService` já isola por UID ativo (`setActiveUser`, no
+    // `AuthContext`), então o valor novo é o de B, não um vazio à toa.
+    setLastReadingSession(StorageService.getLastReadingSession());
+    setMigrationSummary(null);
+    // Modais abertos (busca, plano, feedback, criar simulado/flashcard) não
+    // guardam dado de outra conta, mas um formulário aberto no meio da troca
+    // é um estado órfão — fecha todos, como o resto da tela.
+    setIsSearchOpen(false);
+    setIsPlanModalOpen(false);
+    setIsFeedbackOpen(false);
+    setIsCreateSimuladoOpen(false);
+    setIsCreateFlashcardOpen(false);
+    // O "Testar o que li" (43-C) mostra as leituras da conta que o abriu e só
+    // as busca ao montar: fechá-lo o desmonta, e a próxima abertura já é da
+    // conta nova.
+    setIsTestarOpen(false);
+  }
+
   // Core Data State (carregados do StorageService / Supabase)
   const [theme, setTheme] = useState<ThemeMode>(() => StorageService.getTheme());
   const [plan, setPlan] = useState<UserPlan>(() => StorageService.getUserPlan());
-  const [disciplines, setDisciplines] = useState<Discipline[]>([]);
-  const [themes, setThemes] = useState<Theme[]>([]);
-  const [compendiums, setCompendiums] = useState<Compendium[]>([]);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
-  const [answers, setAnswers] = useState<Record<string, QuestionAnswerRecord>>({});
-  const [stats, setStats] = useState<UserStats>(() => StorageService.getStats());
-  const [dataLoading, setDataLoading] = useState(true);
+  // Carregamento do servidor (45-G, D-2): troca de usuário limpa o estado
+  // antes de carregar; numa falha, o aviso aparece e a carga tenta de novo
+  // sozinha; `dataReady` diz se os dados na tela são deste usuário. Ver
+  // useAppData.
+  const {
+    disciplines,
+    themes,
+    compendiums,
+    questions,
+    flashcards,
+    answers,
+    stats,
+    loading: dataLoading,
+    ready: dataReady,
+    status: dataStatus,
+    refresh,
+  } = useAppData(user?.id ?? null);
 
+  // Nunca lança: as telas chamam isto como `onUpdate` depois de gravar.
   const refreshData = useCallback(async () => {
-    const [nextDisciplines, nextThemes, nextCompendiums, nextQuestions, nextFlashcards, nextAnswers] =
-      await Promise.all([
-        materialsRepository.getDisciplines(),
-        materialsRepository.getThemes(),
-        materialsRepository.getCompendiums(),
-        questionsRepository.getQuestions(),
-        flashcardsRepository.getFlashcards(),
-        answersRepository.getAnswers(),
-      ]);
-    setDisciplines(nextDisciplines);
-    setThemes(nextThemes);
-    setCompendiums(nextCompendiums);
-    setQuestions(nextQuestions);
-    setFlashcards(nextFlashcards);
-    setAnswers(nextAnswers);
-    setStats(GamificationService.computeRealStats(nextAnswers, nextFlashcards));
+    await refresh();
     setPlan(StorageService.getUserPlan());
     setTheme(StorageService.getTheme());
-  }, []);
+  }, [refresh]);
 
-  // Quando o usuário autenticado muda, recarrega os dados do namespace dele
+  // Quando o usuário autenticado muda (a carga dos dados dele é do useAppData)
   useEffect(() => {
     if (user?.id) {
       setNavStateRestored(false);
-      setDataLoading(true);
-      refreshData().finally(() => setDataLoading(false));
+      setPlan(StorageService.getUserPlan());
+      setTheme(StorageService.getTheme());
       const legacySummary = StorageService.checkLegacyDataSummary(user.id);
       if (legacySummary.hasLegacyData) {
         setMigrationSummary(legacySummary);
       }
     }
-  }, [user?.id, refreshData]);
+  }, [user?.id]);
 
   // ── Restauração de navegação depois de um reload (Prompt 22-A) ─────────────
   // Só roda depois que os dados do usuário terminaram de carregar: a view é
@@ -291,8 +333,11 @@ function AuthenticatedApp() {
   // disponíveis para ESTA conta agora — um material despublicado ou removido
   // entre sessões não pode ser reaberto, e o usuário é avisado em vez de cair
   // numa tela vazia. O estado é lido do StorageService, que já isola por UID.
+  // Espera os dados DESTE usuário terem vindo do servidor (`dataReady`): uma
+  // carga que falhou deixa a lista de compêndios vazia, e julgar o pack salvo
+  // contra ela o daria como despublicado e o apagaria (45-G, revisão do #93).
   useEffect(() => {
-    if (!user?.id || dataLoading || navStateRestored) return;
+    if (!user?.id || dataLoading || !dataReady || navStateRestored) return;
 
     // Link direto (#/questoes etc.) tem prioridade sobre a tela salva.
     const hashView = viewFromHash();
@@ -316,7 +361,7 @@ function AuthenticatedApp() {
       setInvalidSavedPackId(savedPackId);
     }
     setNavStateRestored(true);
-  }, [user?.id, dataLoading, navStateRestored, compendiums, profile?.role, profile?.status]);
+  }, [user?.id, dataLoading, dataReady, navStateRestored, compendiums, profile?.role, profile?.status]);
 
   // Persistência só começa depois da restauração — gravar antes sobrescreveria
   // o valor salvo com o 'dashboard' do estado inicial.
@@ -698,6 +743,8 @@ function AuthenticatedApp() {
               : 'max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-24 xl:pb-12'
           }`}
         >
+
+          <ConnectionNotice status={dataStatus} className="mb-4" />
 
           {/* View Router */}
           <AppErrorBoundary resetKey={activeView}>

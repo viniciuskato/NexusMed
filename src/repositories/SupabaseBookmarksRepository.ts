@@ -37,7 +37,10 @@ interface BookmarkRow {
   flashcard_id: string | null;
 }
 
-export class SupabaseBookmarksRepository implements BookmarksRepository {
+export class SupabaseBookmarksRepository implements Pick<BookmarksRepository, 'getBookmarks'> {
+  // O app só usa a leitura daqui: a gravação vai pela fila (handler em
+  // syncHandlers.ts), com o estado desejado explícito (45-G, AUD-29). O toggle
+  // abaixo lê o servidor e inverte; fica só para scripts/validate-personal-repos.ts.
   async getBookmarks(): Promise<{
     questions: string[];
     compendiums: string[];

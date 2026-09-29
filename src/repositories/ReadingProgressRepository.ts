@@ -6,45 +6,42 @@ import { ReadingProgressSetOpPayload } from '../services/syncHandlers';
 
 export interface ReadingProgressRepository {
   getReadingProgress(): Promise<Record<string, { readSectionIds: string[]; percent: number }>>;
-  toggleSectionRead(compendiumId: string, sectionId: string, totalSections: number): Promise<number>;
+  /**
+   * Grava o estado que o estudante pediu (`isRead`), decidido pela tela a
+   * partir do que ela MOSTRA — nunca invertido a partir da cópia local (45-G,
+   * AUD-29). Devolve o percentual local depois da mudança.
+   */
+  setSectionRead(compendiumId: string, sectionId: string, isRead: boolean, totalSections: number): Promise<number>;
 }
 
 class LocalStorageReadingProgressRepository implements ReadingProgressRepository {
   async getReadingProgress(): Promise<Record<string, { readSectionIds: string[]; percent: number }>> {
     return StorageService.getReadingProgress();
   }
-  async toggleSectionRead(compendiumId: string, sectionId: string, totalSections: number): Promise<number> {
-    return StorageService.toggleSectionRead(compendiumId, sectionId, totalSections);
+  async setSectionRead(compendiumId: string, sectionId: string, isRead: boolean, totalSections: number): Promise<number> {
+    return StorageService.setSectionRead(compendiumId, sectionId, isRead, totalSections);
   }
 }
 
+// Leitura (45-G, D-2): com Supabase configurado, só do servidor. A falha sobe
+// para a tela, que diz "sem conexão" — nunca cai numa cópia local vazia ou velha.
 class ResilientReadingProgressRepository implements ReadingProgressRepository {
   private supa = new SupabaseReadingProgressRepository();
   private local = new LocalStorageReadingProgressRepository();
 
   async getReadingProgress(): Promise<Record<string, { readSectionIds: string[]; percent: number }>> {
     if (!isSupabaseConfigured) return this.local.getReadingProgress();
-    try {
-      return await this.supa.getReadingProgress();
-    } catch {
-      return this.local.getReadingProgress();
-    }
+    return this.supa.getReadingProgress();
   }
 
-  async toggleSectionRead(compendiumId: string, sectionId: string, totalSections: number): Promise<number> {
-    // Mesmo problema/solução dos favoritos: `toggleSectionRead` é um toggle
-    // na interface, mas nunca pode ser reenviado como toggle ao servidor
-    // (reenviar depois de uma falha marcaria/desmarcaria a seção errada). O
-    // estado desejado (`isRead`) é decidido aqui, ANTES do toggle local, e é
-    // isso que vira um "set" explícito na fila — o merge do array em si
-    // acontece no servidor (RPC set_section_read), nunca um array calculado
-    // localmente a partir de um progresso que outro dispositivo já pode ter
-    // avançado (ver AGENTS.md armadilha #14 e docs/SINCRONIZACAO-CONFIAVEL.md).
-    const currentProgress = await this.local.getReadingProgress();
-    const wasRead = currentProgress[compendiumId]?.readSectionIds.includes(sectionId) ?? false;
-    const desiredIsRead = !wasRead;
-
-    const localPercent = await this.local.toggleSectionRead(compendiumId, sectionId, totalSections);
+  async setSectionRead(compendiumId: string, sectionId: string, isRead: boolean, totalSections: number): Promise<number> {
+    // Mesmo problema/solução dos favoritos: nunca reenviado como toggle. O
+    // estado desejado vem da tela e vira um "set" explícito na fila — o merge
+    // do array acontece no servidor (RPC set_section_read), nunca um array
+    // calculado a partir de uma cópia local que num aparelho novo está vazia
+    // (45-G, AUD-29).
+    const desiredIsRead = isRead;
+    const localPercent = await this.local.setSectionRead(compendiumId, sectionId, isRead, totalSections);
 
     const userId = getStorageUser();
     if (isSupabaseConfigured && userId) {

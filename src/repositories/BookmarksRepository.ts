@@ -10,7 +10,12 @@ export interface BookmarksRepository {
     compendiums: string[];
     flashcards: string[];
   }>;
-  toggleBookmark(type: 'questions' | 'compendiums' | 'flashcards', id: string): Promise<boolean>;
+  /**
+   * Grava o estado que o estudante pediu (`desired`), decidido pela tela a
+   * partir do que ela MOSTRA — nunca invertido a partir da cópia local, que
+   * num aparelho novo está vazia (45-G, AUD-29). Devolve `desired`.
+   */
+  setBookmark(type: 'questions' | 'compendiums' | 'flashcards', id: string, desired: boolean): Promise<boolean>;
 }
 
 class LocalStorageBookmarksRepository implements BookmarksRepository {
@@ -21,11 +26,13 @@ class LocalStorageBookmarksRepository implements BookmarksRepository {
   }> {
     return StorageService.getBookmarks();
   }
-  async toggleBookmark(type: 'questions' | 'compendiums' | 'flashcards', id: string): Promise<boolean> {
-    return StorageService.toggleBookmark(type, id);
+  async setBookmark(type: 'questions' | 'compendiums' | 'flashcards', id: string, desired: boolean): Promise<boolean> {
+    return StorageService.setBookmark(type, id, desired);
   }
 }
 
+// Leitura (45-G, D-2): com Supabase configurado, só do servidor. A falha sobe
+// para a tela, que diz "sem conexão" — nunca cai numa cópia local vazia ou velha.
 class ResilientBookmarksRepository implements BookmarksRepository {
   private supa = new SupabaseBookmarksRepository();
   private local = new LocalStorageBookmarksRepository();
@@ -36,23 +43,19 @@ class ResilientBookmarksRepository implements BookmarksRepository {
     flashcards: string[];
   }> {
     if (!isSupabaseConfigured) return this.local.getBookmarks();
-    try {
-      return await this.supa.getBookmarks();
-    } catch {
-      return this.local.getBookmarks();
-    }
+    return this.supa.getBookmarks();
   }
 
-  async toggleBookmark(type: 'questions' | 'compendiums' | 'flashcards', id: string): Promise<boolean> {
+  async setBookmark(type: 'questions' | 'compendiums' | 'flashcards', id: string, desired: boolean): Promise<boolean> {
     // Favoritar/desfavoritar é um "toggle" na interface, mas NÃO pode ser
     // enviado ao servidor como toggle: reenviar a mesma operação depois de
-    // uma falha de rede inverteria o estado errado (favoritou -> tenta de
-    // novo pensando que falhou -> desfavorita). O toggle acontece só aqui,
-    // localmente — o resultado (`desired`, o novo estado já decidido) é o
-    // que entra na fila como um "set" explícito, idempotente por natureza:
-    // reenviar o MESMO `desired` é sempre um no-op seguro. Ver AGENTS.md
-    // armadilha #14 e docs/SINCRONIZACAO-CONFIAVEL.md.
-    const desired = await this.local.toggleBookmark(type, id);
+    // uma falha de rede inverteria o estado errado. O estado desejado vem da
+    // tela (o contrário do que ela mostra) e entra na fila como um "set"
+    // explícito, idempotente por natureza — reenviar o MESMO `desired` é
+    // sempre um no-op seguro. Antes da 45-G o toggle era feito aqui, sobre a
+    // cópia local; num aparelho novo ela está vazia e a estrela preenchida
+    // gravava "favoritar" (AUD-29).
+    await this.local.setBookmark(type, id, desired);
     const userId = getStorageUser();
     if (isSupabaseConfigured && userId) {
       const payload: BookmarkSetOpPayload = { type, id, desired };

@@ -29,7 +29,10 @@ interface ReadingProgressRow {
   percent: number;
 }
 
-export class SupabaseReadingProgressRepository implements ReadingProgressRepository {
+export class SupabaseReadingProgressRepository implements Pick<ReadingProgressRepository, 'getReadingProgress'> {
+  // O app só usa a leitura daqui: a gravação vai pela fila (handler em
+  // syncHandlers.ts), com o estado desejado explícito (45-G, AUD-29). O toggle
+  // abaixo lê o servidor e inverte; fica só para scripts/validate-personal-repos.ts.
   async getReadingProgress(): Promise<Record<string, { readSectionIds: string[]; percent: number }>> {
     const { data, error } = await supabase.from('reading_progress').select('material_id, read_section_ids, percent');
     if (error) throw error;
