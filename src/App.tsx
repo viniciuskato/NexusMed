@@ -255,6 +255,9 @@ function AuthenticatedApp() {
     setFilterThemeForFlashcards(undefined);
     setFilterStatusForQuestions(undefined);
     setScopeCompendiumForQuestions(undefined);
+    // Recorte "Testar o que li" (43-C): escolhido a partir das leituras desta
+    // conta.
+    setScopeQuestionIdsForQuestions(undefined);
     setScopeCompendiumForFlashcards(undefined);
     setPackReturnContext(null);
     setFlashcardOriginView('flashcards');
@@ -276,6 +279,10 @@ function AuthenticatedApp() {
     setIsFeedbackOpen(false);
     setIsCreateSimuladoOpen(false);
     setIsCreateFlashcardOpen(false);
+    // O "Testar o que li" (43-C) mostra as leituras da conta que o abriu e só
+    // as busca ao montar: fechá-lo o desmonta, e a próxima abertura já é da
+    // conta nova.
+    setIsTestarOpen(false);
   }
 
   // Core Data State (carregados do StorageService / Supabase)
