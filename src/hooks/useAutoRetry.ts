@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { LoadStatus, onReconnect, onRetryAll } from '../services/connectivity';
+import { LoadStatus, onReconnect, onRetryAll, retryWithFlush } from '../services/connectivity';
 
 /** Espera entre as novas tentativas automáticas, crescendo até o teto. */
 export const AUTO_RETRY_DELAYS_MS = [5_000, 10_000, 20_000, 40_000, 60_000] as const;
@@ -22,7 +22,10 @@ export function useAutoRetry(status: LoadStatus, retry: () => void): void {
 
   useEffect(() => {
     if (status === 'ok') return;
-    const fire = () => retryRef.current();
+    // Toda nova tentativa relê só depois de a fila offline tentar subir o
+    // que está pendente — como o evento `online` (`onReconnect`) já fazia
+    // (revisão do #93, item 3).
+    const fire = () => retryWithFlush(() => retryRef.current());
     let round = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const schedule = () => {
@@ -35,7 +38,7 @@ export function useAutoRetry(status: LoadStatus, retry: () => void): void {
     };
     schedule();
 
-    const offReconnect = onReconnect(fire);
+    const offReconnect = onReconnect(() => retryRef.current());
     const offRetryAll = onRetryAll(fire);
     const onVisible = () => {
       if (document.visibilityState === 'visible') fire();

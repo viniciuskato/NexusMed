@@ -225,6 +225,38 @@ function AuthenticatedApp() {
     StorageService.getLastReadingSession()
   );
 
+  // Estado de SESSÃO deste componente raiz, que nunca desmonta entre logout
+  // e login (`App()` monta `<AuthenticatedApp/>` uma única vez). Sem isto,
+  // trocar de conta com a carga do usuário novo falhando deixava a tela na
+  // view (e no conteúdo em memória: fila de flashcards, seleção de simulado,
+  // compêndio aberto...) que a conta ANTERIOR tinha — o único portão antes do
+  // render normal era `dataLoading`, que `useAppData` volta a `false` ao fim
+  // de toda tentativa, mesmo numa carga que falhou (revisão do #93, item 2).
+  const [shownForUserId, setShownForUserId] = useState<string | null>(user?.id ?? null);
+  if (shownForUserId !== (user?.id ?? null)) {
+    setShownForUserId(user?.id ?? null);
+    setActiveView('dashboard');
+    setDashboardTab('overview');
+    setNavStateRestored(false);
+    setReviewCardsQueue([]);
+    setActiveSimuladoConfig(null);
+    setActiveSimuladoSelection(null);
+    setSelectedCompendiumId(null);
+    setSelectedSectionId(undefined);
+    setLibraryLastView('list');
+    setLibraryOrigin(null);
+    setFocusQuestionId(undefined);
+    setFilterThemeForQuestions(undefined);
+    setFilterThemeForFlashcards(undefined);
+    setFilterStatusForQuestions(undefined);
+    setScopeCompendiumForQuestions(undefined);
+    setScopeCompendiumForFlashcards(undefined);
+    setPackReturnContext(null);
+    setFlashcardOriginView('flashcards');
+    setSelectedPackId(null);
+    setInvalidSavedPackId(null);
+  }
+
   // Core Data State (carregados do StorageService / Supabase)
   const [theme, setTheme] = useState<ThemeMode>(() => StorageService.getTheme());
   const [plan, setPlan] = useState<UserPlan>(() => StorageService.getUserPlan());

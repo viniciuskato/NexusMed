@@ -133,12 +133,30 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   // partir de um estado que a tela não sabe (AUD-29).
   const [hydrateStatus, setHydrateStatus] = useState<LoadStatus>('ok');
   const [bookmarkKnown, setBookmarkKnown] = useState(true);
+  // Se a reação já existe pra esta questão (45-G, revisão do #93, item 5) —
+  // mesmo padrão do favorito (AUD-29): enquanto não é conhecida, o botão
+  // fica desativado, nunca grava por cima de um estado que a tela não sabe.
+  const [reactionKnown, setReactionKnown] = useState(true);
   const [hydrateAttempt, setHydrateAttempt] = useState(0);
   useAutoRetry(hydrateStatus, () => setHydrateAttempt((n) => n + 1));
 
-  // Troca de questão: zera o estado de envio. Só aqui — nunca numa nova
-  // tentativa de carga (ver sessionAnswerRef).
+  // Troca de questão: zera o estado de envio E o que a tela mostra da
+  // questão anterior (seleção, "respondida", reação) — nunca numa nova
+  // tentativa de carga (ver sessionAnswerRef). Sem isto, um card reaproveitado
+  // sem remontar (SimuladoSession não usa `key`) mostrava a questão nova já
+  // "respondida", com a seleção e a reação da anterior sempre que a carga da
+  // nova falhasse antes de zerar esses estados (revisão do #93, item 5).
   useEffect(() => {
+    // `selectedOptionInExam || null`, não `null` puro: no modo prova o pai
+    // (SimuladoSession) guarda a seleção de cada questão fora deste card
+    // (que é reaproveitado sem `key`) e a repassa por essa prop — zerar pra
+    // `null` sempre perderia essa seleção ao navegar. No modo estudo essa
+    // prop nunca vem preenchida, então o efeito é o mesmo: zera.
+    setSelectedOption(selectedOptionInExam || null);
+    setIsSubmitted(false);
+    setAnswerOrigin(null);
+    setMyReaction(null);
+    setReactionKnown(false);
     setReviewResult(null);
     setIsCorrectionPending(false);
     setIsAnswerSubmitting(false);
@@ -147,6 +165,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     sessionAnswerRef.current = false;
     correctionUnsubscribeRef.current?.();
     correctionUnsubscribeRef.current = null;
+    // Só reage à troca de questão — `selectedOptionInExam` é lido aqui
+    // sempre como o valor mais atual (fecha sobre o parâmetro do render
+    // corrente), mas não deve reexecutar este reset a cada tecla/seleção.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question.id]);
 
   useEffect(() => {
@@ -165,8 +187,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       try {
         const review = await questionsRepository.getQuestionReview(question.id);
         if (!cancelled && !sessionAnswerRef.current) setReviewResult(review);
-      } catch {
-        // Justificativa/gabarito não puderam ser recarregados agora (rede instável)
+      } catch (err) {
+        // Gabarito não pôde ser (re)carregado agora — sem isto, o `catch`
+        // engolia o erro, `hydrateStatus` continuava 'ok' e o quadro vermelho
+        // de erro aparecia mesmo com resposta certa, porque `isCorrect`
+        // depende só do gabarito (revisão do #93, item 4). Mostra o aviso de
+        // rede e deixa o useAutoRetry tentar de novo.
+        if (!cancelled && !sessionAnswerRef.current) setHydrateStatus(loadStatusOf(err));
       }
     };
 
@@ -174,6 +201,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       // O aviso de rede fica com o pai, que fez a carga (45-G).
       setHydrateStatus('ok');
       setBookmarkKnown(hydrated.known !== false);
+      setReactionKnown(hydrated.known !== false);
       setIsBookmarked(hydrated.bookmarked);
       setMyReaction(hydrated.reaction);
       void applyAnswer(hydrated.answer);
@@ -193,6 +221,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       const failure = [answersResult, bookmarksResult, reactionResult].find((r) => r.status === 'rejected');
       setHydrateStatus(failure ? loadStatusOf((failure as PromiseRejectedResult).reason) : 'ok');
       setBookmarkKnown(bookmarksResult.status === 'fulfilled');
+      setReactionKnown(reactionResult.status === 'fulfilled');
 
       if (bookmarksResult.status === 'fulfilled') setIsBookmarked(bookmarksResult.value.questions.includes(question.id));
       if (reactionResult.status === 'fulfilled') setMyReaction(reactionResult.value);
@@ -656,7 +685,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       )}
 
       {/* --- THE INTEGRATED ACTION BANNER (O DIFERENCIAL CONECTADO) --- */}
-      {isSubmitted && !isExamMode && (
+      {/* `reviewResult` na condição: sem o gabarito (carga falhou — ver o
+          `catch` de `applyAnswer`), `isCorrect`/`isIncorrect` são sempre
+          `false` e o quadro vermelho de erro aparecia mesmo com resposta
+          certa. Sem o gabarito, nada deste bloco aparece — o aviso de rede
+          (ConnectionNotice acima) já avisa e tenta de novo (revisão do #93,
+          item 4). */}
+      {isSubmitted && !isExamMode && reviewResult && (
         <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800 space-y-4">
           {/* Status summary */}
           {isCorrect ? (
@@ -761,7 +796,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 <button
                   type="button"
                   onClick={() => handleToggleReaction('up')}
-                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                  disabled={!reactionKnown}
+                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
                     myReaction === 'up'
                       ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
                       : 'bg-white dark:bg-[#142038] text-slate-400 dark:text-slate-500 border-slate-200 dark:border-[#243452] hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -773,7 +809,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 <button
                   type="button"
                   onClick={() => handleToggleReaction('down')}
-                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                  disabled={!reactionKnown}
+                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
                     myReaction === 'down'
                       ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800'
                       : 'bg-white dark:bg-[#142038] text-slate-400 dark:text-slate-500 border-slate-200 dark:border-[#243452] hover:bg-slate-100 dark:hover:bg-slate-800'

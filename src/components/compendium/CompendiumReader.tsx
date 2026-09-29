@@ -113,6 +113,14 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
     setIsBookmarked(false);
     setUserNote('');
     setRemovedSectionNotes([]);
+    // A troca zera o que a tela mostra, mas `loadedFor` continuava com o id
+    // do material ANTERIOR até a carga do novo terminar. Se essa carga
+    // falha, `loadedFor` nunca chega a ser esse id novo — mas ao voltar
+    // para o material antigo, `loadedFor` já bate com `compendium.id` de
+    // novo (nunca mudou), `dataReady` ficava `true` sobre o estado que
+    // acabou de ser zerado aqui, e "Salvar" gravava um texto vazio por
+    // cima da anotação real (revisão do #93, item 1).
+    setLoadedFor(null);
   }
   const dataReady = loadedFor === compendium.id;
   const [showNoteDrawer, setShowNoteDrawer] = useState(false);

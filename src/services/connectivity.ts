@@ -29,22 +29,31 @@ export function loadStatusOf(err: unknown): LoadStatus {
 }
 
 /**
+ * Tenta subir o que ficou pendente na fila offline e só então chama
+ * `callback` — nunca relê o servidor antes disso: a releitura podia chegar
+ * antes da gravação feita offline, e a tela desfaria o que o estudante
+ * acabou de marcar. Toda nova tentativa de carga (evento `online`, timer
+ * automático, aba voltando a ficar visível, "Tentar agora") passa por aqui
+ * (revisão do #93, item 3) — antes, só o evento `online` fazia isso.
+ */
+export function retryWithFlush(callback: () => void): void {
+  const uid = getStorageUser();
+  void (uid ? flush(uid, true) : Promise.resolve())
+    .catch(() => undefined)
+    .then(() => callback());
+}
+
+/**
  * Chama `callback` quando o navegador avisa que a rede voltou — depois de a
- * fila tentar enviar o que ficou pendente. Sem essa espera, a recarga podia
- * ler o servidor antes de a gravação feita offline chegar lá, e a tela
- * desfaria o que o estudante acabou de marcar. Devolve o cancelamento.
+ * fila tentar enviar o que ficou pendente (`retryWithFlush`). Devolve o
+ * cancelamento.
  */
 export function onReconnect(callback: () => void): () => void {
   if (typeof window === 'undefined') return () => {};
   let active = true;
-  const handler = () => {
-    const uid = getStorageUser();
-    void (uid ? flush(uid, true) : Promise.resolve())
-      .catch(() => undefined)
-      .then(() => {
-        if (active) callback();
-      });
-  };
+  const handler = () => retryWithFlush(() => {
+    if (active) callback();
+  });
   window.addEventListener('online', handler);
   return () => {
     active = false;

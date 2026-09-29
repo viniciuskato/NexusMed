@@ -118,4 +118,40 @@ describe('CompendiumReader — troca de material sem rede', () => {
     expect(saveNote).not.toHaveBeenCalled();
     expect(setSectionRead).not.toHaveBeenCalled();
   });
+
+  // Revisão do #93, item 1: A -> B (carga falha) -> A (carga falha de novo).
+  // A troca zera o que a tela mostra (anotação, favorito, seções lidas),
+  // mas, antes deste conserto, não zerava `loadedFor` — que continuava com
+  // o id de A desde a primeira carga (bem-sucedida). Ao voltar para A,
+  // `dataReady` (`loadedFor === compendium.id`) dava `true` de novo sobre o
+  // estado que tinha acabado de ser zerado, liberando "Salvar" pra gravar
+  // um texto novo por cima da anotação real de A, sem nunca ter recarregado
+  // nada.
+  it('A -> B (carga falha) -> A (carga falha de novo): não grava por cima da anotação de A', async () => {
+    const view = render(renderReader(A));
+    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Favoritado' }).length).toBeGreaterThan(0));
+
+    serverUp = false;
+    view.rerender(renderReader(B));
+    await screen.findByText(/Sem conex/);
+
+    view.rerender(renderReader(A));
+    // 3 chamadas: carga inicial de A, troca para B, volta para A.
+    await waitFor(() => expect(getNotes).toHaveBeenCalledTimes(3));
+
+    fireEvent.click(screen.getByRole('button', { name: /Anota/ }));
+    const note = screen.getByPlaceholderText(/Escreva suas correla/) as HTMLTextAreaElement;
+
+    // Estado zerado (não mostra a nota de A vinda da carga anterior) E
+    // bloqueado (a carga de A, desta vez, também falhou) — nunca "vazia e
+    // editável", que permitiria digitar e salvar por cima da nota real.
+    expect(note.value).toBe('');
+    expect(note.disabled).toBe(true);
+
+    fireEvent.change(note, { target: { value: 'TEXTO NOVO' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar anotação' }));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(saveNote).not.toHaveBeenCalled();
+  });
 });
