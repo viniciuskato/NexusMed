@@ -183,4 +183,46 @@ test.describe('43-C — Testar o que li', () => {
     await expect(modal).toHaveCount(0);
     await expect(page.getByText('Exibindo')).toContainText(`${doTema} questões`);
   });
+
+  test('bloco "Fixação e Retenção Ativa": botões cabem no card em desktop e em 360px', async ({ page }) => {
+    const t = `${Date.now()}`;
+    const title = `${MATERIAL_PREFIX}43c-viewport-${t}`;
+    insertPublishedMaterial(`43c-viewport-${t}`);
+    cleanup.push(() => deleteE2EMaterials());
+
+    const student = await createTestUser({
+      emailLocalPart: `e2e-43c-viewport-${Date.now()}`,
+      password: 'senha-teste-123',
+      role: 'student',
+      status: 'active',
+    });
+    cleanup.push(() => deleteTestUser(student.id));
+
+    await login(page, student);
+    await abrirMaterial(page, title);
+
+    const heading = page.getByRole('heading', { name: 'Fixação e Retenção Ativa' });
+    await expect(heading).toBeVisible();
+    const card = heading.locator('xpath=../..');
+    const flashcards = card.getByRole('button', { name: 'Flashcards', exact: true });
+    const testar = card.getByRole('button', { name: 'Testar o que li' });
+    const resolver = card.getByRole('button', { name: 'Resolver questões' });
+
+    // Desktop ('Desktop Chrome', o único project deste arquivo de config):
+    // os três botões continuam na mesma linha, com o mesmo topo.
+    const topFlashcards = (await flashcards.boundingBox())!.y;
+    const topTestar = (await testar.boundingBox())!.y;
+    const topResolver = (await resolver.boundingBox())!.y;
+    expect(Math.abs(topTestar - topFlashcards)).toBeLessThanOrEqual(2);
+    expect(Math.abs(topResolver - topFlashcards)).toBeLessThanOrEqual(2);
+
+    // 360px: nenhum botão passa da borda direita do card nem da janela.
+    await page.setViewportSize({ width: 360, height: 800 });
+    const cardBox = (await card.boundingBox())!;
+    for (const button of [flashcards, testar, resolver]) {
+      const box = (await button.boundingBox())!;
+      expect(box.x + box.width).toBeLessThanOrEqual(cardBox.x + cardBox.width + 0.5);
+      expect(box.x + box.width).toBeLessThanOrEqual(360);
+    }
+  });
 });

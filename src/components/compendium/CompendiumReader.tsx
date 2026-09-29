@@ -857,7 +857,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
               Consolide os conceitos deste material resolvendo questões e revisando flashcards.
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => onOpenFlashcardsForTheme(compendium.themeId)}
               className="px-3 py-1.5 rounded-lg border border-[#E2E8F0] dark:border-[#263244] hover:bg-slate-50 dark:hover:bg-[#182235] text-[#172033] dark:text-[#E5E7EB] text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
