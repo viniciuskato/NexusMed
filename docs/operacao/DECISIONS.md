@@ -23,7 +23,8 @@ falando que foi implementado." Substitui o item 3 da D-8.
    que ele o deu; plano que continua numa janela nova volta a ele em uma
    linha antes de seguir. Conta como aprovada também a manutenção técnica
    que não muda o que o estudante vê nem o que a plataforma promete
-   (dependência, teste, CI, defeito com teste que falha antes). Com o plano
+   (dependência, teste, CI, defeito com teste que falha antes), que a
+   diretoria conta ao dono em uma linha no relato seguinte. Com o plano
    inteiro no ar, a diretoria conta ao dono o que mudou, o que conferiu e o
    que não deu para conferir.
 2. **Cada merge**, só com tudo isto: o PR pertence a um plano aprovado (ou é
@@ -54,10 +55,12 @@ falando que foi implementado." Substitui o item 3 da D-8.
    ele recebe; conteúdo médico, que ele atesta (a atestação humana continua
    o portão); afrouxar uma trava (tirar ou enfraquecer check, hook, proteção
    ou regra de revisão; acrescentar pode); e regra deste projeto sobre quem
-   revisa, mescla, autoriza ou publica. Bloqueio do classificador de
-   segurança ou das permissões não se repete nem se contorna: vai ao dono
-   como passo pronto. O `dev-junior` nunca mescla, aplica migration, escreve
-   no remoto nem mexe na configuração do GitHub, qualquer que seja a ORDEM.
+   revisa, mescla, autoriza ou publica (o PR que a muda, a diretoria mescla
+   só com o "sim" do dono àquele merge, mesmo dentro de um plano aprovado).
+   Bloqueio do classificador de segurança ou das permissões não se repete
+   nem se contorna: vai ao dono como passo pronto. O `dev-junior` nunca
+   mescla, aplica migration, escreve no remoto nem mexe na configuração do
+   GitHub, qualquer que seja a ORDEM.
 
 **Revê:**
 - D-8, item 3 (a diretoria mescla sozinha só o risco baixo; "Todo o resto
