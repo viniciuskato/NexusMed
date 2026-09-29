@@ -6,6 +6,71 @@
 > `docs/archive/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-28 — Equipe de agentes numa janela só; a diretoria publica sozinha o risco baixo (D-8)
+
+Origem: decisões do dono de 28/09/2026, para todos os projetos dele ("quero
+realmente só atuar nas decisões"). Concilia a D-7 com o modo como o Claude
+Code passou a abrir no computador do dono: toda janela abre como o agente
+`dev-senior`, que delega a subagentes. Os três agentes são do dono
+(`C:\Users\vinic\.claude\agents\`), fora deste repositório.
+
+1. **Uma janela só.** A diretoria é a janela do Claude Code em que o dono
+   fala (agente `dev-senior`). A sessão de defeitos deixa de ser outra
+   janela: é o subagente `dev-junior`, que a diretoria chama com uma ORDEM
+   (objetivo, aceite, escopo, branch e autorização) e que devolve um
+   RETORNO. Ele segue o `EXECUTOR_PROTOCOL.md`, não fala com o dono e não
+   troca mensagens entre janelas. A revisão de PR é do subagente
+   `dev-revisor`: só lê, não viu a conversa, roda num modelo diferente do
+   autor e não mais fraco que ele, e devolve um VEREDITO que termina em
+   `APROVADO` ou com os bloqueios.
+2. **Revisão e rótulo.** Todo PR, inclusive o de documentação da diretoria,
+   passa pelo `dev-revisor` antes do merge. Com `APROVADO` no último commit,
+   a diretoria posta o VEREDITO no PR, com a verificação dela, e põe o
+   rótulo `revisado`. O resto da regra do rótulo continua: commit novo tira
+   o rótulo; a branch só se atualiza por merge, nunca por rebase.
+3. **Publicação pela diretoria.** A diretoria mescla sem perguntar ao dono
+   só quando tudo isto vale:
+   - risco baixo, ou médio só de aparência (tela, estilo, texto de tela),
+     sem lógica nova sobre dados;
+   - não toca banco ou migration, RLS e permissões, login, sincronização,
+     dado pessoal, remoção de dado, dependência (inclusive lockfile e PR do
+     Dependabot), CI, hooks, configuração de deploy, do GitHub ou do Claude
+     (`.claude/`), conteúdo médico, nem regra deste projeto sobre quem
+     revisa, mescla, autoriza ou publica. Na dúvida, não entra;
+   - `APROVADO` do `dev-revisor` no commit que está no PR, com risco visto
+     baixo (ou médio só de aparência) e nada do aceite sem verificar;
+   - todos os checks verdes, sem conflito com o `main` e sem PR anterior da
+     mesma frente esperando o dono;
+   - dentro dos limites da D-7: até 2 merges por dia, nunca à noite, e, até
+     02/10, nada no caminho de importar, atestar, publicar ou ligar questão.
+
+   O merge é por squash, preso ao commit aprovado
+   (`gh pr merge <n> --squash --match-head-commit <sha>`), sem `--admin` nem
+   `--auto`. Depois, a diretoria confere CI e deploy e conta ao dono no mesmo
+   dia o que mudou, o link do PR e como desfazer (botão "Revert" no PR). Todo
+   o resto continua mesclado pelo dono.
+4. **Autorizações fixas**, que valem até o dono revogar e não se pedem de
+   novo: push de branch de trabalho, abrir PR, postar revisão e pôr o
+   rótulo `revisado`. Nunca cobrem merge (salvo o item 3), migration,
+   escrita no Supabase remoto ou na Vercel, nem configuração do GitHub. As
+   demais autorizações do item 8 da D-7 continuam pedidas na primeira rodada
+   de cada janela nova.
+
+**Revê** a D-7: item 1 (a sessão de defeitos é o subagente `dev-junior`, não
+outra janela); item 7 (uma sessão Claude do NexusMed aberta: a diretoria);
+item 8 (as autorizações do item 4 acima saem da pergunta da primeira
+rodada); e, em "Mantém", "só o dono mescla" (salvo o item 3) e a revisão
+"pela diretoria ou pela sessão de defeitos" (passa ao `dev-revisor`).
+
+**Mantém** todo o resto da D-7, inclusive: conteúdo é o produto;
+funcionalidade nova congelada, salvo pedido da produção; migration aplicada
+no remoto só pelo dono e antes do merge (D-4); a atestação humana como
+portão; o registro do plano pela diretoria.
+
+**Como aplicar:** `docs/diretoria/MODELO-DIRETORIA.md` ("Modelo D-7"),
+`docs/operacao/EXECUTOR_PROTOCOL.md` ("Identidade") e a seção 0 do plano
+canônico.
+
 ## 2026-09-28 — Conteúdo é o produto: diretoria, sessão de defeitos e sessão de materiais (D-7)
 
 Origem: pedido do dono em 28/09, para não gastar todo o tempo dele num

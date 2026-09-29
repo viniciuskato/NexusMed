@@ -15,7 +15,10 @@ a mesa editorial), a **sessão de defeitos** (a única que escreve código de
 produto; conserta, não constrói) e a **sessão de materiais** (o Gemini, fora
 do repositório). Funcionalidade nova está congelada, salvo pedido da
 produção. Papéis: [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md),
-"Modelo D-7"; decisão: `DECISIONS.md`, D-7.
+"Modelo D-7"; decisão: `DECISIONS.md`, D-7. Desde a D-8 (28/09), numa janela só: a diretoria é o agente `dev-senior`, a
+sessão de defeitos é o subagente `dev-junior` e a revisão é do subagente
+`dev-revisor`; a diretoria mescla sozinha só PR de risco baixo aprovado
+(`DECISIONS.md`, D-8).
 
 **Se você é a sessão de defeitos:** este arquivo,
 [`docs/operacao/EXECUTOR_PROTOCOL.md`](docs/operacao/EXECUTOR_PROTOCOL.md)
@@ -224,7 +227,7 @@ seção "Armadilhas já descobertas".
   de trilhas, de PRs esperando, da meta e de "processo congelado até 09/10"
   (09/10 passa a ser a revisão da D-7). O código vem da fila de defeitos;
   todo PR é revisado por quem não o escreveu, antes do merge; só o dono
-  mescla. Modelo:
+  mescla, salvo o risco baixo que a D-8 deixa a diretoria publicar. Modelo:
   [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md).
 - **Testar contra Supabase LOCAL** antes de considerar qualquer mudança
   de schema/RPC pronta. Nunca validar escrita direto no remoto.

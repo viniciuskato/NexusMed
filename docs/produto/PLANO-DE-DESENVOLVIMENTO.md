@@ -78,6 +78,12 @@ Protocolo: `docs/operacao/EXECUTOR_PROTOCOL.md`.
 
 ### Como abrir a diretoria e a sessão de defeitos
 
+**Desde a D-8 (28/09), numa janela só:** toda janela do Claude Code no
+computador do dono já abre como a diretoria (agente `dev-senior`), sem colar
+linha nenhuma, e a sessão de defeitos não se abre mais: é o subagente
+`dev-junior`, chamado pela diretoria. O texto abaixo fica como histórico da
+D-7.
+
 Os textos de abertura ficam em `docs/conteúdos/colar-no-claude/`, pasta local
 que o git ignora (D-5): existem só no computador do dono, e a diretoria os
 mantém sem PR. Por isso eles não concedem autorização: a da sessão de
