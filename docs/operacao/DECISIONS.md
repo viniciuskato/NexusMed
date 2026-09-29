@@ -17,26 +17,33 @@ Code passou a abrir no computador do dono: toda janela abre como o agente
 1. **Uma janela só.** A diretoria é a janela do Claude Code em que o dono
    fala (agente `dev-senior`). A sessão de defeitos deixa de ser outra
    janela: é o subagente `dev-junior`, que a diretoria chama com uma ORDEM
-   (objetivo, aceite, escopo, branch e autorização) e que devolve um
-   RETORNO. Ele segue o `EXECUTOR_PROTOCOL.md`, não fala com o dono e não
-   troca mensagens entre janelas. A revisão de PR é do subagente
-   `dev-revisor`: só lê, não viu a conversa, roda num modelo diferente do
-   autor e não mais fraco que ele, e devolve um VEREDITO que termina em
-   `APROVADO` ou com os bloqueios.
-2. **Revisão e rótulo.** Todo PR, inclusive o de documentação da diretoria,
-   passa pelo `dev-revisor` antes do merge. Com `APROVADO` no último commit,
-   a diretoria posta o VEREDITO no PR, com a verificação dela, e põe o
-   rótulo `revisado`. O resto da regra do rótulo continua: commit novo tira
-   o rótulo; a branch só se atualiza por merge, nunca por rebase.
+   (objetivo, aceite, escopo, branch e o que está autorizado) e que devolve
+   um RETORNO. Ele segue o `EXECUTOR_PROTOCOL.md`, não fala com o dono e não
+   troca mensagens entre janelas: o que a D-7 mandava por mensagem entre
+   sessões vai na ORDEM, no RETORNO ou no PR. A revisão de PR é do subagente
+   `dev-revisor`: só lê, não viu a conversa e devolve um VEREDITO que termina
+   em `APROVADO` ou com os bloqueios. Modelos: o júnior roda em Sonnet, e a
+   diretoria o passa para o Opus quando o risco é alto; o revisor roda num
+   modelo diferente do autor e não mais fraco que ele (Opus, por padrão). A
+   diretoria delega a implementação ao júnior e a revisão ao revisor, e não
+   escreve código.
+2. **Revisão e rótulo.** Todo PR, inclusive o de documentação que a diretoria
+   encomendou, passa pelo `dev-revisor` antes do merge. Como ele só lê, é a
+   diretoria que posta o VEREDITO dele no PR, com a verificação dela, e põe o
+   rótulo `revisado` em nome dele, só depois do `APROVADO` no commit que está
+   no PR. Sem esse `APROVADO`, ou com commit posterior ao aprovado, a
+   diretoria não põe o rótulo. O resto da regra do rótulo continua: commit
+   novo tira o rótulo; a branch só se atualiza por merge, nunca por rebase.
 3. **Publicação pela diretoria.** A diretoria mescla sem perguntar ao dono
    só quando tudo isto vale:
    - risco baixo, ou médio só de aparência (tela, estilo, texto de tela),
      sem lógica nova sobre dados;
    - não toca banco ou migration, RLS e permissões, login, sincronização,
      dado pessoal, remoção de dado, dependência (inclusive lockfile e PR do
-     Dependabot), CI, hooks, configuração de deploy, do GitHub ou do Claude
-     (`.claude/`), conteúdo médico, nem regra deste projeto sobre quem
-     revisa, mescla, autoriza ou publica. Na dúvida, não entra;
+     Dependabot), CI, hooks do git ou do Claude, configuração de deploy, do
+     GitHub ou do Claude (`.claude/`), conteúdo médico, política de
+     privacidade ou termos de uso, nem regra deste projeto sobre quem revisa,
+     mescla, autoriza ou publica. Na dúvida, não entra;
    - `APROVADO` do `dev-revisor` no commit que está no PR, com risco visto
      baixo (ou médio só de aparência) e nada do aceite sem verificar;
    - todos os checks verdes, sem conflito com o `main` e sem PR anterior da
@@ -46,21 +53,52 @@ Code passou a abrir no computador do dono: toda janela abre como o agente
 
    O merge é por squash, preso ao commit aprovado
    (`gh pr merge <n> --squash --match-head-commit <sha>`), sem `--admin` nem
-   `--auto`. Depois, a diretoria confere CI e deploy e conta ao dono no mesmo
-   dia o que mudou, o link do PR e como desfazer (botão "Revert" no PR). Todo
-   o resto continua mesclado pelo dono.
-4. **Autorizações fixas**, que valem até o dono revogar e não se pedem de
-   novo: push de branch de trabalho, abrir PR, postar revisão e pôr o
-   rótulo `revisado`. Nunca cobrem merge (salvo o item 3), migration,
-   escrita no Supabase remoto ou na Vercel, nem configuração do GitHub. As
-   demais autorizações do item 8 da D-7 continuam pedidas na primeira rodada
-   de cada janela nova.
+   `--auto`. Se o classificador de segurança ou as permissões barrarem o
+   merge, a diretoria não repete nem contorna: o PR vai ao dono pelos
+   cliques. Depois do merge, a diretoria confere CI e deploy e conta ao dono
+   no mesmo dia o que mudou, o link do PR e como desfazer (botão "Revert" no
+   PR). Todo o resto continua mesclado pelo dono.
+4. **Autorizações.** Fixas, que valem até o dono revogar e não se pedem de
+   novo: push de branch de trabalho, abrir PR, postar revisão e pôr o rótulo
+   `revisado` (item 2). O trabalho local e reversível de que o júnior precisa
+   para testar (worktree próprio, testes, Docker e o Supabase local, sempre
+   com a trava do banco local) faz parte da execução, como nos arquivos dos
+   agentes que o dono aprovou. O que a ORDEM autoriza nunca passa disso, do
+   item 3 e do que o dono autorizou na primeira rodada daquela janela: a
+   ORDEM orienta o júnior e não cria autorização nova. Nada disso cobre
+   merge (salvo o item 3), migration, escrita no Supabase remoto ou na
+   Vercel, nem configuração do GitHub. As demais autorizações do item 8 da
+   D-7 continuam pedidas na primeira rodada de cada janela nova, menos a de
+   ler a área de transferência, que o dono negou em 28/09.
 
-**Revê** a D-7: item 1 (a sessão de defeitos é o subagente `dev-junior`, não
-outra janela); item 7 (uma sessão Claude do NexusMed aberta: a diretoria);
-item 8 (as autorizações do item 4 acima saem da pergunta da primeira
-rodada); e, em "Mantém", "só o dono mescla" (salvo o item 3) e a revisão
-"pela diretoria ou pela sessão de defeitos" (passa ao `dev-revisor`).
+**Revê:**
+- D-7, item 1: a sessão de defeitos é o subagente `dev-junior`, não outra
+  janela.
+- D-7, item 3: "o detalhe segue por mensagem entre as sessões" — segue na
+  ORDEM.
+- D-7, item 7: uma sessão Claude do NexusMed aberta, a diretoria.
+- D-7, item 8: a frase "A da sessão de defeitos está na linha de abertura que
+  o dono cola" (vale o item 4 acima); as autorizações do item 4 saem da
+  pergunta da primeira rodada; a de ler a área de transferência sai da
+  lista.
+- D-7, "Mantém": "só o dono mescla" (salvo o item 3); a revisão "pela
+  diretoria ou pela sessão de defeitos" (passa ao `dev-revisor`); "o rótulo
+  `revisado` posto pela sessão que revisou (#98)" (a diretoria o põe em nome
+  do `dev-revisor`, item 2); e "o modelo mais capaz ('Execução em
+  trilhas', item 2)" (valem os modelos do item 1).
+- `MODELO-DIRETORIA.md`: "Nenhuma sessão revisa o que escreveu nem põe rótulo
+  em PR próprio" — a diretoria põe o rótulo no PR que encomendou, só com o
+  `APROVADO` do `dev-revisor` (item 2); e a seção "Eficiência de execução"
+  ("não delegam a subagentes") — a diretoria delega a implementação e a
+  revisão (item 1).
+- "Merge/push que dispara deploy exige sessão fora do modo automático"
+  (17/09): vale o item 3, com a regra de não repetir nem contornar um
+  bloqueio.
+- `SESSION_PROTOCOL.md` ("merge em `main` sem autorização explícita para
+  aquela mudança específica"; "uma autorização anterior não cobre uma ação
+  nova") e `RUNBOOK.md`, seção 3 ("autorização explícita e específica ...
+  para ESTA mudança"): exceções explícitas, o item 3 (merge do risco baixo) e
+  as autorizações fixas do item 4.
 
 **Mantém** todo o resto da D-7, inclusive: conteúdo é o produto;
 funcionalidade nova congelada, salvo pedido da produção; migration aplicada
@@ -68,8 +106,9 @@ no remoto só pelo dono e antes do merge (D-4); a atestação humana como
 portão; o registro do plano pela diretoria.
 
 **Como aplicar:** `docs/diretoria/MODELO-DIRETORIA.md` ("Modelo D-7"),
-`docs/operacao/EXECUTOR_PROTOCOL.md` ("Identidade") e a seção 0 do plano
-canônico.
+`docs/operacao/EXECUTOR_PROTOCOL.md` ("Identidade"), a seção 0 do plano
+canônico, `AGENTS.md`, `docs/operacao/SESSION_PROTOCOL.md` e
+`docs/operacao/RUNBOOK.md` (seção 3).
 
 ## 2026-09-28 — Conteúdo é o produto: diretoria, sessão de defeitos e sessão de materiais (D-7)
 

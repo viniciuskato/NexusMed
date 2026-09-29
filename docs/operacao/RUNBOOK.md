@@ -77,6 +77,11 @@ npm run checar:material -- a.md b.md "docs/conteúdos/<ramo>"      # vários cam
 **Exige autorização explícita e específica do usuário/diretoria para ESTA
 mudança** — uma autorização anterior não cobre outra.
 
+> **Exceção explícita (D-8, 28/09):** o PR de risco baixo que cumpre todas as
+> condições do item 3 da D-8 a diretoria mescla sozinha, por squash e preso
+> ao commit aprovado; se o classificador ou as permissões barrarem, o PR vai
+> ao dono pelos cliques (`DECISIONS.md`, D-8).
+
 Desde 2026-09-18, **toda mudança entra em `main` por Pull Request** — nunca
 por push direto. O PR dá três coisas que o push direto não dá: o CI roda
 antes (e não depois) de a mudança estar em produção, a Vercel publica um

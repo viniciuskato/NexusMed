@@ -96,6 +96,12 @@ diretoria, em lote:
 
 ## Regras de segurança sempre válidas, sem exceção implícita
 
+> **Exceções explícitas (D-8, 28/09):** a diretoria mescla sozinha só o PR de
+> risco baixo que cumpre todas as condições do item 3 da D-8, e push de
+> branch de trabalho, abrir PR, postar revisão e pôr o rótulo `revisado` são
+> autorizações fixas do dono (item 4). Fora disso, as regras abaixo valem
+> sem exceção (`DECISIONS.md`, D-8).
+
 - Não fazer force push, `reset --hard` compartilhado, ou merge em `main`
   sem autorização explícita **para aquela mudança específica**.
 - Não presumir que uma autorização anterior cobre uma ação nova.

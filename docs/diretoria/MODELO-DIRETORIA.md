@@ -9,10 +9,12 @@ Funcionalidade nova está congelada, salvo pedido da produção. Três sessões:
 
 > **D-8 (28/09):** numa janela só. A diretoria é o agente `dev-senior`; a
 > sessão de defeitos é o subagente `dev-junior`, chamado por ela com uma
-> ORDEM; a revisão de todo PR é do subagente `dev-revisor`, e a diretoria põe
-> o rótulo depois do `APROVADO` dele. A diretoria mescla sozinha só o que
-> cabe no item 3 da D-8; o resto continua mesclado pelo dono. Onde esta seção
-> disser outra coisa, vale a D-8 (`../operacao/DECISIONS.md`).
+> ORDEM; a revisão de todo PR é do subagente `dev-revisor`, e a diretoria
+> posta o VEREDITO dele e põe o rótulo em nome dele, só depois do `APROVADO`,
+> inclusive no PR que ela encomendou. A diretoria delega a implementação e a
+> revisão a esses subagentes e mescla sozinha só o que cabe no item 3 da
+> D-8; o resto continua mesclado pelo dono. Onde este documento disser outra
+> coisa, vale a D-8 (`../operacao/DECISIONS.md`).
 
 1. **Diretoria** — Claude Code, modelo mais capaz, no checkout principal; PR
    próprio em worktree próprio. **É a única janela em que o dono fala no dia

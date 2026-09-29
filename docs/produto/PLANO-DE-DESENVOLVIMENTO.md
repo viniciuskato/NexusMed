@@ -24,6 +24,14 @@ Como ler, conforme o que você procura:
 
 ## 0. Como este documento funciona
 
+> **D-8 (28/09):** onde esta seção fala de quem revisa, põe o rótulo, mescla
+> ou abre sessões ("Quem atualiza o quê", "Como o código anda", "Como abrir a
+> diretoria e a sessão de defeitos"), vale a D-8
+> (`docs/operacao/DECISIONS.md`): a sessão de defeitos é o subagente
+> `dev-junior`; a revisão é do subagente `dev-revisor`, e a diretoria põe o
+> rótulo depois do `APROVADO` dele; a diretoria mescla sozinha só o risco
+> baixo do item 3 da D-8, e o resto continua com o dono.
+
 ### O que ele é
 
 Um documento vivo com **unidades de implementação**. Cada unidade é uma

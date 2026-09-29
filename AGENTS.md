@@ -256,6 +256,11 @@ o painel legado da diretoria (histórico até 2026-09-17).
 
 ## Comunicação entre as sessões
 
+> **D-8 (28/09):** a sessão de defeitos é o subagente `dev-junior`: recebe da
+> diretoria uma ORDEM e devolve um RETORNO, sem mensagem entre janelas. A
+> revisão é do subagente `dev-revisor`. Onde esta seção disser outra coisa,
+> vale a D-8 (`docs/operacao/DECISIONS.md`).
+
 O dono fala só com a diretoria. A sessão de defeitos fala com a diretoria
 por mensagem entre sessões e pelo PR; o Gemini recebe o pedido e devolve a
 resposta pelas mãos do dono. Toda sessão de diretoria deve ler e seguir
