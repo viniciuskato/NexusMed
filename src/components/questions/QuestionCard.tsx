@@ -174,7 +174,12 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   useEffect(() => {
     let cancelled = false;
 
-    const applyAnswer = async (initialAnswer: QuestionAnswerRecord | null) => {
+    // `ownsStatus`: só o card hidratado (nada mais por carregar aqui, além
+    // do gabarito) pode marcar `hydrateStatus` 'ok' quando o gabarito chega
+    // ou quando não há nada pra buscar. No card avulso, quem decide 'ok' é
+    // só o Promise.allSettled abaixo — um gabarito que chega depois de um
+    // favorito/reação que falhou não pode apagar aquele aviso.
+    const applyAnswer = async (initialAnswer: QuestionAnswerRecord | null, ownsStatus: boolean) => {
       if (cancelled || sessionAnswerRef.current) return; // resposta desta sessão manda
       if (!isExamMode) {
         setSelectedOption(initialAnswer?.selectedOption || selectedOptionInExam || null);
@@ -183,28 +188,41 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       }
       setErrorReason(initialAnswer?.errorReason || 'lacuna_teorica');
       setReviewResult(null);
-      if (isExamMode || !initialAnswer) return;
+      if (isExamMode || !initialAnswer) {
+        if (ownsStatus) setHydrateStatus('ok');
+        return;
+      }
       try {
         const review = await questionsRepository.getQuestionReview(question.id);
-        if (!cancelled && !sessionAnswerRef.current) setReviewResult(review);
+        if (!cancelled && !sessionAnswerRef.current) {
+          setReviewResult(review);
+          if (ownsStatus) setHydrateStatus('ok');
+        }
       } catch (err) {
         // Gabarito não pôde ser (re)carregado agora — sem isto, o `catch`
         // engolia o erro, `hydrateStatus` continuava 'ok' e o quadro vermelho
         // de erro aparecia mesmo com resposta certa, porque `isCorrect`
         // depende só do gabarito (revisão do #93, item 4). Mostra o aviso de
-        // rede e deixa o useAutoRetry tentar de novo.
+        // rede e deixa o useAutoRetry tentar de novo. Chamar com o MESMO
+        // status de erro que já estava (nova tentativa que falha de novo)
+        // não gera re-render — é isso que impede o "flip" pra 'ok' e de
+        // volta que reiniciava o backoff do useAutoRetry a cada tentativa
+        // (revisão do #93/rodada 2, item 3).
         if (!cancelled && !sessionAnswerRef.current) setHydrateStatus(loadStatusOf(err));
       }
     };
 
     if (hydrated) {
-      // O aviso de rede fica com o pai, que fez a carga (45-G).
-      setHydrateStatus('ok');
+      // O aviso de rede do favorito/reação fica com o pai, que fez a carga
+      // (45-G) — só o gabarito é buscado aqui, e só ele decide o status
+      // (nunca `setHydrateStatus('ok')` antes de saber se essa busca deu
+      // certo: fazer isso a cada nova tentativa jogava o status pra 'ok' e
+      // de volta pro erro, resetando o backoff do useAutoRetry sempre).
       setBookmarkKnown(hydrated.known !== false);
       setReactionKnown(hydrated.known !== false);
       setIsBookmarked(hydrated.bookmarked);
       setMyReaction(hydrated.reaction);
-      void applyAnswer(hydrated.answer);
+      void applyAnswer(hydrated.answer, true);
       return () => {
         cancelled = true;
       };
@@ -225,7 +243,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
       if (bookmarksResult.status === 'fulfilled') setIsBookmarked(bookmarksResult.value.questions.includes(question.id));
       if (reactionResult.status === 'fulfilled') setMyReaction(reactionResult.value);
-      if (answersResult.status === 'fulfilled') await applyAnswer(answersResult.value[question.id] ?? null);
+      if (answersResult.status === 'fulfilled') await applyAnswer(answersResult.value[question.id] ?? null, false);
     })();
 
     return () => {

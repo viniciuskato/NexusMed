@@ -29,12 +29,17 @@ export function loadStatusOf(err: unknown): LoadStatus {
 }
 
 /**
- * Tenta subir o que ficou pendente na fila offline e só então chama
- * `callback` — nunca relê o servidor antes disso: a releitura podia chegar
- * antes da gravação feita offline, e a tela desfaria o que o estudante
- * acabou de marcar. Toda nova tentativa de carga (evento `online`, timer
- * automático, aba voltando a ficar visível, "Tentar agora") passa por aqui
- * (revisão do #93, item 3) — antes, só o evento `online` fazia isso.
+ * Tenta subir o que ficou pendente na fila offline (`flush(uid, force:
+ * true)`, ignorando o backoff normal de cada operação — só se justifica
+ * pelos MESMOS sinais fortes e explícitos que `syncQueue.flush` documenta:
+ * o evento `online` real, a aba voltando a ficar visível, ou um clique
+ * explícito em "Tentar agora") e só então chama `callback` — nunca relê o
+ * servidor antes disso: a releitura podia chegar antes da gravação feita
+ * offline, e a tela desfaria o que o estudante acabou de marcar. O timer
+ * automático de `useAutoRetry` NUNCA passa por aqui: forçar a cada 5-60s só
+ * por tempo passando gastaria tentativa da fila sem um sinal real de que a
+ * causa do erro mudou (revisão do #93/rodada 2, item 2) — esse caso já é
+ * coberto pelo heartbeat de 60s da própria fila, que respeita o backoff.
  */
 export function retryWithFlush(callback: () => void): void {
   const uid = getStorageUser();

@@ -255,6 +255,22 @@ function AuthenticatedApp() {
     setFlashcardOriginView('flashcards');
     setSelectedPackId(null);
     setInvalidSavedPackId(null);
+    // "Continuar lendo" e o aviso de dados antigos são desta conta
+    // especificamente — sem isto, a conta B via o card de retomada de
+    // leitura e/ou o modal de migração da conta A (achado do revisor e meu,
+    // rodada 2). `lastReadingSession` é relido (não só zerado): o
+    // `StorageService` já isola por UID ativo (`setActiveUser`, no
+    // `AuthContext`), então o valor novo é o de B, não um vazio à toa.
+    setLastReadingSession(StorageService.getLastReadingSession());
+    setMigrationSummary(null);
+    // Modais abertos (busca, plano, feedback, criar simulado/flashcard) não
+    // guardam dado de outra conta, mas um formulário aberto no meio da troca
+    // é um estado órfão — fecha todos, como o resto da tela.
+    setIsSearchOpen(false);
+    setIsPlanModalOpen(false);
+    setIsFeedbackOpen(false);
+    setIsCreateSimuladoOpen(false);
+    setIsCreateFlashcardOpen(false);
   }
 
   // Core Data State (carregados do StorageService / Supabase)

@@ -10,25 +10,26 @@ import React from 'react';
   disconnect() {}
 };
 
-// 45-G, revisão do #93 (item 2): o componente raiz (`AuthenticatedApp`) nunca
-// desmonta entre logout e login (App() monta `<AuthenticatedApp />` uma
-// única vez, dentro de `<AuthProvider>`). O estado de sessão (activeView,
-// reviewCardsQueue, activeSimuladoSelection, ...) vive nele, sem reset ligado
-// à troca de usuário. Hoje, o único portão antes de renderizar a tela normal
-// é `if (dataLoading) return <LoadingScreen/>` — e `useAppData` marca
-// `loading=false` ao FIM de toda tentativa de carga, mesmo que ela falhe
-// (`.finally(() => setLoading(false))`). Então: usuário A abre uma sessão de
-// flashcards (activeView='flashcard-session', reviewCardsQueue=[cartões de
-// A]); A faz logout, B faz login; a carga dos dados de B falha (sem rede) —
-// `dataLoading` volta a `false`, `dataReady` nunca fica `true` pra B, mas
-// nada bloqueia o render normal, que mostra os cartões de A pra B.
+// 45-G, revisão do #93 (item 2, e rodada 2 item 4): o componente raiz
+// (`AuthenticatedApp`) nunca desmonta entre logout e login (App() monta
+// `<AuthenticatedApp />` uma única vez, dentro de `<AuthProvider>`). O
+// estado de sessão (activeView, reviewCardsQueue, activeSimuladoSelection,
+// "continuar lendo", aviso de dados antigos, modais abertos, ...) vive nele,
+// sem reset ligado à troca de usuário. Hoje, o único portão antes de
+// renderizar a tela normal é `if (dataLoading) return <LoadingScreen/>` — e
+// `useAppData` marca `loading=false` ao FIM de toda tentativa de carga,
+// mesmo que ela falhe (`.finally(() => setLoading(false))`). Então: usuário
+// A abre uma sessão de flashcards, deixa "continuar lendo" e o aviso de
+// dados antigos na tela, e um modal aberto; A faz logout, B faz login; a
+// carga dos dados de B falha (sem rede) — nada bloqueia o render normal, que
+// mostraria tudo isso da conta A pra B.
 
 const authState: { user: { id: string } | null; profile: { role: string; status: string } | null } = {
   user: { id: 'user-a' },
   profile: { role: 'student', status: 'active' },
 };
 
-vi.mock('C:/Users/vinic/dev/NexusMed/.claude/worktrees/trilha-1/src/contexts/AuthContext', () => ({
+vi.mock('../../src/contexts/AuthContext', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
   useAuth: () => ({
     user: authState.user,
@@ -56,7 +57,7 @@ const appDataByUser: Record<string, { ready: boolean; loading: boolean; status: 
   'user-a': { ready: true, loading: false, status: 'ok' },
   'user-b': { ready: false, loading: false, status: 'offline' }, // carga de B falhou
 };
-vi.mock('C:/Users/vinic/dev/NexusMed/.claude/worktrees/trilha-1/src/hooks/useAppData', () => ({
+vi.mock('../../src/hooks/useAppData', () => ({
   useAppData: (userId: string | null) => {
     const st = (userId && appDataByUser[userId]) || { ready: false, loading: true, status: 'ok' };
     return {
@@ -77,7 +78,7 @@ vi.mock('C:/Users/vinic/dev/NexusMed/.claude/worktrees/trilha-1/src/hooks/useApp
 
 // DashboardView real arrasta uma árvore grande de widgets — só precisamos de
 // um jeito de disparar `onStartSRS`, exatamente como o botão real faz.
-vi.mock('C:/Users/vinic/dev/NexusMed/.claude/worktrees/trilha-1/src/components/dashboard/DashboardView', () => ({
+vi.mock('../../src/components/dashboard/DashboardView', () => ({
   DashboardView: ({ onStartSRS }: { onStartSRS: (cards: unknown[]) => void }) => (
     <button onClick={() => onStartSRS([{ id: 'card-de-A', front: 'DA CONTA A' }])}>
       iniciar-srs-teste
@@ -85,7 +86,7 @@ vi.mock('C:/Users/vinic/dev/NexusMed/.claude/worktrees/trilha-1/src/components/d
   ),
 }));
 
-vi.mock('C:/Users/vinic/dev/NexusMed/.claude/worktrees/trilha-1/src/components/flashcards/FlashcardReviewSession', () => ({
+vi.mock('../../src/components/flashcards/FlashcardReviewSession', () => ({
   FlashcardReviewSession: ({ cards }: { cards: Array<{ id: string; front: string }> }) => (
     <div data-testid="flashcard-session">
       {cards.map((c) => (
@@ -98,18 +99,37 @@ vi.mock('C:/Users/vinic/dev/NexusMed/.claude/worktrees/trilha-1/src/components/f
 // AppErrorBoundary importa clientErrorReporter, que lê `__APP_RELEASE__`
 // (definido só em tempo de build pelo Vite, ver vite.config.ts) — não
 // precisamos do boundary real neste teste.
-vi.mock('C:/Users/vinic/dev/NexusMed/.claude/worktrees/trilha-1/src/components/AppErrorBoundary', () => ({
+vi.mock('../../src/components/AppErrorBoundary', () => ({
   AppErrorBoundary: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-vi.mock('C:/Users/vinic/dev/NexusMed/.claude/worktrees/trilha-1/src/services/storage', () => ({
+// "Continuar lendo" (MobileBottomNav) e o aviso de dados antigos
+// (MigrateDataModal, via `checkLegacyDataSummary`) são conteúdo real da
+// conta: só a conta A tem os dois.
+const lastReadingSessionByUser: Record<string, { compendiumId: string; compendiumTitle: string } | undefined> = {
+  'user-a': { compendiumId: 'mat-a', compendiumTitle: 'Material da conta A' },
+};
+const legacySummaryByUser: Record<string, { hasLegacyData: boolean }> = {
+  'user-a': { hasLegacyData: true },
+};
+
+vi.mock('../../src/services/storage', () => ({
   StorageService: {
     getTheme: () => 'light',
     getUserPlan: () => 'free',
     setUserPlan: vi.fn(),
-    getLastReadingSession: () => null,
+    getLastReadingSession: () => lastReadingSessionByUser[authState.user?.id ?? ''] ?? null,
     saveLastReadingSession: vi.fn(),
-    checkLegacyDataSummary: () => ({ hasLegacyData: false }),
+    checkLegacyDataSummary: (uid: string) =>
+      legacySummaryByUser[uid] ?? {
+        hasLegacyData: false,
+        answersCount: 0,
+        flashcardsCount: 0,
+        simuladosCount: 0,
+        bookmarksCount: 0,
+        notesCount: 0,
+        readingProgressCount: 0,
+      },
     getUIState: () => null,
     setUIState: vi.fn(),
     setActiveUser: vi.fn(),
@@ -117,9 +137,7 @@ vi.mock('C:/Users/vinic/dev/NexusMed/.claude/worktrees/trilha-1/src/services/sto
   },
 }));
 
-const { default: App } = await import(
-  'C:/Users/vinic/dev/NexusMed/.claude/worktrees/trilha-1/src/App'
-);
+const { default: App } = await import('../../src/App');
 
 beforeEach(() => {
   authState.user = { id: 'user-a' };
@@ -129,13 +147,21 @@ afterEach(() => {
 });
 
 describe('45-G — troca de usuário com a carga do novo falhando', () => {
-  it('nao mostra flashcard-session da conta anterior pra conta nova', async () => {
+  it('nao mostra sessao, "continuar lendo", aviso de dados antigos nem modal aberto da conta anterior pra conta nova', async () => {
     const view = render(<App />);
 
-    // Conta A: abre uma sessão de flashcards.
+    // Conta A: "continuar lendo" e o aviso de dados antigos aparecem sozinhos
+    // (efeito de carregamento), abre uma sessão de flashcards e deixa um
+    // modal aberto (busca).
+    await waitFor(() => expect(screen.getByText('Histórico Local Encontrado')).toBeTruthy());
+    expect(screen.getByTitle(/Retomar leitura: Material da conta A/)).toBeTruthy();
+
     fireEvent.click(screen.getByText('iniciar-srs-teste'));
     await screen.findByTestId('flashcard-session');
     expect(screen.getByText('DA CONTA A')).toBeTruthy();
+
+    fireEvent.click(screen.getAllByTitle(/Buscar/)[0]);
+    expect(screen.getByPlaceholderText(/Pesquisar mecanismo/)).toBeTruthy();
 
     // Logout + login da conta B, cuja carga falha (offline) — sem
     // desmontar <AuthenticatedApp/>, exatamente como acontece hoje.
@@ -147,5 +173,8 @@ describe('45-G — troca de usuário com a carga do novo falhando', () => {
 
     expect(screen.queryByTestId('flashcard-session')).toBeNull();
     expect(screen.queryByText('DA CONTA A')).toBeNull();
+    expect(screen.queryByText('Histórico Local Encontrado')).toBeNull();
+    expect(screen.queryByTitle(/Retomar leitura: Material da conta A/)).toBeNull();
+    expect(screen.queryByPlaceholderText(/Pesquisar mecanismo/)).toBeNull();
   });
 });

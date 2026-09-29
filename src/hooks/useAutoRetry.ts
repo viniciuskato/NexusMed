@@ -22,10 +22,14 @@ export function useAutoRetry(status: LoadStatus, retry: () => void): void {
 
   useEffect(() => {
     if (status === 'ok') return;
-    // Toda nova tentativa relê só depois de a fila offline tentar subir o
-    // que está pendente — como o evento `online` (`onReconnect`) já fazia
-    // (revisão do #93, item 3).
-    const fire = () => retryWithFlush(() => retryRef.current());
+    // O heartbeat periódico (60s, `syncQueue.ts`) já flusha a fila sozinho,
+    // respeitando o backoff de cada operação pendente. O timer daqui embaixo
+    // NUNCA força esse flush (`force`, em `syncQueue.flush`, é só pra sinais
+    // fortes e explícitos: `online` real e a aba voltando a ficar visível —
+    // ver o comentário de `flush` em syncQueue.ts) — forçar a cada 5-60s só
+    // por tempo passando gastaria tentativa da fila sem motivo (revisão do
+    // #93/rodada 2, item 2) e não é o que este timer decide: ele só relê.
+    const fire = () => retryRef.current();
     let round = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const schedule = () => {
@@ -38,10 +42,14 @@ export function useAutoRetry(status: LoadStatus, retry: () => void): void {
     };
     schedule();
 
+    // `online` (`onReconnect`) e a aba voltando a ficar visível são os dois
+    // sinais fortes que force o flush antes de reler (mesma lista do
+    // `syncQueue.flush`); "Tentar agora" é um clique explícito do estudante,
+    // tratado com a mesma força.
     const offReconnect = onReconnect(() => retryRef.current());
-    const offRetryAll = onRetryAll(fire);
+    const offRetryAll = onRetryAll(() => retryWithFlush(() => retryRef.current()));
     const onVisible = () => {
-      if (document.visibilityState === 'visible') fire();
+      if (document.visibilityState === 'visible') retryWithFlush(() => retryRef.current());
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
