@@ -90,6 +90,7 @@ import { DashboardView } from './components/dashboard/DashboardView';
 import { CreateSimuladoModal } from './components/questions/CreateSimuladoModal';
 import { CreateFlashcardModal } from './components/flashcards/CreateFlashcardModal';
 import { ClinicalPomodoroWidget } from './components/common/ClinicalPomodoroWidget';
+import { TestarOQueLiModal } from './components/testar/TestarOQueLiModal';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { lazyWithReload } from './lib/lazyWithReload';
 
@@ -141,6 +142,9 @@ function AuthenticatedApp() {
   const [navStateRestored, setNavStateRestored] = useState(false);
   // Escopo de material aplicado a Questões/Cards quando se chega pelo pack.
   const [scopeCompendiumForQuestions, setScopeCompendiumForQuestions] = useState<string | undefined>(undefined);
+  // 43-C: recorte "Testar o que li" (ids escolhidos no modal).
+  const [scopeQuestionIdsForQuestions, setScopeQuestionIdsForQuestions] = useState<string[] | undefined>(undefined);
+  const [isTestarOpen, setIsTestarOpen] = useState(false);
   const [scopeCompendiumForFlashcards, setScopeCompendiumForFlashcards] = useState<string | undefined>(undefined);
   const [packReturnContext, setPackReturnContext] = useState<string | null>(null);
   const [flashcardOriginView, setFlashcardOriginView] = useState<string>('flashcards');
@@ -188,6 +192,7 @@ function AuthenticatedApp() {
     // do último material aberto, sem o usuário ter pedido esse recorte.
     if (view === 'questions') {
       setScopeCompendiumForQuestions(undefined);
+      setScopeQuestionIdsForQuestions(undefined);
       setFilterThemeForQuestions(undefined);
       setPackReturnContext(null);
     }
@@ -525,6 +530,7 @@ function AuthenticatedApp() {
     setFocusQuestionId(undefined);
     // Recorte por tema, nunca herdado de um pack aberto antes.
     setScopeCompendiumForQuestions(undefined);
+    setScopeQuestionIdsForQuestions(undefined);
     setPackReturnContext(null);
     setActiveView('questions');
   };
@@ -540,6 +546,20 @@ function AuthenticatedApp() {
     setFilterThemeForQuestions(undefined);
     setFocusQuestionId(undefined);
     setScopeCompendiumForQuestions(compendiumId);
+    setScopeQuestionIdsForQuestions(undefined);
+    setPackReturnContext(null);
+    setActiveView('questions');
+  };
+
+  // 43-C: "Testar o que li" abre a lista recortada pelas questões escolhidas
+  // no modal — a mesma tela de sempre, onde errar já gera flashcard.
+  const handleStartTestarOQueLi = (questionIds: string[]) => {
+    setIsTestarOpen(false);
+    setFilterThemeForQuestions(undefined);
+    setFilterStatusForQuestions(undefined);
+    setFocusQuestionId(undefined);
+    setScopeCompendiumForQuestions(undefined);
+    setScopeQuestionIdsForQuestions(questionIds);
     setPackReturnContext(null);
     setActiveView('questions');
   };
@@ -554,6 +574,7 @@ function AuthenticatedApp() {
   // sumia da lista, e os erros ficavam só os daquele material (43-B).
   const clearQuestionsScope = () => {
     setScopeCompendiumForQuestions(undefined);
+    setScopeQuestionIdsForQuestions(undefined);
     setPackReturnContext(null);
   };
 
@@ -585,6 +606,7 @@ function AuthenticatedApp() {
     setFilterThemeForQuestions(undefined);
     setFocusQuestionId(undefined);
     setScopeCompendiumForQuestions(compendiumId);
+    setScopeQuestionIdsForQuestions(undefined);
     setPackReturnContext(packId);
     setActiveView('questions');
   };
@@ -602,6 +624,7 @@ function AuthenticatedApp() {
     setFilterThemeForQuestions(themeId);
     setFocusQuestionId(undefined);
     setScopeCompendiumForQuestions(SCOPE_UNLINKED);
+    setScopeQuestionIdsForQuestions(undefined);
     setPackReturnContext(selectedPackId ?? 'lista');
     setActiveView('questions');
   };
@@ -622,6 +645,7 @@ function AuthenticatedApp() {
 
   const handleReturnToThematicStudy = () => {
     setScopeCompendiumForQuestions(undefined);
+    setScopeQuestionIdsForQuestions(undefined);
     setScopeCompendiumForFlashcards(undefined);
     setFilterThemeForQuestions(undefined);
     setFilterThemeForFlashcards(undefined);
@@ -698,6 +722,7 @@ function AuthenticatedApp() {
               initialTab={dashboardTab}
               onTabChange={setDashboardTab}
               onStartErrorSimulado={handleTrainMistakesUntimed}
+              onTestarOQueLi={() => setIsTestarOpen(true)}
               onUpdate={refreshData}
             />
           )}
@@ -755,6 +780,7 @@ function AuthenticatedApp() {
               }}
               onOpenQuestionsForTheme={handleOpenQuestionsForTheme}
               onOpenQuestionsForMaterial={handleOpenQuestionsForMaterial}
+              onTestarOQueLi={() => setIsTestarOpen(true)}
               onOpenFlashcardsForTheme={handleOpenFlashcardsForTheme}
               targetSectionId={selectedSectionId}
               onSectionJumpHandled={() => setSelectedSectionId(undefined)}
@@ -773,6 +799,7 @@ function AuthenticatedApp() {
               onOpenCreateSimulado={() => setIsCreateSimuladoOpen(true)}
               filterThemeId={filterThemeForQuestions}
               filterCompendiumId={scopeCompendiumForQuestions}
+              scopeQuestionIds={scopeQuestionIdsForQuestions}
               focusQuestionId={focusQuestionId}
               initialStatusFilter={filterStatusForQuestions}
               onReturnToThematicStudy={packReturnContext ? handleReturnToThematicStudy : undefined}
@@ -863,6 +890,7 @@ function AuthenticatedApp() {
                 setDashboardTab(tab);
               }}
               onStartErrorSimulado={handleTrainMistakesUntimed}
+              onTestarOQueLi={() => setIsTestarOpen(true)}
               onUpdate={refreshData}
             />
           )}
@@ -949,6 +977,20 @@ function AuthenticatedApp() {
         currentPlan={plan}
         onSelectPlan={handleSelectPlan}
       />
+
+      {isTestarOpen && (
+        <TestarOQueLiModal
+          compendiums={compendiums}
+          themes={themes}
+          questions={questions}
+          onClose={() => setIsTestarOpen(false)}
+          onStart={handleStartTestarOQueLi}
+          onOpenQuestionsForTheme={(themeId) => {
+            setIsTestarOpen(false);
+            handleOpenQuestionsForTheme(themeId);
+          }}
+        />
+      )}
 
       <CreateSimuladoModal
         isOpen={isCreateSimuladoOpen}
