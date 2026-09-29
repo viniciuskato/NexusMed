@@ -21,6 +21,7 @@ import {
   RotateCcw,
   BarChart3,
   BookMarked,
+  BookOpenCheck,
 } from 'lucide-react';
 import {
   Discipline,
@@ -63,6 +64,8 @@ interface DashboardViewProps {
   initialTab?: 'overview' | 'errors';
   onTabChange?: (tab: 'overview' | 'errors') => void;
   onStartErrorSimulado?: () => void;
+  /** Abre "Testar o que li" — questões dos materiais lidos hoje (43-C). */
+  onTestarOQueLi?: () => void;
   onUpdate?: () => void;
 }
 
@@ -79,6 +82,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   initialTab = 'overview',
   onTabChange,
   onStartErrorSimulado,
+  onTestarOQueLi,
   onUpdate,
 }) => {
   const { user, profile } = useAuth();
@@ -335,6 +339,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <HelpCircle className="w-4 h-4 group-hover:rotate-12 transition-transform" />
               <span>Resolver Questões (+50 XP)</span>
             </button>
+
+            {onTestarOQueLi && (
+              <button
+                type="button"
+                onClick={onTestarOQueLi}
+                className="px-4 py-3 rounded-2xl bg-slate-800/90 hover:bg-slate-750 text-slate-100 border border-slate-700/90 hover:border-teal-500/50 font-bold text-xs elev-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <BookOpenCheck className="w-4 h-4 text-teal-400" />
+                <span>Testar o que li</span>
+              </button>
+            )}
 
             <button
               type="button"
