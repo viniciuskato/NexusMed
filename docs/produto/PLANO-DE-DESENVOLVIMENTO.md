@@ -24,13 +24,14 @@ Como ler, conforme o que você procura:
 
 ## 0. Como este documento funciona
 
-> **D-8 (28/09):** onde esta seção fala de quem revisa, põe o rótulo, mescla
-> ou abre sessões ("Quem atualiza o quê", "Como o código anda", "Como abrir a
-> diretoria e a sessão de defeitos"), vale a D-8
-> (`docs/operacao/DECISIONS.md`): a sessão de defeitos é o subagente
-> `dev-junior`; a revisão é do subagente `dev-revisor`, e a diretoria põe o
-> rótulo depois do `APROVADO` dele; a diretoria mescla sozinha só o risco
-> baixo do item 3 da D-8, e o resto continua com o dono.
+> **D-8 (28/09) e D-9 (29/09):** onde esta seção fala de quem revisa, põe o
+> rótulo, mescla, aplica migration ou abre sessões ("Quem atualiza o quê",
+> "Como o código anda", "Como abrir a diretoria e a sessão de defeitos"),
+> valem a D-8 e a D-9 (`docs/operacao/DECISIONS.md`): a sessão de defeitos é
+> o subagente `dev-junior`; a revisão é do subagente `dev-revisor`, e a
+> diretoria põe o rótulo depois do `APROVADO` dele; com o "aprovado" do dono
+> a um plano, a diretoria aplica a migration no remoto e mescla o que o
+> plano descreve.
 
 ### O que ele é
 
@@ -378,7 +379,7 @@ anterior à última do remoto: `RUNBOOK.md`, seção 3. A sequência por trilhas
 
 Cada uma bloqueia unidades. A diretoria recomenda; o dono decide. Resolvida,
 vira entrada em `DECISIONS.md` e sai daqui. A numeração continua (a próxima é
-D-8; a D-6, de 25/09, e a D-7, de 28/09, estão em `DECISIONS.md`).
+D-10; da D-6, de 25/09, à D-9, de 29/09, estão em `DECISIONS.md`).
 
 **Nenhuma em aberto.** D-1 (editar material publicado → rascunho à parte), D-2
 (leitura offline → não, por ora) e D-3 (46-A em duas janelas) foram decididas
@@ -1395,7 +1396,7 @@ próximo "semana". Em dúvida, vale a linha "Estado" de cada unidade.*
 |---|---|---|---|
 | 43-A | Concluída | #79 | 24/09 |
 | 43-B | Concluída | #94 | a conferir |
-| 43-C | Planejada (em PR: #96, a meta da D-7) | — | — |
+| 43-C | Concluída | #96 | a conferir |
 | 43-D | Concluída | #80 | 25/09 (migration aplicada ~13h45 depois do merge — INC-2026-005) |
 | 43-E | Congelada (D-7) | — | — |
 | 44-A | Congelada (D-7) | — | — |
@@ -1408,7 +1409,7 @@ próximo "semana". Em dúvida, vale a linha "Estado" de cada unidade.*
 | 45-D | Concluída | #92 | a conferir |
 | 45-E | Concluída | #86 | a conferir |
 | 45-F | Pronta; D-7: item a item, como issue | — | — |
-| 45-G | Planejada (em PR: #93) | — | — |
+| 45-G | Concluída | #93 | a conferir |
 | 45-H | Congelada (D-7), salvo AUD-31.1 e AUD-07 | — | — |
 | 45-I | Congelada (D-7), salvo a parte LGPD | — | — |
 | 45-J | Concluída | #72 | 24/09 |

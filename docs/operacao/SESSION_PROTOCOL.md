@@ -96,11 +96,12 @@ diretoria, em lote:
 
 ## Regras de segurança sempre válidas, sem exceção implícita
 
-> **Exceções explícitas (D-8, 28/09):** a diretoria mescla sozinha só o PR de
-> risco baixo que cumpre todas as condições do item 3 da D-8, e push de
-> branch de trabalho, abrir PR, postar revisão e pôr o rótulo `revisado` são
-> autorizações fixas do dono (item 4). Fora disso, as regras abaixo valem
-> sem exceção (`DECISIONS.md`, D-8).
+> **Exceções explícitas (D-8, 28/09, e D-9, 29/09):** o "aprovado" do dono
+> a um plano autoriza a diretoria a aplicar a migration no remoto e a
+> mesclar os PRs dele, nas condições da D-9; push de branch de trabalho,
+> abrir PR, postar revisão e pôr o rótulo `revisado` são autorizações fixas
+> do dono (D-8, item 4). Fora disso, as regras abaixo valem sem exceção
+> (`DECISIONS.md`, D-8 e D-9).
 
 - Não fazer force push, `reset --hard` compartilhado, ou merge em `main`
   sem autorização explícita **para aquela mudança específica**.

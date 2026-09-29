@@ -77,10 +77,12 @@ npm run checar:material -- a.md b.md "docs/conteúdos/<ramo>"      # vários cam
 **Exige autorização explícita e específica do usuário/diretoria para ESTA
 mudança** — uma autorização anterior não cobre outra.
 
-> **Exceção explícita (D-8, 28/09):** o PR de risco baixo que cumpre todas as
-> condições do item 3 da D-8 a diretoria mescla sozinha, por squash e preso
-> ao commit aprovado; se o classificador ou as permissões barrarem, o PR vai
-> ao dono pelos cliques (`DECISIONS.md`, D-8).
+> **Exceção explícita (D-9, 29/09):** o "aprovado" do dono a um plano é a
+> autorização para cada PR dele e para a manutenção técnica (D-9, item 1): a
+> diretoria aplica antes a migration no remoto e mescla, por squash e preso
+> ao commit aprovado, nas condições dos itens 2 e 3 da D-9; se o
+> classificador ou as permissões barrarem, o PR vai ao dono pelos cliques
+> (`DECISIONS.md`, D-9).
 
 Desde 2026-09-18, **toda mudança entra em `main` por Pull Request** — nunca
 por push direto. O PR dá três coisas que o push direto não dá: o CI roda

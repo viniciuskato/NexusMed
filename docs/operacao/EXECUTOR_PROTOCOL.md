@@ -23,9 +23,10 @@ diretoria. Quem mescla é o dono.
 > **D-8 (28/09):** a sessão de defeitos é o subagente `dev-junior`, chamado
 > pela diretoria com uma ORDEM. Trabalhe na PASTA e na BRANCH da ORDEM e
 > devolva o RETORNO à diretoria, em vez de trocar mensagens entre janelas.
-> Quem revisa é o subagente `dev-revisor`; a diretoria mescla sozinha só o
-> risco baixo do item 3 da D-8. Onde este protocolo disser outra coisa, vale
-> a D-8 ([`DECISIONS.md`](DECISIONS.md)).
+> Quem revisa é o subagente `dev-revisor`; quem mescla é a diretoria, dentro
+> de um plano que o dono aprovou (D-9, 29/09), e nunca a sessão de defeitos.
+> Onde este protocolo disser outra coisa, valem a D-8 e a D-9
+> ([`DECISIONS.md`](DECISIONS.md)).
 
 ## Ao abrir (uma vez)
 

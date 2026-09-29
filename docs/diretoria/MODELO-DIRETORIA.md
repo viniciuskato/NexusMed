@@ -12,9 +12,10 @@ Funcionalidade nova está congelada, salvo pedido da produção. Três sessões:
 > ORDEM; a revisão de todo PR é do subagente `dev-revisor`, e a diretoria
 > posta o VEREDITO dele e põe o rótulo em nome dele, só depois do `APROVADO`,
 > inclusive no PR que ela encomendou. A diretoria delega a implementação e a
-> revisão a esses subagentes e mescla sozinha só o que cabe no item 3 da
-> D-8; o resto continua mesclado pelo dono. Onde este documento disser outra
-> coisa, vale a D-8 (`../operacao/DECISIONS.md`).
+> revisão a esses subagentes e, desde a D-9 (29/09), executa e publica tudo
+> o que está num plano que o dono aprovou. Onde este documento disser outra
+> coisa (inclusive "só o dono mescla" e "o dono mescla"), valem a D-8 e a
+> D-9 (`../operacao/DECISIONS.md`).
 
 1. **Diretoria** — Claude Code, modelo mais capaz, no checkout principal; PR
    próprio em worktree próprio. **É a única janela em que o dono fala no dia

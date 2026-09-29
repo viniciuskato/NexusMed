@@ -17,8 +17,9 @@ do repositório). Funcionalidade nova está congelada, salvo pedido da
 produção. Papéis: [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md),
 "Modelo D-7"; decisão: `DECISIONS.md`, D-7. Desde a D-8 (28/09), numa janela só: a diretoria é o agente `dev-senior`, a
 sessão de defeitos é o subagente `dev-junior` e a revisão é do subagente
-`dev-revisor`; a diretoria mescla sozinha só PR de risco baixo aprovado
-(`DECISIONS.md`, D-8).
+`dev-revisor` (`DECISIONS.md`, D-8). Desde a D-9 (29/09), com o "aprovado"
+do dono a um plano, a diretoria executa e publica tudo o que ele descreve
+(`DECISIONS.md`, D-9).
 
 **Se você é a sessão de defeitos:** este arquivo,
 [`docs/operacao/EXECUTOR_PROTOCOL.md`](docs/operacao/EXECUTOR_PROTOCOL.md)
@@ -230,8 +231,8 @@ seção "Armadilhas já descobertas".
   materiais** — substitui as trilhas (23/09) e revê a D-6 acima no que fala
   de trilhas, de PRs esperando, da meta e de "processo congelado até 09/10"
   (09/10 passa a ser a revisão da D-7). O código vem da fila de defeitos;
-  todo PR é revisado por quem não o escreveu, antes do merge; só o dono
-  mescla, salvo o risco baixo que a D-8 deixa a diretoria publicar. Modelo:
+  todo PR é revisado por quem não o escreveu, antes do merge; a diretoria
+  mescla o que está num plano que o dono aprovou (D-9). Modelo:
   [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md).
 - **Testar contra Supabase LOCAL** antes de considerar qualquer mudança
   de schema/RPC pronta. Nunca validar escrita direto no remoto.

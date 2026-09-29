@@ -6,6 +6,86 @@
 > `docs/archive/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-29 — O dono aprova o plano; a diretoria executa e publica o que ele descreve (D-9)
+
+Origem: decisão do dono de 29/09/2026, para todos os projetos dele, em teste
+até a revisão da D-7 em 09/10: "Eu quero atuar apenas como idealizador dos
+sistemas. [...] se aprovado, os agentes vão aplicar todo o plano. Toda parte
+técnica os agentes devem fazer. Só voltaria a resposta do CEO para mim
+falando que foi implementado." Substitui o item 3 da D-8.
+
+1. **Plano aprovado.** A diretoria leva ao dono um plano curto, em linguagem
+   leiga: o que muda para quem usa, tamanho, custo, risco e se dá para
+   desfazer; o que apaga dado real ou não volta vai escrito com essas
+   palavras, ou o "aprovado" não o cobre. O "aprovado" do dono autoriza a
+   diretoria a executar e publicar tudo o que o plano descreve, de qualquer
+   risco: branch, PR, merge, deploy e migration no remoto. Vale na janela em
+   que ele o deu; plano que continua numa janela nova volta a ele em uma
+   linha antes de seguir. Conta como aprovada também a manutenção técnica
+   que não muda o que o estudante vê nem o que a plataforma promete
+   (dependência, teste, CI, defeito com teste que falha antes). Com o plano
+   inteiro no ar, a diretoria conta ao dono o que mudou, o que conferiu e o
+   que não deu para conferir.
+2. **Cada merge**, só com tudo isto: o PR pertence a um plano aprovado (ou é
+   manutenção técnica) e cabe nos limites da D-7 (até 2 merges por dia,
+   nunca à noite, congelamentos); `APROVADO` do `dev-revisor` no commit que
+   está no PR, com nada do aceite sem verificar, e o rótulo `revisado` posto
+   pela diretoria (D-8, item 2); todos os checks verdes, sem conflito com o
+   `main` e sem PR anterior da mesma frente esperando. Merge por squash,
+   preso ao commit aprovado
+   (`gh pr merge <n> --squash --match-head-commit <sha>`), sem `--admin` nem
+   `--auto` e sem contornar proteção nem check. Depois: CI do `main`, deploy
+   e um teste de fumaça sem dado real. Se algo quebrar no ar, a diretoria
+   desfaz na hora (Revert do código, publicado pelo mesmo caminho; banco só
+   com migration inversa revisada) e conta ao dono primeiro.
+3. **Migration no remoto pela diretoria, antes do merge (a D-4 continua).**
+   `supabase migration list --linked` e `supabase db push --linked --dry-run`
+   mostram exatamente as migrations do PR; se ela apaga ou reescreve dado
+   existente, o plano o dizia, e a diretoria faz antes um backup dos dados
+   afetados num arquivo local fora do git, sem abri-lo nem mostrá-lo,
+   apagado em 7 dias; aplica com `supabase db push --linked`, confere com
+   `migration list --linked`, roda de novo o check do PR e só então mescla.
+   Continua valendo o item 7 da D-7: nenhum PR com migration entra antes de
+   o check `migration-no-remoto` (46-E, #98) existir e ser obrigatório.
+4. **Continua do dono**, com o "sim" dele na hora, uma coisa por vez: o que
+   só a conta, a senha ou o cartão dele fazem; configuração do GitHub e
+   segredos; apagar dado real, ou o que não volta, que o plano não dizia;
+   custo acima do plano; escolha de produto que surgiu no meio e muda o que
+   ele recebe; conteúdo médico, que ele atesta (a atestação humana continua
+   o portão); afrouxar uma trava (tirar ou enfraquecer check, hook, proteção
+   ou regra de revisão; acrescentar pode); e regra deste projeto sobre quem
+   revisa, mescla, autoriza ou publica. Bloqueio do classificador de
+   segurança ou das permissões não se repete nem se contorna: vai ao dono
+   como passo pronto. O `dev-junior` nunca mescla, aplica migration, escreve
+   no remoto nem mexe na configuração do GitHub, qualquer que seja a ORDEM.
+
+**Revê:**
+- D-8, item 3 (a diretoria mescla sozinha só o risco baixo; "Todo o resto
+  continua mesclado pelo dono"): valem os itens 1 e 2 acima.
+- D-8, item 4 ("Nada disso cobre merge (salvo o item 3), migration, escrita
+  no Supabase remoto ou na Vercel"), e o "Mantém" da D-8 ("migration
+  aplicada no remoto só pelo dono e antes do merge"): valem os itens 2 e 3,
+  dentro de um plano aprovado; o resto da escrita remota continua fora.
+- D-7, "Mantém" ("só o dono mescla e aplica migration no remoto"), e item 8
+  ("merge, migration e escrita remota nunca entram"): valem os itens 1 a 3.
+- D-7, item 7 ("até 2 PRs prontos esperando o dono, mostrados um por vez"):
+  vale para o PR que ainda precisa do dono (item 4); PR de plano aprovado
+  não espera por ele.
+- D-4 ("Até lá, o dono confere a lista do remoto antes de mesclar PR com
+  migration"): quem confere é a diretoria (item 3).
+- As notas da D-8 no `AGENTS.md`, no `MODELO-DIRETORIA.md`, no
+  `EXECUTOR_PROTOCOL.md`, no `SESSION_PROTOCOL.md`, no `RUNBOOK.md` (seção
+  3) e na seção 0 do plano, e o que elas cobrem ("só o dono mescla", "o
+  dono aplica a migration, se houver, e mescla"): vale a D-9.
+
+**Mantém:** o resto da D-7 e da D-8, inclusive os limites e congelamentos da
+D-7, a revisão pelo `dev-revisor` e o rótulo (D-8, item 2), as autorizações
+fixas (D-8, item 4), a D-4 e a atestação humana como portão. Revisão em
+09/10, com a da D-7.
+
+**Como aplicar:** as notas da D-8 nos documentos listados em "Revê" passam a
+citar a D-9.
+
 ## 2026-09-28 — Equipe de agentes numa janela só; a diretoria publica sozinha o risco baixo (D-8)
 
 Origem: decisões do dono de 28/09/2026, para todos os projetos dele ("quero
