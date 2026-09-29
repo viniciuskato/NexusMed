@@ -20,7 +20,7 @@ vi.mock('../../src/services/storage', () => ({
 vi.mock('../../src/repositories/BookmarksRepository', () => ({
   bookmarksRepository: {
     getBookmarks: vi.fn().mockResolvedValue({ questions: [], compendiums: [], flashcards: [] }),
-    toggleBookmark: vi.fn().mockResolvedValue(false),
+    setBookmark: vi.fn().mockResolvedValue(false),
   },
 }));
 
@@ -41,7 +41,7 @@ vi.mock('../../src/repositories/FlashcardsRepository', () => ({
 vi.mock('../../src/repositories/ReadingProgressRepository', () => ({
   readingProgressRepository: {
     getReadingProgress: vi.fn().mockResolvedValue({}),
-    toggleSectionRead: vi.fn().mockResolvedValue(50),
+    setSectionRead: vi.fn().mockResolvedValue(50),
   },
 }));
 

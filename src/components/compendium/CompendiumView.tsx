@@ -31,6 +31,8 @@ import { usePersistedState } from '../../hooks/usePersistedState';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
 import { buildMaterialTree } from '../../utils/materialTree';
 import { MaterialTreeList } from './MaterialNavigation';
+import { useServerLoad } from '../../hooks/useServerLoad';
+import { ConnectionNotice } from '../common/ConnectionNotice';
 
 interface CompendiumViewProps {
   compendiums: Compendium[];
@@ -181,25 +183,21 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
       });
   }, [compendiums, readingProgress, lastReadingSession]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const [nextProgress, nextBookmarks, nextNotes, nextRemovedNotes] = await Promise.all([
-        readingProgressRepository.getReadingProgress(),
-        bookmarksRepository.getBookmarks(),
-        notesRepository.getNotes(),
-        notesRepository.getRemovedSectionNotes(),
-      ]);
-      if (cancelled) return;
+  // Do servidor (45-G, D-2): sem rede, o que já está na tela fica e o aviso aparece.
+  const { status: loadStatus } = useServerLoad(async () => {
+    const [nextProgress, nextBookmarks, nextNotes, nextRemovedNotes] = await Promise.all([
+      readingProgressRepository.getReadingProgress(),
+      bookmarksRepository.getBookmarks(),
+      notesRepository.getNotes(),
+      notesRepository.getRemovedSectionNotes(),
+    ]);
+    return () => {
       setRemovedSectionNotes(nextRemovedNotes);
       setReadingProgress(nextProgress);
       setBookmarks(nextBookmarks);
       setNotes(nextNotes);
-    })();
-    return () => {
-      cancelled = true;
     };
-  }, []);
+  });
 
   // Helper to infer lens if not explicitly set
   const getCompendiumLens = (comp: Compendium): StudyLens => {
@@ -282,6 +280,7 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
 
   return (
     <div className="space-y-6 w-full max-w-[1600px] mx-auto">
+      <ConnectionNotice status={loadStatus} />
       {/* ── Retorno contextual às questões ─────────────────────── */}
       {returnToQuestionsContext && onReturnToQuestions && (
         <div className="p-3 sm:px-4 sm:py-2.5 rounded-2xl bg-teal-500/10 dark:bg-teal-950/40 border border-teal-500/30 dark:border-teal-700/40 elev-xs flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Timer,
   Plus,
@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { SimuladoSessionData, Discipline, Theme, SimuladoConfig } from '../../types';
 import { simuladosRepository } from '../../repositories/SimuladosRepository';
+import { useServerLoad } from '../../hooks/useServerLoad';
+import { ConnectionNotice } from '../common/ConnectionNotice';
 
 interface SimuladosViewProps {
   disciplines: Discipline[];
@@ -28,16 +30,11 @@ export const SimuladosView: React.FC<SimuladosViewProps> = ({
 }) => {
   const [history, setHistory] = useState<SimuladoSessionData[]>([]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const nextHistory = await simuladosRepository.getSimuladoHistory();
-      if (!cancelled) setHistory(nextHistory);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Do servidor (45-G, D-2): sem rede, o que já está na tela fica e o aviso aparece.
+  const { status: loadStatus } = useServerLoad(async () => {
+    const nextHistory = await simuladosRepository.getSimuladoHistory();
+    return () => setHistory(nextHistory);
+  });
 
   const handleQuickPreset = (type: 'express' | 'enare' | 'mistakes') => {
     let config: SimuladoConfig;
@@ -88,6 +85,7 @@ export const SimuladosView: React.FC<SimuladosViewProps> = ({
 
   return (
     <div className="space-y-6">
+      <ConnectionNotice status={loadStatus} />
       {/* View Header */}
       <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 rounded-3xl p-6 sm:p-8 text-white elev-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="max-w-2xl space-y-2">

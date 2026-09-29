@@ -19,6 +19,8 @@ import { SCOPE_UNLINKED } from '../../services/thematicPacks';
 import { questionMatchesMaterialScope } from '../../utils/questionMaterials';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
+import { useServerLoad } from '../../hooks/useServerLoad';
+import { ConnectionNotice } from '../common/ConnectionNotice';
 
 interface QuestionsViewProps {
   questions: Question[];
@@ -134,23 +136,23 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
   // concorrentes pela mesma informação que cabe numa única consulta.
   const [reactions, setReactions] = useState<Record<string, QuestionReactionValue>>({});
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const [nextAnswers, nextBookmarks, nextReactions] = await Promise.all([
-        answersRepository.getAnswers(),
-        bookmarksRepository.getBookmarks(),
-        questionReactionsRepository.getMyReactions(),
-      ]);
-      if (cancelled) return;
+  // Do servidor (45-G, D-2): sem rede, o que já está na tela fica e o aviso
+  // aparece. Até a primeira carga dar certo, os cards sabem que o favorito
+  // não é conhecido (`known: false`) e não gravam a partir dele (AUD-29).
+  const [loaded, setLoaded] = useState(false);
+  const { status: loadStatus } = useServerLoad(async () => {
+    const [nextAnswers, nextBookmarks, nextReactions] = await Promise.all([
+      answersRepository.getAnswers(),
+      bookmarksRepository.getBookmarks(),
+      questionReactionsRepository.getMyReactions(),
+    ]);
+    return () => {
       setAnswers(nextAnswers);
       setBookmarks(nextBookmarks);
       setReactions(nextReactions);
-    })();
-    return () => {
-      cancelled = true;
+      setLoaded(true);
     };
-  }, []);
+  });
 
   // If focusQuestionId exists, locate it
   const filteredQuestions = useMemo(() => {
@@ -216,6 +218,7 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
 
   return (
     <div className="w-full max-w-[1600px] mx-auto space-y-6">
+      <ConnectionNotice status={loadStatus} />
       {/* ── Retorno ao pack do Estudo Temático ─────────────────────── */}
       {onReturnToThematicStudy && (
         <div
@@ -549,6 +552,7 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
                 answer: answers[q.id] ?? null,
                 bookmarked: bookmarks.questions.includes(q.id),
                 reaction: reactions[q.id] ?? null,
+                known: loaded,
               }}
             />
           ))}

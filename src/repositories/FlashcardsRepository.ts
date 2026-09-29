@@ -67,18 +67,15 @@ class LocalStorageFlashcardsRepository implements FlashcardsRepository {
   }
 }
 
+// Leitura (45-G, D-2): com Supabase configurado, só do servidor. A falha sobe
+// para a tela, que diz "sem conexão" — nunca cai numa cópia local vazia ou velha.
 class ResilientFlashcardsRepository implements FlashcardsRepository {
   private supa = new SupabaseFlashcardsRepository();
   private local = new LocalStorageFlashcardsRepository();
 
   async getFlashcards(): Promise<Flashcard[]> {
     if (!isSupabaseConfigured) return this.local.getFlashcards();
-    try {
-      const res = await this.supa.getFlashcards();
-      return res && res.length > 0 ? res : this.local.getFlashcards();
-    } catch {
-      return this.local.getFlashcards();
-    }
+    return this.supa.getFlashcards();
   }
 
   // As gravações abaixo passam pela fila de sincronização (syncQueue): grava
@@ -117,12 +114,7 @@ class ResilientFlashcardsRepository implements FlashcardsRepository {
 
   async getDueFlashcards(): Promise<Flashcard[]> {
     if (!isSupabaseConfigured) return this.local.getDueFlashcards();
-    try {
-      const res = await this.supa.getDueFlashcards();
-      return res && res.length > 0 ? res : this.local.getDueFlashcards();
-    } catch {
-      return this.local.getDueFlashcards();
-    }
+    return this.supa.getDueFlashcards();
   }
 
   async updateFlashcardSRS(cardId: string, srs: FlashcardSRS): Promise<void> {

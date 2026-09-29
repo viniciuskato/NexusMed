@@ -23,6 +23,9 @@ import { questionsRepository } from '../../repositories/QuestionsRepository';
 import { questionReactionsRepository } from '../../repositories/QuestionReactionsRepository';
 import { GamificationService, CELEBRATION_STREAK_LENGTH } from '../../services/gamification';
 import { ContextualFeedbackPopover } from '../feedback/ContextualFeedbackPopover';
+import { ConnectionNotice } from '../common/ConnectionNotice';
+import { LoadStatus, loadStatusOf } from '../../services/connectivity';
+import { useAutoRetry } from '../../hooks/useAutoRetry';
 
 interface QuestionCardProps {
   question: Question;
@@ -48,6 +51,8 @@ interface QuestionCardProps {
     answer: QuestionAnswerRecord | null;
     bookmarked: boolean;
     reaction: QuestionReactionValue | null;
+    /** `false` enquanto a carga do pai não deu certo (sem rede): o favorito não é conhecido (45-G). */
+    known?: boolean;
   };
 }
 
@@ -85,6 +90,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const answerSubmissionRef = useRef(false);
   const correctionUnsubscribeRef = useRef<(() => void) | null>(null);
   const correctionAppliedRef = useRef(false);
+  // O estudante já respondeu neste card, nesta sessão (45-G, revisão do #93).
+  // A partir daí, recarregar os dados (nova tentativa sem rede, "Tentar
+  // agora", ou o pai hidratando de novo quando a carga dele volta) não mexe
+  // mais na resposta, na correção pendente nem na assinatura dela: o servidor
+  // pode ainda não ter a resposta que está na fila, e a releitura a apagaria da
+  // tela.
+  const sessionAnswerRef = useRef(false);
   const [myReaction, setMyReaction] = useState<QuestionReactionValue | null>(null);
   // Distingue "reidratado de uma tentativa já existente no servidor" de
   // "respondida agora, nesta sessão" — usado só para não confundir os dois
@@ -110,51 +122,107 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const hydratedKey = hydrated
     ? `${hydrated.answer?.selectedOption ?? ''}|${hydrated.answer?.isCorrect ?? ''}|${
         hydrated.answer?.timestamp ?? ''
-      }|${hydrated.bookmarked}|${hydrated.reaction ?? ''}`
+      }|${hydrated.bookmarked}|${hydrated.reaction ?? ''}|${hydrated.known !== false}`
     : null;
 
   const [isHovered, setIsHovered] = useState(false);
+  // Carga do card avulso (sem `hydrated`), do servidor (45-G, D-2). Numa
+  // falha, só o que chegou é aplicado; o resto fica como estava, o aviso
+  // aparece e a carga tenta de novo sozinha (useAutoRetry). Enquanto o
+  // favorito não é conhecido, o botão fica desativado — senão gravaria a
+  // partir de um estado que a tela não sabe (AUD-29).
+  const [hydrateStatus, setHydrateStatus] = useState<LoadStatus>('ok');
+  const [bookmarkKnown, setBookmarkKnown] = useState(true);
+  // Se a reação já existe pra esta questão (45-G, revisão do #93, item 5) —
+  // mesmo padrão do favorito (AUD-29): enquanto não é conhecida, o botão
+  // fica desativado, nunca grava por cima de um estado que a tela não sabe.
+  const [reactionKnown, setReactionKnown] = useState(true);
+  const [hydrateAttempt, setHydrateAttempt] = useState(0);
+  useAutoRetry(hydrateStatus, () => setHydrateAttempt((n) => n + 1));
 
+  // Troca de questão: zera o estado de envio E o que a tela mostra da
+  // questão anterior (seleção, "respondida", reação) — nunca numa nova
+  // tentativa de carga (ver sessionAnswerRef). Sem isto, um card reaproveitado
+  // sem remontar (SimuladoSession não usa `key`) mostrava a questão nova já
+  // "respondida", com a seleção e a reação da anterior sempre que a carga da
+  // nova falhasse antes de zerar esses estados (revisão do #93, item 5).
   useEffect(() => {
-    let cancelled = false;
-
-    const applyInitialState = (
-      initialAnswer: QuestionAnswerRecord | null,
-      bookmarked: boolean,
-      reaction: QuestionReactionValue | null
-    ) => {
-      if (cancelled) return;
-      if (!isExamMode) {
-        setSelectedOption(initialAnswer?.selectedOption || selectedOptionInExam || null);
-        setIsSubmitted(!!initialAnswer);
-        setAnswerOrigin(initialAnswer ? 'hydrated' : null);
-      }
-      setIsBookmarked(bookmarked);
-      setErrorReason(initialAnswer?.errorReason || 'lacuna_teorica');
-      setMyReaction(reaction);
-    };
-
-    const loadReviewIfAnswered = async (initialAnswer: QuestionAnswerRecord | null) => {
-      if (isExamMode || !initialAnswer) return;
-      try {
-        const review = await questionsRepository.getQuestionReview(question.id);
-        if (!cancelled) setReviewResult(review);
-      } catch {
-        // Justificativa/gabarito não puderam ser recarregados agora (rede instável)
-      }
-    };
-
+    // `selectedOptionInExam || null`, não `null` puro: no modo prova o pai
+    // (SimuladoSession) guarda a seleção de cada questão fora deste card
+    // (que é reaproveitado sem `key`) e a repassa por essa prop — zerar pra
+    // `null` sempre perderia essa seleção ao navegar. No modo estudo essa
+    // prop nunca vem preenchida, então o efeito é o mesmo: zera.
+    setSelectedOption(selectedOptionInExam || null);
+    setIsSubmitted(false);
+    setAnswerOrigin(null);
+    setMyReaction(null);
+    setReactionKnown(false);
     setReviewResult(null);
     setIsCorrectionPending(false);
     setIsAnswerSubmitting(false);
     answerSubmissionRef.current = false;
     correctionAppliedRef.current = false;
+    sessionAnswerRef.current = false;
     correctionUnsubscribeRef.current?.();
     correctionUnsubscribeRef.current = null;
+    // Só reage à troca de questão — `selectedOptionInExam` é lido aqui
+    // sempre como o valor mais atual (fecha sobre o parâmetro do render
+    // corrente), mas não deve reexecutar este reset a cada tecla/seleção.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [question.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    // `ownsStatus`: marca `hydrateStatus` 'ok' quando o gabarito chega ou
+    // quando não há nada pra buscar — no card hidratado (nada mais por
+    // carregar aqui) e no avulso quando as três cargas abaixo deram certo. Um
+    // gabarito que chega depois de um favorito/reação que falhou não pode
+    // apagar aquele aviso.
+    const applyAnswer = async (initialAnswer: QuestionAnswerRecord | null, ownsStatus: boolean) => {
+      if (cancelled || sessionAnswerRef.current) return; // resposta desta sessão manda
+      if (!isExamMode) {
+        setSelectedOption(initialAnswer?.selectedOption || selectedOptionInExam || null);
+        setIsSubmitted(!!initialAnswer);
+        setAnswerOrigin(initialAnswer ? 'hydrated' : null);
+      }
+      setErrorReason(initialAnswer?.errorReason || 'lacuna_teorica');
+      setReviewResult(null);
+      if (isExamMode || !initialAnswer) {
+        if (ownsStatus) setHydrateStatus('ok');
+        return;
+      }
+      try {
+        const review = await questionsRepository.getQuestionReview(question.id);
+        if (!cancelled && !sessionAnswerRef.current) {
+          setReviewResult(review);
+          if (ownsStatus) setHydrateStatus('ok');
+        }
+      } catch (err) {
+        // Gabarito não pôde ser (re)carregado agora — sem isto, o `catch`
+        // engolia o erro, `hydrateStatus` continuava 'ok' e o quadro vermelho
+        // de erro aparecia mesmo com resposta certa, porque `isCorrect`
+        // depende só do gabarito (revisão do #93, item 4). Mostra o aviso de
+        // rede e deixa o useAutoRetry tentar de novo. Chamar com o MESMO
+        // status de erro que já estava (nova tentativa que falha de novo)
+        // não gera re-render — é isso que impede o "flip" pra 'ok' e de
+        // volta que reiniciava o backoff do useAutoRetry a cada tentativa
+        // (revisão do #93/rodada 2, item 3).
+        if (!cancelled && !sessionAnswerRef.current) setHydrateStatus(loadStatusOf(err));
+      }
+    };
 
     if (hydrated) {
-      applyInitialState(hydrated.answer, hydrated.bookmarked, hydrated.reaction);
-      loadReviewIfAnswered(hydrated.answer);
+      // O aviso de rede do favorito/reação fica com o pai, que fez a carga
+      // (45-G) — só o gabarito é buscado aqui, e só ele decide o status
+      // (nunca `setHydrateStatus('ok')` antes de saber se essa busca deu
+      // certo: fazer isso a cada nova tentativa jogava o status pra 'ok' e
+      // de volta pro erro, resetando o backoff do useAutoRetry sempre).
+      setBookmarkKnown(hydrated.known !== false);
+      setReactionKnown(hydrated.known !== false);
+      setIsBookmarked(hydrated.bookmarked);
+      setMyReaction(hydrated.reaction);
+      void applyAnswer(hydrated.answer, true);
       return () => {
         cancelled = true;
       };
@@ -168,23 +236,26 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       ]);
       if (cancelled) return;
 
-      const answers = answersResult.status === 'fulfilled' ? answersResult.value : {};
-      const bookmarks =
-        bookmarksResult.status === 'fulfilled'
-          ? bookmarksResult.value
-          : { questions: [], compendiums: [], flashcards: [] };
-      const reaction = reactionResult.status === 'fulfilled' ? reactionResult.value : null;
+      const failure = [answersResult, bookmarksResult, reactionResult].find((r) => r.status === 'rejected');
+      // Sem falha, quem põe 'ok' é o `applyAnswer` (`ownsStatus`), só depois
+      // do gabarito — pôr 'ok' aqui e o erro de novo quando o gabarito falha
+      // fazia o aviso piscar e zerava a espera do useAutoRetry a cada
+      // tentativa (#93-R1). Resposta desta sessão: não há gabarito a buscar.
+      if (failure) setHydrateStatus(loadStatusOf((failure as PromiseRejectedResult).reason));
+      else if (sessionAnswerRef.current) setHydrateStatus('ok');
+      setBookmarkKnown(bookmarksResult.status === 'fulfilled');
+      setReactionKnown(reactionResult.status === 'fulfilled');
 
-      const initialAnswer = answers[question.id] ?? null;
-      applyInitialState(initialAnswer, bookmarks.questions.includes(question.id), reaction);
-      await loadReviewIfAnswered(initialAnswer);
+      if (bookmarksResult.status === 'fulfilled') setIsBookmarked(bookmarksResult.value.questions.includes(question.id));
+      if (reactionResult.status === 'fulfilled') setMyReaction(reactionResult.value);
+      if (answersResult.status === 'fulfilled') await applyAnswer(answersResult.value[question.id] ?? null, !failure);
     })();
 
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [question.id, hydratedKey]);
+  }, [question.id, hydratedKey, hydrateAttempt]);
 
   useEffect(
     () => () => {
@@ -267,7 +338,11 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       showToast('Resposta incorreta. Questão catalogada automaticamente no seu Caderno de Erros!');
     } else {
       showToast('Resposta correta! Excelente raciocínio clínico.');
-      await checkStreakCelebration();
+      try {
+        await checkStreakCelebration();
+      } catch {
+        // Celebração é opcional: sem rede para ler o histórico (45-G), só não celebra.
+      }
     }
   }, [errorReason, onAnswerRecorded, question, showToast, checkStreakCelebration]);
 
@@ -282,6 +357,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const handleConfirmAnswer = useCallback(async () => {
     if (!selectedOption || isSubmitted || isCorrectionPending || answerSubmissionRef.current) return;
     answerSubmissionRef.current = true;
+    sessionAnswerRef.current = true;
     correctionAppliedRef.current = false;
     setIsAnswerSubmitting(true);
 
@@ -397,7 +473,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   };
 
   const handleToggleBookmark = async () => {
-    const bookmarked = await bookmarksRepository.toggleBookmark('questions', question.id);
+    // Contrário do que a tela mostra, nunca da cópia local (45-G, AUD-29).
+    const bookmarked = await bookmarksRepository.setBookmark('questions', question.id, !isBookmarked);
     setIsBookmarked(bookmarked);
     showToast(bookmarked ? 'Questão adicionada aos seus favoritos' : 'Removida dos favoritos');
   };
@@ -426,6 +503,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           : 'border-slate-300/80 dark:border-[#243652]'
       }`}
     >
+      <ConnectionNotice status={hydrateStatus} className="mb-4" />
+
       {/* Toast */}
       {toastMessage && (
         <div className="absolute top-4 right-4 z-20 bg-slate-900 dark:bg-slate-800 text-white px-3 py-2 rounded-xl text-xs font-semibold elev-lg flex items-center gap-1.5 animate-in fade-in">
@@ -479,8 +558,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             variant="pill"
           />
           <button
+            type="button"
             onClick={handleToggleBookmark}
-            className={`p-2 rounded-xl border text-xs transition-colors cursor-pointer ${
+            disabled={!bookmarkKnown}
+            className={`p-2 rounded-xl border text-xs transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
               isBookmarked
                 ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800'
                 : 'bg-white dark:bg-[#142038] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-[#243452] hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -627,7 +708,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       )}
 
       {/* --- THE INTEGRATED ACTION BANNER (O DIFERENCIAL CONECTADO) --- */}
-      {isSubmitted && !isExamMode && (
+      {/* `reviewResult` na condição: sem o gabarito (carga falhou — ver o
+          `catch` de `applyAnswer`), `isCorrect`/`isIncorrect` são sempre
+          `false` e o quadro vermelho de erro aparecia mesmo com resposta
+          certa. Sem o gabarito, nada deste bloco aparece — o aviso de rede
+          (ConnectionNotice acima) já avisa e tenta de novo (revisão do #93,
+          item 4). */}
+      {isSubmitted && !isExamMode && reviewResult && (
         <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800 space-y-4">
           {/* Status summary */}
           {isCorrect ? (
@@ -732,7 +819,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 <button
                   type="button"
                   onClick={() => handleToggleReaction('up')}
-                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                  disabled={!reactionKnown}
+                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
                     myReaction === 'up'
                       ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
                       : 'bg-white dark:bg-[#142038] text-slate-400 dark:text-slate-500 border-slate-200 dark:border-[#243452] hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -744,7 +832,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 <button
                   type="button"
                   onClick={() => handleToggleReaction('down')}
-                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                  disabled={!reactionKnown}
+                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
                     myReaction === 'down'
                       ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800'
                       : 'bg-white dark:bg-[#142038] text-slate-400 dark:text-slate-500 border-slate-200 dark:border-[#243452] hover:bg-slate-100 dark:hover:bg-slate-800'

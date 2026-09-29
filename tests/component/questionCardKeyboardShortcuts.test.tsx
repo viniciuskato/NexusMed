@@ -39,7 +39,7 @@ vi.mock('../../src/repositories/QuestionsRepository', () => ({
 vi.mock('../../src/repositories/BookmarksRepository', () => ({
   bookmarksRepository: {
     getBookmarks: vi.fn().mockResolvedValue({ questions: [], compendiums: [], flashcards: [] }),
-    toggleBookmark: vi.fn().mockResolvedValue(false),
+    setBookmark: vi.fn().mockResolvedValue(false),
   },
 }));
 
