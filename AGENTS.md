@@ -148,7 +148,7 @@ seção "Armadilhas já descobertas".
 14. **Função nova em `public` nasce com EXECUTE para `PUBLIC`** (e `anon`
     herda); o revoke de default privileges só tira `anon`. Toda RPC nova
     precisa de `revoke all on function ... from public, anon;` explícito —
-    a guarda pgTAP ainda não confere isso (AUD-31).
+    a guarda `security_guards.test.sql` confere isso (AUD-31.1).
 15. **Campo de seção do compêndio com Markdown inline (`content`,
     `keyTakeaways`, `clinicalPearl`, `warningAlert`, `examConsensus`, e
     campos derivados como `Flashcard.back`/`mechanismHighlight`) renderizado

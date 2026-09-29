@@ -55,7 +55,6 @@ jobs:
       GH_REPO: ${{ github.repository }}
       EVENTO: ${{ github.event_name }}
       PR: ${{ github.event.pull_request.number }}
-      MIGRACOES_REMOTO_URL: ${{ secrets.MIGRACOES_REMOTO_URL }}
     steps:
       # Só fora de PR: o `main` (ou a branch do workflow_dispatch) é código
       # confiável. Em PR, nada do PR é baixado.
@@ -65,6 +64,8 @@ jobs:
           persist-credentials: false
 
       - name: Confere se as migrations estão no Supabase de produção
+        env:
+          MIGRACOES_REMOTO_URL: ${{ secrets.MIGRACOES_REMOTO_URL }}
         run: |
           set -euo pipefail
           alteradas=""

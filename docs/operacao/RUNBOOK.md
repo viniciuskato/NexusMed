@@ -162,16 +162,26 @@ obrigatório antes prende o PR para sempre.
    barreira — a própria sessão consegue desligá-lo. O papel também herda o
    que `PUBLIC` concede, e isso não se fecha só para ele: o Postgres não tem
    negação por papel (um `revoke` tira só o que foi dado ao próprio papel, e
-   tirar de `PUBLIC` tiraria de todos). Pelas migrations do repositório, em
-   27/09 o herdado era só executar `rls_auto_enable()`, que é gatilho de
-   evento e não pode ser chamada, e ler as estatísticas do
-   `pg_stat_statements`, das quais cada papel só vê as próprias consultas.
-   O limite: objeto novo com permissão para `PUBLIC` passa a valer para ele
-   também. Uma função `security definer` nova sem o `revoke ... from public`
-   (risco 14 do `AGENTS.md`; nenhuma guarda confere isso ainda, AUD-31) seria
-   chamável com esta credencial, e a sessão pode definir
-   `request.jwt.claims`, que é o que `auth.uid()` lê: a chamada valeria como
-   a de qualquer usuário, admin inclusive.
+   tirar de `PUBLIC` tiraria de todos). O limite: objeto novo com permissão
+   para `PUBLIC` passaria a valer para ele também — inclusive uma função
+   `security definer` nova sem o `revoke ... from public` (risco 14 do
+   `AGENTS.md`), que seria chamável com esta credencial, e a sessão pode
+   definir `request.jwt.claims`, que é o que `auth.uid()` lê: a chamada
+   valeria como a de qualquer usuário, admin inclusive. **Isso está fechado
+   por mecanismo (AUD-31.1):** a guarda pgTAP
+   `supabase/tests/database/security_guards.test.sql` reprova, nomeando a
+   função, qualquer função chamável (que não seja de gatilho) de um schema
+   que o repositório cria e onde `PUBLIC` tem `USAGE` (`public`; `app` entra
+   pela mesma lista, mesmo sem ter `USAGE` hoje) que fique com `EXECUTE`
+   para `PUBLIC` ou para `anon` — o PR que criar essa função fica com o
+   check full vermelho e não é mesclado nem tem a migration aplicada. Função
+   de gatilho (`returns trigger`/`returns event trigger`) de `public` com
+   `EXECUTE` para `PUBLIC` não é risco, porque não é chamável fora do
+   disparo do gatilho — em 28/09 há 15 assim, todas sem esse revoke, como
+   esperado; `rls_auto_enable()` não é uma delas, porque não está em nenhuma
+   migration deste repositório. O que a guarda não cobre é o que o Supabase
+   gerencia fora das migrations do repositório (schemas como `auth`,
+   `storage`, `extensions`, e funções internas deles).
 2. No Supabase, botão "Connect", aba "Session pooler": copie a URI. Nela,
    troque `postgres.jfvhwwvixwvgjfqzlkkb` por
    `ci_migracoes_leitura.jfvhwwvixwvgjfqzlkkb` e `[YOUR-PASSWORD]` pela senha
@@ -183,7 +193,10 @@ obrigatório antes prende o PR para sempre.
    histórico do Supabase de produção". Vermelho mostra só a categoria do erro
    (senha recusada, URI inválida, não conectou), nunca a mensagem do psql.
 5. Com o passo 4 verde, no ruleset "Proteger main": inclua
-   `migration-no-remoto` (e `revisado`) entre os checks obrigatórios.
+   `migration-no-remoto` (e `revisado`) entre os checks obrigatórios. Um PR
+   já aberto no momento desse passo só ganha o check novo num evento novo
+   (push de commit ou "Update branch") — sem isso ele fica preso, exigindo
+   um check que nunca rodou nele.
 
 ## 4. Rollback
 
