@@ -726,7 +726,7 @@ teste reprova jargão interno neles.
 
 **Fora de escopo.** Enviar material (44-E); IA chamada pelo próprio site.
 **Depende de.** Nada.
-**Estado.** Em andamento.
+**Estado.** Concluída — PR #100.
 
 ---
 
