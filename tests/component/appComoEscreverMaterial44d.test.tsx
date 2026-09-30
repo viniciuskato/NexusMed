@@ -54,6 +54,14 @@ vi.mock('../../src/hooks/useAppData', () => ({
   }),
 }));
 
+vi.mock('../../src/repositories/MaterialSubmissionsRepository', () => ({
+  materialSubmissionsRepository: {
+    listMine: vi.fn().mockResolvedValue([]),
+    listAll: vi.fn().mockResolvedValue([]),
+    submit: vi.fn(),
+  },
+  envioDeMaterialDisponivel: true,
+}));
 vi.mock('../../src/components/dashboard/DashboardView', () => ({
   DashboardView: () => <div data-testid="painel">painel</div>,
 }));
@@ -110,6 +118,23 @@ describe('44-D — "Como escrever um material" no app', () => {
     expect(window.location.hash).toBe('#/como-escrever-material');
   });
 
+  it('44-E: estudante ativo abre "Enviar material" pelo menu, e a página de instruções leva até ela', async () => {
+    render(<App />);
+    await screen.findByTestId('painel');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Enviar material' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Enviar material' })).toBeTruthy();
+    expect(window.location.hash).toBe('#/enviar-material');
+    expect(screen.getByRole('heading', { name: 'Meus envios' })).toBeTruthy();
+
+    // Da tela de envio para as instruções e de volta, pelos links.
+    fireEvent.click(screen.getByRole('button', { name: 'Veja como escrever um material' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Como escrever um material' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar material' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Enviar material' })).toBeTruthy();
+  });
+
   it('usuário pendente não vê a página nem o menu, mesmo com o endereço direto', async () => {
     authState.profile = { role: 'student', status: 'pending' };
     window.location.hash = '#/como-escrever-material';
@@ -120,6 +145,17 @@ describe('44-D — "Como escrever um material" no app', () => {
     expect(screen.queryByRole('heading', { name: 'Como escrever um material' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Menu do perfil de usuário' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Copiar prompt revisor' })).toBeNull();
+    // Nem a tela de envio, pelo endereço direto.
+    expect(screen.queryByRole('heading', { name: 'Enviar material' })).toBeNull();
+  });
+
+  it('usuário pendente não abre a tela de envio pelo endereço direto', async () => {
+    authState.profile = { role: 'student', status: 'pending' };
+    window.location.hash = '#/enviar-material';
+    render(<App />);
+    expect(await screen.findByText(/aprova/i)).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Enviar material' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Enviar/ })).toBeNull();
   });
 
   it('usuário bloqueado ou sem status também não acessa', async () => {

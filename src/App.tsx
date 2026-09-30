@@ -99,6 +99,7 @@ const AdminCMSView = lazyWithReload(() => import('./components/admin/AdminCMSVie
 const ThematicStudyView = lazyWithReload(() => import('./components/thematic/ThematicStudyView').then((m) => ({ default: m.ThematicStudyView })));
 // 44-D: "Como escrever um material" traz o padrão e os prompts como texto do
 // build; fica fora do bundle inicial.
+const EnviarMaterialView = lazyWithReload(() => import('./components/material/EnviarMaterialView').then((m) => ({ default: m.EnviarMaterialView })));
 const ComoEscreverMaterialView = lazyWithReload(() => import('./components/material/ComoEscreverMaterialView').then((m) => ({ default: m.ComoEscreverMaterialView })));
 
 // Views que podem ser restauradas depois de um reload (Prompt 22-A). É uma
@@ -117,6 +118,7 @@ const PERSISTED_VIEWS = [
   'simulados',
   'errors',
   'como-escrever-material',
+  'enviar-material',
   'admin',
 ] as const;
 
@@ -948,7 +950,21 @@ function AuthenticatedApp() {
 
           {/* 44-D: qualquer usuário ativo (o gate de status vem antes, no topo do componente) */}
           {activeView === 'como-escrever-material' && (
-            <ComoEscreverMaterialView disciplines={disciplines} themes={themes} />
+            <ComoEscreverMaterialView
+              disciplines={disciplines}
+              themes={themes}
+              onAbrirEnvio={() => handleSelectView('enviar-material')}
+            />
+          )}
+
+          {/* 44-E: qualquer usuário ativo envia material; o envio só é guardado, não publica nada. */}
+          {activeView === 'enviar-material' && (
+            <EnviarMaterialView
+              disciplines={disciplines}
+              themes={themes}
+              compendiums={compendiums}
+              onAbrirComoEscrever={() => handleSelectView('como-escrever-material')}
+            />
           )}
 
           {/* Admin CMS - Apenas para papel admin */}

@@ -9,7 +9,7 @@ import {
   TEXTO_COPIAR_CRIAR,
   TEXTO_COPIAR_REVISAR,
 } from '../../content/padraoMaterial';
-import { dividirEmBlocos } from '../../utils/padraoMaterial';
+import { dividirEmBlocos, paraExibicao } from '../../utils/padraoMaterial';
 
 // ============================================================================
 // "Como escrever um material" (44-D)
@@ -24,6 +24,8 @@ import { dividirEmBlocos } from '../../utils/padraoMaterial';
 interface ComoEscreverMaterialViewProps {
   disciplines: Discipline[];
   themes: Theme[];
+  /** Abre a tela "Enviar material" (44-E). */
+  onAbrirEnvio?: () => void;
 }
 
 type EstadoCopia = 'parado' | 'copiado' | 'falhou';
@@ -163,6 +165,7 @@ const CartaoPrompt: React.FC<CartaoPromptProps> = ({
 export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> = ({
   disciplines,
   themes,
+  onAbrirEnvio,
 }) => {
   const catalogo = useMemo(() => {
     const collator = new Intl.Collator('pt-BR');
@@ -198,9 +201,23 @@ export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> =
           className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed p-4 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700"
         >
           <strong>O caminho:</strong> crie o material com o primeiro prompt; se quiser, confira com o prompt
-          revisor, na sua própria IA (opcional); depois envie pelo site (em breve). O revisor de IA do
-          próprio NexusMed confere o material: com “APTO PARA ENVIAR”, ele vai ao ar com o selo “revisado
-          por IA”, e qualquer leitor pode reportar um erro.
+          revisor, na sua própria IA (opcional); depois envie pelo site
+          {onAbrirEnvio && (
+            <>
+              {' ('}
+              <button
+                type="button"
+                id="como-escrever-enviar"
+                onClick={onAbrirEnvio}
+                className="text-teal-700 dark:text-teal-400 font-semibold underline cursor-pointer"
+              >
+                Enviar material
+              </button>
+              {')'}
+            </>
+          )}
+          . O revisor de IA do próprio NexusMed confere o material: com “APTO PARA ENVIAR”, ele vai ao ar com
+          o selo “revisado por IA”, e qualquer leitor pode reportar um erro.
         </p>
       </header>
 
@@ -220,7 +237,7 @@ export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> =
           <CartaoPrompt
             id="como-escrever-cartao-revisar"
             titulo="2. Revisar o material"
-            descricao="Opcional, mas recomendado. Cole numa IA, depois cole o material pronto. Ela confere fontes e formato e termina dizendo “APTO PARA ENVIAR” ou “NÃO APTO”, com o texto pronto para devolver a quem escreveu."
+            descricao="Opcional, mas recomendado. Cole numa IA, depois cole o material pronto. Ela confere fontes e formato e termina com o veredito (“APTO PARA ENVIAR” ou “NÃO APTO”) e um bloco de correção, pronto para devolver a quem escreveu."
             rotuloBotao="Copiar prompt revisor"
             prompt={PROMPT_REVISAR_MATERIAL}
             textoCompleto={TEXTO_COPIAR_REVISAR}
@@ -245,10 +262,7 @@ export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> =
                 key={disciplina.id}
                 className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
               >
-                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                  <span className="sr-only">Disciplina: </span>
-                  {disciplina.name}
-                </p>
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{disciplina.name}</p>
                 {temas.length === 0 ? (
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Nenhum Tema cadastrado.</p>
                 ) : (
@@ -258,7 +272,6 @@ export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> =
                         key={tema.id}
                         className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-200"
                       >
-                        <span className="sr-only">Tema: </span>
                         {tema.name}
                       </li>
                     ))}
@@ -274,6 +287,13 @@ export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> =
         <h2 id="como-escrever-padrao" className="text-xl font-bold text-slate-900 dark:text-slate-100">
           O padrão de conteúdos
         </h2>
+        <p
+          id="como-escrever-aviso-fontes"
+          className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900"
+        >
+          No NexusMed só valem fontes disponíveis on-line: livro-texto não é aceito, mesmo que o padrão abaixo o
+          cite.
+        </p>
         <div
           id="como-escrever-padrao-texto"
           className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
@@ -287,7 +307,7 @@ export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> =
                 {bloco.conteudo}
               </pre>
             ) : (
-              <SafeMarkdown key={i} content={bloco.conteudo} />
+              <SafeMarkdown key={i} content={paraExibicao(bloco.conteudo)} />
             ),
           )}
         </div>

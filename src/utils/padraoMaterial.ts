@@ -47,6 +47,16 @@ export function montarTextoParaCopiar(prompt: string, parte1: string): string {
   return [prompt, '', MARCA_INICIO_PADRAO, '', parte1, '', MARCA_FIM_PADRAO].join('\n');
 }
 
+/**
+ * O texto da Parte 1 como aparece na tela: o item de checklist `- [ ] ...` do
+ * padrão vira `- ☐ ...`, porque o leitor de Markdown do site não desenha
+ * caixa de seleção e mostraria o "[ ]" literal. Só para exibição — o texto
+ * copiado para a IA continua sendo o do arquivo.
+ */
+export function paraExibicao(markdown: string): string {
+  return markdown.replace(/^(\s*)[-*]\s+\[ \]\s+/gm, '$1- ☐ ');
+}
+
 export type BlocoPadrao =
   | { tipo: 'texto'; conteudo: string }
   | { tipo: 'codigo'; conteudo: string; linguagem: string };

@@ -29,6 +29,7 @@ import {
   Link,
   Eye,
   EyeOff,
+  Inbox,
 } from 'lucide-react';
 import { Discipline, Theme, Question, QuestionMaterialLink, Compendium, Flashcard, CompendiumSection, UserFeedback } from '../../types';
 import { QuestionMaterialLinksEditor } from './QuestionMaterialLinksEditor';
@@ -57,6 +58,7 @@ import MaterialReferencesPanel from './MaterialReferencesPanel';
 import ImportMaterialModal from './ImportMaterialModal';
 import ImportQuestionsModal from './ImportQuestionsModal';
 import CreateThemeModal from './CreateThemeModal';
+import { EnviosDeMaterialAdmin } from './EnviosDeMaterialAdmin';
 
 const CREATE_NEW_THEME = '__create_new_theme__';
 import { getErrorMessage } from '../../utils/errorMessage';
@@ -96,7 +98,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   onOpenCompendium,
 }) => {
   const [activeTab, setActiveTab] = usePersistedState<
-    'compendiums' | 'questions' | 'flashcards' | 'users' | 'feedback' | 'database'
+    'compendiums' | 'questions' | 'flashcards' | 'users' | 'feedback' | 'envios' | 'database'
   >('admin_active_tab', 'compendiums');
   useScrollMemory(`admin:${activeTab}`);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -902,6 +904,19 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
         >
           <MessageSquareWarning className="w-4 h-4" />
           <span>Feedback{feedbackPendingCount > 0 ? ` (${feedbackPendingCount} pendente${feedbackPendingCount > 1 ? 's' : ''})` : ''}</span>
+        </button>
+
+        <button
+          id="admin-tab-envios"
+          onClick={() => setActiveTab('envios')}
+          className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+            activeTab === 'envios'
+              ? 'bg-slate-900 text-white dark:bg-teal-600 dark:text-white elev-xs font-bold'
+              : 'bg-stone-100 dark:bg-[#142038] text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-[#1A2845]'
+          }`}
+        >
+          <Inbox className="w-4 h-4" />
+          <span>Envios de material</span>
         </button>
       </div>
 
@@ -2433,6 +2448,11 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* ── TAB: ENVIOS DE MATERIAL (44-E) ─────────────────────────── */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {activeTab === 'envios' && <EnviosDeMaterialAdmin disciplines={disciplines} themes={themes} />}
 
       {/* ══════════════════════════════════════════════════════════════ */}
       {/* ── TAB: FEEDBACK ──────────────────────────────────────────── */}

@@ -728,6 +728,20 @@ teste reprova jargão interno neles.
 **Depende de.** Nada.
 **Estado.** Concluída — PR #100.
 
+### 44-E — Enviar material pelo site
+
+**Origem.** Pedido do dono (29/09): qualquer usuário aprovado pode postar
+material.
+
+**Aceite.** Usuário ativo envia o `.md` pelo site; só entra arquivo aceito
+pela importação e sem pendência da checagem do padrão. O envio fica guardado
+com estado, visível só para quem enviou e para admin; no máximo 3 envios
+esperando revisão por pessoa e 300 KB por texto, travados no banco.
+
+**Fora de escopo.** Revisor de IA (44-F); publicar (44-G); questões.
+**Depende de.** 44-D.
+**Estado.** Em andamento.
+
 ---
 
 ## 9. Frente 45 — Confiabilidade

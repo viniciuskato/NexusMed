@@ -58,6 +58,14 @@ describe('44-D — item de menu "Como escrever um material"', () => {
     expect(screen.queryByRole('menuitem', { name: /Área Editorial/ })).toBeNull();
   });
 
+  it('44-E: estudante (não admin) vê "Enviar material" no mesmo menu, e ele abre a tela de envio', () => {
+    authState.role = 'student';
+    const onSelectView = renderHeader();
+    fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Enviar material' }));
+    expect(onSelectView).toHaveBeenCalledWith('enviar-material');
+  });
+
   it('admin também vê o item', () => {
     authState.role = 'admin';
     renderHeader();
