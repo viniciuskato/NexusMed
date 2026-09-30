@@ -575,7 +575,7 @@ existem, mas espalhadas.
 
 **Fora de escopo.** Metas, estatísticas novas, gamificação nova.
 **Depende de.** 43-C.
-**Estado.** Planejada. Congelada (D-7, 28/09).
+**Estado.** Implementada na branch `feat/43e-tela-hoje`; PR ainda não aberto. Voltou à fila pela D-10 (29/09).
 
 ---
 

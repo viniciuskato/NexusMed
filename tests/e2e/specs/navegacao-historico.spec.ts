@@ -32,7 +32,8 @@ test.describe('Navegação pelo histórico do navegador', () => {
     cleanup.push(() => deleteTestUser(student.id));
 
     await login(page, student);
-    await expect(page).toHaveURL(/#\/dashboard$/);
+    // Desde a 43-E o app abre em "Hoje".
+    await expect(page).toHaveURL(/#\/today$/);
 
     await page.locator('#nav-thematic-study').click();
     await expect(page.locator('#thematic-study-view')).toBeVisible();
