@@ -191,6 +191,7 @@ begin
     v_prev := v_new;
   end loop;
 end $chain$;
+grant execute on function pg_temp.tax_chain(uuid, uuid, uuid, int) to public;
 
 select lives_ok(
   format($$ select pg_temp.tax_chain(%L, %L, %L, 6) $$,

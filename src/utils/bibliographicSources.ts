@@ -46,6 +46,28 @@ export interface OpenAccessReferenceLink {
 }
 
 /**
+ * Tira a pontuação da frase que vem colada no fim de um DOI ou de uma URL
+ * ("... DOI: 10.1056/NEJMoa2001017." → sem o ponto). Parêntese de fechamento só
+ * sai quando não tem o de abertura no próprio identificador: o DOI
+ * "10.1016/S0140-6736(20)30183-5" mantém os seus.
+ */
+function semPontuacaoFinal(texto: string): string {
+  let t = texto;
+  for (;;) {
+    const ultimo = t.slice(-1);
+    if (ultimo !== '' && '.,;:!?'.includes(ultimo)) {
+      t = t.slice(0, -1);
+    } else if (ultimo === ')' && t.split('(').length < t.split(')').length) {
+      t = t.slice(0, -1);
+    } else if (ultimo === ']' && t.split('[').length < t.split(']').length) {
+      t = t.slice(0, -1);
+    } else {
+      return t;
+    }
+  }
+}
+
+/**
  * Resolve, quando possível, um link clicável para a citação — SEM inventar
  * metadados nem "adivinhar" a fonte pelo assunto do texto (esse
  * mapeamento por palavra-chave existia antes e foi removido: uma citação
@@ -94,7 +116,7 @@ export function resolveOpenAccessReferenceLink(
   const urlMatch = citationText.match(/https?:\/\/[^\s)\]]+/i);
   if (urlMatch) {
     return {
-      url: urlMatch[0],
+      url: semPontuacaoFinal(urlMatch[0]),
       badgeLabel: 'Link direto na citação',
       documentType: studyType ?? 'Documento Oficial',
       isOpenAccess: true,
@@ -107,7 +129,7 @@ export function resolveOpenAccessReferenceLink(
   const doiMatch = citationText.match(/10\.\d{4,9}\/[-._;()/:A-Z0-9]+/i);
   if (doiMatch) {
     return {
-      url: `https://doi.org/${doiMatch[0]}`,
+      url: `https://doi.org/${semPontuacaoFinal(doiMatch[0])}`,
       badgeLabel: 'DOI',
       documentType: studyType ?? 'Artigo Científico',
       isOpenAccess: false,

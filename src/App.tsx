@@ -713,8 +713,10 @@ function AuthenticatedApp() {
     setActiveView('simulado-session');
   };
 
-  // Active Compendium Object
-  const activeCompendium = compendiums.find((c) => c.id === selectedCompendiumId) || compendiums[0];
+  // Material aberto no leitor. Sem fallback para outro material (45-H): um link
+  // para material inexistente ou despublicado mostra "não encontrado", nunca o
+  // primeiro da lista no lugar dele.
+  const activeCompendium = compendiums.find((c) => c.id === selectedCompendiumId);
 
   return (
     <div className="min-h-screen bg-[#F6F7F9] dark:bg-[#0B1220] text-[#172033] dark:text-[#E5E7EB] font-sans flex flex-col selection:bg-teal-500 selection:text-white antialiased transition-colors max-w-full overflow-x-hidden">
@@ -808,6 +810,33 @@ function AuthenticatedApp() {
               onReturnToQuestions={libraryOrigin ? handleReturnToQuestions : undefined}
               lastReadingSession={lastReadingSession}
             />
+          )}
+
+          {activeView === 'compendium-reader' && !activeCompendium && (
+            <div
+              id="material-nao-encontrado"
+              className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center max-w-lg mx-auto my-12 elev-md"
+            >
+              <h2 className="text-xl font-bold font-serif-reading text-slate-900 dark:text-white mb-2">
+                Material não encontrado
+              </h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                Este material não existe ou não está mais publicado.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setLibraryLastView('list');
+                  setSelectedCompendiumId(null);
+                  setSelectedSectionId(undefined);
+                  setLibraryOrigin(null);
+                  setActiveView('compendiums');
+                }}
+                className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold cursor-pointer transition-colors elev-xs"
+              >
+                Ir para a Biblioteca
+              </button>
+            </div>
           )}
 
           {activeView === 'compendium-reader' && activeCompendium && (

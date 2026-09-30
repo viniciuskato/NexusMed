@@ -1,3 +1,4 @@
+import { exigirLinhaAtualizada } from './linhaAtualizada';
 import { Question, QuestionMaterialLink, QuestionOption, QuestionReviewResult } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { QuestionsRepository } from './QuestionsRepository';
@@ -327,8 +328,9 @@ export class SupabaseQuestionsRepository implements QuestionsRepository {
     // Sem RPC dedicada para o caminho inverso — não há validação necessária
     // para tirar de circulação, só materials_admin_write/questions_admin_write
     // ("for all") permitindo o UPDATE direto.
-    const { error } = await supabase.from('questions').update({ status: 'draft' }).eq('id', id);
+    const { data, error } = await supabase.from('questions').update({ status: 'draft' }).eq('id', id).select('id');
     if (error) throw error;
+    exigirLinhaAtualizada(data, 'Despublicar questão');
   }
 
   // Troca os vínculos pela RPC `set_question_materials` (só admin). Não toca

@@ -120,7 +120,11 @@ export function parseInline(text: string): React.ReactNode[] {
         // (ex.: [3](#ref-3) — usado para citação inline apontar pra
         // referência correspondente no rodapé, sem depender de HTML bruto).
         const isAnchor = href.startsWith('#');
-        const isSafe = /^https?:\/\//i.test(href) || href.startsWith('/') || isAnchor;
+        // "//site" e "/\site" começam com barra, mas o navegador os resolve
+        // como outro site (mesmo protocolo da página): não são caminho interno
+        // (45-H, AUD-32.1).
+        const isInternalPath = href.startsWith('/') && !href.startsWith('//') && !href.startsWith('/\\');
+        const isSafe = /^https?:\/\//i.test(href) || isInternalPath || isAnchor;
         // Citação inline (ex.: [3](#ref-3)) recebe estilo distinto do link
         // comum — menor, sobrescrito, com colchete visual via CSS (não faz
         // parte do texto do link, então nunca "gruda" em outra citação
@@ -149,7 +153,7 @@ export function parseInline(text: string): React.ReactNode[] {
           <a
             key={idx}
             href={isSafe ? href : '#'}
-            target={href.startsWith('/') || isAnchor ? undefined : '_blank'}
+            target={isInternalPath || isAnchor ? undefined : '_blank'}
             rel="noopener noreferrer"
             className="text-teal-700 dark:text-teal-400 hover:underline font-medium"
           >

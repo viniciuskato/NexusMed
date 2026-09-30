@@ -1,6 +1,7 @@
 import { FlashcardSRS } from '../types';
 
-const MAX_INTERVAL_DAYS = 36500;
+/** Teto do intervalo (100 anos). O mesmo valor está em `submit_flashcard_review`, no SQL (45-H, AUD-08). */
+export const MAX_INTERVAL_DAYS = 36500;
 
 /**
  * SuperMemo SM-2 Spaced Repetition Algorithm implementation for Medical Flashcards

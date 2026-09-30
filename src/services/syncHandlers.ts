@@ -7,6 +7,7 @@
 // única vez (side-effect de registro) a partir de src/App.tsx.
 // ============================================================================
 
+import { exigirLinhaAtualizada } from '../repositories/linhaAtualizada';
 import { supabase } from '../lib/supabaseClient';
 import { registerHandler } from './syncQueue';
 import { supabaseFlashcardsRepository } from '../repositories/SupabaseFlashcardsRepository';
@@ -403,11 +404,15 @@ export function registerSyncHandlers(): void {
   // os mesmos valores tem o mesmo efeito) — só precisava de retry/visibilidade,
   // não de um `client_op_id` novo.
   registerHandler('error_notebook_update', async (payload: ErrorNotebookUpdateOpPayload) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('error_notebook')
       .update({ resolved: payload.errorItem.resolved, user_notes: payload.errorItem.userNotes })
-      .eq('id', payload.errorItem.id);
+      .eq('id', payload.errorItem.id)
+      .select('id');
     if (error) throw error;
+    // Sem linha atingida (45-H, AUD-32.4): a operação falha de vez e fica
+    // visível, em vez de contar como enviada.
+    exigirLinhaAtualizada(data, 'Caderno de erros');
     return null;
   });
 
