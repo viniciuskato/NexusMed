@@ -44,6 +44,11 @@ e ficam como histórico (mesma lógica de preservação já usada em
 > estão no plano. Ao concluir uma unidade, a execução muda aqui o estado dos
 > achados que ela resolve para "Concluído (unidade NN-X)". Conferido em
 > 2026-09-23: nenhum achado aberto foi corrigido desde a 3ª rodada.
+>
+> **Desde a D-7 (28/09):** item daqui só vira issue se passar pela fronteira
+> defeito × evolução (seção 5 do plano), ou vira pedido da produção com o
+> "sim" do dono; a diretoria não puxa item por conta própria, e o estado
+> aqui é atualizado por ela, em lote, no PR do "semana".
 
 Itens da auditoria técnica de 2026-09-18 (arquitetura, qualidade,
 segurança e negócio). O que já virou PR não está aqui: RPCs de gabarito
