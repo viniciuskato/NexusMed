@@ -70,6 +70,8 @@ interface ReviewRow {
   content_sha256: string;
   completed_at: string | null;
   created_at: string;
+  /** Os materiais que a IA recebeu com o lote (gravados pelo banco na reserva). */
+  material_ids: string[] | null;
 }
 
 interface Row {
@@ -92,7 +94,32 @@ interface Row {
 const COLUMNS =
   'id, title, status, created_at, updated_at, material_ids, content_sha256, published_question_ids, publication_note';
 const REVIEW_COLUMNS =
-  'reviews:material_reviews(id, status, verdict, findings_text, correction_block, error_kind, content_sha256, completed_at, created_at)';
+  'reviews:material_reviews(id, status, verdict, findings_text, correction_block, error_kind, content_sha256, completed_at, created_at, material_ids)';
+
+/** Os mesmos materiais, em qualquer ordem. */
+function mesmoConjunto(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((id) => b.includes(id));
+}
+
+/**
+ * A revisão que vale para o texto E os materiais atuais (44-H3): a mais recente daquele texto,
+ * em qualquer conjunto de materiais, precisa ser a dos materiais de agora; senão nenhuma vale
+ * (uma revisão antiga de outros materiais não pode aparecer como o veredito de hoje).
+ */
+export function revisaoQueValeParaOTextoEOsMateriais(row: {
+  content_sha256?: string | null;
+  status: string;
+  material_ids: string[] | null;
+  reviews?: ReviewRow[] | null;
+}): MaterialReviewView | null {
+  if (!row.content_sha256) return null;
+  const daquelesTexto = (row.reviews ?? []).filter(
+    (r) => r.content_sha256 === row.content_sha256 && r.verdict && (r.status === 'concluida' || r.status === 'erro'),
+  );
+  const maisRecente = [...daquelesTexto].sort((a, b) => (b.completed_at ?? b.created_at).localeCompare(a.completed_at ?? a.created_at))[0];
+  if (!maisRecente || !maisRecente.material_ids || !mesmoConjunto(maisRecente.material_ids, row.material_ids ?? [])) return null;
+  return revisaoQueValeParaOTexto({ content_sha256: row.content_sha256, status: row.status, reviews: [maisRecente] });
+}
 
 function fromRow(row: Row): QuestionSubmission {
   const autor = Array.isArray(row.author) ? row.author[0] : row.author;
@@ -106,7 +133,7 @@ function fromRow(row: Row): QuestionSubmission {
     materialIds: row.material_ids ?? [],
     publishedQuestionIds: row.published_question_ids ?? [],
     publicationNote: row.publication_note ?? null,
-    review: revisaoQueValeParaOTexto({ content_sha256: row.content_sha256, reviews: row.reviews, status: row.status }),
+    review: revisaoQueValeParaOTextoEOsMateriais(row),
     author: autor ? { id: row.author_id ?? '', name: autor.display_name ?? '', email: autor.email ?? '' } : undefined,
   };
 }

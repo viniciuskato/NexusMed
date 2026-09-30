@@ -96,7 +96,7 @@ $$;
 
 create index material_reviews_qsub_idx on public.material_reviews (question_submission_id, created_at desc);
 
-grant select (question_submission_id) on table public.material_reviews to authenticated;
+grant select (question_submission_id, material_ids) on table public.material_reviews to authenticated;
 
 drop policy material_reviews_select_author on public.material_reviews;
 create policy material_reviews_select_author on public.material_reviews
@@ -182,7 +182,9 @@ $$;
 -- 2. Revisão válida e "apto" do envio de questões
 -- ----------------------------------------------------------------------------
 
--- Válida = mesmo texto E mesmo conjunto de materiais (sem ordem) que a IA recebeu.
+-- Válida = mesmo texto E mesmo conjunto de materiais (sem ordem) que a IA recebeu, e é a revisão
+-- concluída MAIS RECENTE daquele texto, em qualquer conjunto de materiais (44-H3): uma revisão
+-- antiga de "apto" não volta a valer depois de um "não apto" mais novo do mesmo texto.
 create or replace function app.revisao_valida_do_envio_de_questoes_para_o_lugar(p_submission uuid, p_material_ids uuid[])
 returns uuid
 language sql
@@ -190,16 +192,19 @@ stable
 security definer
 set search_path = ''
 as $$
-  select r.id
-  from public.material_reviews r
-  join public.question_submissions s on s.id = r.question_submission_id
-  where r.question_submission_id = p_submission
-    and r.status = 'concluida'
-    and r.content_sha256 = s.content_sha256
-    and r.material_ids @> p_material_ids
-    and r.material_ids <@ p_material_ids
-  order by r.completed_at desc nulls last, r.created_at desc
-  limit 1;
+  select l.id
+  from (
+    select r.id, r.material_ids
+    from public.material_reviews r
+    join public.question_submissions s on s.id = r.question_submission_id
+    where r.question_submission_id = p_submission
+      and r.status = 'concluida'
+      and r.content_sha256 = s.content_sha256
+    order by r.completed_at desc nulls last, r.created_at desc, r.id desc
+    limit 1
+  ) l
+  where l.material_ids @> p_material_ids
+    and l.material_ids <@ p_material_ids;
 $$;
 
 create or replace function app.revisao_valida_do_envio_de_questoes(p_submission uuid)
@@ -1027,63 +1032,82 @@ begin
     return jsonb_build_object('resultado', 'revisao_invalida');
   end if;
 
-  -- Confere tudo ANTES de criar qualquer coisa: uma questão que o banco não publicaria,
-  -- ou um material que não se acha, recusa o envio inteiro (nunca publica parcial).
-  -- Os materiais escolhidos na tela valem para as questões que não citam título.
-  foreach v_chosen in array s.material_ids loop
-    if not exists (select 1 from public.materials m where m.id = v_chosen and m.status = 'published') then
-      v_motivo := 'Um dos materiais que você escolheu para as questões não está mais publicado. Escolha outro e envie de novo.';
-    end if;
-  end loop;
-
-  for v_q in select * from jsonb_array_elements(p_questoes) loop
-    v_n := v_n + 1;
-    exit when v_motivo is not null;
-
-    select count(*) into v_correct
-      from jsonb_array_elements(coalesce(v_q->'options', '[]'::jsonb)) o
-     where coalesce((o->>'is_correct')::boolean, false);
-    if jsonb_typeof(v_q->'options') is distinct from 'array' or jsonb_array_length(v_q->'options') < 2 or v_correct <> 1 then
-      v_motivo := format('Questão %s: precisa de ao menos 2 alternativas e de exatamente 1 marcada com [GABARITO].', v_n);
-    elsif exists (
-      select 1 from jsonb_array_elements(v_q->'options') o
-       where btrim(coalesce(o->>'explanation', '')) = '' or btrim(coalesce(o->>'text', '')) = ''
-    ) then
-      v_motivo := format('Questão %s: toda alternativa precisa de texto e de explicação.', v_n);
-    elsif btrim(coalesce(v_q->>'question_stem', '')) = ''
-       or btrim(coalesce(v_q->>'general_commentary', '')) = ''
-       or btrim(coalesce(v_q->>'high_yield_summary', '')) = '' then
-      v_motivo := format('Questão %s: comando, Comentário Geral e Pérola High-Yield são obrigatórios.', v_n);
-    end if;
-    exit when v_motivo is not null;
-
-    -- Materiais da questão: os títulos do arquivo (título exato, um só material publicado)
-    -- ou, sem título, os escolhidos na tela.
-    v_titles := coalesce(v_q->'material_titles', '[]'::jsonb);
-    v_ids := '{}';
-    if jsonb_array_length(v_titles) = 0 then
-      v_ids := s.material_ids;
-      if cardinality(v_ids) = 0 then
-        v_motivo := format('Questão %s: sem material. Escreva “Materiais cobertos” ou escolha o material no envio.', v_n);
+  -- A conferência não pode quebrar com JSON malformado (options que não é lista, item que não é objeto,
+  -- id que não é uuid...): qualquer falha aqui é problema do TEXTO e vai a "não apto" com recado, saindo da fila.
+  begin
+    -- Confere tudo ANTES de criar qualquer coisa: uma questão que o banco não publicaria,
+    -- ou um material que não se acha, recusa o envio inteiro (nunca publica parcial).
+    -- Os materiais escolhidos na tela valem para as questões que não citam título.
+    foreach v_chosen in array s.material_ids loop
+      if not exists (select 1 from public.materials m where m.id = v_chosen and m.status = 'published') then
+        v_motivo := 'Um dos materiais que você escolheu para as questões não está mais publicado. Escolha outro e envie de novo.';
       end if;
-    else
-      for v_title in select jsonb_array_elements_text(v_titles) loop
-        select count(*), min(m.id::text)::uuid into v_found, v_material
-          from public.materials m
-         where m.status = 'published'
-           and regexp_replace(btrim(m.title), '\s+', ' ', 'g') = regexp_replace(btrim(v_title), '\s+', ' ', 'g');
-        if v_found = 0 then
-          v_motivo := format('Questão %s: o material “%s” não existe ou não está publicado.', v_n, v_title);
-        elsif v_found > 1 then
-          v_motivo := format('Questão %s: o título “%s” pertence a mais de um material publicado; o NexusMed não sabe qual é. Escolha o material na tela de envio e tire o título do arquivo.', v_n, v_title);
-        else
-          v_ids := v_ids || v_material;
+    end loop;
+
+    for v_q in select * from jsonb_array_elements(p_questoes) loop
+      v_n := v_n + 1;
+      exit when v_motivo is not null;
+
+      if jsonb_typeof(v_q) is distinct from 'object' then
+        v_motivo := format('Questão %s: o texto não pôde ser lido como questão.', v_n);
+      end if;
+      exit when v_motivo is not null;
+      -- Os campos que o banco vai converter: se não convertem, o problema é do texto (e não vira "erro").
+      perform (v_q->>'discipline_id')::uuid, (v_q->>'theme_id')::uuid, nullif(v_q->>'year', '')::int;
+      if jsonb_typeof(coalesce(v_q->'tags', '[]'::jsonb)) <> 'array'
+         or jsonb_typeof(coalesce(v_q->'material_titles', '[]'::jsonb)) <> 'array' then
+        v_motivo := format('Questão %s: Tags e Materiais cobertos precisam ser listas.', v_n);
+      end if;
+      exit when v_motivo is not null;
+
+      select count(*) into v_correct
+        from jsonb_array_elements(coalesce(v_q->'options', '[]'::jsonb)) o
+       where coalesce((o->>'is_correct')::boolean, false);
+      if jsonb_typeof(v_q->'options') is distinct from 'array' or jsonb_array_length(v_q->'options') < 2 or v_correct <> 1 then
+        v_motivo := format('Questão %s: precisa de ao menos 2 alternativas e de exatamente 1 marcada com [GABARITO].', v_n);
+      elsif exists (
+        select 1 from jsonb_array_elements(v_q->'options') o
+         where btrim(coalesce(o->>'explanation', '')) = '' or btrim(coalesce(o->>'text', '')) = ''
+      ) then
+        v_motivo := format('Questão %s: toda alternativa precisa de texto e de explicação.', v_n);
+      elsif btrim(coalesce(v_q->>'question_stem', '')) = ''
+         or btrim(coalesce(v_q->>'general_commentary', '')) = ''
+         or btrim(coalesce(v_q->>'high_yield_summary', '')) = '' then
+        v_motivo := format('Questão %s: comando, Comentário Geral e Pérola High-Yield são obrigatórios.', v_n);
+      end if;
+      exit when v_motivo is not null;
+
+      -- Materiais da questão: os títulos do arquivo (título exato, um só material publicado)
+      -- ou, sem título, os escolhidos na tela.
+      v_titles := coalesce(v_q->'material_titles', '[]'::jsonb);
+      v_ids := '{}';
+      if jsonb_array_length(v_titles) = 0 then
+        v_ids := s.material_ids;
+        if cardinality(v_ids) = 0 then
+          v_motivo := format('Questão %s: sem material. Escreva “Materiais cobertos” ou escolha o material no envio.', v_n);
         end if;
-        exit when v_motivo is not null;
-      end loop;
-    end if;
-    exit when v_motivo is not null;
-  end loop;
+      else
+        for v_title in select jsonb_array_elements_text(v_titles) loop
+          select count(*), min(m.id::text)::uuid into v_found, v_material
+            from public.materials m
+           where m.status = 'published'
+             and regexp_replace(btrim(m.title), '\s+', ' ', 'g') = regexp_replace(btrim(v_title), '\s+', ' ', 'g');
+          if v_found = 0 then
+            v_motivo := format('Questão %s: o material “%s” não existe ou não está publicado.', v_n, v_title);
+          elsif v_found > 1 then
+            v_motivo := format('Questão %s: o título “%s” pertence a mais de um material publicado; o NexusMed não sabe qual é. Escolha o material na tela de envio e tire o título do arquivo.', v_n, v_title);
+          else
+            v_ids := v_ids || v_material;
+          end if;
+          exit when v_motivo is not null;
+        end loop;
+      end if;
+      exit when v_motivo is not null;
+    end loop;
+  exception when others then
+    raise warning 'revisao_publicar_questoes % conferência falhou: %', p_submission_id, sqlerrm;
+    v_motivo := 'O lote foi aprovado na revisão, mas não pôde ser montado como questões (formato inesperado). Corrija o texto e envie de novo.';
+  end;
 
   if v_motivo is not null then
     update public.question_submissions
@@ -1209,10 +1233,10 @@ $$;
 -- 7. Selo nas questões
 -- ----------------------------------------------------------------------------
 
--- Uma consulta traz o selo de todas as questões publicadas com revisão de IA válida (a
--- lista de questões tem centenas de cartões: nada de uma consulta por cartão).
+-- O selo das questões PEDIDAS (a tela pede as que está mostrando): a API devolve no máximo 1000
+-- linhas por consulta (config.toml, max_rows), então "todas" não serve. Até 500 ids por chamada.
 -- 'ia' = revisada só pela IA; 'ia_e_pessoa' = também atestada por uma pessoa.
-create or replace function public.selos_de_questoes()
+create or replace function public.selos_de_questoes(p_question_ids uuid[])
 returns table (question_id uuid, selo text)
 language plpgsql
 stable
@@ -1225,18 +1249,22 @@ begin
   if v_uid is null or app.current_profile_status(v_uid) is distinct from 'active' then
     raise exception 'acesso negado' using errcode = '42501';
   end if;
+  if p_question_ids is null or cardinality(p_question_ids) > 500 then
+    raise exception 'peça no máximo 500 questões por vez' using errcode = '22023';
+  end if;
   return query
     select q.id,
            case when app.has_current_approved_revision(null, q.id) then 'ia_e_pessoa' else 'ia' end
     from public.questions q
     join public.question_ai_provenance p on p.question_id = q.id
-    where (q.status = 'published' or app.is_admin_active(v_uid))
+    where q.id = any (p_question_ids)
+      and (q.status = 'published' or app.is_admin_active(v_uid))
       and app.questao_tem_revisao_apto(q.id);
 end;
 $$;
 
-revoke all on function public.selos_de_questoes() from public, anon;
-grant execute on function public.selos_de_questoes() to authenticated;
+revoke all on function public.selos_de_questoes(uuid[]) from public, anon;
+grant execute on function public.selos_de_questoes(uuid[]) to authenticated;
 
 -- ----------------------------------------------------------------------------
 -- 8. "Reportar erro" também na questão (mesma tabela e mesma aba da 44-G)

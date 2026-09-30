@@ -42,18 +42,17 @@ export const SeloDeRevisao: React.FC<SeloDeRevisaoProps> = ({ materialId }) => {
 };
 
 /**
- * 44-H2: o selo de uma questão. Uma consulta só, guardada por alguns minutos, traz o
- * selo de todas as questões (a lista tem centenas de cartões). Decorativo: se falhar,
- * a questão aparece sem selo.
+ * 44-H2: o selo de uma questão. Os cartões montados juntos viram uma consulta só (só dos ids
+ * pedidos, guardada por alguns minutos). Decorativo: se falhar, a questão aparece sem selo.
  */
 export function useSeloDaQuestao(questionId: string): Selo | null {
   const [selo, setSelo] = useState<Selo | null>(null);
   useEffect(() => {
     let cancelado = false;
     questionSealsRepository
-      .getSeals()
-      .then((mapa) => {
-        if (!cancelado) setSelo(mapa.get(questionId) ?? null);
+      .getSeal(questionId)
+      .then((resultado) => {
+        if (!cancelado) setSelo(resultado);
       })
       .catch(() => {
         if (!cancelado) setSelo(null);

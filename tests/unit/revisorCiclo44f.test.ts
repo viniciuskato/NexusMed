@@ -505,7 +505,7 @@ describe('44-F — a ponte com o Supabase chama só as funções do servidor, co
             : true;
         return Promise.resolve({ data, error: null });
       },
-      from: () => ({ select: () => Promise.resolve({ data: [], error: null }) }),
+      from: () => ({ select: () => ({ order: () => ({ range: () => Promise.resolve({ data: [], error: null }) }) }) }),
     };
     const banco = bancoDoSupabase(cliente);
     const reservados = await banco.reservar(20);
@@ -526,7 +526,7 @@ describe('44-F — a ponte com o Supabase chama só as funções do servidor, co
   it('erro do banco sobe como exceção (o ciclo não segue como se tivesse dado certo)', async () => {
     const cliente = {
       rpc: () => Promise.resolve({ data: null, error: { message: 'permission denied' } }),
-      from: () => ({ select: () => Promise.resolve({ data: [], error: null }) }),
+      from: () => ({ select: () => ({ order: () => ({ range: () => Promise.resolve({ data: [], error: null }) }) }) }),
     };
     await expect(bancoDoSupabase(cliente).reservar(1)).rejects.toThrow('revisao_reservar_envios: permission denied');
   });

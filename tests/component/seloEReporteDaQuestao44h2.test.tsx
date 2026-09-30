@@ -41,7 +41,7 @@ vi.mock('../../src/services/gamification', () => ({
 
 const getSeals = vi.fn<() => Promise<Map<string, 'ia' | 'ia_e_pessoa'>>>();
 vi.mock('../../src/repositories/QuestionSealRepository', () => ({
-  questionSealsRepository: { getSeals: () => getSeals() },
+  questionSealsRepository: { getSeal: (id: string) => getSeals().then((m) => m.get(id) ?? null) },
 }));
 
 const report = vi.fn();

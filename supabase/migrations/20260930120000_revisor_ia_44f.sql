@@ -630,6 +630,9 @@ $$;
 -- A revisão "concluída" mais recente que vale para um TEXTO e um LUGAR (Disciplina, Tema e
 -- material acima), ou nulo. É o que a publicação (44-G) consulta: revisão de texto antigo,
 -- ou de outro lugar, não vale.
+-- 44-H3: e só vale a revisão concluída MAIS RECENTE daquele texto (em qualquer lugar): um texto
+-- julgado "não apto" num lugar depois de um "apto" em outro não volta a "apto" ao voltar ao
+-- primeiro lugar, por causa da revisão antiga.
 create or replace function app.revisao_valida_do_envio_para_o_lugar(
   p_submission uuid, p_discipline uuid, p_theme uuid, p_parent uuid
 )
@@ -639,17 +642,20 @@ stable
 security definer
 set search_path = ''
 as $$
-  select r.id
-  from public.material_reviews r
-  join public.material_submissions s on s.id = r.submission_id
-  where r.submission_id = p_submission
-    and r.status = 'concluida'
-    and r.content_sha256 = s.content_sha256
-    and r.discipline_id is not distinct from p_discipline
-    and r.theme_id is not distinct from p_theme
-    and r.parent_material_id is not distinct from p_parent
-  order by r.completed_at desc nulls last, r.created_at desc
-  limit 1;
+  select l.id
+  from (
+    select r.id, r.discipline_id, r.theme_id, r.parent_material_id
+    from public.material_reviews r
+    join public.material_submissions s on s.id = r.submission_id
+    where r.submission_id = p_submission
+      and r.status = 'concluida'
+      and r.content_sha256 = s.content_sha256
+    order by r.completed_at desc nulls last, r.created_at desc, r.id desc
+    limit 1
+  ) l
+  where l.discipline_id is not distinct from p_discipline
+    and l.theme_id is not distinct from p_theme
+    and l.parent_material_id is not distinct from p_parent;
 $$;
 
 -- A revisão que vale para o texto E o lugar ATUAIS do envio.

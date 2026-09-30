@@ -13,12 +13,22 @@ import type {
   Uso,
 } from './ciclo.ts';
 
+interface RespostaDeLeitura {
+  data: unknown[] | null;
+  error: { message: string } | null;
+}
+
 export interface ClienteDoBanco {
   rpc(fn: string, args?: Record<string, unknown>): PromiseLike<{ data: unknown; error: { message: string } | null }>;
   from(tabela: string): {
-    select(colunas: string): PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>;
+    select(colunas: string): {
+      order(coluna: string): { range(de: number, ate: number): PromiseLike<RespostaDeLeitura> };
+    };
   };
 }
+
+/** O limite de linhas por consulta da API (config.toml, max_rows) é 1000: lê em páginas, até acabar. */
+export const LINHAS_POR_PAGINA = 1000;
 
 interface LinhaDeReserva {
   review_id: string;
@@ -87,6 +97,21 @@ export function bancoDoSupabase(cliente: ClienteDoBanco): Banco {
     if (error) throw new Error(`${fn}: ${error.message}`);
     return data as T;
   }
+  /** Lê a tabela inteira, em páginas (uma consulta só devolveria as primeiras 1000 linhas). */
+  async function lerTudo<T>(tabela: string, colunas: string): Promise<T[]> {
+    const linhas: T[] = [];
+    for (let de = 0; ; de += LINHAS_POR_PAGINA) {
+      const { data, error } = await cliente
+        .from(tabela)
+        .select(colunas)
+        .order('id')
+        .range(de, de + LINHAS_POR_PAGINA - 1);
+      if (error) throw new Error(`${tabela}: ${error.message}`);
+      const pagina = (data ?? []) as T[];
+      linhas.push(...pagina);
+      if (pagina.length < LINHAS_POR_PAGINA) return linhas;
+    }
+  }
   const uso = (u: Uso) => ({
     p_input_tokens: u.entrada,
     p_output_tokens: u.saida,
@@ -122,22 +147,13 @@ export function bancoDoSupabase(cliente: ClienteDoBanco): Banco {
       return linhas.map(doReservado);
     },
     async catalogo(): Promise<Catalogo> {
-      const d = await cliente.from('disciplines').select('id, name');
-      const t = await cliente.from('themes').select('id, name, discipline_id');
-      const m = await cliente.from('materials').select('id, title, status');
-      if (d.error) throw new Error(`disciplines: ${d.error.message}`);
-      if (t.error) throw new Error(`themes: ${t.error.message}`);
-      if (m.error) throw new Error(`materials: ${m.error.message}`);
+      const d = await lerTudo<{ id: string; name: string }>('disciplines', 'id, name');
+      const t = await lerTudo<{ id: string; name: string; discipline_id: string }>('themes', 'id, name, discipline_id');
+      const m = await lerTudo<{ id: string; title: string; status: string }>('materials', 'id, title, status');
       return {
-        disciplines: ((d.data ?? []) as Array<{ id: string; name: string }>).map((x) => ({ id: x.id, name: x.name })),
-        themes: ((t.data ?? []) as Array<{ id: string; name: string; discipline_id: string }>).map((x) => ({
-          id: x.id,
-          name: x.name,
-          disciplineId: x.discipline_id,
-        })),
-        materiais: ((m.data ?? []) as Array<{ id: string; title: string; status: string }>)
-          .filter((x) => x.status === 'published')
-          .map((x) => ({ id: x.id, title: x.title })),
+        disciplines: d.map((x) => ({ id: x.id, name: x.name })),
+        themes: t.map((x) => ({ id: x.id, name: x.name, disciplineId: x.discipline_id })),
+        materiais: m.filter((x) => x.status === 'published').map((x) => ({ id: x.id, title: x.title })),
       };
     },
     async anexarLote(reviewIds, batchId) {

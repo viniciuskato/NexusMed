@@ -90,6 +90,13 @@ interface AdminCMSViewProps {
   onOpenCompendium: (compendiumId: string) => void;
 }
 
+// 44-H3: o botão "Publicar rascunhos" não publica conteúdo novo — o banco só aceita o que passou pelo
+// revisor de IA (ou o que já esteve no ar e não mudou). A frase aparece antes do clique.
+const AVISO_PUBLICAR_RASCUNHOS_MATERIAL =
+  'Conteúdo novo só vai ao ar pelo revisor de IA: envie o arquivo em “Enviar material”. Este botão só republica o que já esteve no ar e não mudou.';
+const AVISO_PUBLICAR_RASCUNHOS_QUESTOES =
+  'Questão nova só vai ao ar pelo revisor de IA: envie o arquivo em “Enviar material”, na aba Questões. Este botão só republica o que já esteve no ar e não mudou.';
+
 export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   disciplines,
   themes,
@@ -593,7 +600,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       showToast('Nenhum conteúdo em rascunho.');
       return;
     }
-    if (!window.confirm(`Publicar os ${drafts.length} conteúdos em rascunho? Ficam visíveis para estudantes imediatamente.`)) return;
+    if (!window.confirm(`Publicar os ${drafts.length} conteúdos em rascunho? ${AVISO_PUBLICAR_RASCUNHOS_MATERIAL} Os que puderem ser publicados ficam visíveis para estudantes imediatamente.`)) return;
     setBulkPublishing(true);
     let ok = 0;
     // publish_material() exige ancestrais e pré-requisitos já publicados, então
@@ -636,7 +643,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       showToast('Nenhuma questão em rascunho.');
       return;
     }
-    if (!window.confirm(`Tentar publicar as ${drafts.length} questões em rascunho? Questões incompletas (sem 2 alternativas, sem explicação etc.) ficam de fora e são reportadas.`)) return;
+    if (!window.confirm(`Tentar publicar as ${drafts.length} questões em rascunho? ${AVISO_PUBLICAR_RASCUNHOS_QUESTOES} Questões incompletas (sem 2 alternativas, sem explicação etc.) ficam de fora e são reportadas.`)) return;
     setBulkPublishing(true);
     let ok = 0;
     const failures: string[] = [];
@@ -984,6 +991,9 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               <p className="text-[11px] text-stone-500 dark:text-slate-400">
                 {compendiums.length} conteúdos e mecanismos fisiopatológicos no acervo editorial
               </p>
+              <p data-testid="aviso-publicar-rascunhos-material" className="text-[11px] text-stone-500 dark:text-slate-400 mt-1">
+                {AVISO_PUBLICAR_RASCUNHOS_MATERIAL}
+              </p>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
@@ -991,7 +1001,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                 onClick={handlePublishAllDraftCompendiums}
                 disabled={bulkPublishing}
                 className="px-3.5 py-2 rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 hover:dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
-                title="Publica todos os conteúdos que ainda estão em rascunho"
+                title="Publica só o que já esteve no ar e não mudou; conteúdo novo só vai ao ar pelo revisor de IA"
               >
                 <ShieldCheck className="w-4 h-4" />
                 <span>Publicar rascunhos ({compendiums.filter((c) => c.publicationStatus !== 'published').length})</span>
@@ -1800,6 +1810,9 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               <p className="text-[11px] text-stone-500 dark:text-slate-400">
                 {questions.length} questões com explicações por alternativa vinculadas aos conteúdos
               </p>
+              <p data-testid="aviso-publicar-rascunhos-questoes" className="text-[11px] text-stone-500 dark:text-slate-400 mt-1">
+                {AVISO_PUBLICAR_RASCUNHOS_QUESTOES}
+              </p>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
@@ -1807,7 +1820,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                 onClick={handlePublishAllDraftQuestions}
                 disabled={bulkPublishing}
                 className="px-3.5 py-2 rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 hover:dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-                title="Tenta publicar todas as questões em rascunho; incompletas ficam de fora"
+                title="Publica só o que já esteve no ar e não mudou; questão nova só vai ao ar pelo revisor de IA"
               >
                 <ShieldCheck className="w-4 h-4" />
                 <span>Publicar rascunhos ({questions.filter((q) => q.publicationStatus !== 'published').length})</span>

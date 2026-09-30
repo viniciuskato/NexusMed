@@ -387,7 +387,7 @@ describe('44-G — a ponte com o Supabase chama só as funções do servidor da 
             : { resultado: 'publicado', material_id: 'm1' };
         return Promise.resolve({ data, error: null });
       },
-      from: () => ({ select: () => Promise.resolve({ data: [], error: null }) }),
+      from: () => ({ select: () => ({ order: () => ({ range: () => Promise.resolve({ data: [], error: null }) }) }) }),
     };
     const banco = bancoDoSupabase(cliente);
     const prontos = await banco.paraPublicar(7);
@@ -404,7 +404,7 @@ describe('44-G — a ponte com o Supabase chama só as funções do servidor da 
   it('resposta vazia do banco nunca vira "publicado" (falha fechada)', async () => {
     const cliente = {
       rpc: () => Promise.resolve({ data: null, error: null }),
-      from: () => ({ select: () => Promise.resolve({ data: [], error: null }) }),
+      from: () => ({ select: () => ({ order: () => ({ range: () => Promise.resolve({ data: [], error: null }) }) }) }),
     };
     const r = await bancoDoSupabase(cliente).publicar(pronto(1), {});
     expect(r.desfecho).toBe('fora_de_estado');
@@ -413,7 +413,7 @@ describe('44-G — a ponte com o Supabase chama só as funções do servidor da 
   it('erro do banco sobe como exceção', async () => {
     const cliente = {
       rpc: () => Promise.resolve({ data: null, error: { message: 'permission denied' } }),
-      from: () => ({ select: () => Promise.resolve({ data: [], error: null }) }),
+      from: () => ({ select: () => ({ order: () => ({ range: () => Promise.resolve({ data: [], error: null }) }) }) }),
     };
     await expect(bancoDoSupabase(cliente).paraPublicar(1)).rejects.toThrow('revisao_envios_para_publicar: permission denied');
   });

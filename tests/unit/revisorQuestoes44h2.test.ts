@@ -385,7 +385,7 @@ describe('44-H2 — o mapeamento do banco (RPCs de questões)', () => {
         if (fn === 'revisao_recusar_publicacao_de_questoes') return Promise.resolve({ data: true, error: null });
         return Promise.resolve({ data: null, error: null });
       },
-      from: () => ({ select: () => Promise.resolve({ data: [], error: null }) }),
+      from: () => ({ select: () => ({ order: () => ({ range: () => Promise.resolve({ data: [], error: null }) }) }) }),
     };
     const banco = bancoDoSupabase(cliente);
     const reservados = await banco.reservar(5);
@@ -441,5 +441,46 @@ describe('44-H2 — o importador de questões usado pelo servidor é o da tela',
     const daFonte = lerQuestoesParaPublicar(questaoParaEnvio(1), disciplinas, temas);
     const doPacote = gerado.lerQuestoesParaPublicar(questaoParaEnvio(1), disciplinas, temas);
     expect(doPacote).toEqual(daFonte);
+  });
+});
+
+describe('44-H3 — o catálogo do servidor lê tudo, em páginas (a API corta em 1000 linhas por consulta)', () => {
+  it('2500 materiais, 1200 temas e 3 disciplinas: nenhum fica de fora, e só os publicados entram nos títulos', async () => {
+    const tabelas: Record<string, Array<Record<string, unknown>>> = {
+      disciplines: Array.from({ length: 3 }, (_, i) => ({ id: `d${String(i).padStart(4, '0')}`, name: `Disc ${i}` })),
+      themes: Array.from({ length: 1200 }, (_, i) => ({ id: `t${String(i).padStart(4, '0')}`, name: `Tema ${i}`, discipline_id: 'd0000' })),
+      materials: Array.from({ length: 2500 }, (_, i) => ({ id: `m${String(i).padStart(4, '0')}`, title: `Material ${i}`, status: i % 5 === 0 ? 'draft' : 'published' })),
+    };
+    const consultas: Array<[string, number, number]> = [];
+    const cliente = {
+      rpc: () => Promise.resolve({ data: null, error: null }),
+      from: (tabela: string) => ({
+        select: () => ({
+          order: () => ({
+            // Como a API: no máximo 1000 linhas por consulta, mesmo que peçam mais.
+            range: (de: number, ate: number) => {
+              consultas.push([tabela, de, ate]);
+              return Promise.resolve({ data: tabelas[tabela].slice(de, Math.min(ate + 1, de + 1000)), error: null });
+            },
+          }),
+        }),
+      }),
+    };
+    const catalogoLido = await bancoDoSupabase(cliente).catalogo();
+    expect(catalogoLido.disciplines).toHaveLength(3);
+    expect(catalogoLido.themes).toHaveLength(1200);
+    expect(catalogoLido.materiais).toHaveLength(2000);
+    expect(catalogoLido.materiais?.some((m) => m.title === 'Material 2499')).toBe(true);
+    expect(catalogoLido.materiais?.some((m) => m.title === 'Material 0')).toBe(false);
+    expect(consultas.filter(([t]) => t === 'materials')).toHaveLength(3);
+    expect(consultas.filter(([t]) => t === 'themes')).toHaveLength(2);
+  });
+
+  it('erro de leitura vira exceção com o nome da tabela (o ciclo não segue com catálogo pela metade)', async () => {
+    const cliente = {
+      rpc: () => Promise.resolve({ data: null, error: null }),
+      from: () => ({ select: () => ({ order: () => ({ range: () => Promise.resolve({ data: null, error: { message: 'sem permissão' } }) }) }) }),
+    };
+    await expect(bancoDoSupabase(cliente).catalogo()).rejects.toThrow('disciplines: sem permissão');
   });
 });

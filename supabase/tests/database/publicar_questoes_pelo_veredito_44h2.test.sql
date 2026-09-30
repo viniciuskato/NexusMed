@@ -203,7 +203,7 @@ begin
 end;
 $$;
 
-select plan(165);
+select plan(191);
 
 select tests.clear_auth();
 select tests.create_user('h2.admin@test.local', 'admin', 'active') as v_admin \gset
@@ -265,8 +265,8 @@ select ok(
   'a criação interna de questão não é chamável por cliente'
 );
 select ok(
-  not has_function_privilege('anon', 'public.selos_de_questoes()', 'execute')
-  and has_function_privilege('authenticated', 'public.selos_de_questoes()', 'execute')
+  not has_function_privilege('anon', 'public.selos_de_questoes(uuid[])', 'execute')
+  and has_function_privilege('authenticated', 'public.selos_de_questoes(uuid[])', 'execute')
   and not has_function_privilege('authenticated', 'app.questao_tem_revisao_apto(uuid)', 'execute')
   and not has_function_privilege('authenticated', 'app.question_snapshot_hash(uuid)', 'execute'),
   'anon não consulta os selos; as funções internas não são de cliente'
@@ -739,6 +739,72 @@ select tests.clear_auth();
 update public.question_submissions set material_ids = array[:'v_m1']::uuid[] where id = :'v_e_s1';
 select is(app.revisao_apto_do_envio_de_questoes(:'v_e_s1'::uuid), tests.review_of_questoes(:'v_e_s1'), 'voltando aos materiais revisados, a revisão volta a valer');
 
+-- 44-H3: só vale a revisão MAIS RECENTE do texto, em qualquer conjunto de materiais. (T,{M1}) apto → a
+-- publicação falha ("erro") → o autor muda para {M2} → a IA julga o MESMO texto "não apto" com {M2} → o autor
+-- volta a {M1}: a revisão antiga de "apto" NÃO volta a valer (o texto foi julgado não apto depois).
+select tests.create_user('h3.autor@test.local', 'student', 'active') as v_autor5 \gset
+select tests.envio_de_questoes_revisado(:'v_autor5', 'Sonda recente ' || :'v_sfx', array[:'v_m1']::uuid[], 'apto', 'erro') as v_e_r1 \gset
+select tests.review_of_questoes(:'v_e_r1') as v_r_r1 \gset
+select tests.authenticate_as(:'v_autor5');
+select is(tests.affected_rows(format($$ update public.question_submissions set material_ids = array[%L]::uuid[] where id = %L $$, :'v_m2', :'v_e_r1')), 1, 'o autor muda os materiais do envio em "erro"');
+select tests.clear_auth();
+select is((select status from public.question_submissions where id = :'v_e_r1'), 'aguardando_revisao', 'e ele volta à revisão');
+insert into public.material_reviews (question_submission_id, content_sha256, status, verdict, model, completed_at)
+select s.id, s.content_sha256, 'concluida', 'nao_apto', 'claude-opus-5-5', now() from public.question_submissions s where s.id = :'v_e_r1';
+update public.question_submissions set status = 'nao_apto' where id = :'v_e_r1';
+select tests.authenticate_as(:'v_autor5');
+select is(tests.affected_rows(format($$ update public.question_submissions set material_ids = array[%L]::uuid[] where id = %L $$, :'v_m1', :'v_e_r1')), 1, 'o autor volta ao material M1, o da revisão antiga de "apto"');
+select tests.clear_auth();
+select is((select status from public.question_submissions where id = :'v_e_r1'), 'aguardando_revisao', 'a revisão antiga de "apto" NÃO volta a valer: o envio volta à revisão, não a "apto"');
+select is(app.revisao_valida_do_envio_de_questoes(:'v_e_r1'::uuid), null::uuid, 'nenhuma revisão vale para {M1} (a mais recente do texto foi com {M2})');
+update public.question_submissions set status = 'apto' where id = :'v_e_r1';
+select is(app.revisao_apto_do_envio_de_questoes(:'v_e_r1'::uuid), null::uuid, 'mesmo com o estado forçado a "apto", não há revisão apto que valha');
+select tests.authenticate_as_service();
+select is((select count(*)::int from public.revisao_envios_de_questoes_para_publicar(1000) where submission_id = :'v_e_r1'), 0, 'e o envio está fora da fila de publicação');
+select is(
+  (public.revisao_publicar_questoes(:'v_e_r1', :'v_r_r1', (select content_sha256 from public.question_submissions where id = :'v_e_r1'),
+     tests.leitura_de_questoes(:'v_disc', :'v_theme', 'Sonda recente ' || :'v_sfx', 1, jsonb_build_array('Material Q1 ' || :'v_sfx'))))->>'resultado',
+  'revisao_invalida', 'o servidor não publica com a revisão antiga de "apto"'
+);
+select tests.clear_auth();
+select is((select count(*)::int from public.questions where question_stem like 'Sonda recente %' and question_stem like '%' || :'v_sfx' || '%'), 0, 'nenhuma questão foi criada');
+update public.question_submissions set material_ids = array[:'v_m2']::uuid[], status = 'nao_apto' where id = :'v_e_r1';
+select is(app.revisao_apto_do_envio_de_questoes(:'v_e_r1'::uuid), null::uuid, 'com {M2} a revisão que vale é a "não apto": não é apto');
+select is((select verdict from public.material_reviews where id = app.revisao_valida_do_envio_de_questoes(:'v_e_r1'::uuid)), 'nao_apto', 'e a que vale é mesmo a "não apto"');
+
+-- 44-H3: o texto aprovado com JSON malformado não quebra a conferência: vai a "não apto" com recado e sai da fila.
+select tests.create_user('h3.json@test.local', 'student', 'active') as v_autor6 \gset
+select tests.envio_de_questoes_revisado(:'v_autor6', 'Json options texto ' || :'v_sfx', array[:'v_m1']::uuid[]) as v_j1 \gset
+select tests.envio_de_questoes_revisado(:'v_autor6', 'Json options objeto ' || :'v_sfx', array[:'v_m1']::uuid[]) as v_j2 \gset
+select tests.envio_de_questoes_revisado(:'v_autor6', 'Json item escalar ' || :'v_sfx', array[:'v_m1']::uuid[]) as v_j3 \gset
+select tests.envio_de_questoes_revisado(:'v_autor6', 'Json tags texto ' || :'v_sfx', array[:'v_m1']::uuid[]) as v_j4 \gset
+select tests.envio_de_questoes_revisado(:'v_autor6', 'Json disciplina ruim ' || :'v_sfx', array[:'v_m1']::uuid[]) as v_j5 \gset
+select tests.envio_de_questoes_revisado(:'v_autor6', 'Json titulos texto ' || :'v_sfx', array[:'v_m1']::uuid[]) as v_j6 \gset
+select tests.authenticate_as_service();
+select is((public.revisao_publicar_questoes(:'v_j1', tests.review_of_questoes(:'v_j1'), (select content_sha256 from public.question_submissions where id = :'v_j1'),
+  '[{"question_stem":"x","options":"isto não é uma lista"}]'::jsonb))->>'resultado', 'recusado', 'options que é texto: recusado, sem quebrar');
+select is((public.revisao_publicar_questoes(:'v_j2', tests.review_of_questoes(:'v_j2'), (select content_sha256 from public.question_submissions where id = :'v_j2'),
+  '[{"question_stem":"x","options":{"a":1}}]'::jsonb))->>'resultado', 'recusado', 'options que é objeto: recusado, sem quebrar');
+select is((public.revisao_publicar_questoes(:'v_j3', tests.review_of_questoes(:'v_j3'), (select content_sha256 from public.question_submissions where id = :'v_j3'),
+  '["texto solto", 3]'::jsonb))->>'resultado', 'recusado', 'item da lista que não é objeto: recusado, sem quebrar');
+select is((public.revisao_publicar_questoes(:'v_j4', tests.review_of_questoes(:'v_j4'), (select content_sha256 from public.question_submissions where id = :'v_j4'),
+  jsonb_build_array(jsonb_build_object('discipline_id', :'v_disc', 'theme_id', :'v_theme', 'question_stem', 'x', 'tags', 'não é lista', 'options', '[]'::jsonb))))->>'resultado', 'recusado', 'tags que é texto: recusado, sem quebrar');
+select is((public.revisao_publicar_questoes(:'v_j5', tests.review_of_questoes(:'v_j5'), (select content_sha256 from public.question_submissions where id = :'v_j5'),
+  '[{"discipline_id":"não-é-uuid","question_stem":"x","options":[]}]'::jsonb))->>'resultado', 'recusado', 'disciplina que não é uuid: recusado, sem quebrar');
+select is((public.revisao_publicar_questoes(:'v_j6', tests.review_of_questoes(:'v_j6'), (select content_sha256 from public.question_submissions where id = :'v_j6'),
+  jsonb_build_array(jsonb_build_object('discipline_id', :'v_disc', 'theme_id', :'v_theme', 'question_stem', 'x', 'material_titles', 'não é lista', 'options', '[]'::jsonb))))->>'resultado', 'recusado', 'materiais cobertos que é texto: recusado, sem quebrar');
+select tests.clear_auth();
+select is(
+  (select array_agg(status order by title) from public.question_submissions where id in (:'v_j1', :'v_j2', :'v_j3', :'v_j4', :'v_j5', :'v_j6')),
+  array['nao_apto', 'nao_apto', 'nao_apto', 'nao_apto', 'nao_apto', 'nao_apto']::text[],
+  'todos vão a "não apto" (nenhum fica "apto" para sempre nem vai a "erro")'
+);
+select ok((select bool_and(publication_note is not null and length(publication_note) > 20) from public.question_submissions where id in (:'v_j1', :'v_j2', :'v_j3', :'v_j4', :'v_j5', :'v_j6')), 'cada um com recado leigo para o autor');
+select is((select count(*)::int from public.question_submissions where id in (:'v_j1', :'v_j2', :'v_j3', :'v_j4', :'v_j5', :'v_j6') and cardinality(published_question_ids) > 0), 0, 'nenhuma questão foi publicada');
+select tests.authenticate_as_service();
+select is((select count(*)::int from public.revisao_envios_de_questoes_para_publicar(1000) where submission_id in (:'v_j1', :'v_j2', :'v_j3', :'v_j4', :'v_j5', :'v_j6')), 0, 'e todos saíram da fila de publicação');
+select tests.clear_auth();
+
 -- O texto aprovado não pôde ser montado: sai da fila de publicação.
 select tests.envio_de_questoes_revisado(:'v_autor', 'Lote que não monta ' || :'v_sfx') as v_e_nm \gset
 select tests.review_of_questoes(:'v_e_nm') as v_r_nm \gset
@@ -849,26 +915,32 @@ select ok(not app.questao_tem_revisao_apto(:'v_leg'::uuid), 'a questão antiga n
 -- 6. Selo nas questões
 -- ---------------------------------------------------------------------------
 select tests.authenticate_as(:'v_aluno');
-select is((select selo from public.selos_de_questoes() where question_id = (:'v_qids'::uuid[])[1]), 'ia', 'questão publicada por revisão de IA: selo "ia"');
-select is((select count(*)::int from public.selos_de_questoes() where question_id = :'v_leg'), 0, 'questão antiga (sem proveniência): sem selo');
-select is((select count(*)::int from public.selos_de_questoes() where question_id = :'v_edit'), 0, 'rascunho: sem selo para o estudante');
+select is((select selo from public.selos_de_questoes(array[(:'v_qids'::uuid[])[1]]::uuid[]) where question_id = (:'v_qids'::uuid[])[1]), 'ia', 'questão publicada por revisão de IA: selo "ia"');
+select is((select count(*)::int from public.selos_de_questoes(array[:'v_leg']::uuid[]) where question_id = :'v_leg'), 0, 'questão antiga (sem proveniência): sem selo');
+select is((select count(*)::int from public.selos_de_questoes(array[:'v_edit']::uuid[]) where question_id = :'v_edit'), 0, 'rascunho: sem selo para o estudante');
 select tests.clear_auth();
 select tests.atestar_questao((:'v_qids'::uuid[])[1]);
 select tests.authenticate_as(:'v_aluno');
-select is((select selo from public.selos_de_questoes() where question_id = (:'v_qids'::uuid[])[1]), 'ia_e_pessoa', 'depois de uma pessoa atestar o conteúdo atual: selo "ia_e_pessoa"');
+select is((select selo from public.selos_de_questoes(array[(:'v_qids'::uuid[])[1]]::uuid[]) where question_id = (:'v_qids'::uuid[])[1]), 'ia_e_pessoa', 'depois de uma pessoa atestar o conteúdo atual: selo "ia_e_pessoa"');
 select tests.clear_auth();
 -- Editar a questão publicada (como postgres, para provar o selo): o selo não afirma o que não é verdade.
 update public.questions set status = 'draft' where id = (:'v_qids'::uuid[])[2];
 update public.questions set question_stem = question_stem || ' (editada)' where id = (:'v_qids'::uuid[])[2];
 update public.questions set status = 'published' where id = (:'v_qids'::uuid[])[2];
 select tests.authenticate_as(:'v_aluno');
-select is((select count(*)::int from public.selos_de_questoes() where question_id = (:'v_qids'::uuid[])[2]), 0, 'conteúdo editado depois da revisão da IA: o selo some');
+select is((select count(*)::int from public.selos_de_questoes(array[(:'v_qids'::uuid[])[2]]::uuid[]) where question_id = (:'v_qids'::uuid[])[2]), 0, 'conteúdo editado depois da revisão da IA: o selo some');
+-- Só o selo das questões PEDIDAS (a API corta em 1000 linhas: a tela pede as que mostra).
+select is((select count(*)::int from public.selos_de_questoes(array[(:'v_qids'::uuid[])[1], :'v_leg']::uuid[])), 1, 'pedindo duas questões, volta o selo só da que tem');
+select is((select count(*)::int from public.selos_de_questoes('{}'::uuid[])), 0, 'lista vazia: nenhum selo');
+select throws_ok($$ select * from public.selos_de_questoes(null) $$, '22023', NULL, 'lista nula é recusada');
+select throws_ok($$ select * from public.selos_de_questoes((select array_agg(gen_random_uuid()) from generate_series(1, 501))) $$, '22023', NULL, 'mais de 500 ids por chamada é recusado');
+select lives_ok($$ select * from public.selos_de_questoes((select array_agg(gen_random_uuid()) from generate_series(1, 500))) $$, 'exatamente 500 ids passa');
 select tests.clear_auth();
 select tests.authenticate_as(:'v_pend');
-select throws_ok($$ select * from public.selos_de_questoes() $$, '42501', NULL, 'usuário pendente não consulta os selos');
+select throws_ok($$ select * from public.selos_de_questoes(array[gen_random_uuid()]) $$, '42501', NULL, 'usuário pendente não consulta os selos');
 select tests.clear_auth();
 select tests.authenticate_as_anon();
-select throws_ok($$ select * from public.selos_de_questoes() $$, '42501', NULL, 'anon não consulta os selos');
+select throws_ok($$ select * from public.selos_de_questoes(array[gen_random_uuid()]) $$, '42501', NULL, 'anon não consulta os selos');
 select tests.clear_auth();
 
 -- ---------------------------------------------------------------------------

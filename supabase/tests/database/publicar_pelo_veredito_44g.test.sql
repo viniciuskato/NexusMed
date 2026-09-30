@@ -166,7 +166,7 @@ as $$
   );
 $$;
 
-select plan(180);
+select plan(190);
 
 select tests.clear_auth();
 select tests.create_user('g.admin@test.local', 'admin', 'active') as v_admin \gset
@@ -592,6 +592,39 @@ select tests.clear_auth();
 -- Voltando ao lugar revisado, a revisão volta a valer (é a mesma revisão, do mesmo texto e lugar).
 update public.material_submissions set theme_id = :'v_theme' where id = :'v_e_s1';
 select is(app.revisao_apto_do_envio(:'v_e_s1'::uuid), tests.review_of(:'v_e_s1'), 'voltando ao Tema revisado, a revisão volta a valer');
+
+-- 44-H3: só vale a revisão MAIS RECENTE do texto, em qualquer lugar. (T, Tema A) apto → a publicação
+-- falha ("erro") → o autor muda para o Tema B → a IA julga o MESMO texto "não apto" no Tema B → o autor
+-- volta ao Tema A: a revisão antiga de "apto" NÃO volta a valer (o texto foi julgado não apto depois).
+select tests.create_user('g.autor5@test.local', 'student', 'active') as v_autor5 \gset
+select tests.envio_revisado(:'v_autor5', :'v_disc', :'v_theme', 'Sonda recente ' || :'v_sfx', null, 'apto', 'erro') as v_e_r1 \gset
+select tests.review_of(:'v_e_r1') as v_r_r1 \gset
+select tests.authenticate_as(:'v_autor5');
+select is(tests.affected_rows(format($$ update public.material_submissions set theme_id = %L where id = %L $$, :'v_theme_b', :'v_e_r1')), 1, 'o autor muda o Tema do envio em "erro"');
+select tests.clear_auth();
+select is((select status from public.material_submissions where id = :'v_e_r1'), 'aguardando_revisao', 'e ele volta à revisão');
+-- A IA julga o MESMO texto no Tema B: não apto.
+insert into public.material_reviews (submission_id, content_sha256, status, verdict, model, completed_at)
+select s.id, s.content_sha256, 'concluida', 'nao_apto', 'claude-opus-5-5', now() from public.material_submissions s where s.id = :'v_e_r1';
+update public.material_submissions set status = 'nao_apto' where id = :'v_e_r1';
+select tests.authenticate_as(:'v_autor5');
+select is(tests.affected_rows(format($$ update public.material_submissions set theme_id = %L where id = %L $$, :'v_theme', :'v_e_r1')), 1, 'o autor volta ao Tema A, o da revisão antiga de "apto"');
+select tests.clear_auth();
+select is((select status from public.material_submissions where id = :'v_e_r1'), 'aguardando_revisao', 'a revisão antiga de "apto" NÃO volta a valer: o envio volta à revisão, não a "apto"');
+select is(app.revisao_valida_do_envio(:'v_e_r1'::uuid), null::uuid, 'nenhuma revisão vale para o Tema A (a mais recente do texto foi no Tema B)');
+update public.material_submissions set status = 'apto' where id = :'v_e_r1';
+select is(app.revisao_apto_do_envio(:'v_e_r1'::uuid), null::uuid, 'mesmo com o estado forçado a "apto", não há revisão apto que valha');
+select tests.authenticate_as_service();
+select is((select count(*)::int from public.revisao_envios_para_publicar(1000) where submission_id = :'v_e_r1'), 0, 'e o envio está fora da fila de publicação');
+select is(
+  (public.revisao_publicar_envio(:'v_e_r1', :'v_r_r1', (select content_sha256 from public.material_submissions where id = :'v_e_r1'), tests.leitura('Sonda recente ' || :'v_sfx')))->>'resultado',
+  'revisao_invalida', 'o servidor não publica com a revisão antiga de "apto"'
+);
+select tests.clear_auth();
+-- No Tema B (onde a última revisão é a "não apto"), o envio também não vira "apto".
+update public.material_submissions set theme_id = :'v_theme_b', status = 'nao_apto' where id = :'v_e_r1';
+select is(app.revisao_apto_do_envio(:'v_e_r1'::uuid), null::uuid, 'no Tema B a revisão que vale é a "não apto": não é apto');
+select is((select verdict from public.material_reviews where id = app.revisao_valida_do_envio(:'v_e_r1'::uuid)), 'nao_apto', 'e a que vale é mesmo a "não apto"');
 
 -- ---------------------------------------------------------------------------
 -- 4c. O texto aprovado não pôde ser montado: o envio sai da fila de publicação
