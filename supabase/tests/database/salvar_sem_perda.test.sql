@@ -22,7 +22,8 @@ insert into public.themes (discipline_id, name) values (:'v_other_disc', 'Outro 
 returning id as v_other_theme \gset
 
 insert into public.sources (id, citation_text, tipo, verificacao)
-values ('fonte-salvar-teste', 'Diretriz curada', 'diretriz_consenso', 'verificada');
+values ('fonte-salvar-teste', 'Diretriz curada', 'diretriz_consenso', 'verificada')
+on conflict (id) do nothing;
 
 insert into public.materials (discipline_id, theme_id, title)
 values (:'v_disc', :'v_theme', 'Material do salvar') returning id as v_mat \gset
@@ -72,7 +73,7 @@ select is(
   'salvar sem mudança não altera o hash atestado'
 );
 select is(
-  (select id from public.material_references where citation_text = 'Referência vinculada'),
+  (select id from public.material_references where material_id = :'v_mat' and citation_text = 'Referência vinculada'),
   :'v_ref_linked'::uuid,
   'referência mantém o id'
 );
@@ -113,12 +114,12 @@ select is(
   'referência com texto editado é substituída (casamento por texto idêntico)'
 );
 select is(
-  (select source_id from public.material_references where citation_text = 'Referência vinculada — revisada'),
+  (select source_id from public.material_references where material_id = :'v_mat' and citation_text = 'Referência vinculada — revisada'),
   NULL::text,
   'referência nova não herda vínculo de outra'
 );
 select is(
-  (select id from public.material_references where citation_text = 'Referência solta'),
+  (select id from public.material_references where material_id = :'v_mat' and citation_text = 'Referência solta'),
   :'v_ref_plain'::uuid,
   'a referência intocada continua com o mesmo id'
 );
@@ -159,9 +160,9 @@ $fn$;
 
 select gen_random_uuid() as v_imp \gset
 select lives_ok(
-  format($$ select pg_temp.importar(%L, 'Importado na árvore', %L,
+  format($$ select pg_temp.importar(%L, 'Importado na árvore ' || %L, %L,
             jsonb_build_array(jsonb_build_object('material_id', %L, 'link_type', 'prerequisite'))) $$,
-         :'v_imp', :'v_parent', :'v_outside'),
+         :'v_imp', :'v_imp', :'v_parent', :'v_outside'),
   'importar com pai, ordem, rótulo, tipo e "Estude antes" roda'
 );
 select is(
@@ -208,11 +209,11 @@ select is(
 select gen_random_uuid() as v_imp_old \gset
 select lives_ok(
   format($$ select public.import_compendium_draft(
-              p_id => %L, p_discipline_id => %L, p_theme_id => %L, p_title => 'Import cliente antigo',
+              p_id => %L, p_discipline_id => %L, p_theme_id => %L, p_title => 'Import cliente antigo ' || %L,
               p_subtitle => null, p_author => null, p_estimated_read_time_minutes => 5, p_tags => '{}',
               p_sections => jsonb_build_array(jsonb_build_object('id', gen_random_uuid(), 'title', 'S', 'content', 'C')),
               p_references => '{}') $$,
-         :'v_imp_old', :'v_disc', :'v_theme'),
+         :'v_imp_old', :'v_disc', :'v_theme', :'v_imp_old'),
   'importação no formato antigo (sem posição) continua funcionando'
 );
 
