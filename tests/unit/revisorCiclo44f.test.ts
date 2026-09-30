@@ -113,6 +113,7 @@ function montar(c: Cenario = {}) {
     }),
     paraPublicar: vi.fn(async () => c.paraPublicar ?? []),
     publicar: vi.fn(async () => ({ desfecho: 'publicado' as const, materialId: 'material-1' })),
+    recusarPublicacao: vi.fn(async () => true),
   };
   const api: ApiDeLotes = {
     criar: vi.fn(async () => {

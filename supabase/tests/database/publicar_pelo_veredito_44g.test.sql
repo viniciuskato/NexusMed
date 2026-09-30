@@ -71,6 +71,20 @@ $$;
 
 grant usage on schema tests to anon, authenticated, service_role;
 
+-- Quantas linhas um comando alterou, com o papel atual.
+create or replace function tests.affected_rows(p_sql text)
+returns int
+language plpgsql
+as $$
+declare
+  v_n int;
+begin
+  execute p_sql;
+  get diagnostics v_n = row_count;
+  return v_n;
+end;
+$$;
+
 -- Atestação humana de fixture (mesmo helper de content_provenance_attestation).
 create or replace function tests.approve_material_revision(p_material_id uuid)
 returns uuid
@@ -152,7 +166,7 @@ as $$
   );
 $$;
 
-select plan(124);
+select plan(159);
 
 select tests.clear_auth();
 select tests.create_user('g.admin@test.local', 'admin', 'active') as v_admin \gset
@@ -435,6 +449,110 @@ select results_eq(
 );
 
 -- ---------------------------------------------------------------------------
+-- 4b. "Tentar de novo" com revisão apto válida: volta a "apto", sem nova revisão
+-- ---------------------------------------------------------------------------
+select tests.envio_revisado(:'v_autor', :'v_disc', :'v_theme', 'Retry erro ' || :'v_sfx', null, 'apto', 'erro') as v_e_retry \gset
+select count(*)::int as v_revs_antes from public.material_reviews where submission_id = :'v_e_retry' \gset
+update public.material_submissions set publication_note = 'Não conseguimos publicar o material agora.' where id = :'v_e_retry';
+select tests.authenticate_as(:'v_autor');
+select is(
+  tests.affected_rows(format($$ update public.material_submissions set title = title where id = %L $$, :'v_e_retry')),
+  1, 'o autor refaz o envio "erro" sem mudar o texto'
+);
+select tests.clear_auth();
+select results_eq(
+  format($$ select status, publication_note from public.material_submissions where id = %L $$, :'v_e_retry'),
+  $$ values ('apto'::text, null::text) $$,
+  'texto com revisão apto válida: volta a "apto" (não a "aguardando revisão"), sem recado'
+);
+select is((select count(*)::int from public.material_reviews where submission_id = :'v_e_retry'), :v_revs_antes, 'nenhuma revisão nova foi criada');
+select is(app.revisao_apto_do_envio(:'v_e_retry'::uuid), tests.review_of(:'v_e_retry'), 'e a revisão apto de antes continua a que vale');
+select tests.authenticate_as_service();
+select is(
+  (select count(*)::int from public.revisao_envios_para_publicar(1000) where submission_id = :'v_e_retry'),
+  1, 'o envio já está na fila de publicação do servidor'
+);
+select is(
+  (public.revisao_publicar_envio(:'v_e_retry', tests.review_of(:'v_e_retry'), (select content_sha256 from public.material_submissions where id = :'v_e_retry'), tests.leitura('Retry erro ' || :'v_sfx')))->>'resultado',
+  'publicado', 'e a publicação é refeita e dá certo'
+);
+select tests.clear_auth();
+
+-- Texto mudado: revisão nova, como sempre.
+select tests.envio_revisado(:'v_autor', :'v_disc', :'v_theme', 'Retry com texto novo ' || :'v_sfx', null, 'apto', 'erro') as v_e_retry2 \gset
+select tests.authenticate_as(:'v_autor');
+select lives_ok(format($$ update public.material_submissions set content_md = '# texto novo depois do erro' where id = %L $$, :'v_e_retry2'), 'o autor troca o texto do envio "erro"');
+select tests.clear_auth();
+select is((select status from public.material_submissions where id = :'v_e_retry2'), 'aguardando_revisao', 'texto novo volta à fila de revisão (a revisão antiga era de outro texto)');
+
+-- Revisão que não é "apto": também volta à fila.
+select tests.envio_revisado(:'v_autor', :'v_disc', :'v_theme', 'Retry revisão não apto ' || :'v_sfx', null, 'nao_apto', 'nao_apto') as v_e_retry3 \gset
+select tests.authenticate_as(:'v_autor');
+select lives_ok(format($$ update public.material_submissions set title = title where id = %L $$, :'v_e_retry3'), 'o autor refaz o envio "não apto" sem mudar o texto');
+select tests.clear_auth();
+select is((select status from public.material_submissions where id = :'v_e_retry3'), 'aguardando_revisao', 'revisão "não apto" não vale como aprovação: volta à fila de revisão');
+
+-- Envio recusado na publicação (ex.: material acima trocado): mesmo texto, revisão apto válida → "apto".
+select tests.envio_revisado(:'v_autor', :'v_disc', :'v_theme', 'Retry recusado ' || :'v_sfx', null, 'apto', 'nao_apto') as v_e_retry4 \gset
+update public.material_submissions set publication_note = 'O material acima não está mais publicado.' where id = :'v_e_retry4';
+select tests.authenticate_as(:'v_autor');
+select lives_ok(format($$ update public.material_submissions set parent_material_id = %L where id = %L $$, :'v_pai', :'v_e_retry4'), 'o autor escolhe outro material acima, com o mesmo texto');
+select tests.clear_auth();
+select results_eq(
+  format($$ select status, publication_note from public.material_submissions where id = %L $$, :'v_e_retry4'),
+  $$ values ('apto'::text, null::text) $$,
+  'o envio recusado volta a "apto" (a revisão continua valendo) e o recado antigo some'
+);
+
+-- A função de conferência responde só sobre envio do próprio autor.
+select tests.authenticate_as(:'v_aluno');
+select is(app.envio_tem_revisao_apto_do_autor(:'v_e_retry'::uuid), false, 'outra pessoa não descobre se o envio alheio tem revisão apto');
+select tests.clear_auth();
+select tests.authenticate_as(:'v_autor');
+select is(app.envio_tem_revisao_apto_do_autor(:'v_e_retry'::uuid), true, 'o autor vê a resposta sobre o próprio envio');
+select tests.clear_auth();
+select ok(not has_function_privilege('anon', 'app.envio_tem_revisao_apto_do_autor(uuid)', 'execute'), 'anon não executa a conferência');
+
+-- ---------------------------------------------------------------------------
+-- 4c. O texto aprovado não pôde ser montado: o envio sai da fila de publicação
+-- ---------------------------------------------------------------------------
+select tests.envio_revisado(:'v_autor', :'v_disc', :'v_theme', 'Texto que não monta ' || :'v_sfx') as v_e_nm \gset
+select tests.review_of(:'v_e_nm') as v_r_nm \gset
+select content_sha256 as v_h_nm from public.material_submissions where id = :'v_e_nm' \gset
+select tests.authenticate_as(:'v_admin');
+select throws_ok(
+  format($$ select public.revisao_recusar_publicacao(%L, %L, %L, 'x') $$, :'v_e_nm', :'v_r_nm', :'v_h_nm'),
+  '42501', NULL, 'nem admin recusa a publicação: é do servidor'
+);
+select tests.clear_auth();
+select ok(
+  not has_function_privilege('authenticated', 'public.revisao_recusar_publicacao(uuid, uuid, text, text)', 'execute')
+  and not has_function_privilege('anon', 'public.revisao_recusar_publicacao(uuid, uuid, text, text)', 'execute')
+  and has_function_privilege('service_role', 'public.revisao_recusar_publicacao(uuid, uuid, text, text)', 'execute'),
+  'só o servidor recusa a publicação'
+);
+select tests.authenticate_as_service();
+select is(public.revisao_recusar_publicacao(:'v_e_nm', gen_random_uuid(), :'v_h_nm', 'x'), false, 'com outra revisão: não faz nada');
+select is(public.revisao_recusar_publicacao(:'v_e_nm', :'v_r_nm', 'hash-de-outro-texto', 'x'), false, 'com outro texto: não faz nada');
+select tests.clear_auth();
+select is((select status from public.material_submissions where id = :'v_e_nm'), 'apto', 'e o envio continua "apto"');
+select tests.authenticate_as_service();
+select is(public.revisao_recusar_publicacao(:'v_e_nm', :'v_r_nm', :'v_h_nm', 'O texto não monta: falta a seção. Corrija o texto e envie de novo.'), true, 'com a revisão e o texto certos: recusa');
+select is(public.revisao_recusar_publicacao(:'v_e_nm', :'v_r_nm', :'v_h_nm', 'de novo'), false, 'e não recusa duas vezes (já não está "apto")');
+select is((select count(*)::int from public.revisao_envios_para_publicar(1000) where submission_id = :'v_e_nm'), 0, 'o envio saiu da fila de publicação');
+select tests.clear_auth();
+select results_eq(
+  format($$ select status, publication_note, published_material_id is null from public.material_submissions where id = %L $$, :'v_e_nm'),
+  $$ values ('nao_apto'::text, 'O texto não monta: falta a seção. Corrija o texto e envie de novo.'::text, true) $$,
+  'vai a "não apto" com o recado leigo'
+);
+select tests.envio_revisado(:'v_autor', :'v_disc', :'v_theme', 'Texto que não monta 2 ' || :'v_sfx') as v_e_nm2 \gset
+select tests.authenticate_as_service();
+select is(public.revisao_recusar_publicacao(:'v_e_nm2', tests.review_of(:'v_e_nm2'), (select content_sha256 from public.material_submissions where id = :'v_e_nm2'), '   '), true, 'sem recado, grava um recado padrão');
+select tests.clear_auth();
+select is((select publication_note from public.material_submissions where id = :'v_e_nm2'), 'O texto não pôde ser publicado.', 'o recado padrão é leigo');
+
+-- ---------------------------------------------------------------------------
 -- 5. Falha no meio: nada fica pela metade
 -- ---------------------------------------------------------------------------
 select tests.envio_revisado(:'v_autor', :'v_disc', :'v_theme', 'Envio que falha ' || :'v_sfx') as v_e_falha \gset
@@ -526,7 +644,7 @@ select throws_ok(
 insert into public.materials (discipline_id, theme_id, title) values (:'v_disc', :'v_theme', 'Legado ' || :'v_sfx') returning id as v_leg \gset
 insert into public.material_sections (material_id, sort_order, title, content) values (:'v_leg', 0, 'S1', 'texto legado');
 update public.materials set status = 'published' where id = :'v_leg';
-insert into public.material_publicado_antes_44g (material_id) values (:'v_leg');
+insert into public.material_publicado_antes_44g (material_id, snapshot_hash) values (:'v_leg', app.material_snapshot_hash(:'v_leg'::uuid));
 select tests.authenticate_as(:'v_admin');
 select lives_ok(format($$ select public.unpublish_material(%L) $$, :'v_leg'), 'o admin despublica o material antigo');
 select throws_like(format($$ select public.publish_material(%L) $$, :'v_leg'), '%já esteve no ar%', 'material antigo sem atestação do conteúdo atual: a regra antiga o barra, com mensagem leiga');
@@ -536,6 +654,52 @@ select tests.authenticate_as(:'v_admin');
 select lives_ok(format($$ select public.publish_material(%L) $$, :'v_leg'), 'material antigo com atestação do conteúdo atual volta ao ar pela regra antiga');
 select tests.clear_auth();
 select is((select status from public.materials where id = :'v_leg'), 'published', 'e está publicado');
+
+-- A exceção vale só para o CONTEÚDO que já estava no ar: reescrito, precisa de revisão de IA.
+insert into public.materials (discipline_id, theme_id, title) values (:'v_disc', :'v_theme', 'Legado reescrito ' || :'v_sfx') returning id as v_leg2 \gset
+insert into public.material_sections (material_id, sort_order, title, content) values (:'v_leg2', 0, 'S1', 'texto legado original');
+update public.materials set status = 'published' where id = :'v_leg2';
+insert into public.material_publicado_antes_44g (material_id, snapshot_hash) values (:'v_leg2', app.material_snapshot_hash(:'v_leg2'::uuid));
+select tests.authenticate_as(:'v_admin');
+select lives_ok(format($$ select public.unpublish_material(%L) $$, :'v_leg2'), 'o admin despublica outro material antigo');
+select tests.clear_auth();
+-- O admin reescreve título e seções, atesta a própria revisão e tenta republicar sem revisor de IA.
+update public.materials set title = 'Material NOVO escrito pelo admin ' || :'v_sfx' where id = :'v_leg2';
+update public.material_sections set title = 'Seção nova', content = 'texto totalmente novo, escrito pelo admin' where material_id = :'v_leg2';
+select tests.approve_material_revision(:'v_leg2'::uuid);
+select tests.authenticate_as(:'v_admin');
+select throws_like(
+  format($$ select public.publish_material(%L) $$, :'v_leg2'),
+  '%mudou depois de ir ao ar%revisor de IA%',
+  'material antigo reescrito e atestado pelo admin: não republica sem revisor de IA'
+);
+select tests.clear_auth();
+select is((select status from public.materials where id = :'v_leg2'), 'draft', 'e continua rascunho');
+select is((select count(*)::int from public.material_ai_provenance where material_id = :'v_leg2'), 0, 'sem proveniência de IA');
+-- Voltar ao texto original (mesmo hash de antes) devolve a exceção.
+update public.materials set title = 'Legado reescrito ' || :'v_sfx' where id = :'v_leg2';
+update public.material_sections set title = 'S1', content = 'texto legado original' where material_id = :'v_leg2';
+select tests.approve_material_revision(:'v_leg2'::uuid);
+select tests.authenticate_as(:'v_admin');
+select lives_ok(format($$ select public.publish_material(%L) $$, :'v_leg2'), 'republicar exatamente o conteúdo antigo, atestado, ainda é aceito');
+select tests.clear_auth();
+select is((select status from public.materials where id = :'v_leg2'), 'published', 'e volta ao ar');
+-- Conteúdo novo COM revisão de IA apto vinculada publica normalmente (o caminho certo).
+select tests.authenticate_as(:'v_admin');
+select lives_ok(format($$ select public.unpublish_material(%L) $$, :'v_leg2'), 'despublica de novo');
+select tests.clear_auth();
+update public.material_sections set content = 'texto reescrito, agora revisado pela IA' where material_id = :'v_leg2';
+select tests.envio_revisado(:'v_autor', :'v_disc', :'v_theme', 'Envio do legado reescrito ' || :'v_sfx') as v_e_leg2 \gset
+insert into public.material_ai_provenance (material_id, submission_id, review_id, review_verdict, reviewed_at, model, text_sha256, snapshot_hash)
+select :'v_leg2', s.id, tests.review_of(s.id), 'apto', now(), 'm', s.content_sha256, app.material_snapshot_hash(:'v_leg2'::uuid)
+  from public.material_submissions s where s.id = :'v_e_leg2';
+select tests.authenticate_as(:'v_admin');
+select lives_ok(format($$ select public.publish_material(%L) $$, :'v_leg2'), 'conteúdo novo com revisão de IA apto vinculada publica');
+select tests.clear_auth();
+select ok(
+  (select snapshot_hash from public.material_publicado_antes_44g where material_id = :'v_leg2') is distinct from app.material_snapshot_hash(:'v_leg2'::uuid),
+  'e o hash guardado do conteúdo antigo continua o de antes (não acompanha as edições)'
+);
 
 -- Material novo (fora da lista do que já estava publicado) com atestação humana e sem IA: barrado.
 select is((select count(*)::int from public.material_publicado_antes_44g where material_id = :'v_rasc'), 0, 'material novo nunca entra na lista do que já estava publicado');

@@ -52,8 +52,13 @@ create unique index material_submissions_published_material_uq
 comment on column public.material_submissions.published_material_id is
   '44-G: o material que o servidor criou e publicou a partir deste envio (estado "publicado").';
 
--- Mesmo gatilho da 44-F; a única diferença é limpar o recado do servidor quando a
--- pessoa substitui o texto (o recado era sobre o texto antigo).
+-- Mesmo gatilho da 44-F, com duas diferenças:
+--   * limpa o recado do servidor quando a pessoa substitui o texto (o recado era
+--     sobre o texto antigo);
+--   * se a alteração da pessoa NÃO muda o texto (ex.: "Tentar de novo") e o texto
+--     atual já tem revisão "apto" válida, o envio volta a "apto" e só a publicação
+--     é refeita, sem pagar outra revisão. Texto novo, ou revisão que não é "apto",
+--     volta a "aguardando_revisao" como sempre.
 create or replace function app.material_submissions_before_write()
 returns trigger
 language plpgsql
@@ -74,7 +79,10 @@ begin
   if tg_op = 'UPDATE' then
     new.updated_at := now();
     if v_client then
-      new.status := 'aguardando_revisao';
+      new.status := case
+        when new.content_md = old.content_md and app.envio_tem_revisao_apto_do_autor(old.id) then 'apto'
+        else 'aguardando_revisao'
+      end;
       new.author_id := old.author_id;
       new.created_at := old.created_at;
       new.publication_note := null;
@@ -92,6 +100,23 @@ begin
   return new;
 end;
 $$;
+
+-- O `with check` vê a linha depois do gatilho: "aguardando_revisao", ou "apto" quando
+-- o texto é o mesmo e já tem revisão apto. A pessoa não escolhe o estado (sem
+-- privilégio de coluna): é o gatilho que decide.
+drop policy material_submissions_update_own on public.material_submissions;
+create policy material_submissions_update_own on public.material_submissions
+  for update to authenticated
+  using (
+    author_id = auth.uid()
+    and status in ('aguardando_revisao', 'nao_apto', 'erro')
+    and app.current_profile_status(auth.uid()) = 'active'
+  )
+  with check (
+    author_id = auth.uid()
+    and status in ('aguardando_revisao', 'apto')
+    and app.current_profile_status(auth.uid()) = 'active'
+  );
 
 -- ----------------------------------------------------------------------------
 -- 1. Proveniência "revisado por IA"
@@ -127,10 +152,14 @@ create policy material_ai_provenance_select_admin on public.material_ai_provenan
   using (app.is_admin_active(auth.uid()));
 
 -- Materiais que já estavam publicados antes desta migration: a regra antiga
--- (atestação humana do conteúdo atual) continua valendo para republicá-los.
+-- (atestação humana do conteúdo atual) continua valendo para republicá-los, mas
+-- SÓ para o conteúdo que já estava no ar: a tabela guarda o hash desse conteúdo
+-- (o mesmo da atestação humana). Se o conteúdo mudar depois (título, seções,
+-- referências), a exceção acaba e o material precisa de revisão de IA "apto".
 -- Ninguém do app escreve aqui; material novo nunca entra.
 create table public.material_publicado_antes_44g (
-  material_id uuid primary key references public.materials(id) on delete cascade
+  material_id uuid primary key references public.materials(id) on delete cascade,
+  snapshot_hash text not null
 );
 
 comment on table public.material_publicado_antes_44g is
@@ -139,8 +168,9 @@ comment on table public.material_publicado_antes_44g is
 alter table public.material_publicado_antes_44g enable row level security;
 revoke all on table public.material_publicado_antes_44g from anon, authenticated;
 
-insert into public.material_publicado_antes_44g (material_id)
-select id from public.materials where status = 'published';
+insert into public.material_publicado_antes_44g (material_id, snapshot_hash)
+select m.id, encode(extensions.digest(app.build_material_snapshot(m.id)::text, 'sha256'), 'hex')
+from public.materials m where m.status = 'published';
 
 -- ----------------------------------------------------------------------------
 -- 2. Funções internas
@@ -198,6 +228,27 @@ as $$
     and r.verdict = 'apto';
 $$;
 
+-- Para o gatilho do envio (roda com o papel de quem grava): o envio é do próprio
+-- autor e o texto atual dele tem revisão "apto" válida. Só responde sobre envio
+-- da própria pessoa.
+create or replace function app.envio_tem_revisao_apto_do_autor(p_submission uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.material_submissions s
+    where s.id = p_submission
+      and (auth.uid() is null or s.author_id = auth.uid())
+      and app.revisao_apto_do_envio(s.id) is not null
+  );
+$$;
+
+revoke all on function app.envio_tem_revisao_apto_do_autor(uuid) from public, anon;
+grant execute on function app.envio_tem_revisao_apto_do_autor(uuid) to authenticated;
+
 revoke all on function app.material_snapshot_hash(uuid) from public, anon, authenticated;
 revoke all on function app.material_tem_revisao_apto(uuid) from public, anon, authenticated;
 revoke all on function app.revisao_apto_do_envio(uuid) from public, anon, authenticated;
@@ -209,7 +260,7 @@ revoke all on function app.revisao_apto_do_envio(uuid) from public, anon, authen
 -- Igual à de 20260923120000 (ordem de publicação, "Estude antes"), com uma
 -- diferença: no lugar da atestação humana, o material precisa ter revisão de IA
 -- "apto" vinculada ao conteúdo atual. Material publicado antes da 44-G continua
--- com a regra antiga.
+-- com a regra antiga, mas só enquanto o conteúdo for o que já estava no ar.
 create or replace function public.publish_material(p_material_id uuid)
 returns public.materials
 language plpgsql
@@ -219,6 +270,7 @@ as $$
 declare
   v_result public.materials;
   v_blocker text;
+  v_legacy_hash text;
 begin
   if not app.is_admin_active(auth.uid()) then
     raise exception 'apenas administradores ativos podem publicar materiais';
@@ -228,12 +280,15 @@ begin
   if not found then raise exception 'material não encontrado: %', p_material_id; end if;
 
   if not app.material_tem_revisao_apto(p_material_id) then
-    if exists (select 1 from public.material_publicado_antes_44g where material_id = p_material_id) then
-      if not app.has_current_approved_revision(p_material_id, null) then
-        raise exception 'publicação bloqueada: este material já esteve no ar, mas mudou depois da última revisão aprovada por uma pessoa. Atualize a revisão e atestação antes de publicá-lo de novo.';
-      end if;
-    else
+    select l.snapshot_hash into v_legacy_hash
+    from public.material_publicado_antes_44g l where l.material_id = p_material_id;
+    if v_legacy_hash is null then
       raise exception 'publicação bloqueada: este material ainda não passou pelo revisor de IA. Para publicar algo novo, envie o texto em "Enviar material": se o revisor aprovar, ele é publicado sozinho.';
+    elsif v_legacy_hash is distinct from app.material_snapshot_hash(p_material_id) then
+      -- O conteúdo mudou depois de ir ao ar: a exceção do que já estava publicado não cobre o texto novo.
+      raise exception 'publicação bloqueada: este material mudou depois de ir ao ar, e conteúdo novo precisa passar pelo revisor de IA. Envie o texto em "Enviar material": se o revisor aprovar, ele é publicado sozinho.';
+    elsif not app.has_current_approved_revision(p_material_id, null) then
+      raise exception 'publicação bloqueada: este material já esteve no ar, mas não tem a revisão aprovada por uma pessoa para o conteúdo atual. Atualize a revisão e atestação antes de publicá-lo de novo.';
     end if;
   end if;
 
@@ -435,7 +490,9 @@ begin
      where id = s.id;
   exception when others then
     -- Tudo o que o bloco fez foi desfeito. O envio vai a "erro" (a pessoa pode
-    -- tentar de novo) e o detalhe técnico fica só no log do banco.
+    -- tentar de novo: como o texto tem revisão "apto" válida, "Tentar de novo" volta o
+    -- envio a "apto" e só a publicação é refeita, sem nova revisão) e o detalhe
+    -- técnico fica só no log do banco.
     raise warning 'revisao_publicar_envio % falhou: %', p_submission_id, sqlerrm;
     update public.material_submissions
        set status = 'erro',
@@ -448,13 +505,45 @@ begin
 end;
 $$;
 
+-- O servidor não conseguiu montar o material a partir do texto aprovado (o importador
+-- o recusou): o problema é do texto. O envio sai da fila de publicação, vai a
+-- "nao_apto" com o recado em palavras leigas, e a pessoa corrige e reenvia. Só vale
+-- para o envio "apto" com a mesma revisão e o mesmo texto que o servidor leu.
+create or replace function public.revisao_recusar_publicacao(
+  p_submission_id uuid,
+  p_review_id uuid,
+  p_content_sha256 text,
+  p_note text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  s public.material_submissions;
+begin
+  select * into s from public.material_submissions where id = p_submission_id for update;
+  if not found or s.status <> 'apto' or s.published_material_id is not null
+     or app.revisao_apto_do_envio(s.id) is distinct from p_review_id
+     or s.content_sha256 is distinct from p_content_sha256 then
+    return false;
+  end if;
+  update public.material_submissions
+     set status = 'nao_apto', publication_note = left(coalesce(nullif(btrim(p_note), ''), 'O texto não pôde ser publicado.'), 1000)
+   where id = s.id;
+  return true;
+end;
+$$;
+
 do $$
 declare
   f text;
 begin
   foreach f in array array[
     'public.revisao_envios_para_publicar(int)',
-    'public.revisao_publicar_envio(uuid, uuid, text, jsonb)'
+    'public.revisao_publicar_envio(uuid, uuid, text, jsonb)',
+    'public.revisao_recusar_publicacao(uuid, uuid, text, text)'
   ] loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
     execute format('grant execute on function %s to service_role', f);

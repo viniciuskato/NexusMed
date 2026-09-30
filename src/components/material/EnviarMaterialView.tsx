@@ -68,6 +68,8 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
   const [enviando, setEnviando] = useState(false);
   const [erroDoEnvio, setErroDoEnvio] = useState('');
   const [enviadoComo, setEnviadoComo] = useState('');
+  // O texto enviado é o mesmo que já tem revisão "apto": não volta para a fila de revisão.
+  const [enviadoJaAprovado, setEnviadoJaAprovado] = useState(false);
   const seletorDeArquivo = useRef<HTMLInputElement>(null);
 
   // 44-F: envio "não apto" ou "erro" que está sendo corrigido (texto substituído).
@@ -159,6 +161,7 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
         ? await materialSubmissionsRepository.replaceText(substituindo.id, dados)
         : await materialSubmissionsRepository.submit(dados);
       setEnviadoComo(criado.title);
+      setEnviadoJaAprovado(criado.status === 'apto');
       setSubstituindo(null);
       setTexto('');
       setNomeDoArquivo('');
@@ -211,8 +214,13 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
     setAvisoDaLista('');
     setErroDoEnvio('');
     try {
-      await materialSubmissionsRepository.retry(envio.id, envio.title);
-      setAvisoDaLista(`“${envio.title}” voltou para a fila de revisão.`);
+      const atualizado = await materialSubmissionsRepository.retry(envio.id, envio.title);
+      // Texto com revisão "apto" válida: o banco o devolve a "apto" e só a publicação é refeita.
+      setAvisoDaLista(
+        atualizado.status === 'apto'
+          ? `“${envio.title}” já foi aprovado na revisão. A publicação será refeita em alguns minutos, sem nova revisão.`
+          : `“${envio.title}” voltou para a fila de revisão.`,
+      );
       await recarregarEnvios();
     } catch (err) {
       setErroDoEnvio(mensagemDeErroDoEnvio(err));
@@ -503,7 +511,9 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
             role="status"
             className="p-3 rounded-xl border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 dark:border-emerald-800 text-sm text-emerald-900 dark:text-emerald-200"
           >
-            Material “{enviadoComo}” enviado. Ele aparece em “Meus envios”, aguardando revisão.
+            {enviadoJaAprovado
+              ? `Material “${enviadoComo}” enviado. O texto é o mesmo que já foi aprovado na revisão: ele será publicado em alguns minutos.`
+              : `Material “${enviadoComo}” enviado. Ele aparece em “Meus envios”, aguardando revisão.`}
           </p>
         )}
 
