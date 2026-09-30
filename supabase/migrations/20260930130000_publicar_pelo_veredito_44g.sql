@@ -55,10 +55,12 @@ comment on column public.material_submissions.published_material_id is
 -- Mesmo gatilho da 44-F, com duas diferenças:
 --   * limpa o recado do servidor quando a pessoa substitui o texto (o recado era
 --     sobre o texto antigo);
---   * se a alteração da pessoa NÃO muda o texto (ex.: "Tentar de novo") e o texto
---     atual já tem revisão "apto" válida, o envio volta a "apto" e só a publicação
---     é refeita, sem pagar outra revisão. Texto novo, ou revisão que não é "apto",
---     volta a "aguardando_revisao" como sempre.
+--   * se a alteração da pessoa NÃO muda o texto NEM o lugar (Disciplina, Tema, material
+--     acima) — ex.: "Tentar de novo" — e o texto atual já tem revisão "apto" válida
+--     para esse texto e esse lugar, o envio volta a "apto" e só a publicação é
+--     refeita, sem pagar outra revisão. Texto novo, lugar novo, ou revisão que não é
+--     "apto", volta a "aguardando_revisao" como sempre (a IA revisou aquele lugar, não
+--     outro).
 create or replace function app.material_submissions_before_write()
 returns trigger
 language plpgsql
@@ -80,7 +82,9 @@ begin
     new.updated_at := now();
     if v_client then
       new.status := case
-        when new.content_md = old.content_md and app.envio_tem_revisao_apto_do_autor(old.id) then 'apto'
+        when new.content_md = old.content_md
+             and app.envio_tem_revisao_apto_do_autor(old.id, new.discipline_id, new.theme_id, new.parent_material_id)
+          then 'apto'
         else 'aguardando_revisao'
       end;
       new.author_id := old.author_id;
@@ -229,9 +233,12 @@ as $$
 $$;
 
 -- Para o gatilho do envio (roda com o papel de quem grava): o envio é do próprio
--- autor e o texto atual dele tem revisão "apto" válida. Só responde sobre envio
--- da própria pessoa.
-create or replace function app.envio_tem_revisao_apto_do_autor(p_submission uuid)
+-- autor e o texto atual dele tem revisão "apto" válida PARA O LUGAR dado (o lugar
+-- NOVO, que a alteração da pessoa quer gravar: no BEFORE UPDATE a tabela ainda tem o
+-- antigo). Só responde sobre envio da própria pessoa.
+create or replace function app.envio_tem_revisao_apto_do_autor(
+  p_submission uuid, p_discipline uuid, p_theme uuid, p_parent uuid
+)
 returns boolean
 language sql
 stable
@@ -242,12 +249,16 @@ as $$
     select 1 from public.material_submissions s
     where s.id = p_submission
       and (auth.uid() is null or s.author_id = auth.uid())
-      and app.revisao_apto_do_envio(s.id) is not null
+      and exists (
+        select 1 from public.material_reviews r
+        where r.id = app.revisao_valida_do_envio_para_o_lugar(s.id, p_discipline, p_theme, p_parent)
+          and r.verdict = 'apto'
+      )
   );
 $$;
 
-revoke all on function app.envio_tem_revisao_apto_do_autor(uuid) from public, anon;
-grant execute on function app.envio_tem_revisao_apto_do_autor(uuid) to authenticated;
+revoke all on function app.envio_tem_revisao_apto_do_autor(uuid, uuid, uuid, uuid) from public, anon;
+grant execute on function app.envio_tem_revisao_apto_do_autor(uuid, uuid, uuid, uuid) to authenticated;
 
 revoke all on function app.material_snapshot_hash(uuid) from public, anon, authenticated;
 revoke all on function app.material_tem_revisao_apto(uuid) from public, anon, authenticated;
@@ -415,13 +426,13 @@ begin
 
   -- Recusas que a pessoa resolve corrigindo o envio.
   if exists (select 1 from public.materials m where lower(btrim(m.title)) = lower(v_title)) then
-    v_motivo := format('Já existe um material com o título “%s”. Troque o título do arquivo e envie de novo.', v_title);
+    v_motivo := format('Já existe um material com o título “%s”. Troque o título do arquivo e envie de novo (o texto muda, então o envio volta para a revisão).', v_title);
   elsif s.parent_material_id is not null then
     select * into v_parent from public.materials where id = s.parent_material_id;
     if not found or v_parent.status <> 'published' then
-      v_motivo := 'O material que você escolheu como “material acima” não está mais publicado. Escolha outro, ou deixe em branco, e envie de novo.';
+      v_motivo := 'O material que você escolheu como “material acima” não está mais publicado. Escolha outro, ou deixe em branco, e envie de novo: como o lugar do material muda, o envio volta para a revisão.';
     elsif v_parent.discipline_id <> s.discipline_id or v_parent.theme_id <> s.theme_id then
-      v_motivo := 'O material que você escolheu como “material acima” é de outra Disciplina ou de outro Tema. Escolha um do mesmo Tema, ou deixe em branco, e envie de novo.';
+      v_motivo := 'O material que você escolheu como “material acima” é de outra Disciplina ou de outro Tema. Escolha um do mesmo Tema, ou deixe em branco, e envie de novo: como o lugar do material muda, o envio volta para a revisão.';
     end if;
   end if;
   if v_motivo is not null then
