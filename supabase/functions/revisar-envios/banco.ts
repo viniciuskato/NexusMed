@@ -20,7 +20,7 @@ interface LinhaDeReserva {
   discipline_name: string | null;
   theme_name: string | null;
   parent_title: string | null;
-  continuation?: unknown[] | null;
+  continuation?: unknown[][] | null;
   attempt?: number;
 }
 
@@ -41,6 +41,13 @@ function doReservado(l: LinhaDeReserva): Reservado {
   };
 }
 
+interface LinhaPendente {
+  review_id: string;
+  status: 'submetida' | 'pausada' | 'incerta';
+  batch_id: string | null;
+  tentativa_em: string | null;
+}
+
 export function bancoDoSupabase(cliente: ClienteDoBanco): Banco {
   async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
     const { data, error } = await cliente.rpc(fn, args);
@@ -57,12 +64,21 @@ export function bancoDoSupabase(cliente: ClienteDoBanco): Banco {
   });
 
   return {
+    async travar() {
+      return (await rpc<string | null>('revisao_tentar_travar', { p_seconds: 240 })) ?? null;
+    },
+    async destravar(token) {
+      await rpc<null>('revisao_destravar', { p_token: token });
+    },
+    async marcarIncerta(reviewIds) {
+      return (await rpc<string | null>('revisao_marcar_incerta', { p_review_ids: reviewIds })) ?? null;
+    },
     async liberarReservasVelhas() {
       return (await rpc<number | null>('revisao_liberar_reservas_velhas', { p_minutes: 15 })) ?? 0;
     },
     async pendentes(): Promise<Pendente[]> {
-      const linhas = (await rpc<Array<{ review_id: string; status: 'submetida' | 'pausada'; batch_id: string | null }> | null>('revisao_pendentes')) ?? [];
-      return linhas.map((l) => ({ reviewId: l.review_id, status: l.status, batchId: l.batch_id }));
+      const linhas = (await rpc<LinhaPendente[] | null>('revisao_pendentes')) ?? [];
+      return linhas.map((l) => ({ reviewId: l.review_id, status: l.status, batchId: l.batch_id, tentativaEm: l.tentativa_em }));
     },
     async reservar(max) {
       const linhas = (await rpc<LinhaDeReserva[] | null>('revisao_reservar_envios', { p_max: max })) ?? [];

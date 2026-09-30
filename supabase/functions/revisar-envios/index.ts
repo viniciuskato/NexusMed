@@ -12,7 +12,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { bancoDoSupabase, type ClienteDoBanco } from './banco.ts';
-import { executarCiclo, type ApiDeLotes, type Conferencia } from './ciclo.ts';
+import { apiDeLotesDaAnthropic, TIMEOUT_DA_API_MS, type ClienteDaAnthropic } from './api.ts';
+import { executarCiclo, type Conferencia } from './ciclo.ts';
 import { montarSistema } from './montagem.ts';
 import { BASE_DO_REVISOR } from './gerado/textos.ts';
 import * as validacao from './gerado/validacao.js';
@@ -39,23 +40,14 @@ async function tratar(req: Request): Promise<Response> {
   if (!portaria.ok) return json({ erro: portaria.erro }, portaria.status);
 
   const cliente = createClient(ambiente.SUPABASE_URL as string, ambiente.SUPABASE_SERVICE_ROLE_KEY as string, { auth: { persistSession: false } });
-  const anthropic = new Anthropic({ apiKey: ambiente.ANTHROPIC_API_KEY as string });
-
-  const api: ApiDeLotes = {
-    async criar(pedidos) {
-      const lote = await anthropic.messages.batches.create({ requests: pedidos });
-      return { id: lote.id };
-    },
-    async consultar(id) {
-      const lote = await anthropic.messages.batches.retrieve(id);
-      return { status: lote.processing_status };
-    },
-    async *resultados(id) {
-      for await (const item of await anthropic.messages.batches.results(id)) {
-        yield item as unknown as { custom_id: string; result: never };
-      }
-    },
-  };
+  // Prazo por chamada abaixo do limite de tempo da função. As leituras podem
+  // repetir uma vez; a criação de lote NUNCA repete (ver api.ts).
+  const anthropic = new Anthropic({
+    apiKey: ambiente.ANTHROPIC_API_KEY as string,
+    timeout: TIMEOUT_DA_API_MS,
+    maxRetries: 1,
+  });
+  const api = apiDeLotesDaAnthropic(anthropic as unknown as ClienteDaAnthropic);
 
   const modulo = validacao as unknown as ModuloDeValidacao;
   const conferir: Conferencia = (envio, catalogo) => {

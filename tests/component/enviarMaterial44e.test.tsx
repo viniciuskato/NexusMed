@@ -387,6 +387,19 @@ describe('44-F — veredito, achados e bloco de correção do autor', () => {
     expect(within(listaMeus()).queryByRole('button', { name: /Corrigir/ })).toBeNull();
   });
 
+  it('envio de volta à fila (depois de "Tentar de novo") não mostra a revisão antiga, mesmo que ela tenha o mesmo texto', async () => {
+    repo.listMine.mockResolvedValue([
+      envio({ id: 's-erro', title: 'Voltou para a fila', status: 'aguardando_revisao', review: REVISAO_NAO_APTO }),
+      envio({ id: 's-rev', title: 'Sendo revisado', status: 'em_revisao', review: REVISAO_NAO_APTO }),
+    ]);
+    renderTela();
+    await aguardarLista();
+    expect(listaMeus().textContent).not.toContain('Ver a revisão');
+    expect(within(listaMeus()).queryByTestId('revisao-do-envio')).toBeNull();
+    expect(within(listaMeus()).queryByTestId('bloco-de-correcao')).toBeNull();
+    expect(within(listaMeus()).queryByRole('button', { name: /Corrigir/ })).toBeNull();
+  });
+
   it('"não apto" pela conferência do servidor mostra a lista de pendências como achados', async () => {
     repo.listMine.mockResolvedValue([
       envio({

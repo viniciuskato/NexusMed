@@ -149,7 +149,9 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
                 {avisoDaFila}
               </p>
             )}
-            {envio.review && <RevisaoDoEnvio revisao={envio.review} />}
+            {envio.review && envio.status !== 'aguardando_revisao' && envio.status !== 'em_revisao' && (
+              <RevisaoDoEnvio revisao={envio.review} />
+            )}
             {(podeCorrigir || podeTentarDeNovo) && (
               <div className="flex flex-wrap gap-2 pt-1">
                 {podeCorrigir && (

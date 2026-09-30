@@ -110,8 +110,14 @@ const COLUMNS = 'id, title, discipline_id, theme_id, parent_material_id, status,
 const REVIEW_COLUMNS =
   'reviews:material_reviews(id, status, verdict, findings_text, correction_block, error_kind, content_sha256, completed_at, created_at)';
 
-/** A revisão terminada mais recente que vale para o texto atual (mesmo hash). */
-export function revisaoQueValeParaOTexto(row: Pick<Row, 'content_sha256' | 'reviews'>): MaterialReviewView | null {
+/**
+ * A revisão terminada mais recente que vale para o texto atual (mesmo hash) — e
+ * só enquanto o envio NÃO está na fila. Depois de "Tentar de novo", o texto é o
+ * mesmo (o hash bate com a revisão antiga), mas o envio voltou a esperar uma
+ * revisão nova: mostrar a antiga ali daria um veredito que já não vale.
+ */
+export function revisaoQueValeParaOTexto(row: Pick<Row, 'content_sha256' | 'reviews' | 'status'>): MaterialReviewView | null {
+  if (row.status === 'aguardando_revisao' || row.status === 'em_revisao') return null;
   if (!row.content_sha256) return null;
   const validas = (row.reviews ?? [])
     .filter((r) => r.content_sha256 === row.content_sha256 && r.verdict && (r.status === 'concluida' || r.status === 'erro'))

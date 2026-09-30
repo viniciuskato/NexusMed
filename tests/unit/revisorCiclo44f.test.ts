@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
+  MAX_ENVIOS_NOVOS_POR_CICLO,
   executarCiclo,
+  recusaDefinitiva,
   textoTemLinhaDeVeredito,
   type ApiDeLotes,
   type Banco,
@@ -72,7 +74,9 @@ interface Cenario {
   status?: 'in_progress' | 'canceling' | 'ended';
   resultados?: Array<{ custom_id: string; result: ResultadoDoLote }>;
   pausaAceita?: boolean;
-  falhaAoCriar?: boolean;
+  /** true = resposta incerta (rede, timeout); 'definitiva' = a API recusou com 4xx. */
+  falhaAoCriar?: boolean | 'definitiva';
+  travado?: boolean;
   falhaAoAnexar?: boolean;
   falhaAoConsultar?: boolean;
   conferir?: Conferencia;
@@ -81,6 +85,9 @@ interface Cenario {
 function montar(c: Cenario = {}) {
   const registrados: ResultadoRegistrado[] = [];
   const banco: Banco = {
+    travar: vi.fn(async () => (c.travado ? null : 'token-da-trava')),
+    destravar: vi.fn(async () => undefined),
+    marcarIncerta: vi.fn(async () => '2026-09-30T12:00:00.000Z'),
     liberarReservasVelhas: vi.fn(async () => 0),
     pendentes: vi.fn(async () => c.pendentes ?? []),
     reservar: vi.fn(async () => c.reservas ?? []),
@@ -99,9 +106,12 @@ function montar(c: Cenario = {}) {
   };
   const api: ApiDeLotes = {
     criar: vi.fn(async () => {
+      if (c.falhaAoCriar === 'definitiva') throw Object.assign(new Error('400 invalid_request_error'), { status: 400 });
       if (c.falhaAoCriar) throw new Error('API fora');
       return { id: 'msgbatch_novo' };
     }),
+    listar: vi.fn(async () => []),
+    cancelar: vi.fn(async () => undefined),
     consultar: vi.fn(async () => {
       if (c.falhaAoConsultar) throw new Error('rede');
       return { status: c.status ?? 'ended' };
@@ -138,7 +148,7 @@ function montar(c: Cenario = {}) {
   return { deps, banco, api, registrados };
 }
 
-const submetida = (n: number, lote = 'msgbatch_1'): Pendente => ({ reviewId: `rev-${n}`, status: 'submetida', batchId: lote });
+const submetida = (n: number, lote = 'msgbatch_1'): Pendente => ({ reviewId: `rev-${n}`, status: 'submetida', batchId: lote, tentativaEm: null });
 
 describe('44-F — envio ao lote', () => {
   it('reserva, confere e cria um lote com um pedido por envio, ligado ao id da revisão', async () => {
@@ -168,13 +178,45 @@ describe('44-F — envio ao lote', () => {
     expect(banco.liberarReservasVelhas).toHaveBeenCalledTimes(1);
   });
 
-  it('se o lote não puder ser criado, as reservas voltam para a fila e nada é anexado', async () => {
-    const { deps, banco, registrados } = montar({ reservas: [envio(1)], falhaAoCriar: true });
+  it('a API recusou o pedido de vez (4xx): só então as reservas voltam para a fila, e nada é anexado', async () => {
+    const { deps, banco, registrados } = montar({ reservas: [envio(1)], falhaAoCriar: 'definitiva' });
     const resumo = await executarCiclo(deps);
+    expect(banco.marcarIncerta).toHaveBeenCalledWith(['rev-1']);
     expect(banco.liberar).toHaveBeenCalledWith(['rev-1']);
     expect(banco.anexarLote).not.toHaveBeenCalled();
     expect(registrados).toHaveLength(0);
-    expect(resumo.erros.join(' ')).toContain('criar lote');
+    expect(resumo.erros.join(' ')).toContain('recusado pela API');
+    expect(resumo.loteIncerto).toBe(false);
+  });
+
+  it('resposta incerta ao criar o lote (rede, timeout, 5xx): NÃO devolve o envio à fila; a revisão fica gravada como incerta', async () => {
+    const { deps, banco } = montar({ reservas: [envio(1)], falhaAoCriar: true });
+    const resumo = await executarCiclo(deps);
+    // A tentativa foi gravada ANTES de chamar a API.
+    expect(banco.marcarIncerta).toHaveBeenCalledWith(['rev-1']);
+    expect((banco.marcarIncerta as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0]).toBeLessThan(
+      (deps.api.criar as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0],
+    );
+    expect(banco.liberar).not.toHaveBeenCalled();
+    expect(banco.anexarLote).not.toHaveBeenCalled();
+    expect(resumo.loteIncerto).toBe(true);
+    expect(resumo.erros.join(' ')).toContain('resposta incerta');
+  });
+
+  it.each([
+    [400, true], [401, true], [403, true], [404, true], [413, true], [422, true], [429, true],
+    [408, false], [409, false], [500, false], [502, false], [503, false], [529, false], [undefined, false],
+  ])('recusaDefinitiva(status %s) = %s', (status, esperado) => {
+    expect(recusaDefinitiva(status === undefined ? new Error('sem status') : Object.assign(new Error('x'), { status }))).toBe(esperado);
+    expect(recusaDefinitiva(null)).toBe(false);
+  });
+
+  it('cada ciclo cria no máximo 5 lotes novos de envio (e reserva no máximo 5)', async () => {
+    const { deps, banco, api } = montar({ reservas: [1, 2, 3, 4, 5].map((n) => envio(n)) });
+    await executarCiclo(deps);
+    expect(banco.reservar).toHaveBeenCalledWith(MAX_ENVIOS_NOVOS_POR_CICLO);
+    expect(MAX_ENVIOS_NOVOS_POR_CICLO).toBe(5);
+    expect(((api.criar as ReturnType<typeof vi.fn>).mock.calls[0][0] as unknown[]).length).toBe(5);
   });
 
   it('se anexar o lote falhar, tenta 3 vezes e devolve o erro no resumo sem lançar', async () => {
@@ -407,8 +449,8 @@ describe('44-F — pausa (pause_turn) e continuação', () => {
   it('a revisão pausada é continuada no lote seguinte, com o conteúdo anterior como turno do assistente', async () => {
     const continuacao = [{ type: 'text', text: 'parcial' }];
     const { deps, api, banco } = montar({
-      pendentes: [{ reviewId: 'rev-1', status: 'pausada', batchId: null }],
-      continuacoes: [{ ...envio(1), continuacao, tentativa: 2 }],
+      pendentes: [{ reviewId: 'rev-1', status: 'pausada', batchId: null, tentativaEm: null }],
+      continuacoes: [{ ...envio(1), continuacao: [continuacao], tentativa: 2 }],
     });
     const resumo = await executarCiclo(deps);
     const pedidos = (api.criar as ReturnType<typeof vi.fn>).mock.calls[0][0] as Array<{ custom_id: string; params: { messages: unknown[] } }>;
@@ -421,8 +463,8 @@ describe('44-F — pausa (pause_turn) e continuação', () => {
 
   it('se o lote da continuação falhar, a revisão continua pausada (não é liberada nem perdida)', async () => {
     const { deps, banco } = montar({
-      pendentes: [{ reviewId: 'rev-1', status: 'pausada', batchId: null }],
-      continuacoes: [{ ...envio(1), continuacao: [{ type: 'text', text: 'p' }] }],
+      pendentes: [{ reviewId: 'rev-1', status: 'pausada', batchId: null, tentativaEm: null }],
+      continuacoes: [{ ...envio(1), continuacao: [[{ type: 'text', text: 'p' }]] }],
       falhaAoCriar: true,
     });
     await executarCiclo(deps);

@@ -147,7 +147,7 @@ begin
 end;
 $$;
 
-select plan(103);
+select plan(135);
 
 select tests.clear_auth();
 select tests.create_user('rev.admin@test.local', 'admin', 'active') as v_admin \gset
@@ -682,6 +682,140 @@ select is(
   1, 'e o autor resolve tirando o material acima'
 );
 select tests.clear_auth();
+
+
+-- ---------------------------------------------------------------------------
+-- 9. Rodada 2: falha incerta ao criar o lote, trava de um ciclo por vez,
+--    continuação com histórico, extensões nos schemas certos
+-- ---------------------------------------------------------------------------
+-- 9.1 Tentativa gravada antes de pedir o lote: "incerta" conta no limite e não volta sozinha.
+select tests.create_user('rev.inc@test.local', 'student', 'active') as v_inc_autor \gset
+select tests.new_submission(:'v_inc_autor', :'v_disc', :'v_theme', 'Incerto 1', '# inc1', 'aguardando_revisao') as v_inc1 \gset
+select tests.new_submission(:'v_inc_autor', :'v_disc', :'v_theme', 'Incerto 2', '# inc2', 'aguardando_revisao') as v_inc2 \gset
+select tests.authenticate_as_service();
+select count(*) from public.revisao_reservar_envios(1000) where submission_id in (:'v_inc1', :'v_inc2') \gset
+select r.id as v_r_inc1 from public.material_reviews r where r.submission_id = :'v_inc1' \gset
+select r.id as v_r_inc2 from public.material_reviews r where r.submission_id = :'v_inc2' \gset
+select ok(
+  public.revisao_marcar_incerta(array[:'v_r_inc1'::uuid, :'v_r_inc2'::uuid]) is not null,
+  'gravar a tentativa devolve o instante dela'
+);
+select tests.clear_auth();
+select results_eq(
+  format($$ select status, billable, submitted_at is not null, verdict from public.material_reviews where id = %L $$, :'v_r_inc1'),
+  $$ values ('incerta'::text, true, true, null::text) $$,
+  'a revisão fica "incerta", cobrável, com o instante da tentativa'
+);
+select is(app.reviews_used_by_user_today(:'v_inc_autor'), 2, 'a tentativa incerta já conta no limite diário');
+select tests.authenticate_as_service();
+select public.revisao_liberar_reservas_velhas(0);
+select is((select status from public.material_reviews where id = :'v_r_inc1'), 'incerta', 'a limpeza de reservas antigas não mexe em revisão incerta');
+select is((select count(*)::int from public.revisao_reservar_envios(1000) where submission_id in (:'v_inc1', :'v_inc2')), 0, 'e o envio incerto não é reservado de novo (nada de reenviar sozinho)');
+select ok(
+  exists (select 1 from public.revisao_pendentes() where review_id = :'v_r_inc1' and status = 'incerta' and tentativa_em is not null),
+  'a revisão incerta aparece entre as pendentes, com o instante da tentativa'
+);
+select tests.clear_auth();
+select is((select status from public.material_submissions where id = :'v_inc1'), 'em_revisao', 'o envio segue "em revisão" (não voltou para a fila)');
+
+-- 9.2 A conciliação achou o lote: adota. Não achou (certeza): libera de graça.
+select tests.authenticate_as_service();
+select is(public.revisao_anexar_lote(array[:'v_r_inc1'::uuid], 'msgbatch_adotado'), 1, 'o lote achado na API é anexado à revisão incerta');
+select is(public.revisao_liberar(array[:'v_r_inc2'::uuid]), 1, 'sem lote nenhum, a revisão incerta é liberada');
+select tests.clear_auth();
+select results_eq(
+  format($$ select status, batch_id from public.material_reviews where id = %L $$, :'v_r_inc1'),
+  $$ values ('submetida'::text, 'msgbatch_adotado'::text) $$,
+  'a adotada fica "submetida" com o id do lote'
+);
+select is((select count(*)::int from public.material_reviews where id = :'v_r_inc2'), 0, 'a liberada não fica guardada');
+select is((select status from public.material_submissions where id = :'v_inc2'), 'aguardando_revisao', 'e o envio dela volta para a fila');
+select is(app.reviews_used_by_user_today(:'v_inc_autor'), 1, 'só a que tem lote continua contando no limite');
+
+-- Recusa definitiva: liberar apaga reserva e devolve o envio, sem contar.
+select tests.authenticate_as_service();
+select count(*) from public.revisao_reservar_envios(1000) where submission_id = :'v_inc2' \gset
+select r.id as v_r_inc2b from public.material_reviews r where r.submission_id = :'v_inc2' \gset
+select is(public.revisao_liberar(array[:'v_r_inc2b'::uuid]), 1, 'reserva recusada de vez (4xx) é liberada');
+select tests.clear_auth();
+select is(app.reviews_used_by_user_today(:'v_inc_autor'), 1, 'e não contou');
+
+-- Revisão de continuação (com conteúdo guardado) nunca é apagada: volta a "pausada".
+select tests.new_submission(:'v_inc_autor', :'v_disc', :'v_theme', 'Incerto pausado', '# incp', 'aguardando_revisao') as v_incp \gset
+select tests.authenticate_as_service();
+select count(*) from public.revisao_reservar_envios(1000) where submission_id = :'v_incp' \gset
+select r.id as v_r_incp from public.material_reviews r where r.submission_id = :'v_incp' \gset
+select public.revisao_anexar_lote(array[:'v_r_incp'::uuid], 'msgbatch_pausa_a');
+select public.revisao_pausar(:'v_r_incp', '[{"type":"text","text":"primeira"}]'::jsonb, 10, 20, 0, 0, 1, 0);
+select public.revisao_marcar_incerta(array[:'v_r_incp'::uuid]);
+select is(public.revisao_liberar(array[:'v_r_incp'::uuid]), 1, 'continuação sem lote é liberada');
+select tests.clear_auth();
+select results_eq(
+  format($$ select status, submitted_at is null, continuation is not null from public.material_reviews where id = %L $$, :'v_r_incp'),
+  $$ values ('pausada'::text, true, true) $$,
+  'e volta a "pausada", com o que a IA já tinha feito, em vez de ser apagada'
+);
+
+-- 9.3 A continuação acumula o histórico: cada pausa acrescenta a sua resposta.
+select tests.authenticate_as_service();
+select public.revisao_anexar_lote(array[:'v_r_incp'::uuid], 'msgbatch_pausa_b');
+select is(
+  public.revisao_pausar(:'v_r_incp', '[{"type":"web_fetch_tool_result","n":2}]'::jsonb, 30, 40, 0, 0, 0, 1),
+  true, 'a 2ª pausa é aceita'
+);
+select tests.clear_auth();
+select is(
+  (select continuation from public.material_reviews where id = :'v_r_incp'),
+  '[[{"type":"text","text":"primeira"}],[{"type":"web_fetch_tool_result","n":2}]]'::jsonb,
+  'a continuação tem as duas respostas pausadas, na ordem (a 2ª não apaga a 1ª)'
+);
+select results_eq(
+  format($$ select input_tokens, output_tokens, web_searches, web_fetches from public.material_reviews where id = %L $$, :'v_r_incp'),
+  $$ values (40, 60, 1, 1) $$,
+  'e o gasto das duas pausas se soma'
+);
+
+-- 9.4 Um ciclo por vez.
+update public.review_run_lock set locked_until = '-infinity';
+select tests.authenticate_as_service();
+select public.revisao_tentar_travar(240) as v_trava1 \gset
+select ok(:'v_trava1' <> '', 'o primeiro ciclo pega a trava');
+select is(public.revisao_tentar_travar(240), null::uuid, 'o segundo, enquanto o primeiro trabalha, não pega');
+select public.revisao_destravar(gen_random_uuid());
+select is(public.revisao_tentar_travar(240), null::uuid, 'destravar com token que não é o dono não solta a trava');
+select public.revisao_destravar(:'v_trava1');
+select isnt(public.revisao_tentar_travar(240), null::uuid, 'com o token do dono, a trava é solta e o seguinte pega');
+select tests.clear_auth();
+update public.review_run_lock set locked_until = now() - interval '1 second';
+select tests.authenticate_as_service();
+select isnt(public.revisao_tentar_travar(240), null::uuid, 'trava vencida (o servidor morreu com ela pega) é pega sem ninguém soltar');
+select public.revisao_destravar((select token from public.review_run_lock));
+select tests.clear_auth();
+select ok(
+  not has_function_privilege('authenticated', 'public.revisao_tentar_travar(int)', 'execute')
+  and not has_function_privilege('anon', 'public.revisao_tentar_travar(int)', 'execute')
+  and not has_function_privilege('authenticated', 'public.revisao_destravar(uuid)', 'execute')
+  and not has_function_privilege('authenticated', 'public.revisao_marcar_incerta(uuid[])', 'execute')
+  and not has_function_privilege('anon', 'public.revisao_marcar_incerta(uuid[])', 'execute'),
+  'trava e marcação de tentativa só para o servidor'
+);
+select ok(not has_table_privilege('authenticated', 'public.review_run_lock', 'select') and not has_table_privilege('anon', 'public.review_run_lock', 'select'), 'a tabela da trava é inacessível ao cliente');
+select is((select count(*)::int from public.review_run_lock), 1, 'a trava é uma linha só');
+
+-- 9.5 Extensões nos schemas certos: pg_net fora de public.
+select is((select extnamespace::regnamespace::text from pg_extension where extname = 'pg_net'), 'extensions', 'pg_net está no schema extensions');
+select is((select extnamespace::regnamespace::text from pg_extension where extname = 'pg_cron'), 'pg_catalog', 'pg_cron está em pg_catalog (o único schema em que ele se instala)');
+select is(
+  (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname like 'http\_%'),
+  0, 'nenhuma função do pg_net caiu em public'
+);
+
+-- 9.6 O CHECK aceita "incerta" só sem veredito.
+select throws_ok(
+  format($$ insert into public.material_reviews (submission_id, content_sha256, status, verdict) values (%L, 'x', 'incerta', 'apto') $$, :'v_inc1'),
+  '23514', NULL, 'revisão incerta com veredito é recusada'
+);
 
 -- Excluir o autor leva envios e revisões junto.
 select lives_ok(format($$ delete from auth.users where id = %L $$, :'v_month'), 'excluir o autor exclui os envios e as revisões');

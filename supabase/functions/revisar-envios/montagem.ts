@@ -12,11 +12,14 @@ export const MODELO = 'claude-opus-5-5';
 export const ESFORCO = 'medium' as const;
 /** Teto da resposta, com o raciocínio junto. Não é o gasto: só o máximo. */
 export const MAX_TOKENS = 40000;
-/** Tetos de uso das ferramentas de busca, por revisão (controle de custo). */
-export const MAX_BUSCAS = 20;
-export const MAX_LEITURAS_DE_PAGINA = 20;
-/** Teto de tokens que uma página lida pode trazer para a conversa. */
-export const MAX_TOKENS_POR_PAGINA = 30000;
+/**
+ * Tetos de uso das ferramentas de busca, por pedido (controle de custo em dólar:
+ * não há teto de gasto por pedido na API, então o teto é de uso). Cada leitura de
+ * página traz no máximo MAX_TOKENS_POR_PAGINA tokens para a conversa.
+ */
+export const MAX_BUSCAS = 8;
+export const MAX_LEITURAS_DE_PAGINA = 8;
+export const MAX_TOKENS_POR_PAGINA = 15000;
 
 /**
  * Acrescenta ao sistema o que só vale na revisão automática: quem lê o material
@@ -88,8 +91,14 @@ export interface EntradaDoPedido {
   sistema: string;
   material: DadosDoMaterial;
   codigo: string;
-  /** Conteúdo que a IA já produziu, quando o pedido continua uma pausa (pause_turn). */
-  continuacao?: unknown[] | null;
+  /**
+   * Quando o pedido continua uma pausa (pause_turn): o conteúdo de CADA resposta
+   * pausada da IA, na ordem. A documentação manda devolver a resposta pausada
+   * "como está", como um turno do assistente, e repetir isso a cada nova pausa:
+   * a conversa acumula (o pedido, a 1ª resposta, a 2ª...), nada é editado nem
+   * descartado (os blocos de raciocínio voltam intactos, com a assinatura).
+   */
+  continuacao?: unknown[][] | null;
 }
 
 /** Um pedido do lote. O prefixo (ferramentas + sistema) é igual em todos: cache de prompt de 1 hora. */
@@ -97,8 +106,10 @@ export function montarPedidoDeLote(e: EntradaDoPedido): PedidoDeLote {
   const mensagens: Anthropic.Messages.MessageParam[] = [
     { role: 'user', content: montarMensagemDoMaterial(e.material, e.codigo) },
   ];
-  if (e.continuacao && e.continuacao.length > 0) {
-    mensagens.push({ role: 'assistant', content: e.continuacao as Anthropic.Messages.ContentBlockParam[] });
+  for (const resposta of e.continuacao ?? []) {
+    if (resposta.length > 0) {
+      mensagens.push({ role: 'assistant', content: resposta as Anthropic.Messages.ContentBlockParam[] });
+    }
   }
   return {
     custom_id: e.reviewId,

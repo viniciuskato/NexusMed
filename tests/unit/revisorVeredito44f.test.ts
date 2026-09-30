@@ -46,9 +46,14 @@ describe('44-F — as formas válidas do veredito', () => {
     expect(r.veredito).toBe('nao_apto');
   });
 
-  it('espaço no fim das linhas e fim de linha do Windows não atrapalham', () => {
-    const r = fim(`${ACHADOS}  \r\n\r\nAPTO PARA ENVIAR   \r\n`);
+  it('fim de linha do Windows e quebras de linha no fim da resposta não atrapalham', () => {
+    const r = fim(`${ACHADOS}\r\n\r\nAPTO PARA ENVIAR\r\n\r\n`);
     expect(r.veredito).toBe('apto');
+    expect(fim(`${ACHADOS}\n\nAPTO PARA ENVIAR\n \n`).veredito).toBe('apto');
+  });
+
+  it('espaço no fim das linhas dos achados não atrapalha (só a linha de veredito é exata)', () => {
+    expect(fim(`${ACHADOS}   \r\n\r\nAPTO PARA ENVIAR`).veredito).toBe('apto');
   });
 });
 
@@ -68,6 +73,11 @@ describe('44-F — tudo que não é exato vira "erro"', () => {
     ['singular com N maior que 1', `${ACHADOS}\n\nNÃO APTO — 2 achado grave`, 'end_turn'],
     ['plural com 1', `${ACHADOS}\n\nNÃO APTO — 1 achados graves`, 'end_turn'],
     ['número com zero à frente', `${ACHADOS}\n\nNÃO APTO — 02 achados graves`, 'end_turn'],
+    ['espaço no fim da linha de veredito', `${ACHADOS}\n\nAPTO PARA ENVIAR `, 'end_turn'],
+    ['espaço no fim da linha de veredito, seguida do bloco', `${ACHADOS}\n\nNÃO APTO — 2 achados graves  \n\n${BLOCO}`, 'end_turn'],
+    ['espaço no fim da linha de veredito na última linha sem quebra', `${ACHADOS}\n\nNÃO APTO — 1 achado grave   `, 'end_turn'],
+    ['tabulação no fim da linha de veredito', `${ACHADOS}\n\nAPTO PARA ENVIAR\t`, 'end_turn'],
+    ['espaço no fim de "Nenhum achado muda o material."', `${ACHADOS}\n\nAPTO PARA ENVIAR\n\nNenhum achado muda o material. `, 'end_turn'],
     ['veredito colado a outro texto', `${ACHADOS}\n\nAPTO PARA ENVIAR agora`, 'end_turn'],
     ['linha que não é a última antes do bloco (texto depois)', `${ACHADOS}\n\nAPTO PARA ENVIAR\n\nObrigado por enviar.`, 'end_turn'],
     ['linha de veredito no meio, com achados depois', `NÃO APTO — 1 achado grave\n\n${ACHADOS}`, 'end_turn'],

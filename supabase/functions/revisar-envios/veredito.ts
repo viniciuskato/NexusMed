@@ -55,10 +55,12 @@ export function lerVeredito(resposta: RespostaDoModelo): LeituraDoVeredito {
   if (resposta.stopReason !== 'end_turn') {
     return erro(`resposta sem fim normal (stop_reason: ${resposta.stopReason ?? 'nenhum'})`);
   }
-  const texto = resposta.texto.replace(/\r\n/g, '\n').trimEnd();
+  // Só tira as quebras de linha do fim; espaço no fim de uma linha não é aparado
+  // (a linha de veredito tem de ser exata).
+  const texto = resposta.texto.replace(/\r\n/g, '\n').replace(/(?:\n[ \t]*)+$/, '');
   if (texto.trim() === '') return erro('resposta vazia');
 
-  const linhas = texto.split('\n').map((l) => l.replace(/[ \t]+$/, ''));
+  const linhas = texto.split('\n');
   const candidatas = linhas.map((l, i) => (pareceVeredito(l) ? i : -1)).filter((i) => i >= 0);
   if (candidatas.length === 0) return erro('nenhuma linha de veredito', texto);
   if (candidatas.length > 1) return erro('mais de uma linha de veredito', texto);

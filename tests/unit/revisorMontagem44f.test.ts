@@ -154,6 +154,10 @@ describe('44-F — o pedido à API', () => {
       { type: 'web_search_20260209', name: 'web_search', max_uses: MAX_BUSCAS },
       expect.objectContaining({ type: 'web_fetch_20260209', name: 'web_fetch', max_uses: MAX_LEITURAS_DE_PAGINA }),
     ]);
+    // Tetos de uso por pedido: controle de custo em dólar (não há teto de gasto por pedido na API).
+    expect(MAX_BUSCAS).toBe(8);
+    expect(MAX_LEITURAS_DE_PAGINA).toBe(8);
+    expect(pedido.params.tools?.[1]).toMatchObject({ max_uses: 8, max_content_tokens: 15000 });
     // Não declara a execução de código: as duas ferramentas já a usam por dentro.
     expect(JSON.stringify(pedido.params.tools)).not.toContain('code_execution');
   });
@@ -175,10 +179,33 @@ describe('44-F — o pedido à API', () => {
       sistema: montarSistema(BASE_DO_REVISOR),
       material: material('# T'),
       codigo: CODIGO,
-      continuacao: parcial,
+      continuacao: [parcial],
     });
     expect(p.params.messages).toHaveLength(2);
     expect(p.params.messages[1]).toEqual({ role: 'assistant', content: parcial });
+  });
+
+  it('a 2ª continuação leva o histórico inteiro: cada resposta pausada volta como um turno do assistente, na ordem, sem edição', () => {
+    const primeira = [{ type: 'thinking', thinking: '', signature: 'assinatura-1' }, { type: 'server_tool_use', id: 'srvtoolu_1', name: 'web_search', input: { query: 'a' } }, { type: 'web_search_tool_result', tool_use_id: 'srvtoolu_1', content: [] }];
+    const segunda = [{ type: 'server_tool_use', id: 'srvtoolu_2', name: 'web_fetch', input: { url: 'https://exemplo.org' } }];
+    const p = montarPedidoDeLote({
+      reviewId: 'rev-3',
+      sistema: montarSistema(BASE_DO_REVISOR),
+      material: material('# T'),
+      codigo: CODIGO,
+      continuacao: [primeira, segunda],
+    });
+    const msgs = p.params.messages;
+    expect(msgs.map((m) => m.role)).toEqual(['user', 'assistant', 'assistant']);
+    expect(msgs[1].content).toEqual(primeira);
+    expect(msgs[2].content).toEqual(segunda);
+    // O bloco de raciocínio volta intacto, com a assinatura: nada de editar o histórico.
+    expect(JSON.stringify(msgs[1].content)).toContain('assinatura-1');
+  });
+
+  it('respostas pausadas vazias não viram turno do assistente', () => {
+    const p = montarPedidoDeLote({ reviewId: 'r', sistema: 's', material: material('# T'), codigo: CODIGO, continuacao: [[], [{ type: 'text', text: 'x' }]] });
+    expect(p.params.messages).toHaveLength(2);
   });
 });
 

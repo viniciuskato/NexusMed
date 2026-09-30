@@ -140,12 +140,15 @@ create table public.material_reviews (
   submission_id uuid not null references public.material_submissions(id) on delete cascade,
   -- SHA-256 (hex) do texto que foi revisado: a revisão vale para esse texto.
   content_sha256 text not null,
-  -- reservada: o servidor pegou o envio, o lote ainda não foi criado.
-  -- submetida: o lote existe e a resposta é esperada. pausada: a IA parou no
-  -- meio (pause_turn) e a revisão continua em outro lote. concluida: tem
-  -- veredito. erro: falhou (o envio vai a "erro").
+  -- reservada: o servidor pegou o envio, ainda não tentou criar o lote (sem
+  -- gasto possível). incerta: o servidor está tentando (ou tentou) criar o lote e
+  -- não sabe se ele existe (timeout, 5xx, queda no meio): PODE JÁ TER GASTO, por
+  -- isso conta no limite e nunca é reenviada sozinha; o servidor a concilia com a
+  -- lista de lotes da API antes de decidir. submetida: o lote existe e a resposta
+  -- é esperada. pausada: a IA parou no meio (pause_turn) e a revisão continua em
+  -- outro lote. concluida: tem veredito. erro: falhou (o envio vai a "erro").
   status text not null default 'reservada'
-    check (status in ('reservada', 'submetida', 'pausada', 'concluida', 'erro')),
+    check (status in ('reservada', 'incerta', 'submetida', 'pausada', 'concluida', 'erro')),
   verdict text check (verdict in ('apto', 'nao_apto', 'erro')),
   -- A linha exata do veredito, os achados (texto da IA, sem o veredito e sem o
   -- bloco) e o bloco de correção (sem as cercas de código).
@@ -155,7 +158,9 @@ create table public.material_reviews (
   error_kind text,
   batch_id text,
   attempt int not null default 1 check (attempt >= 1),
-  -- Conteúdo já produzido pela IA quando ela pausa (pause_turn), para continuar.
+  -- O que a IA já produziu quando pausa (pause_turn), para continuar: uma lista
+  -- com o conteúdo de CADA resposta pausada, na ordem, sem editar nada (cada uma
+  -- volta à API como um turno do assistente, como a documentação manda).
   continuation jsonb,
   model text,
   -- SHA-256 do prompt de sistema usado (prompt revisor + Parte 1 do padrão).
@@ -176,7 +181,7 @@ create table public.material_reviews (
   constraint material_reviews_verdict_matches_status check (
     (status = 'concluida' and verdict is not null and verdict in ('apto', 'nao_apto'))
     or (status = 'erro' and verdict is not null and verdict = 'erro')
-    or (status in ('reservada', 'submetida', 'pausada') and verdict is null)
+    or (status in ('reservada', 'incerta', 'submetida', 'pausada') and verdict is null)
   )
 );
 
@@ -377,8 +382,29 @@ begin
 end;
 $$;
 
--- O lote foi criado: as revisões reservadas (ou pausadas, na continuação)
--- passam a "submetida".
+-- ANTES de pedir o lote à API, o servidor grava a tentativa: as revisões passam
+-- a "incerta" (contam no limite; não são reenviadas sozinhas). Devolve o instante
+-- da tentativa (o mesmo para todas), que a conciliação usa para achar o lote.
+create or replace function public.revisao_marcar_incerta(p_review_ids uuid[])
+returns timestamptz
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_now timestamptz := now();
+  v_n int;
+begin
+  update public.material_reviews
+     set status = 'incerta', submitted_at = v_now
+   where id = any (p_review_ids) and status in ('reservada', 'pausada');
+  get diagnostics v_n = row_count;
+  return case when v_n > 0 then v_now else null end;
+end;
+$$;
+
+-- O lote foi criado: as revisões reservadas, incertas ou pausadas (na
+-- continuação) passam a "submetida".
 create or replace function public.revisao_anexar_lote(p_review_ids uuid[], p_batch_id text)
 returns int
 language plpgsql
@@ -390,14 +416,16 @@ declare
 begin
   update public.material_reviews
      set status = 'submetida', batch_id = p_batch_id, submitted_at = now()
-   where id = any (p_review_ids) and status in ('reservada', 'pausada');
+   where id = any (p_review_ids) and status in ('reservada', 'pausada', 'incerta');
   get diagnostics v_n = row_count;
   return v_n;
 end;
 $$;
 
--- O lote não pôde ser criado: devolve os envios à fila e apaga as reservas
--- (não houve gasto, então não contam no limite).
+-- Certeza de que NÃO há lote (a API recusou o pedido com um 4xx definitivo, ou a
+-- conciliação não achou lote nenhum depois do prazo): devolve os envios à fila e
+-- apaga as reservas (não houve gasto, então não contam no limite). Revisão de uma
+-- continuação (com conteúdo guardado) volta a "pausada", não é apagada.
 create or replace function public.revisao_liberar(p_review_ids uuid[])
 returns int
 language plpgsql
@@ -405,15 +433,22 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_n int;
+  v_n int := 0;
+  v_m int;
 begin
+  update public.material_reviews r set status = 'pausada', submitted_at = null
+   where r.id = any (p_review_ids) and r.status in ('reservada', 'incerta') and r.continuation is not null;
+  get diagnostics v_m = row_count;
+  v_n := v_n + v_m;
   update public.material_submissions s set status = 'aguardando_revisao'
    where s.status = 'em_revisao'
      and s.id in (select r.submission_id from public.material_reviews r
-                  where r.id = any (p_review_ids) and r.status = 'reservada');
-  delete from public.material_reviews r where r.id = any (p_review_ids) and r.status = 'reservada';
-  get diagnostics v_n = row_count;
-  return v_n;
+                  where r.id = any (p_review_ids) and r.status in ('reservada', 'incerta')
+                    and r.continuation is null);
+  delete from public.material_reviews r
+   where r.id = any (p_review_ids) and r.status in ('reservada', 'incerta') and r.continuation is null;
+  get diagnostics v_m = row_count;
+  return v_n + v_m;
 end;
 $$;
 
@@ -435,9 +470,11 @@ begin
 end;
 $$;
 
--- A IA parou no meio (pause_turn): guarda o que ela já produziu e o gasto até
--- aqui, e deixa a revisão "pausada" para continuar em outro lote. Devolve
--- falso quando já houve tentativas demais (o servidor então registra "erro").
+-- A IA parou no meio (pause_turn): ACRESCENTA o que ela acabou de produzir ao que
+-- já estava guardado (a continuação carrega a conversa inteira, na ordem: a 2ª
+-- não perde as buscas da 1ª), soma o gasto até aqui e deixa a revisão "pausada"
+-- para continuar em outro lote. Devolve falso quando já houve tentativas demais
+-- (o servidor então registra "erro").
 create or replace function public.revisao_pausar(
   p_review_id uuid,
   p_continuation jsonb,
@@ -463,7 +500,8 @@ begin
   end if;
   update public.material_reviews set
     status = 'pausada',
-    continuation = p_continuation,
+    continuation = coalesce(continuation, '[]'::jsonb) || jsonb_build_array(p_continuation),
+    submitted_at = null,
     attempt = attempt + 1,
     input_tokens = coalesce(input_tokens, 0) + coalesce(p_input_tokens, 0),
     output_tokens = coalesce(output_tokens, 0) + coalesce(p_output_tokens, 0),
@@ -576,15 +614,15 @@ revoke all on function app.revisao_valida_do_envio(uuid) from public, anon, auth
 
 -- Revisões que o servidor precisa acompanhar (lote enviado) ou continuar.
 create or replace function public.revisao_pendentes()
-returns table (review_id uuid, status text, batch_id text, continuation jsonb, attempt int)
+returns table (review_id uuid, status text, batch_id text, continuation jsonb, attempt int, tentativa_em timestamptz)
 language sql
 stable
 security definer
 set search_path = ''
 as $$
-  select r.id, r.status, r.batch_id, r.continuation, r.attempt
+  select r.id, r.status, r.batch_id, r.continuation, r.attempt, r.submitted_at
   from public.material_reviews r
-  where r.status in ('submetida', 'pausada')
+  where r.status in ('submetida', 'pausada', 'incerta')
   order by r.created_at;
 $$;
 
@@ -610,11 +648,52 @@ as $$
   where r.id = any (p_review_ids);
 $$;
 
+-- Um ciclo por vez: se um disparo demora mais que o intervalo do agendador, o
+-- seguinte sai sem trabalho (senão os dois criariam o mesmo lote). Trava com
+-- validade: se o servidor morrer com ela pega, ela expira sozinha.
+create table public.review_run_lock (
+  id boolean primary key default true check (id),
+  token uuid,
+  locked_until timestamptz not null default '-infinity'
+);
+insert into public.review_run_lock (id) values (true);
+alter table public.review_run_lock enable row level security;
+revoke all on table public.review_run_lock from anon, authenticated;
+
+create or replace function public.revisao_tentar_travar(p_seconds int default 240)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_token uuid;
+begin
+  update public.review_run_lock
+     set token = gen_random_uuid(), locked_until = now() + make_interval(secs => p_seconds)
+   where id and locked_until < now()
+  returning token into v_token;
+  return v_token;
+end;
+$$;
+
+create or replace function public.revisao_destravar(p_token uuid)
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  update public.review_run_lock set locked_until = '-infinity' where id and token = p_token;
+$$;
+
 do $$
 declare
   f text;
 begin
   foreach f in array array[
+    'public.revisao_marcar_incerta(uuid[])',
+    'public.revisao_tentar_travar(int)',
+    'public.revisao_destravar(uuid)',
     'public.revisao_reservar_envios(int)',
     'public.revisao_anexar_lote(uuid[], text)',
     'public.revisao_liberar(uuid[])',
@@ -637,8 +716,11 @@ $$;
 -- O agendamento em si (cron.schedule) e os dois segredos do Vault ficam no
 -- RUNBOOK, porque dependem do endereço da função e do segredo que o dono cria.
 -- Sem os segredos, a função abaixo não faz nada (é o caso do banco local).
-create extension if not exists pg_net;
-create extension if not exists pg_cron;
+-- pg_net no schema "extensions" (como o painel do Supabase o cria; nunca em
+-- public, onde as funções dele ficariam expostas pela API). pg_cron só se instala
+-- em pg_catalog. As funções de cada um moram nos schemas `net` e `cron`.
+create extension if not exists pg_net with schema extensions;
+create extension if not exists pg_cron with schema pg_catalog;
 
 create or replace function app.disparar_revisao()
 returns void

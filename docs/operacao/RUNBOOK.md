@@ -177,6 +177,15 @@ PowerShell, na pasta do projeto.
    função) e, no SQL Editor, `select * from cron.job_run_details order by start_time desc limit 5;`
    (se o agendador está chamando).
 
+**Se um envio ficar "Em revisão" por muito tempo**: pode ser uma revisão
+"incerta" (o servidor pediu o lote e a resposta se perdeu). Ela já conta no
+limite e **não é reenviada sozinha**: em até 15 minutos o disparo seguinte acha
+o lote pela lista da Anthropic e o adota, ou, se ele não existir, devolve o
+envio à fila. Para ver:
+```sql
+select status, count(*) from public.material_reviews group by 1;
+```
+
 **Trocar os limites de custo** (no SQL Editor, botão **Run**):
 ```sql
 -- máximo de revisões no mês, no site inteiro (começa em 60)
@@ -233,9 +242,13 @@ saída, de cache e o número de buscas e leituras de página. No **SQL Editor**
 do Supabase, botão **Run**:
 
 ```sql
--- Custo estimado por revisão, em dólares (preços do Claude Opus 5.5 pela API de
--- lotes: 50% do preço normal). Confira os números na página Usage do Console e
--- ajuste as constantes se o preço mudar.
+-- Custo estimado por revisão, em dólares. Preços do Claude Opus 5.5 conferidos em
+-- 25/09/2026, pela API de lotes (50% do preço normal), por milhão de tokens:
+--   entrada 2,00 | gravação de cache de 1 hora 4,00 (2x a entrada do lote)
+--   leitura de cache 0,20 (10% da entrada do lote) | saída 10,00
+--   busca na web: US$ 0,01 cada (US$ 10 por mil).
+-- PREÇOS MUDAM: confira sempre na tela de uso do Console (Usage e Billing) e
+-- ajuste as constantes abaixo se forem outras.
 select r.created_at::date as dia,
        s.title as material,
        r.input_tokens as entrada,
@@ -247,7 +260,7 @@ select r.created_at::date as dia,
        round((
          coalesce(r.input_tokens, 0) * 2.0
          + coalesce(r.cache_creation_tokens, 0) * 4.0
-         + coalesce(r.cache_read_tokens, 0) * 0.1
+         + coalesce(r.cache_read_tokens, 0) * 0.2
          + coalesce(r.output_tokens, 0) * 10.0
        ) / 1000000.0 + coalesce(r.web_searches, 0) * 0.01, 3) as custo_usd
 from public.material_reviews r
@@ -262,9 +275,12 @@ Para o custo médio do mês (mesmas constantes), troque o final por
 `custo_usd`; ou compare o total com **Usage** e **Billing** no Claude
 Console. O número que interessa é o da coluna `custo_usd`, que decide se o teto
 mensal de 60 revisões cabe no orçamento. Se cada revisão sair mais cara que
-o esperado, há duas alavancas no código, em `supabase/functions/revisar-envios/montagem.ts`:
-o esforço de raciocínio (`ESFORCO`, começa em `medium`) e o teto de buscas e de
-leituras de página por revisão (`MAX_BUSCAS`, `MAX_LEITURAS_DE_PAGINA`).
+o esperado, há alavancas no código, em `supabase/functions/revisar-envios/montagem.ts`:
+o esforço de raciocínio (`ESFORCO`, começa em `medium`), o teto de buscas e de
+leituras de página por revisão (`MAX_BUSCAS` e `MAX_LEITURAS_DE_PAGINA`, começam
+em 8 cada) e o tamanho máximo de cada página lida (`MAX_TOKENS_POR_PAGINA`,
+15000); e, em `ciclo.ts`, quantos envios novos entram por disparo
+(`MAX_ENVIOS_NOVOS_POR_CICLO`, 5).
 Depois de mudar, rode `npm.cmd run gerar:revisor -- --check` e publique a
 função de novo (passo 3 do bloco (a)).
 

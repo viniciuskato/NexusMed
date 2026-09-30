@@ -1,7 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, configure, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { Claim, Compendium, ContentRevision, Discipline, Theme } from '../../src/types';
+
+// Com a suíte inteira em paralelo (e a máquina carregada) este teste passava de 5 s sem defeito
+// nenhum (0,5 s sozinho): prazos folgados só para não falhar por carga.
+configure({ asyncUtilTimeout: 8000 });
+vi.setConfig({ testTimeout: 30000 });
 
 // ============================================================================
 // Unidade 45-B (AUD-23): a revisão atesta o item certo.
