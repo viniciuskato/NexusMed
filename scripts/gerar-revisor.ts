@@ -43,7 +43,7 @@ export function gerarTextos(): string {
 export async function gerarValidacao(): Promise<string> {
   const resultado = await build({
     stdin: {
-      contents: "export { lerArquivoParaEnvio, avaliarEnvio, motivosDaReprovacao } from './src/utils/envioDeMaterial.ts';",
+      contents: "export { lerArquivoParaEnvio, avaliarEnvio, motivosDaReprovacao, lerMaterialParaPublicar } from './src/utils/envioDeMaterial.ts';",
       resolveDir: RAIZ,
       sourcefile: 'entrada-da-validacao.ts',
       loader: 'ts',

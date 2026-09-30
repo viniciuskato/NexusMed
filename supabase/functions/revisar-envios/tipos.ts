@@ -14,4 +14,10 @@ export interface ModuloDeValidacao {
     themes: Array<{ id: string; name: string; disciplineId: string }>,
   ): { aceito: boolean };
   motivosDaReprovacao(avaliacao: { aceito: boolean }): string[];
+  /** 44-G: o material que o servidor cria do texto aprovado (o mesmo importador da tela). */
+  lerMaterialParaPublicar(
+    texto: string,
+    disciplines: Array<{ id: string; name: string }>,
+    themes: Array<{ id: string; name: string; disciplineId: string }>,
+  ): { ok: true; material: Record<string, unknown> } | { ok: false; motivos: string[] };
 }

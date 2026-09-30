@@ -31,7 +31,8 @@ import { ListaDeEnvios } from './ListaDeEnvios';
 // tela mostra ao vivo a checagem do padrão e a recusa do importador (as mesmas
 // de `npm run checar:material` e do botão "Importar material" do Admin) e só
 // habilita "Enviar" com o arquivo aceito e sem pendência. O envio fica
-// guardado como "envio", com estado; nada aqui publica material.
+// guardado como "envio", com estado; quem publica, com o "apto" da revisão de IA,
+// é o servidor (44-G), nunca esta tela.
 // Os limites (300 KB, 3 esperando revisão) são do banco; a tela os antecipa.
 // ============================================================================
 
@@ -40,6 +41,8 @@ interface EnviarMaterialViewProps {
   themes: Theme[];
   compendiums: Compendium[];
   onAbrirComoEscrever?: () => void;
+  /** 44-G: abre o material que o servidor publicou a partir de um envio. */
+  onAbrirMaterial?: (materialId: string) => void;
 }
 
 const MAX_PENDENCIAS_NA_TELA = 20;
@@ -53,6 +56,7 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
   themes,
   compendiums,
   onAbrirComoEscrever,
+  onAbrirMaterial,
 }) => {
   const [texto, setTexto] = useState('');
   const [nomeDoArquivo, setNomeDoArquivo] = useState('');
@@ -536,6 +540,7 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
           avisoDaFila={fraseDaEspera(situacao)}
           onCorrigir={corrigir}
           onTentarDeNovo={tentarDeNovo}
+          onAbrirMaterial={onAbrirMaterial}
           ocupadoId={ocupadoId}
         />
       </section>

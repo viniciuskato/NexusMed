@@ -39,9 +39,9 @@ export const ESTADOS_DO_ENVIO: readonly EstadoDoEnvio[] = [
 export const ESTADO_EM_PALAVRAS: Record<EstadoDoEnvio, { rotulo: string; explicacao: string }> = {
   aguardando_revisao: { rotulo: 'Aguardando revisão', explicacao: 'Recebemos o material. Ele está na fila para ser revisado.' },
   em_revisao: { rotulo: 'Em revisão', explicacao: 'O material está sendo revisado agora.' },
-  apto: { rotulo: 'Aprovado na revisão', explicacao: 'A revisão aprovou o material. Falta ele ser publicado.' },
+  apto: { rotulo: 'Aprovado na revisão', explicacao: 'A revisão aprovou o material. Ele será publicado em instantes.' },
   nao_apto: { rotulo: 'Precisa de correção', explicacao: 'A revisão encontrou o que corrigir. Corrija o material e envie de novo.' },
-  publicado: { rotulo: 'Publicado', explicacao: 'O material já está no ar para os estudantes.' },
+  publicado: { rotulo: 'Publicado', explicacao: 'O material já está no ar para os estudantes, com o selo de revisado por IA.' },
   erro: { rotulo: 'A revisão não foi concluída', explicacao: 'Algo falhou do nosso lado. Seu material não foi rejeitado.' },
 };
 
@@ -186,6 +186,58 @@ export function avaliarEnvio(
     tituloLongo,
     problemasDeCatalogo,
     aceito,
+  };
+}
+
+/**
+ * O material que o servidor cria quando a revisão de IA aprova o envio (44-G): o
+ * mesmo que o importador da tela lê do arquivo, no formato que a função do banco
+ * `revisao_publicar_envio` recebe. Disciplina, Tema e material acima NÃO vão
+ * aqui: o banco os toma do próprio envio.
+ */
+export interface MaterialParaPublicar {
+  title: string;
+  subtitle: string | null;
+  author: string | null;
+  estimated_read_time_minutes: number | null;
+  tags: string[];
+  sections: Array<{
+    title: string;
+    content: string;
+    key_takeaways: string[];
+    mechanism_tag: string | null;
+    clinical_pearl: string | null;
+    warning_alert: string | null;
+  }>;
+  references: string[];
+}
+
+export type LeituraDoMaterial = { ok: true; material: MaterialParaPublicar } | { ok: false; motivos: string[] };
+
+/** Lê o `.md` com o importador do botão "Importar material" e devolve o que vira material. */
+export function lerMaterialParaPublicar(texto: string, disciplines: Discipline[], themes: Theme[]): LeituraDoMaterial {
+  const importacao = parseCompendiumMarkdownText(texto, disciplines, themes, []);
+  if (!importacao.ok) return { ok: false, motivos: importacao.errors };
+  const { preview } = importacao;
+  return {
+    ok: true,
+    material: {
+      title: preview.title,
+      subtitle: preview.subtitle || null,
+      author: preview.author || null,
+      estimated_read_time_minutes: preview.estimatedReadTimeMinutes || null,
+      // Como o botão "Importar material" (buildCompendiumFromImport): sem palavra-chave, "Geral".
+      tags: importacao.tags.length > 0 ? importacao.tags : ['Geral'],
+      sections: importacao.sections.map((s) => ({
+        title: s.title,
+        content: s.content,
+        key_takeaways: s.keyTakeaways,
+        mechanism_tag: s.mechanismTag ?? null,
+        clinical_pearl: s.clinicalPearl ?? null,
+        warning_alert: s.warningAlert ?? null,
+      })),
+      references: importacao.references,
+    },
   };
 }
 

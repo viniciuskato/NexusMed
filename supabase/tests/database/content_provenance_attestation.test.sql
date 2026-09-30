@@ -132,6 +132,39 @@ begin
 end;
 $$;
 
+-- 44-G: publish_material() passou a exigir revisão de IA "apto" vinculada ao
+-- conteúdo atual (a atestação humana deixou de bastar). Fixture: um envio já
+-- publicado, com a revisão apto e a proveniência do material como ele está agora.
+create or replace function tests.approve_material_by_ai(p_material_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  m public.materials;
+  v_author uuid;
+  v_sub uuid;
+  v_review uuid;
+begin
+  select * into m from public.materials where id = p_material_id;
+  select id into v_author from public.profiles where role = 'admin' and status = 'active' limit 1;
+  if v_author is null then
+    raise exception 'tests.approve_material_by_ai: nenhum admin ativo encontrado para autoria de fixture';
+  end if;
+  insert into public.material_submissions (author_id, title, discipline_id, theme_id, content_md, status, published_material_id)
+  values (v_author, 'Envio de fixture ' || gen_random_uuid()::text, m.discipline_id, m.theme_id, '# fixture', 'publicado', p_material_id)
+  returning id into v_sub;
+  insert into public.material_reviews (submission_id, content_sha256, status, verdict, model, completed_at)
+  select s.id, s.content_sha256, 'concluida', 'apto', 'fixture', now()
+    from public.material_submissions s where s.id = v_sub
+  returning id into v_review;
+  insert into public.material_ai_provenance (material_id, submission_id, review_id, review_verdict, reviewed_at, model, text_sha256, snapshot_hash)
+  select p_material_id, v_sub, v_review, 'apto', now(), 'fixture', s.content_sha256, app.material_snapshot_hash(p_material_id)
+    from public.material_submissions s where s.id = v_sub;
+end;
+$$;
+
 -- Atalho para fixtures que só querem "um material já published", sem
 -- exercitar publish_material() em si (equivalente a approve_material_revision
 -- + UPDATE direto de status, os dois como postgres — passa pelo mesmo trigger
@@ -157,7 +190,7 @@ $$;
 grant usage on schema tests to anon, authenticated;
 grant execute on function tests.clear_auth() to anon, authenticated;
 
-select plan(46);
+select plan(47);
 
 -- ----------------------------------------------------------------------------
 -- Fixtures
@@ -530,9 +563,17 @@ select is(
   'status vira aprovado_para_esta_versao após atestação aprovada com hash batendo'
 );
 
+-- 44-G: a atestação humana sozinha já não publica; é preciso a revisão de IA apto
+-- do conteúdo atual (o teste completo da trava está em publicar_pelo_veredito_44g).
+select throws_like(
+  format($$ select public.publish_material(%L) $$, :'v_material_id'),
+  '%revisor de IA%',
+  'publish_material não publica só com a atestação humana: falta a revisão de IA apto'
+);
+select tests.approve_material_by_ai(:'v_material_id');
 select lives_ok(
   format($$ select public.publish_material(%L) $$, :'v_material_id'),
-  'publish_material publica material com revisão aprovada e hash batendo'
+  'publish_material publica material com revisão de IA apto vinculada ao conteúdo atual'
 );
 select is(
   (select status from public.materials where id = :'v_material_id'),

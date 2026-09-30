@@ -5,9 +5,14 @@
 //      às cegas;
 //   1. COLETA: lotes já enviados que a API terminou viram resultado no banco
 //      (veredito lido por `lerVeredito`, tokens e buscas guardados);
-//   2. ENVIO: envios "aguardando revisão" são reservados no banco (com os
+//   2. PUBLICAÇÃO (44-G): envio "apto" (revisão apto do texto atual) vira material
+//      publicado, pelo banco, numa transação só (o texto é lido aqui, pelo mesmo
+//      importador da tela; o banco confere a revisão e cria tudo ou nada);
+//   3. ENVIO: envios "aguardando revisão" são reservados no banco (com os
 //      limites de custo), conferidos pelo servidor (arquivo fora do padrão nem
-//      chega à IA: custo zero) e enviados num lote novo.
+//      chega à IA: custo zero) e enviados num lote novo. Enquanto houver uma
+//      tentativa incerta sem solução, NÃO se cria lote novo (a conciliação casa
+//      lote e tentativa pelo tamanho; um lote novo a tornaria ambígua).
 // A API de lotes custa metade e não prende uma requisição até a revisão acabar
 // (uma revisão com busca na web leva minutos). Nada aqui chama a IA de forma
 // síncrona. Tudo que depende do mundo de fora entra por `Banco` e `ApiDeLotes`,
@@ -75,6 +80,24 @@ export interface Uso {
   leituras: number;
 }
 
+/** Envio "apto" pronto para virar material (44-G). */
+export interface ParaPublicar {
+  submissionId: string;
+  reviewId: string;
+  texto: string;
+  sha256: string;
+  disciplineId: string;
+  themeId: string;
+}
+
+export type DesfechoDaPublicacao =
+  | 'publicado'
+  | 'ja_publicado'
+  | 'recusado'
+  | 'falhou'
+  | 'fora_de_estado'
+  | 'revisao_invalida';
+
 export interface Banco {
   /** Um ciclo por vez: devolve o token da trava, ou nulo se outro ciclo está em andamento. */
   travar(): Promise<string | null>;
@@ -92,6 +115,13 @@ export interface Banco {
   /** Acrescenta o conteúdo da resposta pausada à continuação e soma o gasto. */
   pausar(reviewId: string, continuacao: unknown[], uso: Uso): Promise<boolean>;
   registrar(r: ResultadoRegistrado): Promise<boolean>;
+  /** Envios "apto" com revisão apto do texto atual, ainda sem material (44-G). */
+  paraPublicar(max: number): Promise<ParaPublicar[]>;
+  /**
+   * Cria o material do envio e o publica, tudo ou nada, e grava a proveniência
+   * "revisado por IA". Idempotente no banco: um envio já publicado não cria outro.
+   */
+  publicar(envio: ParaPublicar, material: Record<string, unknown>): Promise<{ desfecho: DesfechoDaPublicacao; materialId: string | null }>;
 }
 
 export interface Catalogo {
@@ -132,6 +162,12 @@ export interface ApiDeLotes {
   cancelar(batchId: string): Promise<void>;
 }
 
+/** O texto aprovado convertido no material que o banco cria (o mesmo importador da tela). */
+export type LeitorDeMaterial = (
+  envio: ParaPublicar,
+  catalogo: Catalogo,
+) => { ok: true; material: Record<string, unknown> } | { ok: false; motivos: string[] };
+
 /** A conferência que o servidor faz antes de gastar com a IA (a mesma da tela). */
 export type Conferencia = (
   envio: Reservado,
@@ -142,6 +178,8 @@ export interface DepsDoCiclo {
   banco: Banco;
   api: ApiDeLotes;
   conferir: Conferencia;
+  /** 44-G: converte o texto de um envio aprovado no material a criar. */
+  lerMaterial: LeitorDeMaterial;
   /** Prompt revisor + Parte 1 do padrão (o mesmo texto que a pessoa copia). */
   baseDoRevisor: string;
   baseSha256: string;
@@ -169,10 +207,18 @@ export interface ResumoDoCiclo {
   loteCriado: string | null;
   /** Tentativa de criar lote que ficou sem resposta: a revisão fica contada e a conciliação resolve. */
   loteIncerto: boolean;
+  /** Ainda há tentativa incerta sem solução: este ciclo não criou lote novo. */
+  semLoteNovoPorIncerta: boolean;
+  /** 44-G: envios que viraram material publicado neste ciclo. */
+  publicados: number;
+  /** 44-G: envios que o banco recusou publicar (título repetido, material acima fora do ar) ou que falharam. */
+  publicacoesRecusadas: number;
   erros: string[];
 }
 
 export const MAX_ENVIOS_NOVOS_POR_CICLO = 5;
+/** Publicações por ciclo (o texto de cada uma vai e volta pela rede e passa pelo importador). */
+export const MAX_PUBLICACOES_POR_CICLO = 10;
 const PRAZO_DO_CICLO_MS = 100_000;
 const GRACE_DA_CONCILIACAO_MS = 15 * 60_000;
 /** Tolerância entre o relógio do banco e o da API ao procurar o lote de uma tentativa. */
@@ -263,20 +309,14 @@ async function conciliar(deps: DepsDoCiclo, pendentes: Pendente[], resumo: Resum
         .sort((a, b) => a.criadoEm.localeCompare(b.criadoEm));
 
       if (candidatos.length > 0) {
-        // O lote existe: adota o primeiro. Se a tentativa se repetiu (mais de um
-        // lote igual), cancela os outros para não pagar duas vezes a mesma revisão.
-        const [adotado, ...repetidos] = candidatos;
+        // O lote existe: adota o mais antigo. NUNCA cancela os outros iguais: com
+        // a criação sem repetição, um segundo lote do mesmo tamanho é o lote
+        // legítimo de OUTRA tentativa incerta (que adota o seu quando chegar a
+        // vez dela). Cancelá-lo perderia a revisão de outra pessoa.
+        const [adotado] = candidatos;
         await deps.banco.anexarLote(reviewIds, adotado.id);
         conhecidos.add(adotado.id);
         resumo.lotesConciliados += 1;
-        for (const extra of repetidos) {
-          conhecidos.add(extra.id);
-          try {
-            await deps.api.cancelar(extra.id);
-          } catch (e) {
-            resumo.erros.push(`cancelar lote repetido ${extra.id}: ${mensagemDoErro(e)}`);
-          }
-        }
         continue;
       }
 
@@ -380,6 +420,46 @@ async function coletar(deps: DepsDoCiclo, pendentes: Pendente[], resumo: ResumoD
   }
 }
 
+// --- Publicação (44-G) ---------------------------------------------------------
+
+async function publicar(deps: DepsDoCiclo, resumo: ResumoDoCiclo, dentroDoPrazo: () => boolean): Promise<void> {
+  let prontos: ParaPublicar[];
+  try {
+    prontos = await deps.banco.paraPublicar(MAX_PUBLICACOES_POR_CICLO);
+  } catch (e) {
+    resumo.erros.push(`publicação (buscar envios): ${mensagemDoErro(e)}`);
+    return;
+  }
+  if (prontos.length === 0) return;
+  let catalogo: Catalogo;
+  try {
+    catalogo = await deps.banco.catalogo();
+  } catch (e) {
+    resumo.erros.push(`publicação (catálogo): ${mensagemDoErro(e)}`);
+    return;
+  }
+  for (const envio of prontos) {
+    if (!dentroDoPrazo()) {
+      resumo.erros.push('prazo do ciclo esgotado: as publicações que faltam ficam para o próximo disparo');
+      return;
+    }
+    try {
+      const leitura = deps.lerMaterial(envio, catalogo);
+      if (!leitura.ok) {
+        // Não deveria acontecer (o mesmo texto passou pela conferência antes da IA): o
+        // envio fica "apto" e o erro vai para o log, sem publicar nada.
+        resumo.erros.push(`publicação ${envio.submissionId}: texto não lido (${leitura.motivos.join('; ')})`);
+        continue;
+      }
+      const r = await deps.banco.publicar(envio, leitura.material);
+      if (r.desfecho === 'publicado') resumo.publicados += 1;
+      else if (r.desfecho === 'recusado' || r.desfecho === 'falhou') resumo.publicacoesRecusadas += 1;
+    } catch (e) {
+      resumo.erros.push(`publicação ${envio.submissionId}: ${mensagemDoErro(e)}`);
+    }
+  }
+}
+
 // --- Ciclo ---------------------------------------------------------------------
 
 export async function executarCiclo(deps: DepsDoCiclo): Promise<ResumoDoCiclo> {
@@ -394,6 +474,9 @@ export async function executarCiclo(deps: DepsDoCiclo): Promise<ResumoDoCiclo> {
     enviadosAoLote: 0,
     loteCriado: null,
     loteIncerto: false,
+    semLoteNovoPorIncerta: false,
+    publicados: 0,
+    publicacoesRecusadas: 0,
     erros: [],
   };
 
@@ -429,10 +512,21 @@ async function trabalhar(deps: DepsDoCiclo, resumo: ResumoDoCiclo): Promise<void
   const pendentes = await deps.banco.pendentes();
   await conciliar(deps, pendentes, resumo);
   await coletar(deps, await deps.banco.pendentes(), resumo, dentroDoPrazo);
+  if (dentroDoPrazo()) await publicar(deps, resumo, dentroDoPrazo);
   if (!dentroDoPrazo()) return;
 
+  const restantes = await deps.banco.pendentes();
+  // Tentativa incerta sem solução (a API não respondeu e a conciliação ainda não
+  // achou o lote nem esgotou o prazo): nenhum lote novo, de nenhum tipo, até ela
+  // se resolver. Sem isto, um lote novo do mesmo tamanho tornaria a conciliação
+  // ambígua e ela poderia adotar (ou cancelar) o lote errado.
+  if (restantes.some((p) => p.status === 'incerta')) {
+    resumo.semLoteNovoPorIncerta = true;
+    return;
+  }
+
   // Continuações (pause_turn) ainda pausadas depois da coleta.
-  const aindaPausadas = (await deps.banco.pendentes()).filter((p) => p.status === 'pausada').map((p) => p.reviewId);
+  const aindaPausadas = restantes.filter((p) => p.status === 'pausada').map((p) => p.reviewId);
   const continuacoes = aindaPausadas.length > 0 ? await deps.banco.dadosDoEnvio(aindaPausadas) : [];
 
   const novas = await deps.banco.reservar(deps.maxPorLote ?? MAX_ENVIOS_NOVOS_POR_CICLO);

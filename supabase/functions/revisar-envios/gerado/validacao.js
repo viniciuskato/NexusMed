@@ -972,6 +972,31 @@ function avaliarEnvio(leitura, escolha, disciplines, themes) {
     aceito
   };
 }
+function lerMaterialParaPublicar(texto, disciplines, themes) {
+  const importacao = parseCompendiumMarkdownText(texto, disciplines, themes, []);
+  if (!importacao.ok) return { ok: false, motivos: importacao.errors };
+  const { preview } = importacao;
+  return {
+    ok: true,
+    material: {
+      title: preview.title,
+      subtitle: preview.subtitle || null,
+      author: preview.author || null,
+      estimated_read_time_minutes: preview.estimatedReadTimeMinutes || null,
+      // Como o botão "Importar material" (buildCompendiumFromImport): sem palavra-chave, "Geral".
+      tags: importacao.tags.length > 0 ? importacao.tags : ["Geral"],
+      sections: importacao.sections.map((s) => ({
+        title: s.title,
+        content: s.content,
+        key_takeaways: s.keyTakeaways,
+        mechanism_tag: s.mechanismTag ?? null,
+        clinical_pearl: s.clinicalPearl ?? null,
+        warning_alert: s.warningAlert ?? null
+      })),
+      references: importacao.references
+    }
+  };
+}
 function descreverAvisoDaImportacao(aviso) {
   return /^[^—.]{1,40}$/.test(aviso) ? `Falta o campo “${aviso}”.` : aviso;
 }
@@ -994,5 +1019,6 @@ function motivosDaReprovacao(av) {
 export {
   avaliarEnvio,
   lerArquivoParaEnvio,
+  lerMaterialParaPublicar,
   motivosDaReprovacao
 };

@@ -1,5 +1,13 @@
 import { test, expect, type Page } from '@playwright/test';
-import { createTestUser, deleteTestUser, psqlLocal, getSeedIds, runCleanup, type CreatedTestUser } from '../fixtures/localSupabase';
+import {
+  createTestUser,
+  deleteTestUser,
+  psqlLocal,
+  getSeedIds,
+  runCleanup,
+  vincularRevisaoDeIaAoMaterial,
+  type CreatedTestUser,
+} from '../fixtures/localSupabase';
 
 // Prompt 23-B — proveniência e atestação editorial.
 //
@@ -122,7 +130,20 @@ test.describe('Proveniência e atestação editorial (23-B)', () => {
     await page.locator('#provenance-review-close').click();
     await expect(panel).not.toBeVisible();
 
+    // 44-G: a atestação humana sozinha já não publica. O gate agora é a revisão de IA
+    // "apto" do conteúdo atual (o caminho real é "Enviar material"); sem ela, a
+    // mensagem diz o que fazer, em palavras leigas.
     await expect(row).toBeVisible();
+    await row.getByRole('button', { name: 'Publicar', exact: true }).click();
+    await page.waitForFunction(
+      () => document.body.innerText.includes('ainda não passou pelo revisor de IA') && document.body.innerText.includes('Enviar material'),
+      { timeout: 10_000 }
+    );
+    await expect(row).toContainText('rascunho');
+
+    // Com a revisão de IA apto vinculada a este conteúdo (fixture), publica.
+    vincularRevisaoDeIaAoMaterial(materialId, admin.id);
+    await page.waitForFunction(() => !document.body.innerText.includes('ainda não passou pelo revisor de IA'), { timeout: 10_000 });
     await row.getByRole('button', { name: 'Publicar', exact: true }).click();
     await expect(row).toContainText('publicado', { timeout: 10_000 });
 

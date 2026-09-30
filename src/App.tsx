@@ -553,6 +553,13 @@ function AuthenticatedApp() {
     setActiveView('compendium-reader');
   };
 
+  // 44-G: o servidor publica o material fora desta sessão, então a lista carregada
+  // ainda não o tem: recarrega antes de abrir.
+  const handleAbrirMaterialPublicado = async (materialId: string) => {
+    if (!compendiums.some((c) => c.id === materialId)) await refreshData();
+    handleOpenCompendium(materialId);
+  };
+
   const handleReturnToQuestions = () => {
     if (libraryOrigin) {
       const targetView = libraryOrigin.view;
@@ -964,6 +971,7 @@ function AuthenticatedApp() {
               themes={themes}
               compendiums={compendiums}
               onAbrirComoEscrever={() => handleSelectView('como-escrever-material')}
+              onAbrirMaterial={handleAbrirMaterialPublicado}
             />
           )}
 

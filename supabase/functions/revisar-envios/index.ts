@@ -4,7 +4,9 @@
 // com o segredo REVISOR_SEGREDO no cabeçalho Authorization. Cada disparo:
 //   1. coleta os lotes que a API da Anthropic já terminou (Message Batches API:
 //      metade do preço, sem prender requisição até a revisão acabar);
-//   2. reserva envios "aguardando revisão" (com os limites de custo do banco),
+//   2. publica os envios que a revisão aprovou ("apto"): o banco cria o material,
+//      publica e grava a proveniência "revisado por IA" numa transação só (44-G);
+//   3. reserva envios "aguardando revisão" (com os limites de custo do banco),
 //      confere o arquivo no servidor e cria um lote novo.
 // Segredos (nunca no repositório nem no cliente): ANTHROPIC_API_KEY e
 // REVISOR_SEGREDO, criados pelo dono no painel do Supabase. SUPABASE_URL e
@@ -13,7 +15,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { bancoDoSupabase, type ClienteDoBanco } from './banco.ts';
 import { apiDeLotesDaAnthropic, TIMEOUT_DA_API_MS, type ClienteDaAnthropic } from './api.ts';
-import { executarCiclo, type Conferencia } from './ciclo.ts';
+import { executarCiclo, type Conferencia, type LeitorDeMaterial } from './ciclo.ts';
 import { montarSistema } from './montagem.ts';
 import { BASE_DO_REVISOR } from './gerado/textos.ts';
 import * as validacao from './gerado/validacao.js';
@@ -61,11 +63,16 @@ async function tratar(req: Request): Promise<Response> {
     return { aceito: avaliacao.aceito, motivos: modulo.motivosDaReprovacao(avaliacao) };
   };
 
+  // 44-G: o texto aprovado vira material pelo mesmo importador da tela.
+  const lerMaterial: LeitorDeMaterial = (envio, catalogo) =>
+    modulo.lerMaterialParaPublicar(envio.texto, catalogo.disciplines, catalogo.themes);
+
   const sistemaCompleto = montarSistema(BASE_DO_REVISOR);
   const resumo = await executarCiclo({
     banco: bancoDoSupabase(cliente as unknown as ClienteDoBanco),
     api,
     conferir,
+    lerMaterial,
     baseDoRevisor: BASE_DO_REVISOR,
     baseSha256: await sha256Hex(sistemaCompleto),
     novoCodigo: () => crypto.randomUUID(),

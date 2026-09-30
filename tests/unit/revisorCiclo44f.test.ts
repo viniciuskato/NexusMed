@@ -8,6 +8,7 @@ import {
   type Banco,
   type Conferencia,
   type DepsDoCiclo,
+  type ParaPublicar,
   type MensagemDaApi,
   type Pendente,
   type ResultadoDoLote,
@@ -23,6 +24,12 @@ import { materialComPendencia, materialParaEnvio } from '../e2e/fixtures/materia
 // 44-F — o ciclo do revisor com a API SIMULADA. Nenhuma chamada real: nem a
 // API paga nem o Supabase. Prova o encadeamento (reservar, conferir, lote,
 // coletar, registrar) e a falha fechada em cada ponto.
+
+type LeitorGerado = (
+  texto: string,
+  d: unknown,
+  t: unknown,
+) => { ok: true; material: Record<string, unknown> } | { ok: false; motivos: string[] };
 
 const ACHADOS = '1. Fato — seção Espectro: confere.';
 const BLOCO = '```\nCorrija o material conforme os achados abaixo, mude só o que eles pedem e entregue os dois blocos de novo (o .md inteiro e O QUE MUDEI):\n1. Espectro: corrigir.\n```';
@@ -80,6 +87,7 @@ interface Cenario {
   falhaAoAnexar?: boolean;
   falhaAoConsultar?: boolean;
   conferir?: Conferencia;
+  paraPublicar?: ParaPublicar[];
 }
 
 function montar(c: Cenario = {}) {
@@ -103,6 +111,8 @@ function montar(c: Cenario = {}) {
       registrados.push(r);
       return true;
     }),
+    paraPublicar: vi.fn(async () => c.paraPublicar ?? []),
+    publicar: vi.fn(async () => ({ desfecho: 'publicado' as const, materialId: 'material-1' })),
   };
   const api: ApiDeLotes = {
     criar: vi.fn(async () => {
@@ -125,6 +135,7 @@ function montar(c: Cenario = {}) {
     avaliarEnvio: (l: unknown, e: unknown, d: unknown, th: unknown) => { aceito: boolean };
     motivosDaReprovacao: (a: unknown) => string[];
   };
+  const lerMaterialGerado = (gerado as unknown as { lerMaterialParaPublicar: LeitorGerado }).lerMaterialParaPublicar;
   const conferir: Conferencia =
     c.conferir ??
     ((e, cat) => {
@@ -141,6 +152,7 @@ function montar(c: Cenario = {}) {
     banco,
     api,
     conferir,
+    lerMaterial: (e, cat) => lerMaterialGerado(e.texto, cat.disciplines, cat.themes),
     baseDoRevisor: BASE_DO_REVISOR,
     baseSha256: 'sha-do-sistema',
     novoCodigo: () => `codigo-${++n}`,

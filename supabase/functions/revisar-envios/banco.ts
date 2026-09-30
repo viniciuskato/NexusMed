@@ -1,6 +1,6 @@
 // Ponte entre o ciclo e o Supabase (44-F): cada método é uma chamada às funções
 // `revisao_*` da migration 20260930120000, que só o service_role executa.
-import type { Banco, Catalogo, Pendente, Reservado, ResultadoRegistrado, Uso } from './ciclo.ts';
+import type { Banco, Catalogo, DesfechoDaPublicacao, ParaPublicar, Pendente, Reservado, ResultadoRegistrado, Uso } from './ciclo.ts';
 
 export interface ClienteDoBanco {
   rpc(fn: string, args?: Record<string, unknown>): PromiseLike<{ data: unknown; error: { message: string } | null }>;
@@ -39,6 +39,15 @@ function doReservado(l: LinhaDeReserva): Reservado {
     continuacao: l.continuation ?? null,
     tentativa: l.attempt,
   };
+}
+
+interface LinhaParaPublicar {
+  submission_id: string;
+  review_id: string;
+  content_md: string;
+  content_sha256: string;
+  discipline_id: string;
+  theme_id: string;
 }
 
 interface LinhaPendente {
@@ -110,6 +119,26 @@ export function bancoDoSupabase(cliente: ClienteDoBanco): Banco {
     },
     async pausar(reviewId, continuacao, u) {
       return Boolean(await rpc<boolean>('revisao_pausar', { p_review_id: reviewId, p_continuation: continuacao, ...uso(u) }));
+    },
+    async paraPublicar(max): Promise<ParaPublicar[]> {
+      const linhas = (await rpc<LinhaParaPublicar[] | null>('revisao_envios_para_publicar', { p_max: max })) ?? [];
+      return linhas.map((l) => ({
+        submissionId: l.submission_id,
+        reviewId: l.review_id,
+        texto: l.content_md,
+        sha256: l.content_sha256,
+        disciplineId: l.discipline_id,
+        themeId: l.theme_id,
+      }));
+    },
+    async publicar(envio, material) {
+      const r = await rpc<{ resultado: DesfechoDaPublicacao; material_id?: string } | null>('revisao_publicar_envio', {
+        p_submission_id: envio.submissionId,
+        p_review_id: envio.reviewId,
+        p_content_sha256: envio.sha256,
+        p_material: material,
+      });
+      return { desfecho: r?.resultado ?? 'fora_de_estado', materialId: r?.material_id ?? null };
     },
     async registrar(r: ResultadoRegistrado) {
       return Boolean(

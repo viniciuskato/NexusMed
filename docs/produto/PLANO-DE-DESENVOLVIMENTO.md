@@ -757,6 +757,22 @@ no banco.
 **Depende de.** 44-E; segredo da API criado pelo dono.
 **Estado.** Em andamento.
 
+### 44-G — Publicar pelo veredito do revisor de IA
+
+**Origem.** Decisão do dono (29/09): com o "apto" do revisor de IA o material
+vai direto aos alunos, com selo e botão de reportar erro; a leitura dele deixa
+de ser exigida para publicar.
+
+**Aceite.** Envio com revisão apto do texto atual vira material publicado pelo
+servidor, uma vez só. Nenhum material novo é publicado sem revisão apto,
+inclusive pelo admin. Selo "Revisado por IA" no leitor (mais forte quando uma
+pessoa atesta). "Reportar erro" para todo usuário ativo, com limite diário e
+lista na Área Editorial.
+
+**Fora de escopo.** Questões (44-H); editar publicado (45-K).
+**Depende de.** 44-F.
+**Estado.** Em andamento.
+
 ---
 
 ## 9. Frente 45 — Confiabilidade

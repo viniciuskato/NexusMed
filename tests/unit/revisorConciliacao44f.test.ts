@@ -105,6 +105,8 @@ class Mundo {
   falhasAoAnexar = 0;
   resultadoPadrao: LoteSimulado['resultado'] = () => ({ type: 'succeeded', message: msg(APTO) });
   atrasoAoCriar: Promise<void> | null = null;
+  /** A API de listar lotes fora do ar (a conciliação não consegue olhar). */
+  listaFalha = false;
   registrados: ResultadoRegistrado[] = [];
 
   iso(ms = this.agora) {
@@ -211,6 +213,8 @@ class Mundo {
       this.registrados.push(res);
       return true;
     },
+    paraPublicar: async () => [],
+    publicar: async () => ({ desfecho: 'publicado' as const, materialId: 'material-1' }),
   };
 
   api: ApiDeLotes = {
@@ -233,11 +237,13 @@ class Mundo {
         for (const p of lote.pedidos) yield { custom_id: p.custom_id, result: lote.resultado(p.custom_id, p) };
       })();
     },
-    listar: async (desde): Promise<LoteNaApi[]> =>
-      this.lotes
+    listar: async (desde): Promise<LoteNaApi[]> => {
+      if (this.listaFalha) throw new Error('API fora do ar ao listar os lotes');
+      return this.lotes
         .filter((l) => Date.parse(l.criadoEm) >= Date.parse(desde))
         .map((l) => ({ id: l.id, criadoEm: l.criadoEm, total: l.pedidos.length }))
-        .reverse(),
+        .reverse();
+    },
     cancelar: async (id) => {
       const l = this.lotes.find((x) => x.id === id);
       if (l) l.cancelado = true;
@@ -250,6 +256,7 @@ class Mundo {
       banco: this.banco,
       api: this.api,
       conferir: () => ({ aceito: true, motivos: [] }),
+      lerMaterial: () => ({ ok: false, motivos: ['fora do escopo destes testes'] }),
       baseDoRevisor: 'BASE',
       baseSha256: 'sha-do-sistema',
       novoCodigo: () => `codigo-${++n}`,
@@ -405,7 +412,7 @@ describe('44-F r2 — falha incerta ao criar o lote: nada é devolvido de graça
     expect(mundo.pedidosDeCriacao).toBe(1);
   });
 
-  it('se a tentativa se repetiu e a API tem dois lotes iguais, adota o mais antigo e cancela o outro (não paga duas vezes)', async () => {
+  it('se a tentativa se repetiu e a API tem dois lotes iguais, adota o mais antigo e NÃO cancela o outro (pode ser o lote legítimo de outra tentativa)', async () => {
     const mundo = new Mundo();
     mundo.fila = [envio(1)];
     mundo.modoDeCriar = 'perde_resposta';
@@ -417,8 +424,83 @@ describe('44-F r2 — falha incerta ao criar o lote: nada é devolvido de graça
     mundo.modoDeCriar = 'ok';
     await executarCiclo(mundo.deps());
     expect(mundo.revisoes.get('rev-1')?.batchId).toBe('msgbatch_1');
-    expect(mundo.lotes.find((l) => l.id === 'msgbatch_repetido')?.cancelado).toBe(true);
-    expect(mundo.lotesDoEnvio('rev-1')).toHaveLength(1);
+    expect(mundo.lotes.find((l) => l.id === 'msgbatch_repetido')?.cancelado).toBe(false);
+    expect(mundo.lotes.filter((l) => l.cancelado)).toHaveLength(0);
+  });
+
+  it('A/B: duas tentativas incertas seguidas, com a lista de lotes falhando no meio → cada uma adota o lote certo e nenhum lote é cancelado', async () => {
+    const mundo = new Mundo();
+    const lote = (id: string, reviewId: string): LoteSimulado => ({
+      id, criadoEm: mundo.iso(), pedidos: [{ custom_id: reviewId } as PedidoDeLote], cancelado: false, terminado: false, resultado: mundo.resultadoPadrao,
+    });
+    // A: tentativa às 12:00, o lote msgbatch_1 existe, a resposta se perdeu.
+    mundo.fila = [envio(1)];
+    await mundo.banco.reservar(1);
+    await mundo.banco.marcarIncerta(['rev-1']);
+    mundo.avanca(1);
+    mundo.lotes.push(lote('msgbatch_1', 'rev-1'));
+    // B: tentativa às 12:02, o lote msgbatch_2 existe, a resposta também se perdeu.
+    mundo.avanca(1);
+    mundo.fila = [envio(2)];
+    await mundo.banco.reservar(1);
+    await mundo.banco.marcarIncerta(['rev-2']);
+    mundo.avanca(1);
+    mundo.lotes.push(lote('msgbatch_2', 'rev-2'));
+
+    // A API de listar fica fora do ar: a conciliação não resolve nenhuma das duas.
+    mundo.listaFalha = true;
+    mundo.avanca(5);
+    const r1 = await executarCiclo(mundo.deps());
+    expect(r1.erros.join(' ')).toContain('conciliação');
+    expect(mundo.revisoes.get('rev-1')?.estado).toBe('incerta');
+    expect(mundo.revisoes.get('rev-2')?.estado).toBe('incerta');
+    expect(mundo.lotes.filter((l) => l.cancelado)).toHaveLength(0);
+
+    // A API volta: A adota o lote mais antigo, B adota o outro, ninguém cancela nada.
+    mundo.listaFalha = false;
+    mundo.avanca(5);
+    const r2 = await executarCiclo(mundo.deps());
+    expect(r2.lotesConciliados).toBe(2);
+    expect(mundo.revisoes.get('rev-1')).toMatchObject({ estado: 'submetida', batchId: 'msgbatch_1' });
+    expect(mundo.revisoes.get('rev-2')).toMatchObject({ estado: 'submetida', batchId: 'msgbatch_2' });
+    expect(mundo.lotes.filter((l) => l.cancelado)).toHaveLength(0);
+
+    // Os dois lotes terminam: cada pessoa recebe o resultado do seu envio.
+    mundo.terminaTodos();
+    await executarCiclo(mundo.deps());
+    expect(mundo.revisoes.get('rev-1')).toMatchObject({ estado: 'concluida', veredito: 'apto' });
+    expect(mundo.revisoes.get('rev-2')).toMatchObject({ estado: 'concluida', veredito: 'apto' });
+    expect(mundo.registrados.map((r) => r.reviewId).sort()).toEqual(['rev-1', 'rev-2']);
+  });
+
+  it('com uma tentativa incerta sem solução, o ciclo NÃO cria lote novo nem reserva envios (nem continua revisão pausada)', async () => {
+    const mundo = new Mundo();
+    mundo.fila = [envio(1)];
+    mundo.modoDeCriar = 'perde_resposta';
+    await executarCiclo(mundo.deps()); // A: msgbatch_1 criado, resposta perdida → incerta
+    expect(mundo.lotes).toHaveLength(1);
+
+    // Chega o envio B e a lista de lotes está fora do ar: A continua sem solução.
+    mundo.fila.push(envio(2));
+    mundo.modoDeCriar = 'ok';
+    mundo.listaFalha = true;
+    mundo.avanca(6);
+    const r2 = await executarCiclo(mundo.deps());
+    expect(r2.semLoteNovoPorIncerta).toBe(true);
+    expect(r2.enviadosAoLote).toBe(0);
+    expect(mundo.lotes).toHaveLength(1); // nenhum lote novo
+    expect(mundo.pedidosDeCriacao).toBe(1);
+    expect(mundo.fila.map((e) => e.reviewId)).toEqual(['rev-2']); // B nem foi reservado
+
+    // A lista volta: A adota o seu lote e, no mesmo ciclo, B já pode ir num lote novo.
+    mundo.listaFalha = false;
+    mundo.avanca(6);
+    const r3 = await executarCiclo(mundo.deps());
+    expect(r3.lotesConciliados).toBe(1);
+    expect(r3.semLoteNovoPorIncerta).toBe(false);
+    expect(mundo.revisoes.get('rev-1')).toMatchObject({ estado: 'submetida', batchId: 'msgbatch_1' });
+    expect(mundo.revisoes.get('rev-2')).toMatchObject({ estado: 'submetida', batchId: 'msgbatch_2' });
+    expect(mundo.lotes.map((l) => l.pedidos.map((p) => p.custom_id))).toEqual([['rev-1'], ['rev-2']]);
   });
 
   it('um lote que já tem dono nunca é adotado por outra tentativa incerta', async () => {

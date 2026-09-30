@@ -23,6 +23,7 @@ import {
   ShieldBan,
   ShieldCheck,
   MessageSquareWarning,
+  Flag,
   ArrowRight,
   ThumbsUp,
   ThumbsDown,
@@ -59,6 +60,7 @@ import ImportMaterialModal from './ImportMaterialModal';
 import ImportQuestionsModal from './ImportQuestionsModal';
 import CreateThemeModal from './CreateThemeModal';
 import { EnviosDeMaterialAdmin } from './EnviosDeMaterialAdmin';
+import { ErrosReportadosAdmin } from './ErrosReportadosAdmin';
 
 const CREATE_NEW_THEME = '__create_new_theme__';
 import { getErrorMessage } from '../../utils/errorMessage';
@@ -80,7 +82,7 @@ interface AdminCMSViewProps {
   questions: Question[];
   compendiums: Compendium[];
   flashcards: Flashcard[];
-  onRefreshData: () => void;
+  onRefreshData: () => void | Promise<void>;
   // Abre o compêndio no leitor real (mesmo em rascunho) — usado pelo botão
   // "Visualizar" da revisão editorial: sem isso, o revisor só tem o form de
   // edição bruto ou o painel de claims, nunca o material como vai ficar pro
@@ -98,7 +100,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   onOpenCompendium,
 }) => {
   const [activeTab, setActiveTab] = usePersistedState<
-    'compendiums' | 'questions' | 'flashcards' | 'users' | 'feedback' | 'envios' | 'database'
+    'compendiums' | 'questions' | 'flashcards' | 'users' | 'feedback' | 'envios' | 'erros' | 'database'
   >('admin_active_tab', 'compendiums');
   useScrollMemory(`admin:${activeTab}`);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -917,6 +919,19 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
         >
           <Inbox className="w-4 h-4" />
           <span>Envios de material</span>
+        </button>
+
+        <button
+          id="admin-tab-erros"
+          onClick={() => setActiveTab('erros')}
+          className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+            activeTab === 'erros'
+              ? 'bg-slate-900 text-white dark:bg-teal-600 dark:text-white elev-xs font-bold'
+              : 'bg-stone-100 dark:bg-[#142038] text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-[#1A2845]'
+          }`}
+        >
+          <Flag className="w-4 h-4" />
+          <span>Erros reportados</span>
         </button>
       </div>
 
@@ -2452,7 +2467,22 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
       {/* ══════════════════════════════════════════════════════════════ */}
       {/* ── TAB: ENVIOS DE MATERIAL (44-E) ─────────────────────────── */}
       {/* ══════════════════════════════════════════════════════════════ */}
-      {activeTab === 'envios' && <EnviosDeMaterialAdmin disciplines={disciplines} themes={themes} />}
+      {activeTab === 'envios' && (
+        <EnviosDeMaterialAdmin
+          disciplines={disciplines}
+          themes={themes}
+          onAbrirMaterial={async (materialId) => {
+            // O servidor publicou fora desta sessão: a lista carregada ainda não tem o material.
+            if (!compendiums.some((c) => c.id === materialId)) await onRefreshData();
+            onOpenCompendium(materialId);
+          }}
+        />
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* ── TAB: ERROS REPORTADOS (44-G) ───────────────────────────── */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {activeTab === 'erros' && <ErrosReportadosAdmin />}
 
       {/* ══════════════════════════════════════════════════════════════ */}
       {/* ── TAB: FEEDBACK ──────────────────────────────────────────── */}

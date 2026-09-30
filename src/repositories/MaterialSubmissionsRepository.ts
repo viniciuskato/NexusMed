@@ -37,6 +37,10 @@ export interface MaterialSubmission {
   status: string;
   createdAt: string;
   updatedAt: string;
+  /** 44-G: o material que o servidor criou e publicou a partir deste envio (estado "publicado"). */
+  publishedMaterialId?: string | null;
+  /** 44-G: por que o servidor não publicou (título repetido etc.), em palavras leigas. */
+  publicationNote?: string | null;
   /** A revisão de IA do texto atual, se já houve uma. */
   review?: MaterialReviewView | null;
   /** Só na leitura de admin. */
@@ -99,6 +103,8 @@ interface Row {
   created_at: string;
   updated_at: string;
   content_sha256?: string | null;
+  published_material_id?: string | null;
+  publication_note?: string | null;
   reviews?: ReviewRow[] | null;
   // A junção com `profiles` é um-para-um; o tipo inferido a trata como lista.
   author?: AuthorRow | AuthorRow[] | null;
@@ -106,7 +112,8 @@ interface Row {
 }
 
 // Sem `content_md`: as listas não precisam do texto (até 300 KB por linha).
-const COLUMNS = 'id, title, discipline_id, theme_id, parent_material_id, status, created_at, updated_at, content_sha256';
+const COLUMNS =
+  'id, title, discipline_id, theme_id, parent_material_id, status, created_at, updated_at, content_sha256, published_material_id, publication_note';
 const REVIEW_COLUMNS =
   'reviews:material_reviews(id, status, verdict, findings_text, correction_block, error_kind, content_sha256, completed_at, created_at)';
 
@@ -145,6 +152,8 @@ function fromRow(row: Row): MaterialSubmission {
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    publishedMaterialId: row.published_material_id ?? null,
+    publicationNote: row.publication_note ?? null,
     review: revisaoQueValeParaOTexto(row),
     author: autor
       ? { id: row.author_id ?? '', name: autor.display_name ?? '', email: autor.email ?? '' }

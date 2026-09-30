@@ -10,6 +10,9 @@ import { SafeMarkdown } from '../common/SafeMarkdown';
 // Lista de envios — a mesma para "Meus envios" (estudante) e para a aba de
 // envios da Área Editorial (admin, só leitura nesta unidade).
 //
+// 44-G: envio "publicado" tem o link para o material; o recado do servidor (ex.:
+// título repetido) aparece junto do estado.
+//
 // 44-F: cada envio mostra o veredito da revisão de IA em palavras leigas, os
 // achados e o bloco de correção. O texto vem da IA: é renderizado só por
 // SafeMarkdown (AGENTS.md, risco 15) e por <pre> de texto puro para código —
@@ -29,6 +32,8 @@ interface ListaDeEnviosProps {
   onCorrigir?: (envio: MaterialSubmission) => void;
   /** Estudante: mandar o mesmo texto de novo (envio "erro"). */
   onTentarDeNovo?: (envio: MaterialSubmission) => void;
+  /** 44-G: abre o material publicado a partir deste envio. */
+  onAbrirMaterial?: (materialId: string) => void;
   ocupadoId?: string | null;
 }
 
@@ -110,6 +115,7 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
   avisoDaFila,
   onCorrigir,
   onTentarDeNovo,
+  onAbrirMaterial,
   ocupadoId,
 }) => {
   if (envios.length === 0) {
@@ -143,6 +149,23 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
             </p>
             {estado.explicacao && (
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{estado.explicacao}</p>
+            )}
+            {envio.publicationNote && envio.status !== 'publicado' && (
+              <p data-testid="recado-do-servidor" className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                {envio.publicationNote}
+              </p>
+            )}
+            {envio.status === 'publicado' && envio.publishedMaterialId && onAbrirMaterial && (
+              <div className="pt-1">
+                <button
+                  type="button"
+                  data-testid="abrir-material-publicado"
+                  onClick={() => onAbrirMaterial(envio.publishedMaterialId as string)}
+                  className="min-h-11 px-3 py-2 rounded-xl border border-teal-600 text-teal-700 dark:text-teal-300 dark:border-teal-500 bg-white dark:bg-slate-900 text-xs font-semibold cursor-pointer hover:bg-teal-50 dark:hover:bg-teal-950/40"
+                >
+                  Abrir o material publicado
+                </button>
+              </div>
             )}
             {envio.status === 'aguardando_revisao' && avisoDaFila && (
               <p data-testid="aviso-da-fila" className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
