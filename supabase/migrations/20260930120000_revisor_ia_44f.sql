@@ -188,6 +188,40 @@ create table public.material_reviews (
 comment on table public.material_reviews is
   '44-F: revisão de IA de um envio (texto revisado por hash, veredito, achados, modelo, tokens e buscas). Escrita só pelo servidor.';
 
+-- O LUGAR que a IA recebeu junto com o texto (Disciplina, Tema e material acima do envio no
+-- momento da reserva). A revisão vale para o texto E para este lugar: quem muda o lugar
+-- depois da revisão (o autor pode, pela API, enquanto o envio está em "erro", "não apto" ou
+-- esperando) tem o envio revisado de novo, senão o lugar publicado nunca teria passado pelo
+-- revisor. Sem chaves estrangeiras: é o registro do que foi enviado à IA.
+alter table public.material_reviews
+  add column discipline_id uuid,
+  add column theme_id uuid,
+  add column parent_material_id uuid;
+
+-- O lugar é gravado pelo banco, na mesma transação da reserva (o envio está travado):
+-- é o que a IA recebe. Quem grava a revisão não o informa nem o forja.
+create or replace function app.material_reviews_guardar_lugar()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.submission_id is not null then
+    select s.discipline_id, s.theme_id, s.parent_material_id
+      into new.discipline_id, new.theme_id, new.parent_material_id
+      from public.material_submissions s where s.id = new.submission_id;
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function app.material_reviews_guardar_lugar() from public, anon, authenticated;
+
+create trigger trg_material_reviews_guardar_lugar
+  before insert on public.material_reviews
+  for each row execute function app.material_reviews_guardar_lugar();
+
 create index material_reviews_submission_idx on public.material_reviews (submission_id, created_at desc);
 create index material_reviews_status_idx on public.material_reviews (status, created_at);
 create index material_reviews_created_idx on public.material_reviews (created_at) where billable;
@@ -581,19 +615,24 @@ begin
     completed_at = now()
   where id = p_review_id;
 
-  -- O envio só muda se ainda está em revisão com o mesmo texto que foi revisado.
+  -- O envio só muda se ainda está em revisão com o mesmo texto E o mesmo lugar que foram revisados.
   update public.material_submissions s set status = v_submission_status
    where s.id = r.submission_id
      and s.status = 'em_revisao'
-     and s.content_sha256 = r.content_sha256;
+     and s.content_sha256 = r.content_sha256
+     and s.discipline_id is not distinct from r.discipline_id
+     and s.theme_id is not distinct from r.theme_id
+     and s.parent_material_id is not distinct from r.parent_material_id;
   return true;
 end;
 $$;
 
--- A revisão "concluída" mais recente que vale para o texto ATUAL do envio (mesmo
--- hash), ou nulo. É o que a publicação (44-G) consulta: revisão de texto antigo
--- não vale.
-create or replace function app.revisao_valida_do_envio(p_submission uuid)
+-- A revisão "concluída" mais recente que vale para um TEXTO e um LUGAR (Disciplina, Tema e
+-- material acima), ou nulo. É o que a publicação (44-G) consulta: revisão de texto antigo,
+-- ou de outro lugar, não vale.
+create or replace function app.revisao_valida_do_envio_para_o_lugar(
+  p_submission uuid, p_discipline uuid, p_theme uuid, p_parent uuid
+)
 returns uuid
 language sql
 stable
@@ -606,10 +645,27 @@ as $$
   where r.submission_id = p_submission
     and r.status = 'concluida'
     and r.content_sha256 = s.content_sha256
+    and r.discipline_id is not distinct from p_discipline
+    and r.theme_id is not distinct from p_theme
+    and r.parent_material_id is not distinct from p_parent
   order by r.completed_at desc nulls last, r.created_at desc
   limit 1;
 $$;
 
+-- A revisão que vale para o texto E o lugar ATUAIS do envio.
+create or replace function app.revisao_valida_do_envio(p_submission uuid)
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select app.revisao_valida_do_envio_para_o_lugar(s.id, s.discipline_id, s.theme_id, s.parent_material_id)
+  from public.material_submissions s
+  where s.id = p_submission;
+$$;
+
+revoke all on function app.revisao_valida_do_envio_para_o_lugar(uuid, uuid, uuid, uuid) from public, anon, authenticated;
 revoke all on function app.revisao_valida_do_envio(uuid) from public, anon, authenticated;
 
 -- Revisões que o servidor precisa acompanhar (lote enviado) ou continuar.

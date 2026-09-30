@@ -166,7 +166,7 @@ as $$
   );
 $$;
 
-select plan(159);
+select plan(180);
 
 select tests.clear_auth();
 select tests.create_user('g.admin@test.local', 'admin', 'active') as v_admin \gset
@@ -180,6 +180,13 @@ insert into public.disciplines (name, code, cycle)
 values ('Disciplina 44G', 'G44-' || :'v_sfx', 'clinico') returning id as v_disc \gset
 insert into public.themes (discipline_id, name) values (:'v_disc', 'Tema 44G A') returning id as v_theme \gset
 insert into public.themes (discipline_id, name) values (:'v_disc', 'Tema 44G B') returning id as v_theme_b \gset
+
+-- Guarda os tetos de revisão como estavam e abre folga (a reserva do servidor os respeita;
+-- rodar o arquivo várias vezes gasta o teto mensal); tira da frente o que outros testes
+-- deixaram esperando, porque a reserva é global.
+select monthly_review_cap as v_cap_orig, daily_review_cap_per_user as v_daily_orig from public.review_settings \gset
+update public.review_settings set monthly_review_cap = 100000, daily_review_cap_per_user = 50;
+update public.material_submissions set status = 'erro' where status = 'aguardando_revisao';
 
 -- Um material já publicado (o "material acima" dos envios).
 insert into public.materials (discipline_id, theme_id, title) values (:'v_disc', :'v_theme', 'Pai publicado ' || :'v_sfx') returning id as v_pai \gset
@@ -256,7 +263,7 @@ select ok(
 -- ---------------------------------------------------------------------------
 -- 2. Envios prontos para publicar (o que o servidor busca)
 -- ---------------------------------------------------------------------------
-select tests.envio_revisado(:'v_autor', :'v_disc', :'v_theme', 'Envio apto 1 ' || :'v_sfx') as v_e1 \gset
+select tests.envio_revisado(:'v_autor', :'v_disc', :'v_theme', 'Envio apto 1 ' || :'v_sfx', :'v_pai') as v_e1 \gset
 select tests.envio_revisado(:'v_autor', :'v_disc', :'v_theme', 'Envio nao apto ' || :'v_sfx', null, 'nao_apto', 'nao_apto') as v_e_nao \gset
 select tests.envio_revisado(:'v_autor', :'v_disc', :'v_theme', 'Envio apto sem revisao valida ' || :'v_sfx', null, 'nao_apto', 'apto') as v_e_incoerente \gset
 select tests.envio_revisado(:'v_autor', :'v_disc', :'v_theme', 'Envio apto texto mudou ' || :'v_sfx') as v_e_mudou \gset
@@ -316,8 +323,7 @@ select is(
 select tests.clear_auth();
 select is((select count(*)::int from public.materials where title like 'Envio apto 1 %' and title like '%' || :'v_sfx'), 0, 'nenhuma dessas tentativas criou material');
 
--- O caminho feliz, com o "material acima".
-update public.material_submissions set parent_material_id = :'v_pai' where id = :'v_e1';
+-- O caminho feliz, com o "material acima" (o lugar que a IA revisou).
 select tests.authenticate_as_service();
 select public.revisao_publicar_envio(:'v_e1', :'v_r1', :'v_h1', tests.leitura('Envio apto 1 ' || :'v_sfx', 3)) as v_res1 \gset
 select tests.clear_auth();
@@ -492,26 +498,100 @@ select lives_ok(format($$ update public.material_submissions set title = title w
 select tests.clear_auth();
 select is((select status from public.material_submissions where id = :'v_e_retry3'), 'aguardando_revisao', 'revisão "não apto" não vale como aprovação: volta à fila de revisão');
 
--- Envio recusado na publicação (ex.: material acima trocado): mesmo texto, revisão apto válida → "apto".
-select tests.envio_revisado(:'v_autor', :'v_disc', :'v_theme', 'Retry recusado ' || :'v_sfx', null, 'apto', 'nao_apto') as v_e_retry4 \gset
+-- Envio recusado na publicação (ex.: material acima que saiu do ar): o autor escolhe outro material acima.
+-- O lugar mudou, e a IA revisou o lugar antigo: o envio volta à REVISÃO (não a "apto").
+select tests.create_user('g.autor2@test.local', 'student', 'active') as v_autor2 \gset
+select tests.envio_revisado(:'v_autor2', :'v_disc', :'v_theme', 'Retry recusado ' || :'v_sfx', null, 'apto', 'nao_apto') as v_e_retry4 \gset
 update public.material_submissions set publication_note = 'O material acima não está mais publicado.' where id = :'v_e_retry4';
-select tests.authenticate_as(:'v_autor');
+select tests.authenticate_as(:'v_autor2');
 select lives_ok(format($$ update public.material_submissions set parent_material_id = %L where id = %L $$, :'v_pai', :'v_e_retry4'), 'o autor escolhe outro material acima, com o mesmo texto');
 select tests.clear_auth();
 select results_eq(
   format($$ select status, publication_note from public.material_submissions where id = %L $$, :'v_e_retry4'),
-  $$ values ('apto'::text, null::text) $$,
-  'o envio recusado volta a "apto" (a revisão continua valendo) e o recado antigo some'
+  $$ values ('aguardando_revisao'::text, null::text) $$,
+  'lugar novo (outro material acima): o envio volta a "aguardando revisão", e o recado antigo some'
 );
 
 -- A função de conferência responde só sobre envio do próprio autor.
 select tests.authenticate_as(:'v_aluno');
-select is(app.envio_tem_revisao_apto_do_autor(:'v_e_retry'::uuid), false, 'outra pessoa não descobre se o envio alheio tem revisão apto');
+select is(app.envio_tem_revisao_apto_do_autor(:'v_e_retry'::uuid, :'v_disc'::uuid, :'v_theme'::uuid, null::uuid), false, 'outra pessoa não descobre se o envio alheio tem revisão apto');
 select tests.clear_auth();
 select tests.authenticate_as(:'v_autor');
-select is(app.envio_tem_revisao_apto_do_autor(:'v_e_retry'::uuid), true, 'o autor vê a resposta sobre o próprio envio');
+select is(app.envio_tem_revisao_apto_do_autor(:'v_e_retry'::uuid, :'v_disc'::uuid, :'v_theme'::uuid, null::uuid), true, 'o autor vê a resposta sobre o próprio envio, para o lugar dele');
+select is(app.envio_tem_revisao_apto_do_autor(:'v_e_retry'::uuid, :'v_disc'::uuid, :'v_theme_b'::uuid, null::uuid), false, 'e a resposta para outro lugar é não');
 select tests.clear_auth();
-select ok(not has_function_privilege('anon', 'app.envio_tem_revisao_apto_do_autor(uuid)', 'execute'), 'anon não executa a conferência');
+select ok(not has_function_privilege('anon', 'app.envio_tem_revisao_apto_do_autor(uuid, uuid, uuid, uuid)', 'execute'), 'anon não executa a conferência');
+
+-- ---------------------------------------------------------------------------
+-- 4b2. A revisão vale para o texto E para o LUGAR (Disciplina, Tema, material acima)
+-- ---------------------------------------------------------------------------
+insert into public.disciplines (name, code, cycle) values ('Outra Disciplina 44G', 'G44O-' || :'v_sfx', 'clinico') returning id as v_disc2 \gset
+insert into public.themes (discipline_id, name) values (:'v_disc2', 'Outro Tema 44G') returning id as v_theme2 \gset
+
+-- A revisão guarda o lugar que a IA recebeu, gravado pelo banco na reserva.
+select tests.create_user('g.autor4@test.local', 'student', 'active') as v_autor4 \gset
+insert into public.material_submissions (author_id, title, discipline_id, theme_id, parent_material_id, content_md)
+values (:'v_autor4', 'Lugar reservado ' || :'v_sfx', :'v_disc', :'v_theme', :'v_pai', '# lugar reservado') returning id as v_e_lug \gset
+select tests.authenticate_as_service();
+select count(*) from public.revisao_reservar_envios(1000) where submission_id = :'v_e_lug' \gset
+select tests.clear_auth();
+select results_eq(
+  format($$ select discipline_id, theme_id, parent_material_id from public.material_reviews where submission_id = %L $$, :'v_e_lug'),
+  format($$ values (%L::uuid, %L::uuid, %L::uuid) $$, :'v_disc', :'v_theme', :'v_pai'),
+  'a revisão guarda Disciplina, Tema e material acima que a IA recebeu, gravados pelo banco na reserva'
+);
+select tests.review_of(:'v_e_lug') as v_r_lug \gset
+-- Se o lugar mudar durante a revisão (por fora do fluxo do autor), o resultado não leva o envio a "apto".
+update public.material_submissions set theme_id = :'v_theme_b' where id = :'v_e_lug';
+select tests.authenticate_as_service();
+select public.revisao_registrar_resultado(:'v_r_lug', 'apto', 'APTO PARA ENVIAR', null, null, null, 'm', 'p', 1, 1, 0, 0, 0, 0, 'end_turn');
+select tests.clear_auth();
+select is((select status from public.material_submissions where id = :'v_e_lug'), 'em_revisao', 'lugar mudado durante a revisão: o resultado não leva o envio a "apto"');
+
+-- A sonda do revisor: o autor troca o lugar de um envio em "erro" com revisão apto do MESMO texto.
+select tests.create_user('g.autor3@test.local', 'student', 'active') as v_autor3 \gset
+select tests.envio_revisado(:'v_autor3', :'v_disc', :'v_theme', 'Sonda tema ' || :'v_sfx', null, 'apto', 'erro') as v_e_s1 \gset
+select tests.envio_revisado(:'v_autor3', :'v_disc', :'v_theme', 'Sonda disciplina ' || :'v_sfx', null, 'apto', 'erro') as v_e_s2 \gset
+select tests.envio_revisado(:'v_autor3', :'v_disc', :'v_theme', 'Sonda pai ' || :'v_sfx', null, 'apto', 'erro') as v_e_s3 \gset
+select tests.envio_revisado(:'v_autor3', :'v_disc', :'v_theme', 'Sonda sem troca ' || :'v_sfx', :'v_pai', 'apto', 'erro') as v_e_s4 \gset
+select tests.authenticate_as(:'v_autor3');
+select is(tests.affected_rows(format($$ update public.material_submissions set theme_id = %L where id = %L $$, :'v_theme_b', :'v_e_s1')), 1, 'o autor troca o Tema de um envio em "erro" (pela API)');
+select is(tests.affected_rows(format($$ update public.material_submissions set discipline_id = %L, theme_id = %L where id = %L $$, :'v_disc2', :'v_theme2', :'v_e_s2')), 1, 'o autor troca a Disciplina e o Tema de outro envio em "erro"');
+select is(tests.affected_rows(format($$ update public.material_submissions set parent_material_id = %L where id = %L $$, :'v_pai', :'v_e_s3')), 1, 'o autor troca só o material acima de um terceiro');
+select is(tests.affected_rows(format($$ update public.material_submissions set title = title where id = %L $$, :'v_e_s4')), 1, 'e "Tentar de novo" num quarto, sem trocar lugar nenhum');
+select tests.clear_auth();
+select is(
+  (select array_agg(status order by title) from public.material_submissions where id in (:'v_e_s1', :'v_e_s2', :'v_e_s3')),
+  array['aguardando_revisao', 'aguardando_revisao', 'aguardando_revisao']::text[],
+  'lugar trocado (Tema, Disciplina ou material acima): o envio volta a "aguardando revisão", nunca a "apto"'
+);
+select is((select status from public.material_submissions where id = :'v_e_s4'), 'apto', 'sem trocar o lugar, "Tentar de novo" continua voltando a "apto"');
+select is((select count(*)::int from public.material_reviews where submission_id = :'v_e_s4'), 1, 'e sem nova revisão');
+-- Mesmo que o estado fosse forçado a "apto", a revisão não vale para o lugar novo: fora da fila e sem publicar.
+update public.material_submissions set status = 'apto' where id in (:'v_e_s1', :'v_e_s2', :'v_e_s3');
+select is(app.revisao_apto_do_envio(:'v_e_s1'::uuid), null::uuid, 'a revisão do lugar antigo não vale para o Tema novo');
+select is(app.revisao_apto_do_envio(:'v_e_s2'::uuid), null::uuid, 'nem para a Disciplina nova');
+select is(app.revisao_apto_do_envio(:'v_e_s3'::uuid), null::uuid, 'nem para o material acima novo');
+select tests.authenticate_as_service();
+select is((select count(*)::int from public.revisao_envios_para_publicar(1000) where submission_id in (:'v_e_s1', :'v_e_s2', :'v_e_s3')), 0, 'e nenhum deles está na fila de publicação');
+select is(
+  (public.revisao_publicar_envio(:'v_e_s1', tests.review_of(:'v_e_s1'), (select content_sha256 from public.material_submissions where id = :'v_e_s1'), tests.leitura('Sonda tema ' || :'v_sfx')))->>'resultado',
+  'revisao_invalida', 'o servidor não publica o texto aprovado no Tema novo'
+);
+select is(
+  (public.revisao_publicar_envio(:'v_e_s2', tests.review_of(:'v_e_s2'), (select content_sha256 from public.material_submissions where id = :'v_e_s2'), tests.leitura('Sonda disciplina ' || :'v_sfx')))->>'resultado',
+  'revisao_invalida', 'nem na Disciplina nova'
+);
+select is(
+  (public.revisao_publicar_envio(:'v_e_s3', tests.review_of(:'v_e_s3'), (select content_sha256 from public.material_submissions where id = :'v_e_s3'), tests.leitura('Sonda pai ' || :'v_sfx')))->>'resultado',
+  'revisao_invalida', 'nem sob o material acima novo'
+);
+select is((select count(*)::int from public.materials where title like 'Sonda %' and title like '%' || :'v_sfx'), 0, 'nenhum material foi criado no lugar novo');
+select is((select count(*)::int from public.revisao_envios_para_publicar(1000) where submission_id = :'v_e_s4'), 1, 'o envio sem troca de lugar continua na fila de publicação');
+select tests.clear_auth();
+-- Voltando ao lugar revisado, a revisão volta a valer (é a mesma revisão, do mesmo texto e lugar).
+update public.material_submissions set theme_id = :'v_theme' where id = :'v_e_s1';
+select is(app.revisao_apto_do_envio(:'v_e_s1'::uuid), tests.review_of(:'v_e_s1'), 'voltando ao Tema revisado, a revisão volta a valer');
 
 -- ---------------------------------------------------------------------------
 -- 4c. O texto aprovado não pôde ser montado: o envio sai da fila de publicação
@@ -866,5 +946,9 @@ select tests.clear_auth();
 -- Excluir quem reportou leva os reportes junto; o material continua.
 select lives_ok(format($$ delete from auth.users where id = %L $$, :'v_lim'), 'excluir quem reportou exclui os reportes dele');
 select is((select count(*)::int from public.material_error_reports where reporter_id = :'v_lim'), 0, 'e nenhum ficou');
+
+-- Devolve os tetos como estavam.
+update public.review_settings set monthly_review_cap = :v_cap_orig, daily_review_cap_per_user = :v_daily_orig;
+select is((select monthly_review_cap from public.review_settings), :v_cap_orig, 'os tetos voltam ao que eram');
 
 select * from finish();
