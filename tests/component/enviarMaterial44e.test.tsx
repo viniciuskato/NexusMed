@@ -23,6 +23,12 @@ vi.mock('../../src/repositories/MaterialSubmissionsRepository', () => ({
   envioDeMaterialDisponivel: true,
 }));
 
+// 44-H1: "Meus envios" também lista os envios de questões; aqui não há nenhum.
+const repoQuestoes = { listMine: vi.fn().mockResolvedValue([]), submit: vi.fn() };
+vi.mock('../../src/repositories/QuestionSubmissionsRepository', () => ({
+  questionSubmissionsRepository: repoQuestoes,
+}));
+
 const { EnviarMaterialView } = await import('../../src/components/material/EnviarMaterialView');
 const { EnviosDeMaterialAdmin } = await import('../../src/components/admin/EnviosDeMaterialAdmin');
 
@@ -288,7 +294,7 @@ describe('44-E — Meus envios', () => {
 
   it('sem envios, diz isso', async () => {
     renderTela();
-    await screen.findByText('Você ainda não enviou nenhum material.');
+    await screen.findByText('Você ainda não enviou nenhum material nem questões.');
   });
 
   it('sem conexão, avisa em vez de mostrar lista vazia como se estivesse certa', async () => {

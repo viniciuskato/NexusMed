@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ClipboardCopy, Check } from 'lucide-react';
 import type { Discipline, Theme } from '../../types';
 import type { MaterialReviewView, MaterialSubmission } from '../../repositories/MaterialSubmissionsRepository';
+import type { QuestionSubmission } from '../../repositories/QuestionSubmissionsRepository';
 import { estadoEmPalavras } from '../../utils/envioDeMaterial';
 import { dividirEmBlocos } from '../../utils/padraoMaterial';
 import { copiarTexto } from '../../utils/areaDeTransferencia';
@@ -20,7 +21,8 @@ import { SafeMarkdown } from '../common/SafeMarkdown';
 
 interface ListaDeEnviosProps {
   id: string;
-  envios: MaterialSubmission[];
+  /** 44-H1: os dois tipos de envio (o de questões traz `kind: 'questoes'`). */
+  envios: Array<MaterialSubmission | QuestionSubmission>;
   disciplines: Discipline[];
   themes: Theme[];
   /** Admin: mostra quem enviou. */
@@ -123,39 +125,50 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
   }
   return (
     <ul id={id} className="space-y-2">
-      {envios.map((envio) => {
-        const estado = estadoEmPalavras(envio.status);
-        const disciplina = disciplines.find((d) => d.id === envio.disciplineId)?.name;
-        const tema = themes.find((t) => t.id === envio.themeId)?.name;
-        const podeCorrigir = onCorrigir && (envio.status === 'nao_apto' || envio.status === 'erro');
-        const podeTentarDeNovo = onTentarDeNovo && envio.status === 'erro';
+      {envios.map((item) => {
+        // O envio de questões não tem Disciplina, Tema, revisão nem material publicado por aqui (44-H2).
+        const questoes = 'kind' in item && item.kind === 'questoes';
+        const envio = (questoes ? null : item) as MaterialSubmission | null;
+        const estado = estadoEmPalavras(item.status, questoes ? 'questoes' : 'material');
+        const disciplina = envio ? disciplines.find((d) => d.id === envio.disciplineId)?.name : undefined;
+        const tema = envio ? themes.find((t) => t.id === envio.themeId)?.name : undefined;
+        const podeCorrigir = !questoes && onCorrigir && (item.status === 'nao_apto' || item.status === 'erro');
+        const podeTentarDeNovo = !questoes && onTentarDeNovo && item.status === 'erro';
         return (
           <li
-            key={envio.id}
-            data-status={envio.status}
+            key={`${questoes ? 'q' : 'm'}-${item.id}`}
+            data-status={item.status}
+            data-tipo={questoes ? 'questoes' : 'material'}
             className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col gap-1"
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 min-w-0 break-words">{envio.title}</p>
-              <span className="shrink-0 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                {estado.rotulo}
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 min-w-0 break-words">{item.title}</p>
+              <span className="shrink-0 flex items-center gap-1.5">
+                {questoes && (
+                  <span className="px-2 py-0.5 rounded-md border border-slate-300 dark:border-slate-600 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Questões
+                  </span>
+                )}
+                <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  {estado.rotulo}
+                </span>
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Enviado em {dataDoEnvio(envio.createdAt)}
+              Enviado em {dataDoEnvio(item.createdAt)}
               {disciplina ? ` · ${disciplina}` : ''}
               {tema ? ` › ${tema}` : ''}
-              {mostrarAutor && envio.author ? ` · por ${envio.author.name || envio.author.email}` : ''}
+              {mostrarAutor && envio?.author ? ` · por ${envio.author.name || envio.author.email}` : ''}
             </p>
             {estado.explicacao && (
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{estado.explicacao}</p>
             )}
-            {envio.publicationNote && envio.status !== 'publicado' && (
+            {envio?.publicationNote && envio.status !== 'publicado' && (
               <p data-testid="recado-do-servidor" className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
                 {envio.publicationNote}
               </p>
             )}
-            {envio.status === 'publicado' && envio.publishedMaterialId && onAbrirMaterial && (
+            {envio && envio.status === 'publicado' && envio.publishedMaterialId && onAbrirMaterial && (
               <div className="pt-1">
                 <button
                   type="button"
@@ -167,15 +180,15 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
                 </button>
               </div>
             )}
-            {envio.status === 'aguardando_revisao' && avisoDaFila && (
+            {item.status === 'aguardando_revisao' && avisoDaFila && (
               <p data-testid="aviso-da-fila" className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
                 {avisoDaFila}
               </p>
             )}
-            {envio.review && envio.status !== 'aguardando_revisao' && envio.status !== 'em_revisao' && (
+            {envio?.review && envio.status !== 'aguardando_revisao' && envio.status !== 'em_revisao' && (
               <RevisaoDoEnvio revisao={envio.review} />
             )}
-            {(podeCorrigir || podeTentarDeNovo) && (
+            {envio && (podeCorrigir || podeTentarDeNovo) && (
               <div className="flex flex-wrap gap-2 pt-1">
                 {podeCorrigir && (
                   <button

@@ -42,6 +42,11 @@ vi.mock('../../src/repositories/MaterialSubmissionsRepository', async () => {
   return { ...real, materialSubmissionsRepository: envios, envioDeMaterialDisponivel: true };
 });
 
+// 44-H1: "Meus envios" também lista os envios de questões; aqui não há nenhum.
+vi.mock('../../src/repositories/QuestionSubmissionsRepository', () => ({
+  questionSubmissionsRepository: { listMine: vi.fn().mockResolvedValue([]), submit: vi.fn() },
+}));
+
 const { SeloDeRevisao } = await import('../../src/components/material/SeloDeRevisao');
 const { ReportarErroDoMaterial } = await import('../../src/components/material/ReportarErroDoMaterial');
 const { ListaDeEnvios } = await import('../../src/components/material/ListaDeEnvios');

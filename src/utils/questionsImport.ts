@@ -29,6 +29,7 @@ import { DifficultyLevel, Discipline, MedicalCycle, Question, QuestionOption, Th
 //   **Ano:** 2025
 //   **Ciclo:** internato_residencia (opcional; padrão internato_residencia)
 //   **Dificuldade:** medio (opcional; padrão medio)
+//   **Materiais cobertos:** Título exato; Outro título exato (opcional; 44-H1)
 //
 //   **Enunciado Clínico (Caso / Vinheta):** (opcional)
 //   Texto da vinheta...
@@ -108,6 +109,11 @@ export interface QuestionImportPreview {
   generalCommentary: string;
   highYieldSummary: string;
   tags: string[];
+  /**
+   * 44-H1: títulos dos materiais que a questão cobre (campo `**Materiais cobertos:**`, separados por ";").
+   * O Admin ignora (vale o material escolhido para o lote); o envio pelo site os confere com os publicados.
+   */
+  materialTitles: string[];
   /** Tudo que não pôde ser importado, está ausente ou usou um valor padrão — sempre mostrado, nunca escondido. */
   missingFields: string[];
   /** Torna esta linha impossível de importar, mesmo com disciplina/tema escolhidos manualmente. */
@@ -173,6 +179,8 @@ const FIELD_LABELS: Record<string, keyof QuestionImportPreview | 'clinicalVignet
   'comando da questao (pergunta)': 'questionStem',
   'comando da questao': 'questionStem',
   pergunta: 'questionStem',
+  'materiais cobertos': 'materialTitles',
+  'material coberto': 'materialTitles',
   'comentario geral': 'generalCommentary',
   'perola high-yield (resumo para fixacao rapida)': 'highYieldSummary',
   'perola high-yield': 'highYieldSummary',
@@ -368,6 +376,16 @@ function parseQuestionBlock(
     '';
   if (!highYieldSummary) missingFields.push('Pérola High-Yield vazia — usando texto padrão.');
 
+  // 44-H1: "Materiais cobertos" — títulos separados por ";" (ou por linha), sem repetir.
+  const materialTitles = [
+    ...new Set(
+      (values['materiais cobertos'] ?? values['material coberto'] ?? '')
+        .split(/[;\n]/)
+        .map((t) => t.trim())
+        .filter(Boolean)
+    ),
+  ];
+
   if (tags.length === 0) missingFields.push('Tags não informadas — usando padrão (Admin, CMS, Custom).');
 
   return {
@@ -386,6 +404,7 @@ function parseQuestionBlock(
     generalCommentary: generalCommentary || DEFAULT_GENERAL_COMMENTARY,
     highYieldSummary: highYieldSummary || DEFAULT_HIGH_YIELD_SUMMARY,
     tags: tags.length > 0 ? tags : DEFAULT_TAGS,
+    materialTitles,
     missingFields,
     blockingErrors,
   };

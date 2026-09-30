@@ -32,6 +32,8 @@ interface ComoEscreverMaterialViewProps {
 type EstadoCopia = 'parado' | 'copiado' | 'falhou';
 
 interface CartaoPromptProps {
+  /** Como o padrão colado junto é chamado no texto do cartão (44-H1: o de questões usa o dele). */
+  nomeDoPadrao?: string;
   id: string;
   titulo: string;
   descricao: string;
@@ -40,7 +42,8 @@ interface CartaoPromptProps {
   textoCompleto: string;
 }
 
-const CartaoPrompt: React.FC<CartaoPromptProps> = ({
+export const CartaoPrompt: React.FC<CartaoPromptProps> = ({
+  nomeDoPadrao = 'padrão de conteúdos',
   id,
   titulo,
   descricao,
@@ -127,7 +130,7 @@ const CartaoPrompt: React.FC<CartaoPromptProps> = ({
           Ver o texto do prompt
         </summary>
         <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-          O botão copia este texto seguido do padrão de conteúdos, mostrado mais abaixo nesta página.
+          O botão copia este texto seguido do {nomeDoPadrao}, mostrado mais abaixo nesta página.
         </p>
         <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs leading-relaxed text-slate-800 dark:text-slate-200 font-mono">
           {prompt}
@@ -137,11 +140,8 @@ const CartaoPrompt: React.FC<CartaoPromptProps> = ({
   );
 };
 
-export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> = ({
-  disciplines,
-  themes,
-  onAbrirEnvio,
-}) => {
+/** Disciplinas e Temas do catálogo, com os nomes exatos (compartilhado com "Como escrever questões", 44-H1). */
+export const CatalogoDeTemas: React.FC<{ disciplines: Discipline[]; themes: Theme[] }> = ({ disciplines, themes }) => {
   const catalogo = useMemo(() => {
     const collator = new Intl.Collator('pt-BR');
     return [...disciplines]
@@ -154,6 +154,52 @@ export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> =
       }));
   }, [disciplines, themes]);
 
+  return (
+      <section aria-labelledby="como-escrever-catalogo" className="space-y-3">
+        <h2 id="como-escrever-catalogo" className="text-xl font-bold text-slate-900 dark:text-slate-100">
+          Disciplinas e Temas do catálogo
+        </h2>
+        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+          Ao pedir o material, use estes nomes exatamente como aparecem aqui. Não crie Disciplina nem Tema
+          novos.
+        </p>
+        {catalogo.length === 0 ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400">O catálogo ainda não foi carregado.</p>
+        ) : (
+          <ul id="como-escrever-catalogo-lista" className="grid gap-3 sm:grid-cols-2">
+            {catalogo.map(({ disciplina, temas }) => (
+              <li
+                key={disciplina.id}
+                className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
+              >
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{disciplina.name}</p>
+                {temas.length === 0 ? (
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Nenhum Tema cadastrado.</p>
+                ) : (
+                  <ul aria-label={`Temas de ${disciplina.name}`} className="mt-2 flex flex-wrap gap-1.5">
+                    {temas.map((tema) => (
+                      <li
+                        key={tema.id}
+                        className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-200"
+                      >
+                        {tema.name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+  );
+};
+
+export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> = ({
+  disciplines,
+  themes,
+  onAbrirEnvio,
+}) => {
   const blocosDoPadrao = useMemo(() => dividirEmBlocos(PARTE_1_DO_PADRAO), []);
 
   return (
@@ -220,43 +266,7 @@ export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> =
         </div>
       </section>
 
-      <section aria-labelledby="como-escrever-catalogo" className="space-y-3">
-        <h2 id="como-escrever-catalogo" className="text-xl font-bold text-slate-900 dark:text-slate-100">
-          Disciplinas e Temas do catálogo
-        </h2>
-        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          Ao pedir o material, use estes nomes exatamente como aparecem aqui. Não crie Disciplina nem Tema
-          novos.
-        </p>
-        {catalogo.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">O catálogo ainda não foi carregado.</p>
-        ) : (
-          <ul id="como-escrever-catalogo-lista" className="grid gap-3 sm:grid-cols-2">
-            {catalogo.map(({ disciplina, temas }) => (
-              <li
-                key={disciplina.id}
-                className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
-              >
-                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{disciplina.name}</p>
-                {temas.length === 0 ? (
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Nenhum Tema cadastrado.</p>
-                ) : (
-                  <ul aria-label={`Temas de ${disciplina.name}`} className="mt-2 flex flex-wrap gap-1.5">
-                    {temas.map((tema) => (
-                      <li
-                        key={tema.id}
-                        className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-200"
-                      >
-                        {tema.name}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <CatalogoDeTemas disciplines={disciplines} themes={themes} />
 
       <section aria-labelledby="como-escrever-padrao" className="space-y-4">
         <h2 id="como-escrever-padrao" className="text-xl font-bold text-slate-900 dark:text-slate-100">

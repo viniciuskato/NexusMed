@@ -82,4 +82,20 @@ describe('44-D — item de menu "Como escrever um material"', () => {
       screen.getByRole('menuitem', { name: 'Como escrever um material' }).getAttribute('aria-current'),
     ).toBe('page');
   });
+
+  it('44-H1: estudante (não admin) vê "Como escrever questões" no menu, e ele abre a página certa', () => {
+    authState.role = 'student';
+    const onSelectView = renderHeader();
+    fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Como escrever questões' }));
+    expect(onSelectView).toHaveBeenCalledWith('como-escrever-questoes');
+  });
+
+  it('44-H1: o item de questões é marcado como página atual só na página dele', () => {
+    authState.role = 'student';
+    renderHeader(vi.fn(), 'como-escrever-questoes');
+    fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
+    expect(screen.getByRole('menuitem', { name: 'Como escrever questões' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('menuitem', { name: 'Como escrever um material' }).getAttribute('aria-current')).toBeNull();
+  });
 });

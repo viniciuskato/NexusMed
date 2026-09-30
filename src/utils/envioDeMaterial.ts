@@ -45,8 +45,22 @@ export const ESTADO_EM_PALAVRAS: Record<EstadoDoEnvio, { rotulo: string; explica
   erro: { rotulo: 'A revisão não foi concluída', explicacao: 'Algo falhou do nosso lado. Seu material não foi rejeitado.' },
 };
 
-export function estadoEmPalavras(status: string): { rotulo: string; explicacao: string } {
-  return ESTADO_EM_PALAVRAS[status as EstadoDoEnvio] ?? { rotulo: 'Estado desconhecido', explicacao: '' };
+/** O mesmo para o envio de questões (44-H1): o rótulo é o mesmo, a explicação fala do lote de questões. */
+export const ESTADO_EM_PALAVRAS_DE_QUESTOES: Record<EstadoDoEnvio, { rotulo: string; explicacao: string }> = {
+  aguardando_revisao: { rotulo: 'Aguardando revisão', explicacao: 'Recebemos o lote de questões. Ele está na fila para ser revisado.' },
+  em_revisao: { rotulo: 'Em revisão', explicacao: 'As questões estão sendo revisadas agora.' },
+  apto: { rotulo: 'Aprovado na revisão', explicacao: 'A revisão aprovou as questões. Falta publicá-las.' },
+  nao_apto: { rotulo: 'Precisa de correção', explicacao: 'A revisão encontrou o que corrigir. Corrija as questões e envie de novo.' },
+  publicado: { rotulo: 'Publicado', explicacao: 'As questões já estão no ar para os estudantes.' },
+  erro: { rotulo: 'A revisão não foi concluída', explicacao: 'Algo falhou do nosso lado. Suas questões não foram rejeitadas.' },
+};
+
+export function estadoEmPalavras(
+  status: string,
+  tipo: 'material' | 'questoes' = 'material',
+): { rotulo: string; explicacao: string } {
+  const tabela = tipo === 'questoes' ? ESTADO_EM_PALAVRAS_DE_QUESTOES : ESTADO_EM_PALAVRAS;
+  return tabela[status as EstadoDoEnvio] ?? { rotulo: 'Estado desconhecido', explicacao: '' };
 }
 
 /** Tamanho do texto em bytes (o que o banco mede), não em letras. */
@@ -291,11 +305,14 @@ export function mensagemDeErroDoEnvio(err: unknown): string {
   if (e.hint === 'limite_envios_em_espera' || texto.includes('limite_envios_em_espera')) {
     return `Você já tem ${LIMITE_ENVIOS_EM_ESPERA} envios esperando revisão. Quando a revisão de um deles terminar, você poderá enviar outro.`;
   }
-  if (e.code === '23514' && texto.includes('material_submissions_content_size')) {
+  if (e.code === '23514' && /(material|question)_submissions_content_size/.test(texto)) {
     return `O texto passa de ${tamanhoLegivel(LIMITE_TEXTO_BYTES)}. Reduza o material ou divida-o em mais de um.`;
   }
   if (texto.includes('publicado') && texto.includes('material acima')) {
     return 'O material acima precisa estar publicado. Escolha outro ou deixe em branco.';
+  }
+  if (texto.includes('materiais escolhidos precisam estar publicados')) {
+    return 'Um dos materiais escolhidos não está mais publicado. Escolha outro.';
   }
   if (e.code === 'PGRST116') {
     return 'Este envio já não pode ser alterado: o estado dele mudou. Atualize a página para ver como está.';

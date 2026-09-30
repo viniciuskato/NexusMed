@@ -38,13 +38,42 @@ export function normalizarTexto(bruto: string): string {
   return bruto.replace(CRLF, '\n').trim();
 }
 
+export const MARCA_INICIO_PADRAO_QUESTOES = '=== PADRÃO NEXUSMED DE QUESTÕES — INÍCIO ===';
+export const MARCA_FIM_PADRAO_QUESTOES = '=== PADRÃO NEXUSMED DE QUESTÕES — FIM ===';
+
 /**
  * Texto que vai para a área de transferência: o prompt, uma linha-marca de
  * início, o padrão e uma linha-marca de fim. O prompt cita essas duas linhas,
- * para a IA saber onde o padrão começa e termina.
+ * para a IA saber onde o padrão começa e termina. Sem `marcas`, valem as do
+ * padrão de conteúdos; o de questões (44-H1) passa as suas.
  */
-export function montarTextoParaCopiar(prompt: string, parte1: string): string {
-  return [prompt, '', MARCA_INICIO_PADRAO, '', parte1, '', MARCA_FIM_PADRAO].join('\n');
+export function montarTextoParaCopiar(
+  prompt: string,
+  parte1: string,
+  marcas: { inicio: string; fim: string } = { inicio: MARCA_INICIO_PADRAO, fim: MARCA_FIM_PADRAO },
+): string {
+  return [prompt, '', marcas.inicio, '', parte1, '', marcas.fim].join('\n');
+}
+
+/**
+ * O padrão de questões para quem escreve (44-H1). Diferente do de conteúdos, o
+ * arquivo inteiro é para quem escreve (não há parte de quem opera), então o
+ * "recorte" é o arquivo todo, com fim de linha unificado. Falha alto se o
+ * arquivo perder o título ou o formato: melhor quebrar o teste e o build do que
+ * exibir, ou entregar a uma IA, um texto sem o formato.
+ */
+export function extrairPadraoDeQuestoes(padrao: string): string {
+  const texto = normalizarTexto(padrao);
+  if (!/^# Padrão NexusMed de questões — para quem escreve/m.test(texto)) {
+    throw new Error('Padrão de questões: título "# Padrão NexusMed de questões — para quem escreve" não encontrado.');
+  }
+  if (!/^## 4\. Formato do arquivo/m.test(texto)) {
+    throw new Error('Padrão de questões: seção "## 4. Formato do arquivo" não encontrada.');
+  }
+  if (!/^## 5\. Checklist antes de entregar/m.test(texto)) {
+    throw new Error('Padrão de questões: seção "## 5. Checklist antes de entregar" não encontrada.');
+  }
+  return texto;
 }
 
 /**

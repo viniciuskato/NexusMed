@@ -100,6 +100,7 @@ const ThematicStudyView = lazyWithReload(() => import('./components/thematic/The
 // 44-D: "Como escrever um material" traz o padrão e os prompts como texto do
 // build; fica fora do bundle inicial.
 const EnviarMaterialView = lazyWithReload(() => import('./components/material/EnviarMaterialView').then((m) => ({ default: m.EnviarMaterialView })));
+const ComoEscreverQuestoesView = lazyWithReload(() => import('./components/material/ComoEscreverQuestoesView').then((m) => ({ default: m.ComoEscreverQuestoesView })));
 const ComoEscreverMaterialView = lazyWithReload(() => import('./components/material/ComoEscreverMaterialView').then((m) => ({ default: m.ComoEscreverMaterialView })));
 
 // Views que podem ser restauradas depois de um reload (Prompt 22-A). É uma
@@ -118,6 +119,7 @@ const PERSISTED_VIEWS = [
   'simulados',
   'errors',
   'como-escrever-material',
+  'como-escrever-questoes',
   'enviar-material',
   'admin',
 ] as const;
@@ -149,6 +151,8 @@ function AuthenticatedApp() {
 
   // Deep-link / Context State
   const [selectedCompendiumId, setSelectedCompendiumId] = useState<string | null>(null);
+  // 44-H1: qual aba de "Enviar material" abre (a de questões, quando se vem de "Como escrever questões").
+  const [modoDoEnvio, setModoDoEnvio] = useState<'material' | 'questoes'>('material');
   const [selectedSectionId, setSelectedSectionId] = useState<string | undefined>(undefined);
   // Qual tela da Biblioteca estava ativa por último — 'reader' enquanto o
   // usuário está lendo um compêndio, mesmo depois de navegar temporariamente
@@ -960,7 +964,23 @@ function AuthenticatedApp() {
             <ComoEscreverMaterialView
               disciplines={disciplines}
               themes={themes}
-              onAbrirEnvio={() => handleSelectView('enviar-material')}
+              onAbrirEnvio={() => {
+                setModoDoEnvio('material');
+                handleSelectView('enviar-material');
+              }}
+            />
+          )}
+
+          {/* 44-H1: idem, para questões */}
+          {activeView === 'como-escrever-questoes' && (
+            <ComoEscreverQuestoesView
+              disciplines={disciplines}
+              themes={themes}
+              compendiums={compendiums}
+              onAbrirEnvio={() => {
+                setModoDoEnvio('questoes');
+                handleSelectView('enviar-material');
+              }}
             />
           )}
 
@@ -970,7 +990,9 @@ function AuthenticatedApp() {
               disciplines={disciplines}
               themes={themes}
               compendiums={compendiums}
+              modoInicial={modoDoEnvio}
               onAbrirComoEscrever={() => handleSelectView('como-escrever-material')}
+              onAbrirComoEscreverQuestoes={() => handleSelectView('como-escrever-questoes')}
               onAbrirMaterial={handleAbrirMaterialPublicado}
             />
           )}

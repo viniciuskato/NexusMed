@@ -7,6 +7,10 @@ import {
   type MaterialSubmission,
   type SituacaoDaRevisao,
 } from '../../repositories/MaterialSubmissionsRepository';
+import {
+  questionSubmissionsRepository,
+  type QuestionSubmission,
+} from '../../repositories/QuestionSubmissionsRepository';
 import { useServerLoad } from '../../hooks/useServerLoad';
 import { ConnectionNotice } from '../common/ConnectionNotice';
 import {
@@ -23,6 +27,7 @@ import {
 } from '../../utils/envioDeMaterial';
 import { parentCandidates } from '../../utils/materialNavigation';
 import { ListaDeEnvios } from './ListaDeEnvios';
+import { EnviarQuestoesForm } from './EnviarQuestoesForm';
 
 // ============================================================================
 // "Enviar material" (44-E)
@@ -41,6 +46,10 @@ interface EnviarMaterialViewProps {
   themes: Theme[];
   compendiums: Compendium[];
   onAbrirComoEscrever?: () => void;
+  /** 44-H1: abre "Como escrever questões". */
+  onAbrirComoEscreverQuestoes?: () => void;
+  /** 44-H1: a aba que abre primeiro (a de questões, quando se vem de "Como escrever questões"). */
+  modoInicial?: 'material' | 'questoes';
   /** 44-G: abre o material que o servidor publicou a partir de um envio. */
   onAbrirMaterial?: (materialId: string) => void;
 }
@@ -56,8 +65,12 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
   themes,
   compendiums,
   onAbrirComoEscrever,
+  onAbrirComoEscreverQuestoes,
+  modoInicial = 'material',
   onAbrirMaterial,
 }) => {
+  // 44-H1: a mesma tela envia material ou questões; "Meus envios" lista os dois tipos.
+  const [modo, setModo] = useState<'material' | 'questoes'>(modoInicial);
   const [texto, setTexto] = useState('');
   const [nomeDoArquivo, setNomeDoArquivo] = useState('');
   const [avisoDoArquivo, setAvisoDoArquivo] = useState('');
@@ -77,15 +90,18 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
   const topoDoFormulario = useRef<HTMLHeadingElement>(null);
 
   const [envios, setEnvios] = useState<MaterialSubmission[]>([]);
+  const [enviosDeQuestoes, setEnviosDeQuestoes] = useState<QuestionSubmission[]>([]);
   const [situacao, setSituacao] = useState<SituacaoDaRevisao | null>(null);
   const { status: statusDaLista, reload: recarregarEnvios } = useServerLoad(async () => {
-    const [lista, sit] = await Promise.all([
+    const [lista, listaDeQuestoes, sit] = await Promise.all([
       materialSubmissionsRepository.listMine(),
+      questionSubmissionsRepository.listMine(),
       // A situação só explica a espera: sem ela a lista aparece do mesmo jeito.
       materialSubmissionsRepository.situacaoDaRevisao().catch(() => null),
     ]);
     return () => {
       setEnvios(lista);
+      setEnviosDeQuestoes(listaDeQuestoes);
       setSituacao(sit);
     };
   }, 'meus-envios');
@@ -106,6 +122,14 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
   const atualizando = textoAvaliado !== texto;
 
   const esperando = envios.filter((e) => e.status === 'aguardando_revisao' || e.status === 'em_revisao').length;
+  const esperandoQuestoes = enviosDeQuestoes.filter(
+    (e) => e.status === 'aguardando_revisao' || e.status === 'em_revisao',
+  ).length;
+  // Os dois tipos numa lista só, do mais novo para o mais antigo.
+  const todosOsEnvios = useMemo(
+    () => [...envios, ...enviosDeQuestoes].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [envios, enviosDeQuestoes],
+  );
   const filaCheia = esperando >= LIMITE_ENVIOS_EM_ESPERA;
 
   const disciplinasOrdenadas = useMemo(
@@ -251,6 +275,30 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
         )}
       </header>
 
+      <div role="group" aria-label="O que você quer enviar" className="flex flex-wrap gap-2" id="enviar-modo">
+        {(
+          [
+            ['material', 'Material'],
+            ['questoes', 'Questões'],
+          ] as const
+        ).map(([valor, rotulo]) => (
+          <button
+            key={valor}
+            type="button"
+            id={`enviar-modo-${valor}`}
+            aria-pressed={modo === valor}
+            onClick={() => setModo(valor)}
+            className={`min-h-11 px-4 py-2 rounded-xl border text-sm font-semibold cursor-pointer transition-colors ${
+              modo === valor
+                ? 'bg-teal-600 border-teal-600 text-white'
+                : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            {rotulo}
+          </button>
+        ))}
+      </div>
+
       {!envioDeMaterialDisponivel && (
         <p
           role="alert"
@@ -260,6 +308,18 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
         </p>
       )}
 
+      {modo === 'questoes' && (
+        <EnviarQuestoesForm
+          disciplines={disciplines}
+          themes={themes}
+          compendiums={compendiums}
+          esperando={esperandoQuestoes}
+          onEnviado={recarregarEnvios}
+          onAbrirComoEscreverQuestoes={onAbrirComoEscreverQuestoes}
+        />
+      )}
+
+      {modo === 'material' && (
       <section aria-labelledby="enviar-material-form-titulo" className="space-y-4">
         <h2
           id="enviar-material-form-titulo"
@@ -520,6 +580,7 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
           </button>
         </div>
       </section>
+      )}
 
       <section aria-labelledby="meus-envios-titulo" className="space-y-3">
         <h2 id="meus-envios-titulo" className="text-xl font-bold text-slate-900 dark:text-slate-100">
@@ -533,10 +594,10 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
         )}
         <ListaDeEnvios
           id="meus-envios-lista"
-          envios={envios}
+          envios={todosOsEnvios}
           disciplines={disciplines}
           themes={themes}
-          vazio="Você ainda não enviou nenhum material."
+          vazio="Você ainda não enviou nenhum material nem questões."
           avisoDaFila={fraseDaEspera(situacao)}
           onCorrigir={corrigir}
           onTentarDeNovo={tentarDeNovo}

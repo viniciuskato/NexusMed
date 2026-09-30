@@ -14,7 +14,7 @@ vi.setConfig({ testTimeout: 30000 });
   disconnect() {}
 };
 
-// 44-D, aceite 1 — usuário ATIVO não-admin vê no menu "Como escrever um
+// 44-H1 (cópia do molde da 44-D) — usuário ATIVO não-admin vê no menu "Como escrever um
 // material" e a página abre; pendente e bloqueado não chegam à página, mesmo
 // com o endereço direto (mesmo gate do resto do app).
 
@@ -47,7 +47,7 @@ vi.mock('../../src/hooks/useAppData', () => ({
   useAppData: () => ({
     disciplines: [{ id: 'd1', name: 'Farmacologia', code: 'FARM', icon: 'book', description: '', cycle: 'basico', color: '#000' }],
     themes: [{ id: 't1', disciplineId: 'd1', name: 'Antimicrobianos', description: '', highYield: false, order: 1 }],
-    compendiums: [],
+    compendiums: [{ id: 'm1', disciplineId: 'd1', themeId: 't1', title: 'Material publicado do app', publicationStatus: 'published', sections: [], references: [], tags: [] }],
     questions: [],
     flashcards: [],
     answers: {},
@@ -113,69 +113,54 @@ afterEach(() => {
   window.location.hash = '';
 });
 
-describe('44-D — "Como escrever um material" no app', () => {
+describe('44-H1 — "Como escrever questões" no app', () => {
   it('estudante ativo abre a página pelo menu do usuário', async () => {
     render(<App />);
     await screen.findByTestId('painel');
 
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Como escrever um material' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Como escrever questões' }));
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Como escrever um material' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Como escrever questões' })).toBeTruthy();
     expect(screen.getByText('Farmacologia')).toBeTruthy();
     expect(screen.getByText('Antimicrobianos')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Copiar prompt para criar material' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Copiar prompt revisor' })).toBeTruthy();
-    expect(window.location.hash).toBe('#/como-escrever-material');
+    expect(screen.getByText('Material publicado do app')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Copiar prompt para criar questões' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Copiar prompt revisor de questões' })).toBeTruthy();
+    expect(window.location.hash).toBe('#/como-escrever-questoes');
   });
 
-  it('44-E: estudante ativo abre "Enviar material" pelo menu, e a página de instruções leva até ela', async () => {
+  it('o link da página leva a "Enviar material" já na aba de questões, e de lá volta às instruções', async () => {
     render(<App />);
     await screen.findByTestId('painel');
-
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Enviar material' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Como escrever questões' }));
+    await screen.findByRole('heading', { level: 1, name: 'Como escrever questões' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar material, na aba Questões' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Enviar material' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Novo envio de questões' })).toBeTruthy();
     expect(window.location.hash).toBe('#/enviar-material');
-    expect(screen.getByRole('heading', { name: 'Meus envios' })).toBeTruthy();
 
-    // Da tela de envio para as instruções e de volta, pelos links.
-    fireEvent.click(screen.getByRole('button', { name: 'Veja como escrever um material' }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Como escrever um material' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Enviar material' }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Enviar material' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Veja como escrever questões' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Como escrever questões' })).toBeTruthy();
   });
 
-  it('usuário pendente não vê a página nem o menu, mesmo com o endereço direto', async () => {
+  it('usuário pendente não vê a página, mesmo com o endereço direto', async () => {
     authState.profile = { role: 'student', status: 'pending' };
-    window.location.hash = '#/como-escrever-material';
-    render(<App />);
-
-    // Tela de espera de aprovação no lugar do app inteiro.
-    expect(await screen.findByText(/aprova/i)).toBeTruthy();
-    expect(screen.queryByRole('heading', { name: 'Como escrever um material' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Menu do perfil de usuário' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Copiar prompt revisor' })).toBeNull();
-    // Nem a tela de envio, pelo endereço direto.
-    expect(screen.queryByRole('heading', { name: 'Enviar material' })).toBeNull();
-  });
-
-  it('usuário pendente não abre a tela de envio pelo endereço direto', async () => {
-    authState.profile = { role: 'student', status: 'pending' };
-    window.location.hash = '#/enviar-material';
+    window.location.hash = '#/como-escrever-questoes';
     render(<App />);
     expect(await screen.findByText(/aprova/i)).toBeTruthy();
-    expect(screen.queryByRole('heading', { name: 'Enviar material' })).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Enviar/ })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Como escrever questões' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Copiar prompt revisor de questões' })).toBeNull();
   });
 
-  it('usuário bloqueado ou sem status também não acessa', async () => {
+  it('usuário bloqueado também não acessa', async () => {
     authState.profile = { role: 'student', status: 'blocked' };
-    window.location.hash = '#/como-escrever-material';
+    window.location.hash = '#/como-escrever-questoes';
     render(<App />);
-
     expect(await screen.findByText('Acesso bloqueado')).toBeTruthy();
-    expect(screen.queryByRole('heading', { name: 'Como escrever um material' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Copiar prompt revisor' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Como escrever questões' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Copiar prompt para criar questões' })).toBeNull();
   });
 });

@@ -773,6 +773,20 @@ lista na Área Editorial.
 **Depende de.** 44-F.
 **Estado.** Em andamento.
 
+### 44-H1 — Questões: como escrever e enviar pelo site
+
+**Origem.** Decisões do dono (29/09): qualquer usuário aprovado posta
+conteúdo, e tudo que é publicado passa pelo revisor de IA.
+
+**Aceite.** O site mostra o padrão de questões e dois prompts para copiar
+(criar e revisar questões). Usuário ativo envia o `.md` de questões; só entra
+arquivo aceito pela importação; o envio fica guardado com estado, com as
+mesmas regras e limites dos envios de material.
+
+**Fora de escopo.** Revisão por IA e publicação de questões (44-H2).
+**Depende de.** 44-G.
+**Estado.** Em andamento.
+
 ---
 
 ## 9. Frente 45 — Confiabilidade
