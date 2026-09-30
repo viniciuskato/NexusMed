@@ -122,6 +122,11 @@ export interface Banco {
    * "revisado por IA". Idempotente no banco: um envio já publicado não cria outro.
    */
   publicar(envio: ParaPublicar, material: Record<string, unknown>): Promise<{ desfecho: DesfechoDaPublicacao; materialId: string | null }>;
+  /**
+   * O texto aprovado não pôde ser montado como material (problema do texto): o envio sai da
+   * fila de publicação, vai a "não apto" com o recado leigo, e a pessoa corrige e reenvia.
+   */
+  recusarPublicacao(envio: ParaPublicar, recado: string): Promise<boolean>;
 }
 
 export interface Catalogo {
@@ -422,6 +427,12 @@ async function coletar(deps: DepsDoCiclo, pendentes: Pendente[], resumo: ResumoD
 
 // --- Publicação (44-G) ---------------------------------------------------------
 
+/** O recado que a pessoa lê quando o texto aprovado não pôde virar material. */
+function recadoDoTextoNaoLido(motivos: string[]): string {
+  const detalhe = motivos.slice(0, 5).join(' ');
+  return `O texto foi aprovado na revisão, mas não pôde ser montado como material: ${detalhe} Corrija o texto e envie de novo.`;
+}
+
 async function publicar(deps: DepsDoCiclo, resumo: ResumoDoCiclo, dentroDoPrazo: () => boolean): Promise<void> {
   let prontos: ParaPublicar[];
   try {
@@ -444,11 +455,19 @@ async function publicar(deps: DepsDoCiclo, resumo: ResumoDoCiclo, dentroDoPrazo:
       return;
     }
     try {
-      const leitura = deps.lerMaterial(envio, catalogo);
+      let leitura: ReturnType<LeitorDeMaterial>;
+      try {
+        leitura = deps.lerMaterial(envio, catalogo);
+      } catch (e) {
+        leitura = { ok: false, motivos: [`erro ao ler o texto (${mensagemDoErro(e)})`] };
+      }
       if (!leitura.ok) {
-        // Não deveria acontecer (o mesmo texto passou pela conferência antes da IA): o
-        // envio fica "apto" e o erro vai para o log, sem publicar nada.
+        // Não deveria acontecer (o mesmo texto passou pela conferência antes da IA), mas, se
+        // acontecer, o envio não pode ficar "apto" para sempre ocupando a vez dos outros: vai a
+        // "não apto", com o recado, e a pessoa corrige o texto.
         resumo.erros.push(`publicação ${envio.submissionId}: texto não lido (${leitura.motivos.join('; ')})`);
+        const recusado = await deps.banco.recusarPublicacao(envio, recadoDoTextoNaoLido(leitura.motivos));
+        if (recusado) resumo.publicacoesRecusadas += 1;
         continue;
       }
       const r = await deps.banco.publicar(envio, leitura.material);

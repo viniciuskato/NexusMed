@@ -42,10 +42,13 @@ interface Cenario {
   desfecho?: 'publicado' | 'ja_publicado' | 'recusado' | 'falhou';
   falhaAoBuscar?: boolean;
   falhaAoPublicarNo?: number;
+  /** O banco não aceita a recusa (o envio já mudou de estado). */
+  recusaNaoAceita?: boolean;
 }
 
 function montar(c: Cenario = {}) {
   const ordem: string[] = [];
+  const recados: string[] = [];
   const publicados: Array<{ envio: ParaPublicar; material: Record<string, unknown> }> = [];
   const banco: Banco = {
     travar: async () => 'tok',
@@ -71,6 +74,11 @@ function montar(c: Cenario = {}) {
       publicados.push({ envio, material });
       return { desfecho: c.desfecho ?? 'publicado', materialId: c.desfecho === 'recusado' ? null : `mat-${envio.submissionId}` };
     }),
+    recusarPublicacao: vi.fn(async (envio: ParaPublicar, recado: string) => {
+      ordem.push(`recusar:${envio.submissionId}`);
+      recados.push(recado);
+      return !c.recusaNaoAceita;
+    }),
   };
   const api: ApiDeLotes = {
     criar: vi.fn(async () => ({ id: 'x' })),
@@ -89,7 +97,7 @@ function montar(c: Cenario = {}) {
     baseSha256: 'sha',
     novoCodigo: () => 'codigo',
   };
-  return { deps, banco, ordem, publicados };
+  return { deps, banco, ordem, publicados, recados };
 }
 
 describe('44-G — o texto aprovado vira o material que o banco recebe', () => {
@@ -176,11 +184,46 @@ describe('44-G — o ciclo publica os envios aprovados', () => {
     expect(banco.reservar).toHaveBeenCalled();
   });
 
-  it('texto que já não é lido pelo importador não é publicado: fica "apto" e o erro vai no log', async () => {
-    const { deps, banco } = montar({ prontos: [pronto(1, 'texto sem título')] });
+  it('texto que já não é lido pelo importador não é publicado e SAI da fila: vai a "não apto" com recado leigo, e os outros seguem', async () => {
+    const { deps, banco, publicados, recados, ordem } = montar({ prontos: [pronto(1, 'texto sem título'), pronto(2)] });
     const resumo = await executarCiclo(deps);
-    expect(banco.publicar).not.toHaveBeenCalled();
+    expect(banco.publicar).toHaveBeenCalledTimes(1);
+    expect(publicados.map((p) => p.envio.submissionId)).toEqual(['sub-2']);
+    expect(ordem).toEqual(['paraPublicar', 'recusar:sub-1', 'publicar:sub-2']);
+    expect(recados).toHaveLength(1);
+    expect(recados[0]).toMatch(/^O texto foi aprovado na revisão, mas não pôde ser montado como material: /);
+    expect(recados[0]).toMatch(/Corrija o texto e envie de novo\.$/);
     expect(resumo.erros.join(' ')).toContain('publicação sub-1: texto não lido');
+    expect(resumo).toMatchObject({ publicados: 1, publicacoesRecusadas: 1 });
+  });
+
+  it('o recado leva no máximo 5 motivos (a pessoa não recebe uma parede de texto)', async () => {
+    const { deps, recados } = montar({ prontos: [pronto(1)] });
+    deps.lerMaterial = () => ({ ok: false, motivos: ['m1.', 'm2.', 'm3.', 'm4.', 'm5.', 'm6.', 'm7.'] });
+    await executarCiclo(deps);
+    expect(recados[0]).toContain('m5.');
+    expect(recados[0]).not.toContain('m6.');
+  });
+
+  it('se ler o texto lança exceção, o efeito é o mesmo: recusa com recado, sem derrubar o ciclo', async () => {
+    const { deps, recados, banco } = montar({ prontos: [pronto(1), pronto(2)] });
+    let n = 0;
+    const original = deps.lerMaterial;
+    deps.lerMaterial = (e, c) => {
+      n += 1;
+      if (n === 1) throw new Error('importador quebrou');
+      return original(e, c);
+    };
+    const resumo = await executarCiclo(deps);
+    expect(recados[0]).toContain('erro ao ler o texto (importador quebrou)');
+    expect(banco.publicar).toHaveBeenCalledTimes(1);
+    expect(resumo).toMatchObject({ publicados: 1, publicacoesRecusadas: 1 });
+  });
+
+  it('se o banco não aceita a recusa (o envio já mudou de estado), não conta como recusa e o ciclo segue', async () => {
+    const { deps } = montar({ prontos: [pronto(1, 'texto sem título')], recusaNaoAceita: true });
+    const resumo = await executarCiclo(deps);
+    expect(resumo.publicacoesRecusadas).toBe(0);
     expect(resumo.publicados).toBe(0);
   });
 
@@ -212,9 +255,9 @@ describe('44-G — o ciclo publica os envios aprovados', () => {
 
 describe('44-G — do envio ao material publicado, com a revisão simulada (ciclo inteiro, uma vez só)', () => {
   /** Um banco em memória com o comportamento que importa: só o "apto" do texto atual publica, e uma vez. */
-  function mundo(veredito: 'apto' | 'nao_apto' | 'erro') {
+  function mundo(veredito: 'apto' | 'nao_apto' | 'erro', inicial: { envio?: string; revisao?: string } = {}) {
     const envio = { reviewId: 'rev-1', submissionId: 'sub-1', titulo: 'Material 1', texto: materialParaEnvio({ titulo: 'Material 1' }), sha256: 'sha-1', disciplineId: 'd1', themeId: 't1', disciplina: 'Farmacologia', tema: 'Clínica', pai: null };
-    const estado = { envio: 'aguardando_revisao' as string, revisao: 'nenhuma' as string, batch: null as string | null, materiais: [] as string[], publicacoes: 0 };
+    const estado = { envio: inicial.envio ?? 'aguardando_revisao', revisao: inicial.revisao ?? 'nenhuma', batch: null as string | null, materiais: [] as string[], publicacoes: 0 };
     const banco: Banco = {
       travar: async () => 'tok',
       destravar: async () => undefined,
@@ -246,6 +289,7 @@ describe('44-G — do envio ao material publicado, com a revisão simulada (cicl
         estado.envio === 'apto' && estado.revisao === 'concluida:apto'
           ? [{ submissionId: 'sub-1', reviewId: 'rev-1', texto: envio.texto, sha256: 'sha-1', disciplineId: 'd1', themeId: 't1' }]
           : [],
+      recusarPublicacao: async () => true,
       publicar: async () => {
         if (estado.envio === 'publicado') return { desfecho: 'ja_publicado' as const, materialId: estado.materiais[0] };
         estado.envio = 'publicado';
@@ -302,6 +346,16 @@ describe('44-G — do envio ao material publicado, com a revisão simulada (cicl
     const r3 = await executarCiclo(deps);
     expect(r3.publicados).toBe(0);
     expect(estado.publicacoes).toBe(1);
+  });
+
+  it('"Tentar de novo": o envio já volta "apto" com a revisão apto do mesmo texto, e SÓ a publicação é refeita (nenhum lote, nenhuma reserva de envio, nenhuma revisão nova)', async () => {
+    const { deps, estado } = mundo('apto', { envio: 'apto', revisao: 'concluida:apto' });
+    const criar = vi.spyOn(deps.api, 'criar');
+    const r = await executarCiclo(deps);
+    expect(r.publicados).toBe(1);
+    expect(r.enviadosAoLote).toBe(0);
+    expect(criar).not.toHaveBeenCalled();
+    expect(estado).toMatchObject({ envio: 'publicado', publicacoes: 1, materiais: ['mat-1'], revisao: 'concluida:apto' });
   });
 
   it.each(['nao_apto', 'erro'] as const)('%s: nada é publicado', async (veredito) => {

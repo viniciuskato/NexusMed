@@ -140,6 +140,16 @@ export function bancoDoSupabase(cliente: ClienteDoBanco): Banco {
       });
       return { desfecho: r?.resultado ?? 'fora_de_estado', materialId: r?.material_id ?? null };
     },
+    async recusarPublicacao(envio, recado) {
+      return Boolean(
+        await rpc<boolean>('revisao_recusar_publicacao', {
+          p_submission_id: envio.submissionId,
+          p_review_id: envio.reviewId,
+          p_content_sha256: envio.sha256,
+          p_note: recado,
+        }),
+      );
+    },
     async registrar(r: ResultadoRegistrado) {
       return Boolean(
         await rpc<boolean>('revisao_registrar_resultado', {

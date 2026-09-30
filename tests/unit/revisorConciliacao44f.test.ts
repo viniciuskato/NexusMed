@@ -215,6 +215,7 @@ class Mundo {
     },
     paraPublicar: async () => [],
     publicar: async () => ({ desfecho: 'publicado' as const, materialId: 'material-1' }),
+    recusarPublicacao: async () => true,
   };
 
   api: ApiDeLotes = {
