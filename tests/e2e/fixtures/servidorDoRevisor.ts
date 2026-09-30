@@ -3,11 +3,12 @@ import {
   type ApiDeLotes,
   type Conferencia,
   type LeitorDeMaterial,
+  type LeitorDeQuestoes,
   type MensagemDaApi,
   type ResumoDoCiclo,
 } from '../../../supabase/functions/revisar-envios/ciclo.ts';
 import { bancoDoSupabase, type ClienteDoBanco } from '../../../supabase/functions/revisar-envios/banco.ts';
-import { BASE_DO_REVISOR } from '../../../supabase/functions/revisar-envios/gerado/textos.ts';
+import { BASE_DO_REVISOR, BASE_DO_REVISOR_DE_QUESTOES } from '../../../supabase/functions/revisar-envios/gerado/textos.ts';
 import * as validacaoGerada from '../../../supabase/functions/revisar-envios/gerado/validacao.js';
 import type { ModuloDeValidacao } from '../../../supabase/functions/revisar-envios/tipos.ts';
 import { getAdminClient } from './localSupabase';
@@ -71,10 +72,16 @@ export async function rodarServidorDoRevisor(
   const { veredito = 'apto', ciclos = 2 } = opcoes;
   const modulo = validacaoGerada as unknown as ModuloDeValidacao;
   const conferir: Conferencia = (envio, catalogo) => {
+    if (envio.tipo === 'questoes') {
+      // 44-H2: o mesmo importador de questões da tela.
+      const leituraDoLote = modulo.lerLoteDeQuestoes(envio.texto, catalogo.disciplines, catalogo.themes);
+      const avaliacaoDoLote = modulo.avaliarLote(leituraDoLote, catalogo.materiais ?? [], envio.materiais ?? []);
+      return { aceito: avaliacaoDoLote.aceito, motivos: modulo.motivosDaRecusaDoLote(avaliacaoDoLote) };
+    }
     const leitura = modulo.lerArquivoParaEnvio(envio.texto, catalogo.disciplines, catalogo.themes);
     const avaliacao = modulo.avaliarEnvio(
       leitura,
-      { disciplineId: envio.disciplineId, themeId: envio.themeId },
+      { disciplineId: envio.disciplineId ?? '', themeId: envio.themeId ?? '' },
       catalogo.disciplines,
       catalogo.themes,
     );
@@ -82,6 +89,8 @@ export async function rodarServidorDoRevisor(
   };
   const lerMaterial: LeitorDeMaterial = (envio, catalogo) =>
     modulo.lerMaterialParaPublicar(envio.texto, catalogo.disciplines, catalogo.themes);
+  const lerQuestoes: LeitorDeQuestoes = (envio, catalogo) =>
+    modulo.lerQuestoesParaPublicar(envio.texto, catalogo.disciplines, catalogo.themes);
   const banco = bancoDoSupabase(getAdminClient() as unknown as ClienteDoBanco);
   const api = apiSimulada(veredito);
   const resumos: ResumoDoCiclo[] = [];
@@ -92,8 +101,11 @@ export async function rodarServidorDoRevisor(
         api,
         conferir,
         lerMaterial,
+        lerQuestoes,
         baseDoRevisor: BASE_DO_REVISOR,
         baseSha256: 'e2e-simulado',
+        baseDoRevisorDeQuestoes: BASE_DO_REVISOR_DE_QUESTOES,
+        baseSha256DeQuestoes: 'e2e-simulado-questoes',
         novoCodigo: () => crypto.randomUUID(),
       }),
     );

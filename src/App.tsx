@@ -189,6 +189,9 @@ function AuthenticatedApp() {
   const [dashboardTab, setDashboardTab] = useState<'overview' | 'errors'>('overview');
 
   const handleSelectView = (view: string) => {
+    // O menu "Enviar material" abre sempre na aba Material; quem quer a aba Questões a pede depois
+    // ("Como escrever questões"), com setModoDoEnvio('questoes') logo em seguida.
+    if (view === 'enviar-material') setModoDoEnvio('material');
     // Navegar pelo menu principal é sempre uma saída explícita do escopo de um
     // pack — sem isso, "Questões" no menu continuaria mostrando só as questões
     // do último material aberto, sem o usuário ter pedido esse recorte.
@@ -559,6 +562,12 @@ function AuthenticatedApp() {
 
   // 44-G: o servidor publica o material fora desta sessão, então a lista carregada
   // ainda não o tem: recarrega antes de abrir.
+  // 44-H2: "Abrir as questões publicadas" a partir de um envio de questões.
+  const handleAbrirQuestoesPublicadas = async (questionIds: string[]) => {
+    if (!questionIds.every((id) => questions.some((q) => q.id === id))) await refreshData();
+    handleStartTestarOQueLi(questionIds);
+  };
+
   const handleAbrirMaterialPublicado = async (materialId: string) => {
     if (!compendiums.some((c) => c.id === materialId)) await refreshData();
     handleOpenCompendium(materialId);
@@ -978,8 +987,8 @@ function AuthenticatedApp() {
               themes={themes}
               compendiums={compendiums}
               onAbrirEnvio={() => {
-                setModoDoEnvio('questoes');
                 handleSelectView('enviar-material');
+                setModoDoEnvio('questoes');
               }}
             />
           )}
@@ -994,6 +1003,7 @@ function AuthenticatedApp() {
               onAbrirComoEscrever={() => handleSelectView('como-escrever-material')}
               onAbrirComoEscreverQuestoes={() => handleSelectView('como-escrever-questoes')}
               onAbrirMaterial={handleAbrirMaterialPublicado}
+              onAbrirQuestoes={handleAbrirQuestoesPublicadas}
             />
           )}
 

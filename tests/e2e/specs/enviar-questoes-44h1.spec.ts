@@ -173,9 +173,10 @@ test.describe('Como escrever e enviar questões (44-H1)', () => {
     expect(psqlLocal(`select count(*) from public.question_submissions where author_id = '${student.id}';`)).toBe('0');
   });
 
-  test('estudante A não vê o lote do estudante B, e admin vê os dois no banco (RLS)', async ({ page, browser }) => {
+  test('estudante A não vê o lote do estudante B, e o admin vê os dois na aba de envios (RLS)', async ({ page, browser }) => {
     const a = await novoUsuario('q-a');
     const b = await novoUsuario('q-b');
+    const admin = await novoUsuario('q-admin', 'admin');
     const tituloA = `Lote do A ${Date.now()}`;
     const tituloB = `Lote do B ${Date.now()}`;
     for (const [autor, titulo] of [
@@ -200,9 +201,22 @@ test.describe('Como escrever e enviar questões (44-H1)', () => {
     await expect(paginaB.locator('#meus-envios-lista')).toContainText(tituloB);
     await expect(paginaB.locator('#meus-envios-lista')).not.toContainText(tituloA);
     await expect(paginaB.locator('body')).not.toContainText(tituloA);
+
+    // O admin de verdade (44-H2): abre a aba de envios da Área Editorial e vê os lotes dos dois, marcados como
+    // envio de questões, sem nenhum botão de ação.
+    const contextoAdmin = await browser.newContext();
+    cleanup.push(() => contextoAdmin.close());
+    const paginaAdmin = await contextoAdmin.newPage();
+    await login(paginaAdmin, admin, '/#/admin');
+    await paginaAdmin.locator('#admin-tab-envios').click();
+    const listaAdmin = paginaAdmin.locator('#admin-envios-lista');
+    await expect(listaAdmin).toContainText(tituloA);
+    await expect(listaAdmin).toContainText(tituloB);
+    await expect(listaAdmin.locator('li[data-tipo="questoes"]')).toHaveCount(2);
+    await expect(listaAdmin.locator('button')).toHaveCount(0);
   });
 
-  test('lote no limite: 3 esperando revisão, o envio fica travado com a explicação; o banco também recusa', async ({ page }) => {
+  test('lote no limite: 3 esperando revisão (fila única de material e questões), o envio fica travado com a explicação', async ({ page }) => {
     const { disciplina, tema } = catalogoDoSeed();
     const tag = `${Date.now()}`;
     insertPublishedMaterial(`limite-${tag}`);
@@ -216,10 +230,10 @@ test.describe('Como escrever e enviar questões (44-H1)', () => {
     await page.locator('#enviar-modo-questoes').click();
     await page.locator('#envio-questoes-texto').fill(loteParaEnvio(1, { disciplina, tema, materiais: `${MATERIAL_PREFIX}limite-${tag}` }));
     await expect(page.locator('#envio-questoes-resultado')).toContainText('Arquivo aceito');
-    await expect(page.locator('#envio-questoes-fila-cheia')).toContainText('3 envios de questões esperando revisão');
+    await expect(page.locator('#envio-questoes-fila-cheia')).toContainText('3 envios esperando revisão');
     await expect(page.locator('#btn-enviar-questoes')).toBeDisabled();
-    // O material da mesma pessoa não é travado pela fila de questões: a aba de material continua livre.
+    // A fila é uma só (44-H2): 3 esperando, de material e de questões somados. A aba de material trava também.
     await page.locator('#enviar-modo-material').click();
-    await expect(page.locator('#envio-fila-cheia')).toHaveCount(0);
+    await expect(page.locator('#envio-fila-cheia')).toContainText('3 envios esperando revisão');
   });
 });

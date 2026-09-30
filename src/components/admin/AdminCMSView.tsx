@@ -918,7 +918,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
           }`}
         >
           <Inbox className="w-4 h-4" />
-          <span>Envios de material</span>
+          <span>Envios (material e questões)</span>
         </button>
 
         <button

@@ -141,7 +141,11 @@ export const CartaoPrompt: React.FC<CartaoPromptProps> = ({
 };
 
 /** Disciplinas e Temas do catálogo, com os nomes exatos (compartilhado com "Como escrever questões", 44-H1). */
-export const CatalogoDeTemas: React.FC<{ disciplines: Discipline[]; themes: Theme[] }> = ({ disciplines, themes }) => {
+export const CatalogoDeTemas: React.FC<{ disciplines: Discipline[]; themes: Theme[]; objeto?: 'material' | 'questoes' }> = ({
+  disciplines,
+  themes,
+  objeto = 'material',
+}) => {
   const catalogo = useMemo(() => {
     const collator = new Intl.Collator('pt-BR');
     return [...disciplines]
@@ -160,8 +164,8 @@ export const CatalogoDeTemas: React.FC<{ disciplines: Discipline[]; themes: Them
           Disciplinas e Temas do catálogo
         </h2>
         <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          Ao pedir o material, use estes nomes exatamente como aparecem aqui. Não crie Disciplina nem Tema
-          novos.
+          {objeto === 'questoes' ? 'Ao pedir as questões' : 'Ao pedir o material'}, use estes nomes exatamente como
+          aparecem aqui. Não crie Disciplina nem Tema novos.
         </p>
         {catalogo.length === 0 ? (
           <p className="text-sm text-slate-500 dark:text-slate-400">O catálogo ainda não foi carregado.</p>

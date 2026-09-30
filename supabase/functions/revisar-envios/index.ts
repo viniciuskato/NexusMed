@@ -15,9 +15,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { bancoDoSupabase, type ClienteDoBanco } from './banco.ts';
 import { apiDeLotesDaAnthropic, TIMEOUT_DA_API_MS, type ClienteDaAnthropic } from './api.ts';
-import { executarCiclo, type Conferencia, type LeitorDeMaterial } from './ciclo.ts';
-import { montarSistema } from './montagem.ts';
-import { BASE_DO_REVISOR } from './gerado/textos.ts';
+import { executarCiclo, type Conferencia, type LeitorDeMaterial, type LeitorDeQuestoes } from './ciclo.ts';
+import { montarSistema, montarSistemaDeQuestoes } from './montagem.ts';
+import { BASE_DO_REVISOR, BASE_DO_REVISOR_DE_QUESTOES } from './gerado/textos.ts';
 import * as validacao from './gerado/validacao.js';
 import { sha256Hex, verificarChamada } from './seguranca.ts';
 import type { ModuloDeValidacao } from './tipos.ts';
@@ -53,10 +53,16 @@ async function tratar(req: Request): Promise<Response> {
 
   const modulo = validacao as unknown as ModuloDeValidacao;
   const conferir: Conferencia = (envio, catalogo) => {
+    if (envio.tipo === 'questoes') {
+      // 44-H2: o mesmo importador de questões da tela (e do Admin), sem escolha manual.
+      const leituraDoLote = modulo.lerLoteDeQuestoes(envio.texto, catalogo.disciplines, catalogo.themes);
+      const avaliacaoDoLote = modulo.avaliarLote(leituraDoLote, catalogo.materiais ?? [], envio.materiais ?? []);
+      return { aceito: avaliacaoDoLote.aceito, motivos: modulo.motivosDaRecusaDoLote(avaliacaoDoLote) };
+    }
     const leitura = modulo.lerArquivoParaEnvio(envio.texto, catalogo.disciplines, catalogo.themes);
     const avaliacao = modulo.avaliarEnvio(
       leitura,
-      { disciplineId: envio.disciplineId, themeId: envio.themeId },
+      { disciplineId: envio.disciplineId ?? '', themeId: envio.themeId ?? '' },
       catalogo.disciplines,
       catalogo.themes,
     );
@@ -67,12 +73,20 @@ async function tratar(req: Request): Promise<Response> {
   const lerMaterial: LeitorDeMaterial = (envio, catalogo) =>
     modulo.lerMaterialParaPublicar(envio.texto, catalogo.disciplines, catalogo.themes);
 
+  // 44-H2: o texto aprovado de um lote vira as questões pelo mesmo importador da tela.
+  const lerQuestoes: LeitorDeQuestoes = (envio, catalogo) =>
+    modulo.lerQuestoesParaPublicar(envio.texto, catalogo.disciplines, catalogo.themes);
+
   const sistemaCompleto = montarSistema(BASE_DO_REVISOR);
+  const sistemaDeQuestoes = montarSistemaDeQuestoes(BASE_DO_REVISOR_DE_QUESTOES);
   const resumo = await executarCiclo({
     banco: bancoDoSupabase(cliente as unknown as ClienteDoBanco),
     api,
     conferir,
     lerMaterial,
+    lerQuestoes,
+    baseDoRevisorDeQuestoes: BASE_DO_REVISOR_DE_QUESTOES,
+    baseSha256DeQuestoes: await sha256Hex(sistemaDeQuestoes),
     baseDoRevisor: BASE_DO_REVISOR,
     baseSha256: await sha256Hex(sistemaCompleto),
     novoCodigo: () => crypto.randomUUID(),

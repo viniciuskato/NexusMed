@@ -74,6 +74,7 @@ function reporte(over: Partial<ReporteDeErro> = {}): ReporteDeErro {
   return {
     id: 'r1',
     materialId: 'm1',
+    questionId: null,
     materialTitle: 'Material com erro',
     description: 'A dose citada está errada.',
     excerpt: null,

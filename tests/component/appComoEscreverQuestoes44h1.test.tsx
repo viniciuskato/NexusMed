@@ -146,6 +146,26 @@ describe('44-H1 — "Como escrever questões" no app', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Como escrever questões' })).toBeTruthy();
   });
 
+  it('o item "Enviar material" do menu abre sempre na aba Material, mesmo depois de a aba Questões ter sido aberta (44-H2)', async () => {
+    render(<App />);
+    await screen.findByTestId('painel');
+    fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Como escrever questões' }));
+    await screen.findByRole('heading', { level: 1, name: 'Como escrever questões' });
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar material, na aba Questões' }));
+    await screen.findByRole('heading', { name: 'Novo envio de questões' });
+
+    // Sai da tela e volta pelo item do menu: a aba é a de Material, não a última usada.
+    fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Como escrever questões' }));
+    await screen.findByRole('heading', { level: 1, name: 'Como escrever questões' });
+    fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Enviar material' }));
+    expect(await screen.findByRole('heading', { name: 'Novo envio' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Novo envio de questões' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Material' }).getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('usuário pendente não vê a página, mesmo com o endereço direto', async () => {
     authState.profile = { role: 'student', status: 'pending' };
     window.location.hash = '#/como-escrever-questoes';

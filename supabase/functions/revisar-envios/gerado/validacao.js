@@ -1,5 +1,5 @@
 /* eslint-disable */
-// GERADO por scripts/gerar-revisor.ts (empacota src/utils/envioDeMaterial.ts). NÃO EDITE: rode `npm run gerar:revisor`.
+// GERADO por scripts/gerar-revisor.ts (empacota src/utils/envioDeMaterial.ts e envioDeQuestoes.ts). NÃO EDITE: rode `npm run gerar:revisor`.
 // src/utils/compendiumImport.ts
 function normalizeTitle(t) {
   return t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim().replace(/\s+/g, " ");
@@ -1016,9 +1016,375 @@ function motivosDaReprovacao(av) {
   motivos.push(...av.pendencias.map((p) => `Linha ${p.linha} · ${p.secao}: ${p.mensagem}`));
   return motivos;
 }
+
+// src/utils/questionsImport.ts
+var VALID_CYCLES = ["basico", "clinico", "internato_residencia"];
+var VALID_DIFFICULTIES = ["facil", "medio", "dificil"];
+var DEFAULT_CYCLE = "internato_residencia";
+var DEFAULT_DIFFICULTY = "medio";
+var DEFAULT_TAGS = ["Admin", "CMS", "Custom"];
+var DEFAULT_GENERAL_COMMENTARY = "Comentário cadastrado via Painel Administrativo.";
+var DEFAULT_HIGH_YIELD_SUMMARY = "Conceito chave adicionado pelo autor.";
+function stripAccents2(s) {
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+function normalizeLabel(s) {
+  return stripAccents2(s).toLowerCase().trim();
+}
+function isNonEmptyString2(v) {
+  return typeof v === "string" && v.trim().length > 0;
+}
+function resolveByName2(name, list) {
+  const norm = name.trim().toLowerCase();
+  if (!norm) return void 0;
+  return list.find((item) => item.name.trim().toLowerCase() === norm);
+}
+var OPTION_TEXT_RE = /^\*\*([A-Za-z]+)\)\*\*\s*(.*)$/i;
+var OPTION_EXPLANATION_RE = /^\*\*explica[cç][aã]o\s+([A-Za-z]+):?\*\*\s*(.*)$/i;
+var GENERIC_LABEL_RE = /^\*\*([^*:]+):?\*\*\s*(.*)$/;
+var FIELD_LABELS = {
+  disciplina: "disciplineName",
+  tema: "themeName",
+  "instituicao / banca": "institution",
+  instituicao: "institution",
+  banca: "institution",
+  ano: "year",
+  ciclo: "cycle",
+  dificuldade: "difficulty",
+  "enunciado clinico (caso / vinheta)": "clinicalVignette",
+  "enunciado clinico": "clinicalVignette",
+  vinheta: "clinicalVignette",
+  "comando da questao (pergunta)": "questionStem",
+  "comando da questao": "questionStem",
+  pergunta: "questionStem",
+  "materiais cobertos": "materialTitles",
+  "material coberto": "materialTitles",
+  "comentario geral": "generalCommentary",
+  "perola high-yield (resumo para fixacao rapida)": "highYieldSummary",
+  "perola high-yield": "highYieldSummary",
+  perola: "highYieldSummary"
+};
+function findLabelMatches(lines) {
+  const matches = [];
+  lines.forEach((rawLine, i) => {
+    const line = rawLine.trim();
+    const optText = line.match(OPTION_TEXT_RE);
+    if (optText) {
+      matches.push({ label: "optionText", letter: optText[1].toUpperCase(), kind: "optionText", line: i, inline: optText[2] });
+      return;
+    }
+    const optExp = line.match(OPTION_EXPLANATION_RE);
+    if (optExp) {
+      matches.push({
+        label: "optionExplanation",
+        letter: optExp[1].toUpperCase(),
+        kind: "optionExplanation",
+        line: i,
+        inline: optExp[2]
+      });
+      return;
+    }
+    const generic = line.match(GENERIC_LABEL_RE);
+    if (generic) {
+      const norm = normalizeLabel(generic[1]);
+      if (norm in FIELD_LABELS) {
+        matches.push({ label: norm, kind: "field", line: i, inline: generic[2] });
+      }
+    }
+  });
+  return matches;
+}
+function collectValue(lines, match, nextLine) {
+  const continuation = lines.slice(match.line + 1, nextLine).join("\n");
+  return `${match.inline}
+${continuation}`.trim();
+}
+function isTagsHeader2(line) {
+  return normalizeLabel(line.replace(/^###\s+/, "")) === "tags";
+}
+function extractBacktickTags2(body) {
+  const found = body.match(/`([^`\n]+)`/g) ?? [];
+  return found.map((m) => m.slice(1, -1).trim()).filter(Boolean);
+}
+function splitByH2(text) {
+  const lines = text.split(/\r\n|\n/);
+  const headingIdx = [];
+  lines.forEach((line, i) => {
+    if (/^##\s+.+/.test(line.trim())) headingIdx.push(i);
+  });
+  const blocks = [];
+  headingIdx.forEach((idx, i) => {
+    const end = i + 1 < headingIdx.length ? headingIdx[i + 1] : lines.length;
+    blocks.push(lines.slice(idx + 1, end).join("\n"));
+  });
+  return blocks;
+}
+function parseQuestionBlock(block, index, disciplines, themes) {
+  const lines = block.split(/\r\n|\n/);
+  let tags = [];
+  const tagsHeaderIdx = lines.findIndex((l) => /^###\s+/.test(l.trim()) && isTagsHeader2(l));
+  let contentLines = lines;
+  if (tagsHeaderIdx !== -1) {
+    const nextHeadingRel = lines.slice(tagsHeaderIdx + 1).findIndex((l) => /^#{2,3}\s+/.test(l.trim()));
+    const tagsEnd = nextHeadingRel === -1 ? lines.length : tagsHeaderIdx + 1 + nextHeadingRel;
+    tags = extractBacktickTags2(lines.slice(tagsHeaderIdx + 1, tagsEnd).join("\n"));
+    contentLines = [...lines.slice(0, tagsHeaderIdx), ...lines.slice(tagsEnd)];
+  }
+  const matches = findLabelMatches(contentLines);
+  const values = {};
+  const optionTextByLetter = {};
+  const optionExplanationByLetter = {};
+  const gabaritoLetters = [];
+  const letterOrder = [];
+  matches.forEach((match, i) => {
+    const nextLine = i + 1 < matches.length ? matches[i + 1].line : contentLines.length;
+    const value = collectValue(contentLines, match, nextLine);
+    if (match.kind === "field") {
+      values[match.label] = value;
+    } else if (match.kind === "optionText" && match.letter) {
+      if (!letterOrder.includes(match.letter)) letterOrder.push(match.letter);
+      const hasGabarito = /\[\s*gabarito\s*\]/i.test(value);
+      const cleanText = value.replace(/\[\s*gabarito\s*\]/gi, "").trim();
+      optionTextByLetter[match.letter] = cleanText;
+      if (hasGabarito) gabaritoLetters.push(match.letter);
+    } else if (match.kind === "optionExplanation" && match.letter) {
+      optionExplanationByLetter[match.letter] = value;
+    }
+  });
+  const missingFields = [];
+  const blockingErrors = [];
+  const disciplineName = values.disciplina?.trim() ?? "";
+  if (!disciplineName) blockingErrors.push("Disciplina não informada — questão não pode ser criada.");
+  const themeName = values.tema?.trim() ?? "";
+  const discipline = resolveByName2(disciplineName, disciplines);
+  const theme = resolveByName2(themeName, discipline ? themes.filter((t) => t.disciplineId === discipline.id) : themes);
+  if (discipline && !themeName) {
+    missingFields.push("Tema não informado — selecione um manualmente antes de confirmar.");
+  } else if (themeName && !theme) {
+    missingFields.push(`Tema "${themeName}" não encontrado no catálogo atual — selecione um manualmente antes de confirmar.`);
+  } else if (!discipline) {
+    missingFields.push(`Disciplina "${disciplineName}" não encontrada no catálogo atual — selecione uma manualmente antes de confirmar.`);
+  }
+  const institution = values["instituicao / banca"]?.trim() || values.instituicao?.trim() || values.banca?.trim() || "";
+  if (!institution) missingFields.push("Instituição / Banca vazia.");
+  const yearRaw = values.ano?.trim() ?? "";
+  const yearNum = parseInt(yearRaw, 10);
+  const year = Number.isFinite(yearNum) && yearNum >= 1980 && yearNum <= 2100 ? yearNum : 0;
+  if (!year) missingFields.push(yearRaw ? `Ano "${yearRaw}" inválido — ignorado.` : "Ano vazio.");
+  const cycleRaw = normalizeLabel(values.ciclo ?? "");
+  const cycle = VALID_CYCLES.includes(cycleRaw) ? cycleRaw : DEFAULT_CYCLE;
+  if (values.ciclo && cycle === DEFAULT_CYCLE && cycleRaw !== DEFAULT_CYCLE) {
+    missingFields.push(`Ciclo "${values.ciclo}" inválido — usando padrão "${DEFAULT_CYCLE}".`);
+  }
+  const difficultyRaw = normalizeLabel(values.dificuldade ?? "");
+  const difficulty = VALID_DIFFICULTIES.includes(difficultyRaw) ? difficultyRaw : DEFAULT_DIFFICULTY;
+  if (values.dificuldade && difficulty === DEFAULT_DIFFICULTY && difficultyRaw !== DEFAULT_DIFFICULTY) {
+    missingFields.push(`Dificuldade "${values.dificuldade}" inválida — usando padrão "${DEFAULT_DIFFICULTY}".`);
+  }
+  const clinicalVignette = values["enunciado clinico (caso / vinheta)"]?.trim() || values["enunciado clinico"]?.trim() || values.vinheta?.trim() || "";
+  if (!clinicalVignette) missingFields.push("Enunciado Clínico (Vinheta) vazio (ok se a questão realmente não tiver caso clínico).");
+  const questionStem = values["comando da questao (pergunta)"]?.trim() || values["comando da questao"]?.trim() || values.pergunta?.trim() || "";
+  if (!questionStem) blockingErrors.push("Comando da Questão (Pergunta) vazio — questão não pode ser criada.");
+  const options = letterOrder.filter((letter) => isNonEmptyString2(optionTextByLetter[letter])).map((letter) => ({
+    letter,
+    text: (optionTextByLetter[letter] ?? "").trim(),
+    explanation: (optionExplanationByLetter[letter] ?? "").trim(),
+    isCorrect: gabaritoLetters.includes(letter)
+  }));
+  if (options.length < 2) {
+    blockingErrors.push(`Menos de 2 alternativas com texto (encontradas: ${options.length}) — questão não pode ser criada.`);
+  }
+  const correctCount = options.filter((o) => o.isCorrect).length;
+  if (correctCount === 0 && options.length >= 2) {
+    blockingErrors.push("Nenhuma alternativa marcada com [GABARITO] — marque exatamente uma.");
+  } else if (correctCount > 1) {
+    blockingErrors.push(`Mais de uma alternativa marcada com [GABARITO] (${correctCount}) — deixe só uma.`);
+  }
+  const lettersWithoutExplanation = options.filter((o) => !o.explanation).map((o) => o.letter);
+  if (lettersWithoutExplanation.length > 0) {
+    missingFields.push(
+      `Explicação vazia nas alternativas: ${lettersWithoutExplanation.join(", ")} — obrigatória antes de publicar.`
+    );
+  }
+  const generalCommentary = values["comentario geral"]?.trim() || "";
+  if (!generalCommentary) missingFields.push("Comentário Geral vazio — usando texto padrão.");
+  const highYieldSummary = values["perola high-yield (resumo para fixacao rapida)"]?.trim() || values["perola high-yield"]?.trim() || values.perola?.trim() || "";
+  if (!highYieldSummary) missingFields.push("Pérola High-Yield vazia — usando texto padrão.");
+  const materialTitles = [
+    ...new Set(
+      (values["materiais cobertos"] ?? values["material coberto"] ?? "").split(/[;\n]/).map((t) => t.trim()).filter(Boolean)
+    )
+  ];
+  if (tags.length === 0) missingFields.push("Tags não informadas — usando padrão (Admin, CMS, Custom).");
+  return {
+    index,
+    disciplineName,
+    themeName,
+    disciplineId: discipline?.id ?? null,
+    themeId: theme?.id ?? null,
+    institution,
+    year,
+    cycle,
+    difficulty,
+    clinicalVignette,
+    questionStem,
+    options,
+    generalCommentary: generalCommentary || DEFAULT_GENERAL_COMMENTARY,
+    highYieldSummary: highYieldSummary || DEFAULT_HIGH_YIELD_SUMMARY,
+    tags: tags.length > 0 ? tags : DEFAULT_TAGS,
+    materialTitles,
+    missingFields,
+    blockingErrors
+  };
+}
+function parseQuestionsMarkdownText(text, disciplines, themes) {
+  const blocks = splitByH2(text);
+  if (blocks.length === 0) {
+    return {
+      ok: false,
+      errors: [
+        'Nenhum bloco "## Questão" encontrado no arquivo. Cada questão precisa começar com um heading de nível 2 (ex.: "## Questão 1").'
+      ]
+    };
+  }
+  const rows = blocks.map((block, i) => parseQuestionBlock(block, i + 1, disciplines, themes));
+  return { ok: true, rows };
+}
+
+// src/utils/envioDeQuestoes.ts
+var INSTITUICAO_AUTORAL = "NexusMed (questão autoral)";
+var MIN_TAGS = 2;
+var MAX_TAGS = 5;
+function normalizar(s) {
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+function mencionaAutoral(instituicao) {
+  const n = normalizar(instituicao);
+  return n.includes("nexusmed") || n.includes("autoral");
+}
+function ehAutoralExata(instituicao) {
+  return normalizar(instituicao) === normalizar(INSTITUICAO_AUTORAL);
+}
+var FONTE_ON_LINE = /https?:\/\/\S+|\bdoi:\s*10\.\d{4,9}\/\S+|\b10\.\d{4,9}\/\S+/i;
+function comentarioTemFonteOnLine(linha) {
+  const texto = [linha.generalCommentary, ...linha.options.map((o) => o.explanation)].join("\n");
+  return FONTE_ON_LINE.test(texto);
+}
+function avisoIgnorado2(aviso, linha) {
+  if (aviso.startsWith("Enunciado Clínico")) return true;
+  if (/^(Tema|Disciplina) /.test(aviso)) return true;
+  if (aviso === "Ano vazio." && ehAutoralExata(linha.institution)) return true;
+  return false;
+}
+function lerLoteDeQuestoes(texto, disciplines, themes) {
+  const bytes = tamanhoEmBytes(texto);
+  if (texto.trim().length === 0) return { texto, bytes, errosDeImportacao: [], linhas: [] };
+  const resultado = parseQuestionsMarkdownText(texto, disciplines, themes);
+  if (resultado.ok === false) return { texto, bytes, errosDeImportacao: resultado.errors, linhas: [] };
+  return { texto, bytes, errosDeImportacao: [], linhas: resultado.rows };
+}
+function achaMaterial(titulo, publicados) {
+  const alvo = titulo.replace(/\s+/g, " ").trim();
+  return publicados.find((m) => m.title.replace(/\s+/g, " ").trim() === alvo);
+}
+function avaliarLote(leitura, publicados, materiaisEscolhidos) {
+  const vazio = leitura.texto.trim().length === 0;
+  const tamanhoExcedido = leitura.bytes > LIMITE_TEXTO_BYTES;
+  const pendencias = [];
+  for (const linha of leitura.linhas) {
+    const q = linha.index;
+    const add = (mensagem) => pendencias.push({ questao: q, mensagem });
+    for (const erro of linha.blockingErrors) add(erro);
+    for (const aviso of linha.missingFields) {
+      if (!avisoIgnorado2(aviso, linha)) add(aviso);
+    }
+    if (linha.disciplineName && !linha.disciplineId) {
+      add(
+        `A Disciplina escrita no arquivo (“${linha.disciplineName}”) não existe no catálogo. Use o nome exato da lista da página “Como escrever questões”.`
+      );
+    } else if (linha.disciplineId && !linha.themeName) {
+      add("O Tema não foi informado. Escreva o nome exato de um Tema da Disciplina.");
+    } else if (linha.disciplineId && !linha.themeId) {
+      add(
+        `O Tema escrito no arquivo (“${linha.themeName}”) não existe nessa Disciplina. Use o nome exato da lista da página “Como escrever questões”.`
+      );
+    }
+    if (linha.institution && mencionaAutoral(linha.institution) && !ehAutoralExata(linha.institution)) {
+      add(`Questão autoral: escreva exatamente “${INSTITUICAO_AUTORAL}” no campo Instituição / Banca.`);
+    }
+    if (ehAutoralExata(linha.institution) && linha.year > 0) {
+      add("Questão autoral não leva Ano: tire o campo Ano (ou, se é de prova real, escreva a banca verdadeira).");
+    }
+    const semTags = linha.missingFields.some((m) => m.startsWith("Tags não informadas"));
+    if (!semTags && (linha.tags.length < MIN_TAGS || linha.tags.length > MAX_TAGS)) {
+      add(`Use de ${MIN_TAGS} a ${MAX_TAGS} Tags (encontradas: ${linha.tags.length}).`);
+    }
+    if (linha.blockingErrors.length === 0 && !comentarioTemFonteOnLine(linha)) {
+      add("O comentário não cita nenhuma fonte on-line identificável (endereço ou DOI).");
+    }
+    if (publicados !== null && linha.materialTitles.length === 0 && materiaisEscolhidos.length === 0) {
+      add("Sem material: escreva “Materiais cobertos” na questão ou escolha o material abaixo.");
+    }
+    for (const titulo of publicados === null ? [] : linha.materialTitles) {
+      if (!achaMaterial(titulo, publicados ?? [])) {
+        add(`O material “${titulo}” não é o título exato de um material publicado.`);
+      }
+    }
+  }
+  const aceito = !vazio && !tamanhoExcedido && leitura.errosDeImportacao.length === 0 && leitura.linhas.length > 0 && pendencias.length === 0;
+  return {
+    vazio,
+    bytes: leitura.bytes,
+    tamanhoExcedido,
+    errosDeImportacao: vazio ? [] : leitura.errosDeImportacao,
+    totalDeQuestoes: leitura.linhas.length,
+    pendencias,
+    aceito
+  };
+}
+function motivosDaRecusaDoLote(av) {
+  const motivos = [];
+  if (av.vazio) motivos.push("O texto do lote está vazio.");
+  if (av.tamanhoExcedido) motivos.push(`O texto tem ${tamanhoLegivel(av.bytes)} e o limite é ${tamanhoLegivel(LIMITE_TEXTO_BYTES)}.`);
+  motivos.push(...av.errosDeImportacao);
+  motivos.push(...av.pendencias.map((p) => `Questão ${p.questao}: ${p.mensagem}`));
+  return motivos;
+}
+function lerQuestoesParaPublicar(texto, disciplines, themes) {
+  const leitura = lerLoteDeQuestoes(texto, disciplines, themes);
+  const avaliacao = avaliarLote(leitura, null, []);
+  if (!avaliacao.aceito) return { ok: false, motivos: motivosDaRecusaDoLote(avaliacao) };
+  return {
+    ok: true,
+    questoes: leitura.linhas.map((l) => ({
+      discipline_id: l.disciplineId,
+      theme_id: l.themeId,
+      cycle: l.cycle,
+      difficulty: l.difficulty,
+      institution: l.institution,
+      year: l.year > 0 ? l.year : null,
+      clinical_vignette: l.clinicalVignette,
+      question_stem: l.questionStem,
+      general_commentary: l.generalCommentary,
+      high_yield_summary: l.highYieldSummary,
+      tags: l.tags,
+      material_titles: l.materialTitles,
+      options: l.options.map((o) => ({
+        letter: o.letter,
+        text: o.text,
+        explanation: o.explanation,
+        is_correct: o.isCorrect
+      }))
+    }))
+  };
+}
 export {
   avaliarEnvio,
+  avaliarLote,
   lerArquivoParaEnvio,
+  lerLoteDeQuestoes,
   lerMaterialParaPublicar,
+  lerQuestoesParaPublicar,
+  motivosDaRecusaDoLote,
   motivosDaReprovacao
 };

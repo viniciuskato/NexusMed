@@ -27,7 +27,10 @@ vi.mock('../../src/repositories/MaterialSubmissionsRepository', () => ({
 
 const repoQuestoes = {
   listMine: vi.fn<() => Promise<QuestionSubmission[]>>(),
+  listAll: vi.fn(),
   submit: vi.fn<(i: { title: string; contentMd: string; materialIds: string[] }) => Promise<QuestionSubmission>>(),
+  replaceText: vi.fn(),
+  retry: vi.fn(),
 };
 vi.mock('../../src/repositories/QuestionSubmissionsRepository', () => ({
   questionSubmissionsRepository: repoQuestoes,
@@ -227,25 +230,22 @@ describe('44-H1 — enviar questões: o que vai ao servidor', () => {
     expect(await screen.findByText('Um dos materiais escolhidos não está mais publicado. Escolha outro.')).toBeTruthy();
   });
 
-  it('3 lotes de questões esperando: Enviar fica desabilitado e a tela explica; envios de material esperando não contam', async () => {
-    repoMaterial.listMine.mockResolvedValue([envioDeMaterial({ id: 'a' }), envioDeMaterial({ id: 'b' }), envioDeMaterial({ id: 'c' })]);
+  it('a fila é uma só (44-H2): 3 esperando, de material e de questões somados, desabilitam Enviar e a tela explica', async () => {
+    repoMaterial.listMine.mockResolvedValue([envioDeMaterial({ id: 'a' })]);
     repoQuestoes.listMine.mockResolvedValue([
       envioDeQuestoes({ id: 'q1' }),
-      envioDeQuestoes({ id: 'q2', status: 'em_revisao' }),
+      envioDeQuestoes({ id: 'q2', status: 'apto' }),
     ]);
     renderTela();
     await colar(loteParaEnvio(1));
     await waitFor(() => expect(botaoEnviar().disabled).toBe(false));
 
     cleanup();
-    repoQuestoes.listMine.mockResolvedValue([
-      envioDeQuestoes({ id: 'q1' }),
-      envioDeQuestoes({ id: 'q2', status: 'em_revisao' }),
-      envioDeQuestoes({ id: 'q3' }),
-    ]);
+    repoMaterial.listMine.mockResolvedValue([envioDeMaterial({ id: 'a' }), envioDeMaterial({ id: 'b', status: 'em_revisao' })]);
+    repoQuestoes.listMine.mockResolvedValue([envioDeQuestoes({ id: 'q1' })]);
     renderTela();
     await colar(loteParaEnvio(1));
-    const aviso = await screen.findByText(/Você já tem 3 envios de questões esperando revisão/);
+    const aviso = await screen.findByText(/Você já tem 3 envios esperando revisão/);
     expect(aviso.closest('[role="alert"]')).not.toBeNull();
     await screen.findByText(/Arquivo aceito/);
     expect(botaoEnviar().disabled).toBe(true);
@@ -272,12 +272,12 @@ describe('44-H1 — "Meus envios" lista os dois tipos', () => {
     expect(itens[1].textContent).toContain('Material antigo');
   });
 
-  it('o envio de questões não oferece corrigir, tentar de novo nem abrir material', async () => {
+  it('o envio de questões oferece corrigir ("não apto" e "erro") e tentar de novo (só "erro"); nunca "abrir material"', async () => {
     repoQuestoes.listMine.mockResolvedValue([envioDeQuestoes({ status: 'nao_apto' }), envioDeQuestoes({ id: 'q2', status: 'erro' })]);
     renderTela();
     await waitFor(() => expect(document.querySelectorAll('#meus-envios-lista > li')).toHaveLength(2));
-    expect(screen.queryByRole('button', { name: /Corrigir/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Tentar de novo/ })).toBeNull();
+    expect(screen.getAllByRole('button', { name: /Corrigir e enviar de novo/ })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /Tentar de novo/ })).toHaveLength(1);
     expect(screen.queryByTestId('abrir-material-publicado')).toBeNull();
   });
 

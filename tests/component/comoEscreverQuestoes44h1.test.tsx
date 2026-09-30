@@ -103,7 +103,7 @@ describe('44-H1 — página "Como escrever questões"', () => {
     expect(screen.getByText('Nenhum material publicado ainda.')).toBeTruthy();
   });
 
-  it('explica o fluxo: criar, conferir (opcional), enviar; sem prometer publicação nem falar em atestação', () => {
+  it('explica o fluxo: criar, conferir (opcional), enviar, revisão automática e publicação; sem falar em atestação', () => {
     renderPagina();
     const fluxo = document.querySelector('#como-escrever-questoes-fluxo')?.textContent ?? '';
     expect(fluxo).toMatch(/crie as questões com o primeiro prompt/i);
@@ -111,7 +111,9 @@ describe('44-H1 — página "Como escrever questões"', () => {
     expect(fluxo).toMatch(/opcional/i);
     expect(fluxo).toMatch(/depois envie o arquivo pelo site/i);
     expect(fluxo).toMatch(/sem pendência/i);
-    expect(fluxo).toMatch(/revisão automática e a publicação das questões vêm numa etapa seguinte/i);
+    expect(fluxo).toMatch(/revisão automática/i);
+    expect(fluxo).toMatch(/com o “apto”, as questões são publicadas ligadas aos materiais/i);
+    expect(fluxo).toMatch(/Revisado por IA — ainda não lido por uma pessoa/);
     expect(fluxo).not.toMatch(/atesta/i);
   });
 

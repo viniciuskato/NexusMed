@@ -4,7 +4,9 @@
 //
 //   gerado/textos.ts     o prompt revisor + a Parte 1 do padrão, montados como a
 //                        página "Como escrever um material" os copia (mesmos
-//                        arquivos de docs/editorial/, mesma montagem);
+//                        arquivos de docs/editorial/, mesma montagem), e (44-H2)
+//                        o prompt revisor de questões + o padrão de questões,
+//                        montados como a página "Como escrever questões";
 //   gerado/validacao.js  a checagem do padrão e a importação que a tela de envio
 //                        roda (src/utils/envioDeMaterial.ts e o que ele usa),
 //                        empacotadas, para o servidor conferir o arquivo antes de
@@ -19,7 +21,14 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
-import { extrairParte1, montarTextoParaCopiar, normalizarTexto } from '../src/utils/padraoMaterial';
+import {
+  MARCA_FIM_PADRAO_QUESTOES,
+  MARCA_INICIO_PADRAO_QUESTOES,
+  extrairPadraoDeQuestoes,
+  extrairParte1,
+  montarTextoParaCopiar,
+  normalizarTexto,
+} from '../src/utils/padraoMaterial';
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SAIDA = path.join(RAIZ, 'supabase/functions/revisar-envios/gerado');
@@ -27,7 +36,7 @@ const SAIDA = path.join(RAIZ, 'supabase/functions/revisar-envios/gerado');
 const CABECALHO_TS =
   '// GERADO por scripts/gerar-revisor.ts a partir de docs/editorial/. NÃO EDITE: rode `npm run gerar:revisor`.\n';
 const CABECALHO_JS =
-  '/* eslint-disable */\n// GERADO por scripts/gerar-revisor.ts (empacota src/utils/envioDeMaterial.ts). NÃO EDITE: rode `npm run gerar:revisor`.\n';
+  '/* eslint-disable */\n// GERADO por scripts/gerar-revisor.ts (empacota src/utils/envioDeMaterial.ts e envioDeQuestoes.ts). NÃO EDITE: rode `npm run gerar:revisor`.\n';
 
 function lerTexto(relativo: string): string {
   return readFileSync(path.join(RAIZ, relativo), 'utf8');
@@ -37,13 +46,25 @@ export function gerarTextos(): string {
   const parte1 = extrairParte1(lerTexto('docs/editorial/PADRAO-NEXUSMED-CONTEUDOS.md'));
   const prompt = normalizarTexto(lerTexto('docs/editorial/PROMPT-REVISAR-MATERIAL.txt'));
   const base = montarTextoParaCopiar(prompt, parte1);
-  return `${CABECALHO_TS}export const BASE_DO_REVISOR = ${JSON.stringify(base)};\n`;
+  const padraoDeQuestoes = extrairPadraoDeQuestoes(lerTexto('docs/editorial/PADRAO-QUESTOES-PARA-QUEM-ESCREVE.md'));
+  const promptDeQuestoes = normalizarTexto(lerTexto('docs/editorial/PROMPT-REVISAR-QUESTOES.txt'));
+  const baseDeQuestoes = montarTextoParaCopiar(promptDeQuestoes, padraoDeQuestoes, {
+    inicio: MARCA_INICIO_PADRAO_QUESTOES,
+    fim: MARCA_FIM_PADRAO_QUESTOES,
+  });
+  return (
+    `${CABECALHO_TS}export const BASE_DO_REVISOR = ${JSON.stringify(base)};\n` +
+    `export const BASE_DO_REVISOR_DE_QUESTOES = ${JSON.stringify(baseDeQuestoes)};\n`
+  );
 }
 
 export async function gerarValidacao(): Promise<string> {
   const resultado = await build({
     stdin: {
-      contents: "export { lerArquivoParaEnvio, avaliarEnvio, motivosDaReprovacao, lerMaterialParaPublicar } from './src/utils/envioDeMaterial.ts';",
+      contents: [
+        "export { lerArquivoParaEnvio, avaliarEnvio, motivosDaReprovacao, lerMaterialParaPublicar } from './src/utils/envioDeMaterial.ts';",
+        "export { lerLoteDeQuestoes, avaliarLote, motivosDaRecusaDoLote, lerQuestoesParaPublicar } from './src/utils/envioDeQuestoes.ts';",
+      ].join('\n'),
       resolveDir: RAIZ,
       sourcefile: 'entrada-da-validacao.ts',
       loader: 'ts',

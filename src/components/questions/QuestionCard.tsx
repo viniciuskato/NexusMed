@@ -23,6 +23,8 @@ import { questionsRepository } from '../../repositories/QuestionsRepository';
 import { questionReactionsRepository } from '../../repositories/QuestionReactionsRepository';
 import { GamificationService, CELEBRATION_STREAK_LENGTH } from '../../services/gamification';
 import { ContextualFeedbackPopover } from '../feedback/ContextualFeedbackPopover';
+import { SeloDaQuestao, useSeloDaQuestao } from '../material/SeloDeRevisao';
+import { ReportarErroDaQuestao } from '../material/ReportarErroDoMaterial';
 import { ConnectionNotice } from '../common/ConnectionNotice';
 import { LoadStatus, loadStatusOf } from '../../services/connectivity';
 import { useAutoRetry } from '../../hooks/useAutoRetry';
@@ -126,6 +128,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     : null;
 
   const [isHovered, setIsHovered] = useState(false);
+  const selo = useSeloDaQuestao(question.id);
   // Carga do card avulso (sem `hydrated`), do servidor (45-G, D-2). Numa
   // falha, só o que chegou é aplicado; o resto fica como estava, o aviso
   // aparece e a carga tenta de novo sozinha (useAutoRetry). Enquanto o
@@ -523,11 +526,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             {theme?.name || 'Tema'}
           </span>
           <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
-            {question.institution} ({question.year})
+            {question.institution}
+            {question.year > 0 ? ` (${question.year})` : ''}
           </span>
           <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase">
             {question.difficulty}
           </span>
+          {selo && <SeloDaQuestao selo={selo} />}
 
           {/* Vínculo com material da biblioteca */}
           {hasValidMaterial ? (
@@ -552,11 +557,17 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <ContextualFeedbackPopover
-            questionId={question.id}
-            label="Reportar erro"
-            variant="pill"
-          />
+          {/* 44-H2: questão revisada por IA leva o "Reportar erro" que vai para a Área Editorial (com limite
+              diário); a antiga segue com o feedback de sempre. */}
+          {selo ? (
+            <ReportarErroDaQuestao questionId={question.id} enunciado={question.questionStem} />
+          ) : (
+            <ContextualFeedbackPopover
+              questionId={question.id}
+              label="Reportar erro"
+              variant="pill"
+            />
+          )}
           <button
             type="button"
             onClick={handleToggleBookmark}

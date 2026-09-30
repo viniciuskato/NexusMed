@@ -1,7 +1,8 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient';
 import { fetchAllRows } from './supabasePaging';
 
-// 44-G: "Reportar erro" num material publicado. Acesso direto ao Supabase — sem o
+// 44-G: "Reportar erro" num material publicado (44-H2: também numa questão publicada,
+// na mesma tabela e na mesma aba da Área Editorial). Acesso direto ao Supabase — sem o
 // padrão "Resilient" (AGENTS.md, risco 8): o reporte não é gravado local nem entra
 // em fila; ou o servidor o aceita, ou a tela diz que não foi enviado.
 //
@@ -16,7 +17,9 @@ export const LIMITE_DO_TEXTO_DO_REPORTE = 2000;
 export type EstadoDoReporte = 'aberto' | 'resolvido';
 
 export interface NovoReporteDeErro {
-  materialId: string;
+  /** O alvo é um material OU uma questão: exatamente um dos dois. */
+  materialId?: string;
+  questionId?: string;
   /** O que está errado (obrigatório, até 2000 caracteres). */
   description: string;
   /** O trecho do material a que o erro se refere (opcional, até 2000 caracteres). */
@@ -25,7 +28,10 @@ export interface NovoReporteDeErro {
 
 export interface ReporteDeErro {
   id: string;
-  materialId: string;
+  materialId: string | null;
+  /** 44-H2: o reporte é de uma questão. */
+  questionId: string | null;
+  /** O nome do alvo: o título do material ou o começo do enunciado da questão. */
   materialTitle: string;
   description: string;
   excerpt: string | null;
@@ -45,7 +51,8 @@ export interface MaterialErrorReportsRepository {
 
 interface Row {
   id: string;
-  material_id: string;
+  material_id: string | null;
+  question_id?: string | null;
   description: string;
   excerpt: string | null;
   status: EstadoDoReporte;
@@ -53,6 +60,7 @@ interface Row {
   resolved_at: string | null;
   reporter_id: string;
   material?: { title: string | null } | Array<{ title: string | null }> | null;
+  question?: { question_stem: string | null } | Array<{ question_stem: string | null }> | null;
   reporter?:
     | { display_name: string | null; email: string | null }
     | Array<{ display_name: string | null; email: string | null }>
@@ -60,16 +68,21 @@ interface Row {
 }
 
 const COLUMNS =
-  'id, material_id, description, excerpt, status, created_at, resolved_at, reporter_id, ' +
-  'material:materials(title), reporter:profiles!reporter_id(display_name, email)';
+  'id, material_id, question_id, description, excerpt, status, created_at, resolved_at, reporter_id, ' +
+  'material:materials(title), question:questions(question_stem), reporter:profiles!reporter_id(display_name, email)';
 
 function fromRow(row: Row): ReporteDeErro {
   const material = Array.isArray(row.material) ? row.material[0] : row.material;
+  const questao = Array.isArray(row.question) ? row.question[0] : row.question;
   const autor = Array.isArray(row.reporter) ? row.reporter[0] : row.reporter;
+  const enunciado = (questao?.question_stem ?? '').replace(/\s+/g, ' ').trim();
   return {
     id: row.id,
     materialId: row.material_id,
-    materialTitle: material?.title ?? '(material removido)',
+    questionId: row.question_id ?? null,
+    materialTitle: row.question_id
+      ? `Questão: ${enunciado.length > 140 ? `${enunciado.slice(0, 140)}…` : enunciado || '(questão removida)'}`
+      : (material?.title ?? '(material removido)'),
     description: row.description,
     excerpt: row.excerpt,
     status: row.status,
@@ -82,7 +95,7 @@ function fromRow(row: Row): ReporteDeErro {
 class SupabaseMaterialErrorReportsRepository implements MaterialErrorReportsRepository {
   async report(input: NovoReporteDeErro): Promise<void> {
     const { error } = await supabase.from('material_error_reports').insert({
-      material_id: input.materialId,
+      ...(input.questionId ? { question_id: input.questionId } : { material_id: input.materialId }),
       description: input.description,
       excerpt: input.excerpt,
     });
@@ -135,7 +148,7 @@ export function mensagemDeErroDoReporte(err: unknown): string {
     return `Você já enviou ${LIMITE_DE_REPORTES_POR_DIA} reportes de erro hoje. Tente de novo amanhã.`;
   }
   if (e.code === '42501') {
-    return 'Este material já não está publicado, então não dá para reportar erro nele.';
+    return 'Este conteúdo já não está publicado, então não dá para reportar erro nele.';
   }
   if (e.code === '23514') {
     return `Escreva o que está errado, com no máximo ${LIMITE_DO_TEXTO_DO_REPORTE} caracteres (o trecho também tem esse limite).`;

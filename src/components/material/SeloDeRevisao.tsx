@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BadgeCheck, ShieldCheck } from 'lucide-react';
 import { materialSealRepository, type SeloDeRevisao as Selo } from '../../repositories/MaterialSealRepository';
+import { questionSealsRepository } from '../../repositories/QuestionSealRepository';
 import { useServerLoad } from '../../hooks/useServerLoad';
 
 // Selo do leitor (44-G): diz, em uma frase, como o material foi revisado. Só
@@ -37,5 +38,43 @@ export const SeloDeRevisao: React.FC<SeloDeRevisaoProps> = ({ materialId }) => {
       <Icone className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
       <span>{TEXTO_DO_SELO[carregado.selo]}</span>
     </p>
+  );
+};
+
+/**
+ * 44-H2: o selo de uma questão. Uma consulta só, guardada por alguns minutos, traz o
+ * selo de todas as questões (a lista tem centenas de cartões). Decorativo: se falhar,
+ * a questão aparece sem selo.
+ */
+export function useSeloDaQuestao(questionId: string): Selo | null {
+  const [selo, setSelo] = useState<Selo | null>(null);
+  useEffect(() => {
+    let cancelado = false;
+    questionSealsRepository
+      .getSeals()
+      .then((mapa) => {
+        if (!cancelado) setSelo(mapa.get(questionId) ?? null);
+      })
+      .catch(() => {
+        if (!cancelado) setSelo(null);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [questionId]);
+  return selo;
+}
+
+export const SeloDaQuestao: React.FC<{ selo: Selo }> = ({ selo }) => {
+  const Icone = selo === 'ia_e_pessoa' ? BadgeCheck : ShieldCheck;
+  return (
+    <span
+      data-testid="selo-da-questao"
+      data-selo={selo}
+      className="inline-flex items-center gap-1 text-[11px] font-medium text-teal-800 dark:text-teal-300"
+    >
+      <Icone className="w-3 h-3 shrink-0" aria-hidden="true" />
+      <span>{TEXTO_DO_SELO[selo]}</span>
+    </span>
   );
 };

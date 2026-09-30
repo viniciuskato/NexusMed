@@ -74,6 +74,9 @@ function montar(c: Cenario = {}) {
       publicados.push({ envio, material });
       return { desfecho: c.desfecho ?? 'publicado', materialId: c.desfecho === 'recusado' ? null : `mat-${envio.submissionId}` };
     }),
+    paraPublicarQuestoes: async () => [],
+    publicarQuestoes: async () => ({ desfecho: 'fora_de_estado' as const, questionIds: [] }),
+    recusarPublicacaoDeQuestoes: async () => false,
     recusarPublicacao: vi.fn(async (envio: ParaPublicar, recado: string) => {
       ordem.push(`recusar:${envio.submissionId}`);
       recados.push(recado);
@@ -289,6 +292,9 @@ describe('44-G — do envio ao material publicado, com a revisão simulada (cicl
         estado.envio === 'apto' && estado.revisao === 'concluida:apto'
           ? [{ submissionId: 'sub-1', reviewId: 'rev-1', texto: envio.texto, sha256: 'sha-1', disciplineId: 'd1', themeId: 't1' }]
           : [],
+      paraPublicarQuestoes: async () => [],
+      publicarQuestoes: async () => ({ desfecho: 'fora_de_estado' as const, questionIds: [] }),
+      recusarPublicacaoDeQuestoes: async () => false,
       recusarPublicacao: async () => true,
       publicar: async () => {
         if (estado.envio === 'publicado') return { desfecho: 'ja_publicado' as const, materialId: estado.materiais[0] };
@@ -322,7 +328,7 @@ describe('44-G — do envio ao material publicado, com a revisão simulada (cicl
       banco,
       api,
       conferir: (e, cat) => {
-        const av = modulo.avaliarEnvio(modulo.lerArquivoParaEnvio(e.texto, cat.disciplines, cat.themes), { disciplineId: e.disciplineId, themeId: e.themeId }, cat.disciplines, cat.themes);
+        const av = modulo.avaliarEnvio(modulo.lerArquivoParaEnvio(e.texto, cat.disciplines, cat.themes), { disciplineId: e.disciplineId ?? '', themeId: e.themeId ?? '' }, cat.disciplines, cat.themes);
         return { aceito: av.aceito, motivos: modulo.motivosDaReprovacao(av) };
       },
       lerMaterial: (e, cat) => modulo.lerMaterialParaPublicar(e.texto, cat.disciplines, cat.themes),

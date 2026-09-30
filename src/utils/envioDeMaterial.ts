@@ -49,9 +49,9 @@ export const ESTADO_EM_PALAVRAS: Record<EstadoDoEnvio, { rotulo: string; explica
 export const ESTADO_EM_PALAVRAS_DE_QUESTOES: Record<EstadoDoEnvio, { rotulo: string; explicacao: string }> = {
   aguardando_revisao: { rotulo: 'Aguardando revisão', explicacao: 'Recebemos o lote de questões. Ele está na fila para ser revisado.' },
   em_revisao: { rotulo: 'Em revisão', explicacao: 'As questões estão sendo revisadas agora.' },
-  apto: { rotulo: 'Aprovado na revisão', explicacao: 'A revisão aprovou as questões. Falta publicá-las.' },
+  apto: { rotulo: 'Aprovado na revisão', explicacao: 'A revisão aprovou as questões. Elas serão publicadas em alguns minutos.' },
   nao_apto: { rotulo: 'Precisa de correção', explicacao: 'A revisão encontrou o que corrigir. Corrija as questões e envie de novo.' },
-  publicado: { rotulo: 'Publicado', explicacao: 'As questões já estão no ar para os estudantes.' },
+  publicado: { rotulo: 'Publicado', explicacao: 'As questões já estão no ar para os estudantes, com a marca de revisado por IA.' },
   erro: { rotulo: 'A revisão não foi concluída', explicacao: 'Algo falhou do nosso lado. Suas questões não foram rejeitadas.' },
 };
 
@@ -299,14 +299,16 @@ export function fraseDaEspera(situacao: { usadasHoje: number; limitePorDia: numb
 }
 
 /** Frase leiga para o erro que o banco devolve ao gravar o envio. */
-export function mensagemDeErroDoEnvio(err: unknown): string {
+export function mensagemDeErroDoEnvio(err: unknown, tipo: 'material' | 'questoes' = 'material'): string {
   const e = (err ?? {}) as { code?: string; message?: string; hint?: string; details?: string };
   const texto = `${e.message ?? ''} ${e.details ?? ''} ${e.hint ?? ''}`;
   if (e.hint === 'limite_envios_em_espera' || texto.includes('limite_envios_em_espera')) {
     return `Você já tem ${LIMITE_ENVIOS_EM_ESPERA} envios esperando revisão. Quando a revisão de um deles terminar, você poderá enviar outro.`;
   }
   if (e.code === '23514' && /(material|question)_submissions_content_size/.test(texto)) {
-    return `O texto passa de ${tamanhoLegivel(LIMITE_TEXTO_BYTES)}. Reduza o material ou divida-o em mais de um.`;
+    return tipo === 'questoes'
+      ? `O texto passa de ${tamanhoLegivel(LIMITE_TEXTO_BYTES)}. Divida o lote de questões em mais de um envio.`
+      : `O texto passa de ${tamanhoLegivel(LIMITE_TEXTO_BYTES)}. Reduza o material ou divida-o em mais de um.`;
   }
   if (texto.includes('publicado') && texto.includes('material acima')) {
     return 'O material acima precisa estar publicado. Escolha outro ou deixe em branco.';
@@ -318,7 +320,11 @@ export function mensagemDeErroDoEnvio(err: unknown): string {
     return 'Este envio já não pode ser alterado: o estado dele mudou. Atualize a página para ver como está.';
   }
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-    return 'Sem conexão. O material não foi enviado; tente de novo quando a rede voltar.';
+    return tipo === 'questoes'
+      ? 'Sem conexão. As questões não foram enviadas; tente de novo quando a rede voltar.'
+      : 'Sem conexão. O material não foi enviado; tente de novo quando a rede voltar.';
   }
-  return 'Não foi possível enviar o material agora. Tente de novo em instantes.';
+  return tipo === 'questoes'
+    ? 'Não foi possível enviar as questões agora. Tente de novo em instantes.'
+    : 'Não foi possível enviar o material agora. Tente de novo em instantes.';
 }

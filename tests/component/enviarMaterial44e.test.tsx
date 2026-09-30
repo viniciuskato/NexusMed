@@ -24,7 +24,7 @@ vi.mock('../../src/repositories/MaterialSubmissionsRepository', () => ({
 }));
 
 // 44-H1: "Meus envios" também lista os envios de questões; aqui não há nenhum.
-const repoQuestoes = { listMine: vi.fn().mockResolvedValue([]), submit: vi.fn() };
+const repoQuestoes = { listMine: vi.fn().mockResolvedValue([]), listAll: vi.fn().mockResolvedValue([]), submit: vi.fn(), replaceText: vi.fn(), retry: vi.fn() };
 vi.mock('../../src/repositories/QuestionSubmissionsRepository', () => ({
   questionSubmissionsRepository: repoQuestoes,
 }));
@@ -86,6 +86,7 @@ const botaoEnviar = () => screen.getByRole('button', { name: /^Enviar/ }) as HTM
 beforeEach(() => {
   repo.listMine.mockReset().mockResolvedValue([]);
   repo.listAll.mockReset().mockResolvedValue([]);
+  repoQuestoes.listAll.mockReset().mockResolvedValue([]);
   repo.submit.mockReset();
   repo.replaceText.mockReset();
   repo.retry.mockReset();
@@ -598,6 +599,19 @@ describe('44-E — Área Editorial: envios de todos, só leitura', () => {
       envio({ id: '1', title: 'Envio da Ana', author: { id: 'u1', name: 'Ana', email: 'ana@x.test' } }),
       envio({ id: '2', title: 'Envio do Beto', status: 'nao_apto', author: { id: 'u2', name: '', email: 'beto@x.test' } }),
     ]);
+    // 44-H2: os envios de questões vêm na mesma lista, com quem enviou (o admin lê os dois tipos).
+    repoQuestoes.listAll.mockResolvedValue([
+      {
+        kind: 'questoes',
+        id: 'q1',
+        title: 'Lote da Carla',
+        status: 'apto',
+        createdAt: '2026-09-30T12:00:00.000Z',
+        updatedAt: '2026-09-30T12:00:00.000Z',
+        materialIds: [],
+        author: { id: 'u3', name: 'Carla', email: 'carla@x.test' },
+      },
+    ]);
     render(<EnviosDeMaterialAdmin disciplines={disciplinas} themes={temas} />);
 
     const lista = await waitFor(() => {
@@ -610,12 +624,18 @@ describe('44-E — Área Editorial: envios de todos, só leitura', () => {
     expect(lista.textContent).toContain('Envio do Beto');
     expect(lista.textContent).toContain('por beto@x.test');
     expect(lista.textContent).toContain('Precisa de correção');
+    // Os envios de questões aparecem junto, marcados, com quem enviou.
+    expect(lista.textContent).toContain('Lote da Carla');
+    expect(lista.textContent).toContain('por Carla');
+    const itemDeQuestoes = lista.querySelector('li[data-tipo="questoes"]') as HTMLElement;
+    expect(itemDeQuestoes.textContent).toContain('Lote da Carla');
     expect(within(document.querySelector('#admin-envios-de-material') as HTMLElement).queryAllByRole('button')).toHaveLength(0);
     expect(repo.listAll).toHaveBeenCalledTimes(1);
+    expect(repoQuestoes.listAll).toHaveBeenCalledTimes(1);
   });
 
   it('sem envios, diz isso', async () => {
     render(<EnviosDeMaterialAdmin disciplines={disciplinas} themes={temas} />);
-    await screen.findByText('Nenhum material foi enviado ainda.');
+    await screen.findByText('Nenhum material nem questões foram enviados ainda.');
   });
 });

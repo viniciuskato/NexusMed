@@ -1,4 +1,5 @@
-// Ciclo do revisor de IA (44-F). Roda a cada disparo do agendador, um por vez
+// Ciclo do revisor de IA (44-F; envios de questões desde a 44-H2: o MESMO ciclo revisa e
+// publica os dois tipos, só o prompt, a conferência e a leitura do texto mudam). Roda a cada disparo do agendador, um por vez
 // (trava no banco), e faz, nesta ordem:
 //   0. CONCILIAÇÃO: tentativas de criar lote que terminaram sem resposta (falha
 //      incerta) são resolvidas olhando a lista de lotes da API, nunca reenviando
@@ -25,21 +26,28 @@
 // revisão contada e a conciliação decide, com a lista de lotes, se o lote
 // existe (adota) ou não (libera depois do prazo).
 import { lerVeredito, textoFinalDaResposta, type Veredito } from './veredito.ts';
-import { MODELO, montarPedidoDeLote, montarSistema, type PedidoDeLote } from './montagem.ts';
+import { MODELO, montarPedidoDeLote, montarSistema, montarSistemaDeQuestoes, type PedidoDeLote } from './montagem.ts';
 
 // --- Portas ---------------------------------------------------------------
+
+export type TipoDeEnvio = 'material' | 'questoes';
 
 export interface Reservado {
   reviewId: string;
   submissionId: string;
+  /** Sem `tipo`, é um envio de material (a forma da 44-F). */
+  tipo?: TipoDeEnvio;
   titulo: string;
   texto: string;
   sha256: string;
-  disciplineId: string;
-  themeId: string;
+  /** Nulos nos envios de questões (cada questão traz os seus, no texto). */
+  disciplineId: string | null;
+  themeId: string | null;
   disciplina: string;
   tema: string;
   pai: string | null;
+  /** Só nos envios de questões: títulos dos materiais escolhidos na tela. */
+  materiais?: string[];
   /**
    * Só nas revisões pausadas: o conteúdo de cada resposta pausada da IA, na ordem
    * (uma lista de listas de blocos). Volta à API sem edição, um turno do
@@ -51,6 +59,8 @@ export interface Reservado {
 
 export interface Pendente {
   reviewId: string;
+  /** Sem `tipo`, é revisão de material. */
+  tipo?: TipoDeEnvio;
   status: 'submetida' | 'pausada' | 'incerta';
   batchId: string | null;
   /** Instante da tentativa de criar o lote (revisões "incertas"). */
@@ -90,6 +100,14 @@ export interface ParaPublicar {
   themeId: string;
 }
 
+/** Envio de questões "apto" pronto para virar questões (44-H2). */
+export interface ParaPublicarQuestoes {
+  submissionId: string;
+  reviewId: string;
+  texto: string;
+  sha256: string;
+}
+
 export type DesfechoDaPublicacao =
   | 'publicado'
   | 'ja_publicado'
@@ -127,11 +145,21 @@ export interface Banco {
    * fila de publicação, vai a "não apto" com o recado leigo, e a pessoa corrige e reenvia.
    */
   recusarPublicacao(envio: ParaPublicar, recado: string): Promise<boolean>;
+  /** 44-H2: envios de questões "apto" com revisão apto do texto atual, ainda sem questões. */
+  paraPublicarQuestoes(max: number): Promise<ParaPublicarQuestoes[]>;
+  /** Cria as questões do envio, liga aos materiais pelo título exato, publica e grava a proveniência: tudo ou nada. */
+  publicarQuestoes(
+    envio: ParaPublicarQuestoes,
+    questoes: Array<Record<string, unknown>>,
+  ): Promise<{ desfecho: DesfechoDaPublicacao; questionIds: string[] }>;
+  recusarPublicacaoDeQuestoes(envio: ParaPublicarQuestoes, recado: string): Promise<boolean>;
 }
 
 export interface Catalogo {
   disciplines: Array<{ id: string; name: string }>;
   themes: Array<{ id: string; name: string; disciplineId: string }>;
+  /** Materiais publicados (para conferir os títulos que as questões citam). Só o envio de questões usa. */
+  materiais?: Array<{ id: string; title: string }>;
 }
 
 export interface MensagemDaApi {
@@ -173,6 +201,12 @@ export type LeitorDeMaterial = (
   catalogo: Catalogo,
 ) => { ok: true; material: Record<string, unknown> } | { ok: false; motivos: string[] };
 
+/** O texto aprovado convertido nas questões que o banco cria (o mesmo importador da tela). */
+export type LeitorDeQuestoes = (
+  envio: ParaPublicarQuestoes,
+  catalogo: Catalogo,
+) => { ok: true; questoes: Array<Record<string, unknown>> } | { ok: false; motivos: string[] };
+
 /** A conferência que o servidor faz antes de gastar com a IA (a mesma da tela). */
 export type Conferencia = (
   envio: Reservado,
@@ -188,6 +222,11 @@ export interface DepsDoCiclo {
   /** Prompt revisor + Parte 1 do padrão (o mesmo texto que a pessoa copia). */
   baseDoRevisor: string;
   baseSha256: string;
+  /** 44-H2: converte o texto de um envio de questões aprovado nas questões a criar. */
+  lerQuestoes?: LeitorDeQuestoes;
+  /** 44-H2: prompt revisor de questões + padrão de questões (o mesmo texto que a pessoa copia). */
+  baseDoRevisorDeQuestoes?: string;
+  baseSha256DeQuestoes?: string;
   novoCodigo: () => string;
   /** Envios novos por ciclo (limita o gasto e a CPU da conferência). */
   maxPorLote?: number;
@@ -340,7 +379,18 @@ async function conciliar(deps: DepsDoCiclo, pendentes: Pendente[], resumo: Resum
 
 // --- Coleta ------------------------------------------------------------------
 
-async function coletarLote(deps: DepsDoCiclo, batchId: string, reviewIds: string[], resumo: ResumoDoCiclo): Promise<void> {
+/** O hash do prompt do sistema usado na revisão do tipo dado. */
+function shaDoSistema(deps: DepsDoCiclo, tipo: TipoDeEnvio | undefined): string {
+  return tipo === 'questoes' ? (deps.baseSha256DeQuestoes ?? deps.baseSha256) : deps.baseSha256;
+}
+
+async function coletarLote(
+  deps: DepsDoCiclo,
+  batchId: string,
+  reviewIds: string[],
+  tipos: Map<string, TipoDeEnvio | undefined>,
+  resumo: ResumoDoCiclo,
+): Promise<void> {
   const vistos = new Set<string>();
   const pendentes = new Set(reviewIds);
   for await (const item of deps.api.resultados(batchId)) {
@@ -350,7 +400,7 @@ async function coletarLote(deps: DepsDoCiclo, batchId: string, reviewIds: string
     const r = item.result;
     if (r.type !== 'succeeded') {
       // Erro, cancelamento ou expiração: a API não cobra.
-      const ok = await deps.banco.registrar(registroDeErro(reviewId, deps.baseSha256, `lote_${r.type}`, USO_ZERO, false));
+      const ok = await deps.banco.registrar(registroDeErro(reviewId, shaDoSistema(deps, tipos.get(reviewId)), `lote_${r.type}`, USO_ZERO, false));
       if (ok) resumo.resultadosRegistrados += 1;
       continue;
     }
@@ -362,7 +412,7 @@ async function coletarLote(deps: DepsDoCiclo, batchId: string, reviewIds: string
       if (pausou) {
         resumo.pausasContinuadas += 1;
       } else {
-        const ok = await deps.banco.registrar(registroDeErro(reviewId, deps.baseSha256, 'pausas_demais', uso, true, msg.stop_reason));
+        const ok = await deps.banco.registrar(registroDeErro(reviewId, shaDoSistema(deps, tipos.get(reviewId)), 'pausas_demais', uso, true, msg.stop_reason));
         if (ok) resumo.resultadosRegistrados += 1;
       }
       continue;
@@ -376,7 +426,7 @@ async function coletarLote(deps: DepsDoCiclo, batchId: string, reviewIds: string
       blocoDeCorrecao: leitura.blocoDeCorrecao,
       tipoDeErro: leitura.veredito === 'erro' ? leitura.motivo : null,
       modelo: msg.model ?? MODELO,
-      sistemaSha256: deps.baseSha256,
+      sistemaSha256: shaDoSistema(deps, tipos.get(reviewId)),
       uso,
       stopReason: msg.stop_reason,
       cobravel: true,
@@ -386,16 +436,18 @@ async function coletarLote(deps: DepsDoCiclo, batchId: string, reviewIds: string
   // Lote terminado e revisão sem resultado: não há o que esperar.
   for (const reviewId of pendentes) {
     if (vistos.has(reviewId)) continue;
-    const ok = await deps.banco.registrar(registroDeErro(reviewId, deps.baseSha256, 'lote_sem_resultado', USO_ZERO, false));
+    const ok = await deps.banco.registrar(registroDeErro(reviewId, shaDoSistema(deps, tipos.get(reviewId)), 'lote_sem_resultado', USO_ZERO, false));
     if (ok) resumo.resultadosRegistrados += 1;
   }
 }
 
 async function coletar(deps: DepsDoCiclo, pendentes: Pendente[], resumo: ResumoDoCiclo, dentroDoPrazo: () => boolean): Promise<void> {
   const porLote = new Map<string, string[]>();
+  const tipos = new Map<string, TipoDeEnvio | undefined>();
   for (const p of pendentes) {
     if (p.status !== 'submetida' || !p.batchId) continue;
     porLote.set(p.batchId, [...(porLote.get(p.batchId) ?? []), p.reviewId]);
+    tipos.set(p.reviewId, p.tipo);
   }
   for (const [batchId, reviewIds] of porLote) {
     if (!dentroDoPrazo()) {
@@ -405,7 +457,7 @@ async function coletar(deps: DepsDoCiclo, pendentes: Pendente[], resumo: ResumoD
     try {
       const lote = await deps.api.consultar(batchId);
       if (lote.status !== 'ended') continue;
-      await coletarLote(deps, batchId, reviewIds, resumo);
+      await coletarLote(deps, batchId, reviewIds, tipos, resumo);
       resumo.lotesColetados += 1;
     } catch (e) {
       if ((e as { status?: number } | null)?.status === 404) {
@@ -413,7 +465,7 @@ async function coletar(deps: DepsDoCiclo, pendentes: Pendente[], resumo: ResumoD
         // errado): não há o que esperar, e insistir seria uma chamada à API por
         // disparo, para sempre. Vira erro, sem custo.
         for (const reviewId of reviewIds) {
-          const ok = await deps.banco.registrar(registroDeErro(reviewId, deps.baseSha256, 'lote_nao_encontrado', USO_ZERO, false));
+          const ok = await deps.banco.registrar(registroDeErro(reviewId, shaDoSistema(deps, tipos.get(reviewId)), 'lote_nao_encontrado', USO_ZERO, false));
           if (ok) resumo.resultadosRegistrados += 1;
         }
         continue;
@@ -425,7 +477,27 @@ async function coletar(deps: DepsDoCiclo, pendentes: Pendente[], resumo: ResumoD
   }
 }
 
-// --- Publicação (44-G) ---------------------------------------------------------
+/** O pedido do lote para um envio do tipo dele: material (44-F) ou lote de questões (44-H2). */
+function pedidoDe(envio: Reservado, sistema: string, codigo: string, continuacao: unknown[][] | null): PedidoDeLote {
+  if (envio.tipo === 'questoes') {
+    return montarPedidoDeLote({
+      reviewId: envio.reviewId,
+      sistema,
+      lote: { titulo: envio.titulo, materiais: envio.materiais ?? [], texto: envio.texto },
+      codigo,
+      continuacao,
+    });
+  }
+  return montarPedidoDeLote({
+    reviewId: envio.reviewId,
+    sistema,
+    material: { titulo: envio.titulo, disciplina: envio.disciplina, tema: envio.tema, pai: envio.pai, texto: envio.texto },
+    codigo,
+    continuacao,
+  });
+}
+
+// --- Publicação (44-G; questões, 44-H2) ------------------------------------------
 
 /** O recado que a pessoa lê quando o texto aprovado não pôde virar material. */
 function recadoDoTextoNaoLido(motivos: string[]): string {
@@ -434,6 +506,11 @@ function recadoDoTextoNaoLido(motivos: string[]): string {
 }
 
 async function publicar(deps: DepsDoCiclo, resumo: ResumoDoCiclo, dentroDoPrazo: () => boolean): Promise<void> {
+  await publicarMateriais(deps, resumo, dentroDoPrazo);
+  await publicarQuestoes(deps, resumo, dentroDoPrazo);
+}
+
+async function publicarMateriais(deps: DepsDoCiclo, resumo: ResumoDoCiclo, dentroDoPrazo: () => boolean): Promise<void> {
   let prontos: ParaPublicar[];
   try {
     prontos = await deps.banco.paraPublicar(MAX_PUBLICACOES_POR_CICLO);
@@ -475,6 +552,57 @@ async function publicar(deps: DepsDoCiclo, resumo: ResumoDoCiclo, dentroDoPrazo:
       else if (r.desfecho === 'recusado' || r.desfecho === 'falhou') resumo.publicacoesRecusadas += 1;
     } catch (e) {
       resumo.erros.push(`publicação ${envio.submissionId}: ${mensagemDoErro(e)}`);
+    }
+  }
+}
+
+/** O recado que a pessoa lê quando o texto aprovado não pôde virar questões. */
+function recadoDoLoteNaoLido(motivos: string[]): string {
+  const detalhe = motivos.slice(0, 5).join(' ');
+  return `O lote foi aprovado na revisão, mas não pôde ser montado como questões: ${detalhe} Corrija o texto e envie de novo.`;
+}
+
+async function publicarQuestoes(deps: DepsDoCiclo, resumo: ResumoDoCiclo, dentroDoPrazo: () => boolean): Promise<void> {
+  if (!deps.lerQuestoes) return;
+  let prontos: ParaPublicarQuestoes[];
+  try {
+    prontos = await deps.banco.paraPublicarQuestoes(MAX_PUBLICACOES_POR_CICLO);
+  } catch (e) {
+    resumo.erros.push(`publicação de questões (buscar envios): ${mensagemDoErro(e)}`);
+    return;
+  }
+  if (prontos.length === 0) return;
+  let catalogo: Catalogo;
+  try {
+    catalogo = await deps.banco.catalogo();
+  } catch (e) {
+    resumo.erros.push(`publicação de questões (catálogo): ${mensagemDoErro(e)}`);
+    return;
+  }
+  for (const envio of prontos) {
+    if (!dentroDoPrazo()) {
+      resumo.erros.push('prazo do ciclo esgotado: as publicações de questões que faltam ficam para o próximo disparo');
+      return;
+    }
+    try {
+      let leitura: ReturnType<LeitorDeQuestoes>;
+      try {
+        leitura = deps.lerQuestoes(envio, catalogo);
+      } catch (e) {
+        leitura = { ok: false, motivos: [`erro ao ler o texto (${mensagemDoErro(e)}).`] };
+      }
+      if (!leitura.ok) {
+        // Como no material: o envio não pode ficar "apto" para sempre ocupando a vez dos outros.
+        resumo.erros.push(`publicação de questões ${envio.submissionId}: texto não lido (${leitura.motivos.join('; ')})`);
+        const recusado = await deps.banco.recusarPublicacaoDeQuestoes(envio, recadoDoLoteNaoLido(leitura.motivos));
+        if (recusado) resumo.publicacoesRecusadas += 1;
+        continue;
+      }
+      const r = await deps.banco.publicarQuestoes(envio, leitura.questoes);
+      if (r.desfecho === 'publicado') resumo.publicados += 1;
+      else if (r.desfecho === 'recusado' || r.desfecho === 'falhou') resumo.publicacoesRecusadas += 1;
+    } catch (e) {
+      resumo.erros.push(`publicação de questões ${envio.submissionId}: ${mensagemDoErro(e)}`);
     }
   }
 }
@@ -549,8 +677,12 @@ async function trabalhar(deps: DepsDoCiclo, resumo: ResumoDoCiclo): Promise<void
   const continuacoes = aindaPausadas.length > 0 ? await deps.banco.dadosDoEnvio(aindaPausadas) : [];
 
   const novas = await deps.banco.reservar(deps.maxPorLote ?? MAX_ENVIOS_NOVOS_POR_CICLO);
-  const sistema = montarSistema(deps.baseDoRevisor);
-  const catalogo = novas.length > 0 ? await deps.banco.catalogo() : { disciplines: [], themes: [] };
+  const sistemaDe = (tipo: TipoDeEnvio | undefined): string => {
+    if (tipo !== 'questoes') return montarSistema(deps.baseDoRevisor);
+    if (!deps.baseDoRevisorDeQuestoes) throw new Error('revisão de questões sem o prompt revisor de questões');
+    return montarSistemaDeQuestoes(deps.baseDoRevisorDeQuestoes);
+  };
+  const catalogo: Catalogo = novas.length > 0 ? await deps.banco.catalogo() : { disciplines: [], themes: [] };
 
   const pedidos: PedidoDeLote[] = [];
   const idsNovos: string[] = [];
@@ -559,7 +691,9 @@ async function trabalhar(deps: DepsDoCiclo, resumo: ResumoDoCiclo): Promise<void
   for (const envio of novas) {
     let motivos: string[];
     if (textoTemLinhaDeVeredito(envio.texto)) {
-      motivos = ['O texto do material contém uma linha de veredito ("APTO PARA ENVIAR" ou "NÃO APTO"). Tire essa linha do texto: quem dá o veredito é a revisão.'];
+      motivos = [
+        `O texto ${envio.tipo === 'questoes' ? 'do lote' : 'do material'} contém uma linha de veredito ("APTO PARA ENVIAR" ou "NÃO APTO"). Tire essa linha do texto: quem dá o veredito é a revisão.`,
+      ];
     } else {
       const c = deps.conferir(envio, catalogo);
       motivos = c.aceito ? [] : c.motivos;
@@ -574,7 +708,7 @@ async function trabalhar(deps: DepsDoCiclo, resumo: ResumoDoCiclo): Promise<void
         blocoDeCorrecao: null,
         tipoDeErro: 'pre_checagem',
         modelo: null,
-        sistemaSha256: deps.baseSha256,
+        sistemaSha256: shaDoSistema(deps, envio.tipo),
         uso: USO_ZERO,
         stopReason: null,
         cobravel: false,
@@ -582,27 +716,12 @@ async function trabalhar(deps: DepsDoCiclo, resumo: ResumoDoCiclo): Promise<void
       if (ok) resumo.reprovadosAntesDaIa += 1;
       continue;
     }
-    pedidos.push(
-      montarPedidoDeLote({
-        reviewId: envio.reviewId,
-        sistema,
-        material: { titulo: envio.titulo, disciplina: envio.disciplina, tema: envio.tema, pai: envio.pai, texto: envio.texto },
-        codigo: deps.novoCodigo(),
-      }),
-    );
+    pedidos.push(pedidoDe(envio, sistemaDe(envio.tipo), deps.novoCodigo(), null));
     idsNovos.push(envio.reviewId);
   }
 
   for (const envio of continuacoes) {
-    pedidos.push(
-      montarPedidoDeLote({
-        reviewId: envio.reviewId,
-        sistema,
-        material: { titulo: envio.titulo, disciplina: envio.disciplina, tema: envio.tema, pai: envio.pai, texto: envio.texto },
-        codigo: deps.novoCodigo(),
-        continuacao: envio.continuacao ?? null,
-      }),
-    );
+    pedidos.push(pedidoDe(envio, sistemaDe(envio.tipo), deps.novoCodigo(), envio.continuacao ?? null));
     idsContinuados.push(envio.reviewId);
   }
 

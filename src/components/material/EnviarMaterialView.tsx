@@ -26,7 +26,7 @@ import {
   tamanhoLegivel,
 } from '../../utils/envioDeMaterial';
 import { parentCandidates } from '../../utils/materialNavigation';
-import { ListaDeEnvios } from './ListaDeEnvios';
+import { ListaDeEnvios, type EnvioDaLista } from './ListaDeEnvios';
 import { EnviarQuestoesForm } from './EnviarQuestoesForm';
 
 // ============================================================================
@@ -52,6 +52,8 @@ interface EnviarMaterialViewProps {
   modoInicial?: 'material' | 'questoes';
   /** 44-G: abre o material que o servidor publicou a partir de um envio. */
   onAbrirMaterial?: (materialId: string) => void;
+  /** 44-H2: abre as questões que o servidor publicou a partir de um envio de questões. */
+  onAbrirQuestoes?: (questionIds: string[]) => void;
 }
 
 const MAX_PENDENCIAS_NA_TELA = 20;
@@ -68,6 +70,7 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
   onAbrirComoEscreverQuestoes,
   modoInicial = 'material',
   onAbrirMaterial,
+  onAbrirQuestoes,
 }) => {
   // 44-H1: a mesma tela envia material ou questões; "Meus envios" lista os dois tipos.
   const [modo, setModo] = useState<'material' | 'questoes'>(modoInicial);
@@ -87,6 +90,8 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
 
   // 44-F: envio "não apto" ou "erro" que está sendo corrigido (texto substituído).
   const [substituindo, setSubstituindo] = useState<MaterialSubmission | null>(null);
+  // 44-H2: o mesmo para um envio de questões (o formulário de questões é remontado por envio).
+  const [substituindoQuestoes, setSubstituindoQuestoes] = useState<QuestionSubmission | null>(null);
   const [ocupadoId, setOcupadoId] = useState<string | null>(null);
   const [avisoDaLista, setAvisoDaLista] = useState('');
   const topoDoFormulario = useRef<HTMLHeadingElement>(null);
@@ -132,7 +137,9 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
     () => [...envios, ...enviosDeQuestoes].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     [envios, enviosDeQuestoes],
   );
-  const filaCheia = esperando >= LIMITE_ENVIOS_EM_ESPERA;
+  // A fila é uma só: 3 esperando por pessoa, material e questões somados (o banco é a autoridade).
+  const emEspera = esperando + esperandoQuestoes;
+  const filaCheia = emEspera >= LIMITE_ENVIOS_EM_ESPERA;
 
   const disciplinasOrdenadas = useMemo(
     () => [...disciplines].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
@@ -211,7 +218,20 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
       texto: p.mensagem,
     })),
   ];
-  const corrigir = (envio: MaterialSubmission) => {
+  const corrigir = (item: EnvioDaLista) => {
+    if ('kind' in item && item.kind === 'questoes') {
+      setSubstituindo(null);
+      setSubstituindoQuestoes(item);
+      setModo('questoes');
+      setEnviadoComo('');
+      setErroDoEnvio('');
+      setAvisoDaLista('');
+      topoDoFormulario.current?.scrollIntoView?.({ block: 'start' });
+      return;
+    }
+    const envio = item as MaterialSubmission;
+    setSubstituindoQuestoes(null);
+    setModo('material');
     setSubstituindo(envio);
     setEnviadoComo('');
     setErroDoEnvio('');
@@ -233,12 +253,16 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
     setPaiId('');
   };
 
-  const tentarDeNovo = async (envio: MaterialSubmission) => {
+  const tentarDeNovo = async (item: EnvioDaLista) => {
+    const questoes = 'kind' in item && item.kind === 'questoes';
+    const envio = item;
     setOcupadoId(envio.id);
     setAvisoDaLista('');
     setErroDoEnvio('');
     try {
-      const atualizado = await materialSubmissionsRepository.retry(envio.id, envio.title);
+      const atualizado = questoes
+        ? await questionSubmissionsRepository.retry(envio.id, envio.title)
+        : await materialSubmissionsRepository.retry(envio.id, envio.title);
       // Texto com revisão "apto" válida: o banco o devolve a "apto" e só a publicação é refeita.
       setAvisoDaLista(
         atualizado.status === 'apto'
@@ -247,7 +271,7 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
       );
       await recarregarEnvios();
     } catch (err) {
-      setErroDoEnvio(mensagemDeErroDoEnvio(err));
+      setErroDoEnvio(mensagemDeErroDoEnvio(err, questoes ? 'questoes' : 'material'));
       void recarregarEnvios();
     } finally {
       setOcupadoId(null);
@@ -321,8 +345,10 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
           disciplines={disciplines}
           themes={themes}
           compendiums={compendiums}
-          esperando={esperandoQuestoes}
+          esperando={emEspera}
           onEnviado={recarregarEnvios}
+          substituindo={substituindoQuestoes}
+          onEncerrarCorrecao={() => setSubstituindoQuestoes(null)}
           onAbrirComoEscreverQuestoes={onAbrirComoEscreverQuestoes}
         />
       )}
@@ -612,6 +638,7 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
           onCorrigir={corrigir}
           onTentarDeNovo={tentarDeNovo}
           onAbrirMaterial={onAbrirMaterial}
+          onAbrirQuestoes={onAbrirQuestoes}
           ocupadoId={ocupadoId}
         />
       </section>

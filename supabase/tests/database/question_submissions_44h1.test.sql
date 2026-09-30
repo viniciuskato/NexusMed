@@ -79,7 +79,7 @@ begin
 end;
 $$;
 
-select plan(67);
+select plan(68);
 
 select tests.clear_auth();
 select tests.create_user('qsub.admin@test.local', 'admin', 'active') as v_admin \gset
@@ -394,23 +394,33 @@ select lives_ok(
 );
 select tests.clear_auth();
 
--- A fila de questões e a de material são irmãs, cada uma com o seu limite: uma não trava a outra.
+-- 44-H2: a fila é UMA só por pessoa: 3 esperando, somando material e questões.
 select tests.create_user('qsub.irmas@test.local', 'student', 'active') as v_irmas \gset
 insert into public.question_submissions (author_id, title, content_md)
 select :'v_irmas', 'Lote esperando ' || g, '## Questão 1' from generate_series(1, 3) g;
 select tests.authenticate_as(:'v_irmas');
-select lives_ok(
+select throws_ok(
   format($$ insert into public.material_submissions (title, discipline_id, theme_id, content_md) values ('Material com 3 lotes de questões esperando', %L, %L, '# m') $$, :'v_disc', :'v_theme'),
-  '3 lotes de questões esperando não travam o envio de material'
+  'P0001', NULL, '3 lotes de questões esperando travam também o envio de material (fila única)'
 );
 select tests.clear_auth();
 select tests.create_user('qsub.irmas2@test.local', 'student', 'active') as v_irmas2 \gset
 insert into public.material_submissions (author_id, title, discipline_id, theme_id, content_md)
 select :'v_irmas2', 'Material esperando ' || g, :'v_disc', :'v_theme', '# m' from generate_series(1, 3) g;
 select tests.authenticate_as(:'v_irmas2');
-select lives_ok(
+select throws_ok(
   $$ insert into public.question_submissions (title, content_md) values ('Lote com 3 materiais esperando', '## Questão 1') $$,
-  '3 materiais esperando não travam o envio de questões'
+  'P0001', NULL, '3 materiais esperando travam também o envio de questões (fila única)'
+);
+select tests.clear_auth();
+select tests.create_user('qsub.mista@test.local', 'student', 'active') as v_mista \gset
+insert into public.material_submissions (author_id, title, discipline_id, theme_id, content_md)
+select :'v_mista', 'Material misto ' || g, :'v_disc', :'v_theme', '# m' from generate_series(1, 2) g;
+insert into public.question_submissions (author_id, title, content_md) values (:'v_mista', 'Lote misto', '## Questão 1');
+select tests.authenticate_as(:'v_mista');
+select throws_ok(
+  $$ insert into public.question_submissions (title, content_md) values ('O quarto, de outro tipo', '## Questão 1') $$,
+  'P0001', NULL, '2 materiais + 1 lote esperando: o 4º envio, de qualquer tipo, é recusado'
 );
 select tests.clear_auth();
 

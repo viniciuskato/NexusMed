@@ -90,8 +90,10 @@ export const ComoEscreverQuestoesView: React.FC<ComoEscreverQuestoesViewProps> =
               {')'}
             </>
           )}
-          . O envio só é aceito se o arquivo passa pela importação sem pendência e fica guardado na sua lista de
-          envios. A revisão automática e a publicação das questões vêm numa etapa seguinte.
+          . O envio só é aceito se o arquivo passa pela importação sem pendência. Uma revisão automática (feita por
+          IA) confere gabarito, fontes e formato; com o “apto”, as questões são publicadas ligadas aos materiais,
+          com a marca “Revisado por IA — ainda não lido por uma pessoa”. Se a revisão apontar problemas, você vê os
+          achados na lista de envios, corrige e envia de novo.
         </p>
       </header>
 
@@ -121,7 +123,7 @@ export const ComoEscreverQuestoesView: React.FC<ComoEscreverQuestoesViewProps> =
         </div>
       </section>
 
-      <CatalogoDeTemas disciplines={disciplines} themes={themes} />
+      <CatalogoDeTemas disciplines={disciplines} themes={themes} objeto="questoes" />
 
       <section aria-labelledby="como-escrever-questoes-materiais" className="space-y-3">
         <h2 id="como-escrever-questoes-materiais" className="text-xl font-bold text-slate-900 dark:text-slate-100">

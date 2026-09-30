@@ -19,10 +19,12 @@ import { SafeMarkdown } from '../common/SafeMarkdown';
 // SafeMarkdown (AGENTS.md, risco 15) e por <pre> de texto puro para código —
 // nunca como HTML.
 
+/** Os dois tipos de envio (o de questões traz `kind: 'questoes'`). */
+export type EnvioDaLista = MaterialSubmission | QuestionSubmission;
+
 interface ListaDeEnviosProps {
   id: string;
-  /** 44-H1: os dois tipos de envio (o de questões traz `kind: 'questoes'`). */
-  envios: Array<MaterialSubmission | QuestionSubmission>;
+  envios: EnvioDaLista[];
   disciplines: Discipline[];
   themes: Theme[];
   /** Admin: mostra quem enviou. */
@@ -31,11 +33,13 @@ interface ListaDeEnviosProps {
   /** Frase que explica por que os envios "aguardando revisão" esperam (limite de custo). */
   avisoDaFila?: string | null;
   /** Estudante: substituir o texto de um envio "não apto" ou "erro". */
-  onCorrigir?: (envio: MaterialSubmission) => void;
+  onCorrigir?: (envio: EnvioDaLista) => void;
   /** Estudante: mandar o mesmo texto de novo (envio "erro"). */
-  onTentarDeNovo?: (envio: MaterialSubmission) => void;
+  onTentarDeNovo?: (envio: EnvioDaLista) => void;
   /** 44-G: abre o material publicado a partir deste envio. */
   onAbrirMaterial?: (materialId: string) => void;
+  /** 44-H2: abre as questões que o servidor publicou a partir de um envio de questões. */
+  onAbrirQuestoes?: (questionIds: string[]) => void;
   ocupadoId?: string | null;
 }
 
@@ -63,13 +67,13 @@ export const TextoDaIA: React.FC<{ texto: string }> = ({ texto }) => (
   </div>
 );
 
-const BlocoDeCorrecao: React.FC<{ texto: string }> = ({ texto }) => {
+const BlocoDeCorrecao: React.FC<{ texto: string; objeto: string }> = ({ texto, objeto }) => {
   const [copiado, setCopiado] = useState(false);
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">Bloco de correção</p>
       <p className="text-xs text-slate-500 dark:text-slate-400">
-        Cole este texto na conversa de quem escreveu o material (a IA que o criou) para corrigir só o que a revisão
+        Cole este texto na conversa de quem escreveu {objeto} (a IA que os criou) para corrigir só o que a revisão
         apontou.
       </p>
       <pre
@@ -92,7 +96,7 @@ const BlocoDeCorrecao: React.FC<{ texto: string }> = ({ texto }) => {
   );
 };
 
-const RevisaoDoEnvio: React.FC<{ revisao: MaterialReviewView }> = ({ revisao }) => {
+const RevisaoDoEnvio: React.FC<{ revisao: MaterialReviewView; objeto: string }> = ({ revisao, objeto }) => {
   if (!revisao.findingsText && !revisao.correctionBlock) return null;
   return (
     <details className="mt-1">
@@ -101,7 +105,7 @@ const RevisaoDoEnvio: React.FC<{ revisao: MaterialReviewView }> = ({ revisao }) 
       </summary>
       <div className="mt-2 space-y-4" data-testid="revisao-do-envio">
         {revisao.findingsText && <TextoDaIA texto={revisao.findingsText} />}
-        {revisao.correctionBlock && <BlocoDeCorrecao texto={revisao.correctionBlock} />}
+        {revisao.correctionBlock && <BlocoDeCorrecao texto={revisao.correctionBlock} objeto={objeto} />}
       </div>
     </details>
   );
@@ -118,6 +122,7 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
   onCorrigir,
   onTentarDeNovo,
   onAbrirMaterial,
+  onAbrirQuestoes,
   ocupadoId,
 }) => {
   if (envios.length === 0) {
@@ -126,14 +131,15 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
   return (
     <ul id={id} className="space-y-2">
       {envios.map((item) => {
-        // O envio de questões não tem Disciplina, Tema, revisão nem material publicado por aqui (44-H2).
+        // O envio de questões não tem Disciplina, Tema nem material publicado; tem revisão e questões publicadas (44-H2).
         const questoes = 'kind' in item && item.kind === 'questoes';
         const envio = (questoes ? null : item) as MaterialSubmission | null;
+        const idsPublicados = questoes ? ((item as QuestionSubmission).publishedQuestionIds ?? []) : [];
         const estado = estadoEmPalavras(item.status, questoes ? 'questoes' : 'material');
         const disciplina = envio ? disciplines.find((d) => d.id === envio.disciplineId)?.name : undefined;
         const tema = envio ? themes.find((t) => t.id === envio.themeId)?.name : undefined;
-        const podeCorrigir = !questoes && onCorrigir && (item.status === 'nao_apto' || item.status === 'erro');
-        const podeTentarDeNovo = !questoes && onTentarDeNovo && item.status === 'erro';
+        const podeCorrigir = onCorrigir && (item.status === 'nao_apto' || item.status === 'erro');
+        const podeTentarDeNovo = onTentarDeNovo && item.status === 'erro';
         return (
           <li
             key={`${questoes ? 'q' : 'm'}-${item.id}`}
@@ -158,15 +164,32 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
               Enviado em {dataDoEnvio(item.createdAt)}
               {disciplina ? ` · ${disciplina}` : ''}
               {tema ? ` › ${tema}` : ''}
-              {mostrarAutor && envio?.author ? ` · por ${envio.author.name || envio.author.email}` : ''}
+              {mostrarAutor && item.author ? ` · por ${item.author.name || item.author.email}` : ''}
             </p>
             {estado.explicacao && (
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{estado.explicacao}</p>
             )}
-            {envio?.publicationNote && envio.status !== 'publicado' && (
+            {item.publicationNote && item.status !== 'publicado' && (
               <p data-testid="recado-do-servidor" className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-                {envio.publicationNote}
+                {item.publicationNote}
               </p>
+            )}
+            {questoes && item.status === 'publicado' && idsPublicados.length > 0 && (
+              <div className="pt-1 space-y-1">
+                <p data-testid="questoes-publicadas" className="text-xs text-slate-600 dark:text-slate-300">
+                  {idsPublicados.length === 1 ? '1 questão publicada.' : `${idsPublicados.length} questões publicadas.`}
+                </p>
+                {onAbrirQuestoes && (
+                  <button
+                    type="button"
+                    data-testid="abrir-questoes-publicadas"
+                    onClick={() => onAbrirQuestoes(idsPublicados)}
+                    className="min-h-11 px-3 py-2 rounded-xl border border-teal-600 text-teal-700 dark:text-teal-300 dark:border-teal-500 bg-white dark:bg-slate-900 text-xs font-semibold cursor-pointer hover:bg-teal-50 dark:hover:bg-teal-950/40"
+                  >
+                    Abrir as questões publicadas
+                  </button>
+                )}
+              </div>
             )}
             {envio && envio.status === 'publicado' && envio.publishedMaterialId && onAbrirMaterial && (
               <div className="pt-1">
@@ -185,16 +208,16 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
                 {avisoDaFila}
               </p>
             )}
-            {envio?.review && envio.status !== 'aguardando_revisao' && envio.status !== 'em_revisao' && (
-              <RevisaoDoEnvio revisao={envio.review} />
+            {item.review && item.status !== 'aguardando_revisao' && item.status !== 'em_revisao' && (
+              <RevisaoDoEnvio revisao={item.review} objeto={questoes ? 'as questões' : 'o material'} />
             )}
-            {envio && (podeCorrigir || podeTentarDeNovo) && (
+            {(podeCorrigir || podeTentarDeNovo) && (
               <div className="flex flex-wrap gap-2 pt-1">
                 {podeCorrigir && (
                   <button
                     type="button"
-                    disabled={ocupadoId === envio.id}
-                    onClick={() => onCorrigir?.(envio)}
+                    disabled={ocupadoId === item.id}
+                    onClick={() => onCorrigir?.(item)}
                     className="min-h-11 px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 text-white text-xs font-semibold cursor-pointer"
                   >
                     Corrigir e enviar de novo
@@ -203,11 +226,11 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
                 {podeTentarDeNovo && (
                   <button
                     type="button"
-                    disabled={ocupadoId === envio.id}
-                    onClick={() => onTentarDeNovo?.(envio)}
+                    disabled={ocupadoId === item.id}
+                    onClick={() => onTentarDeNovo?.(item)}
                     className="min-h-11 px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer disabled:opacity-60"
                   >
-                    {ocupadoId === envio.id ? 'Enviando…' : 'Tentar de novo com o mesmo texto'}
+                    {ocupadoId === item.id ? 'Enviando…' : 'Tentar de novo com o mesmo texto'}
                   </button>
                 )}
               </div>

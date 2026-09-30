@@ -105,8 +105,11 @@ function achaMaterial(titulo: string, publicados: MaterialPublicado[]): Material
 
 export function avaliarLote(
   leitura: LeituraDoLote,
-  /** Materiais publicados (para conferir os títulos que o arquivo cita). */
-  publicados: MaterialPublicado[],
+  /**
+   * Materiais publicados (para conferir os títulos que o arquivo cita). `null` não confere os
+   * títulos nem a falta de material: é o servidor, que os confere no banco, no momento de publicar.
+   */
+  publicados: MaterialPublicado[] | null,
   /** Materiais que a pessoa escolheu na tela para as questões que não citam nenhum. */
   materiaisEscolhidos: string[],
 ): AvaliacaoDoLote {
@@ -156,11 +159,11 @@ export function avaliarLote(
     }
 
     // Ligação com material: pelo título no arquivo ou pelo material escolhido na tela.
-    if (linha.materialTitles.length === 0 && materiaisEscolhidos.length === 0) {
+    if (publicados !== null && linha.materialTitles.length === 0 && materiaisEscolhidos.length === 0) {
       add('Sem material: escreva “Materiais cobertos” na questão ou escolha o material abaixo.');
     }
-    for (const titulo of linha.materialTitles) {
-      if (!achaMaterial(titulo, publicados)) {
+    for (const titulo of publicados === null ? [] : linha.materialTitles) {
+      if (!achaMaterial(titulo, publicados ?? [])) {
         add(`O material “${titulo}” não é o título exato de um material publicado.`);
       }
     }
@@ -200,4 +203,58 @@ export function motivosDaRecusaDoLote(av: AvaliacaoDoLote): string[] {
   motivos.push(...av.errosDeImportacao);
   motivos.push(...av.pendencias.map((p) => `Questão ${p.questao}: ${p.mensagem}`));
   return motivos;
+}
+
+/**
+ * A questão que o servidor cria quando a revisão de IA aprova o envio (44-H2): a mesma que o
+ * importador da tela leu, no formato que a função do banco `revisao_publicar_questoes` recebe.
+ * Os materiais escolhidos na tela vêm do próprio envio; aqui só os títulos que o arquivo cita.
+ */
+export interface QuestaoParaPublicar {
+  discipline_id: string;
+  theme_id: string;
+  cycle: string;
+  difficulty: string;
+  institution: string;
+  year: number | null;
+  clinical_vignette: string;
+  question_stem: string;
+  general_commentary: string;
+  high_yield_summary: string;
+  tags: string[];
+  material_titles: string[];
+  options: Array<{ letter: string; text: string; explanation: string; is_correct: boolean }>;
+}
+
+export type LeituraDasQuestoes = { ok: true; questoes: QuestaoParaPublicar[] } | { ok: false; motivos: string[] };
+
+/** Lê o texto aprovado com o importador da tela e devolve as questões que viram publicadas. */
+export function lerQuestoesParaPublicar(texto: string, disciplines: Discipline[], themes: Theme[]): LeituraDasQuestoes {
+  const leitura = lerLoteDeQuestoes(texto, disciplines, themes);
+  // Sem lista de materiais aqui: o banco confere os títulos (e a falta de material) ao publicar.
+  const avaliacao = avaliarLote(leitura, null, []);
+  if (!avaliacao.aceito) return { ok: false, motivos: motivosDaRecusaDoLote(avaliacao) };
+  return {
+    ok: true,
+    questoes: leitura.linhas.map((l) => ({
+      discipline_id: l.disciplineId as string,
+      theme_id: l.themeId as string,
+      cycle: l.cycle,
+      difficulty: l.difficulty,
+      institution: l.institution,
+      year: l.year > 0 ? l.year : null,
+      clinical_vignette: l.clinicalVignette,
+      question_stem: l.questionStem,
+      general_commentary: l.generalCommentary,
+      high_yield_summary: l.highYieldSummary,
+      tags: l.tags,
+      material_titles: l.materialTitles,
+      options: l.options.map((o) => ({
+        letter: o.letter,
+        text: o.text,
+        explanation: o.explanation,
+        is_correct: o.isCorrect,
+      })),
+    })),
+  };
 }

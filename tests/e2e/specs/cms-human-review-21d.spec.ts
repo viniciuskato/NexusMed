@@ -7,6 +7,7 @@ import {
   runCleanup,
   type CreatedTestUser,
 } from '../fixtures/localSupabase';
+import { aprovarQuestaoPorIA } from '../fixtures/proveniencia';
 
 // Prompt 21-D — desbloquear o fluxo humano de revisão no CMS.
 //
@@ -260,6 +261,9 @@ test.describe('CMS — fluxo humano de revisão (21-D)', () => {
     await panel.getByRole('button', { name: 'Atestar — Aprovar revisão' }).click();
     await expect(panel).toHaveAttribute('data-provenance-status', 'aprovado_para_esta_versao', { timeout: 10_000 });
     await page.locator('#provenance-review-close').click();
+
+    // 44-H2: questão nova só é publicada com a revisão de IA "apto" do conteúdo atual (fixture: o que o servidor grava).
+    aprovarQuestaoPorIA(questionId);
 
     await row.getByRole('button', { name: 'Publicar', exact: true }).click();
     await expect(row).toContainText('publicada', { timeout: 10_000 });

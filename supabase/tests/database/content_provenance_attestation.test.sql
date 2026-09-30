@@ -98,6 +98,39 @@ begin
 end;
 $$;
 
+-- 44-H2: revisão de IA "apto" (envio de questões, revisão e proveniência) do conteúdo ATUAL da
+-- questão. Chamada de novo depois de uma edição, refaz o vínculo com o conteúdo novo.
+create or replace function tests.approve_question_by_ai(p_question_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_author uuid;
+  v_sub uuid;
+  v_review uuid;
+begin
+  select id into v_author from public.profiles where role = 'admin' and status = 'active' limit 1;
+  if v_author is null then
+    raise exception 'tests.approve_question_by_ai: nenhum admin ativo encontrado para autoria de fixture';
+  end if;
+  insert into public.question_submissions (author_id, title, content_md, status, published_question_ids)
+  values (v_author, 'Envio de fixture ' || gen_random_uuid()::text, '## Questão 1', 'publicado', array[p_question_id])
+  returning id into v_sub;
+  insert into public.material_reviews (question_submission_id, content_sha256, status, verdict, model, completed_at)
+  select s.id, s.content_sha256, 'concluida', 'apto', 'fixture', now()
+    from public.question_submissions s where s.id = v_sub
+  returning id into v_review;
+  insert into public.question_ai_provenance (question_id, submission_id, review_id, review_verdict, reviewed_at, model, text_sha256, snapshot_hash)
+  select p_question_id, v_sub, v_review, 'apto', now(), 'fixture', s.content_sha256, app.question_snapshot_hash(p_question_id)
+    from public.question_submissions s where s.id = v_sub
+  on conflict (question_id) do update
+    set submission_id = excluded.submission_id, review_id = excluded.review_id,
+        snapshot_hash = excluded.snapshot_hash, text_sha256 = excluded.text_sha256;
+end;
+$$;
+
 create or replace function tests.approve_question_revision(p_question_id uuid)
 returns uuid
 language plpgsql
@@ -127,6 +160,11 @@ begin
 
   insert into public.content_reviews (content_revision_id, reviewer_user_id, decision, checklist, policy_version, revision_hash)
   values (v_revision_id, v_admin, 'aprovado', '{"fixture": true}'::jsonb, 'v1', v_hash);
+
+  -- 44-H2: publish_question() passou a exigir revisão de IA "apto" vinculada ao conteúdo
+  -- atual; as fixtures que só querem "uma questão publicável" ganham as duas aprovações
+  -- (a trava em si é provada em publicar_questoes_pelo_veredito_44h2.test.sql).
+  perform tests.approve_question_by_ai(p_question_id);
 
   return v_revision_id;
 end;
@@ -190,7 +228,7 @@ $$;
 grant usage on schema tests to anon, authenticated;
 grant execute on function tests.clear_auth() to anon, authenticated;
 
-select plan(47);
+select plan(48);
 
 -- ----------------------------------------------------------------------------
 -- Fixtures
@@ -638,9 +676,16 @@ returning id as v_qclaim_id \gset
 
 select public.attest_content_revision(:'v_qrev_id', 'aprovado', '{}'::jsonb) as v_qreview_json \gset
 
+-- 44-H2: a atestação humana sozinha já não publica; é preciso a revisão de IA apto do conteúdo atual.
+select throws_like(
+  format($$ select public.publish_question(%L) $$, :'v_question_id'),
+  '%revisor de IA%',
+  'publish_question não publica só com a atestação humana: falta a revisão de IA apto'
+);
+select tests.approve_question_by_ai(:'v_question_id');
 select lives_ok(
   format($$ select public.publish_question(%L) $$, :'v_question_id'),
-  'publish_question publica questão com revisão aprovada e hash batendo'
+  'publish_question publica questão com revisão de IA apto vinculada ao conteúdo atual'
 );
 select is(
   (select status from public.questions where id = :'v_question_id'),

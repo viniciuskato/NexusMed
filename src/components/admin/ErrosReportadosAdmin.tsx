@@ -47,7 +47,7 @@ export const ErrosReportadosAdmin: React.FC = () => {
       <div className="bg-white dark:bg-[#0F172A] p-4 rounded-xl border border-stone-200 dark:border-[#243452] elev-xs">
         <h3 className="font-serif-reading text-base font-bold text-stone-900 dark:text-slate-100">Erros reportados</h3>
         <p className="text-[11px] text-stone-500 dark:text-slate-400">
-          Erros que usuários apontaram em materiais publicados. Abertos primeiro.{' '}
+          Erros que usuários apontaram em materiais e questões publicados. Abertos primeiro.{' '}
           <span data-testid="erros-abertos">
             {abertos === 0 ? 'Nenhum erro aberto.' : `${abertos} aberto${abertos > 1 ? 's' : ''}.`}
           </span>

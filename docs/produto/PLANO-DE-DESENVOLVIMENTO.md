@@ -787,6 +787,20 @@ mesmas regras e limites dos envios de material.
 **Depende de.** 44-G.
 **Estado.** Em andamento.
 
+### 44-H2 — Questões: revisão por IA e publicação pelo veredito
+
+**Origem.** Decisões do dono (29/09): tudo que é publicado passa pelo revisor
+de IA; com o "apto", vai direto aos alunos, com selo e "reportar erro".
+
+**Aceite.** Envio de questões é revisado pelo mesmo revisor (mesmos limites de
+custo), e com apto do texto atual o servidor publica as questões ligadas aos
+materiais, uma vez só. Nenhuma questão nova é publicada sem revisão apto,
+inclusive pelo admin. Selo e "Reportar erro" nas questões.
+
+**Fora de escopo.** Editar publicado (45-K).
+**Depende de.** 44-H1.
+**Estado.** Em andamento.
+
 ---
 
 ## 9. Frente 45 — Confiabilidade

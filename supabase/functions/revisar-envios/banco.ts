@@ -1,6 +1,17 @@
 // Ponte entre o ciclo e o Supabase (44-F): cada método é uma chamada às funções
 // `revisao_*` da migration 20260930120000, que só o service_role executa.
-import type { Banco, Catalogo, DesfechoDaPublicacao, ParaPublicar, Pendente, Reservado, ResultadoRegistrado, Uso } from './ciclo.ts';
+import type {
+  Banco,
+  Catalogo,
+  DesfechoDaPublicacao,
+  ParaPublicar,
+  ParaPublicarQuestoes,
+  Pendente,
+  Reservado,
+  ResultadoRegistrado,
+  TipoDeEnvio,
+  Uso,
+} from './ciclo.ts';
 
 export interface ClienteDoBanco {
   rpc(fn: string, args?: Record<string, unknown>): PromiseLike<{ data: unknown; error: { message: string } | null }>;
@@ -12,11 +23,14 @@ export interface ClienteDoBanco {
 interface LinhaDeReserva {
   review_id: string;
   submission_id: string;
+  /** Ausente nas linhas de material da 44-F; "questoes" nas da 44-H2. */
+  tipo?: TipoDeEnvio;
   title: string;
   content_md: string;
   content_sha256?: string;
-  discipline_id: string;
-  theme_id: string;
+  discipline_id: string | null;
+  theme_id: string | null;
+  material_titles?: string[] | null;
   discipline_name: string | null;
   theme_name: string | null;
   parent_title: string | null;
@@ -28,6 +42,7 @@ function doReservado(l: LinhaDeReserva): Reservado {
   return {
     reviewId: l.review_id,
     submissionId: l.submission_id,
+    tipo: l.tipo ?? 'material',
     titulo: l.title,
     texto: l.content_md,
     sha256: l.content_sha256 ?? '',
@@ -36,6 +51,7 @@ function doReservado(l: LinhaDeReserva): Reservado {
     disciplina: l.discipline_name ?? '',
     tema: l.theme_name ?? '',
     pai: l.parent_title,
+    materiais: l.material_titles ?? undefined,
     continuacao: l.continuation ?? null,
     tentativa: l.attempt,
   };
@@ -50,8 +66,16 @@ interface LinhaParaPublicar {
   theme_id: string;
 }
 
+interface LinhaParaPublicarQuestoes {
+  submission_id: string;
+  review_id: string;
+  content_md: string;
+  content_sha256: string;
+}
+
 interface LinhaPendente {
   review_id: string;
+  tipo?: TipoDeEnvio;
   status: 'submetida' | 'pausada' | 'incerta';
   batch_id: string | null;
   tentativa_em: string | null;
@@ -87,7 +111,7 @@ export function bancoDoSupabase(cliente: ClienteDoBanco): Banco {
     },
     async pendentes(): Promise<Pendente[]> {
       const linhas = (await rpc<LinhaPendente[] | null>('revisao_pendentes')) ?? [];
-      return linhas.map((l) => ({ reviewId: l.review_id, status: l.status, batchId: l.batch_id, tentativaEm: l.tentativa_em }));
+      return linhas.map((l) => ({ reviewId: l.review_id, tipo: l.tipo ?? 'material', status: l.status, batchId: l.batch_id, tentativaEm: l.tentativa_em }));
     },
     async reservar(max) {
       const linhas = (await rpc<LinhaDeReserva[] | null>('revisao_reservar_envios', { p_max: max })) ?? [];
@@ -100,8 +124,10 @@ export function bancoDoSupabase(cliente: ClienteDoBanco): Banco {
     async catalogo(): Promise<Catalogo> {
       const d = await cliente.from('disciplines').select('id, name');
       const t = await cliente.from('themes').select('id, name, discipline_id');
+      const m = await cliente.from('materials').select('id, title, status');
       if (d.error) throw new Error(`disciplines: ${d.error.message}`);
       if (t.error) throw new Error(`themes: ${t.error.message}`);
+      if (m.error) throw new Error(`materials: ${m.error.message}`);
       return {
         disciplines: ((d.data ?? []) as Array<{ id: string; name: string }>).map((x) => ({ id: x.id, name: x.name })),
         themes: ((t.data ?? []) as Array<{ id: string; name: string; discipline_id: string }>).map((x) => ({
@@ -109,6 +135,9 @@ export function bancoDoSupabase(cliente: ClienteDoBanco): Banco {
           name: x.name,
           disciplineId: x.discipline_id,
         })),
+        materiais: ((m.data ?? []) as Array<{ id: string; title: string; status: string }>)
+          .filter((x) => x.status === 'published')
+          .map((x) => ({ id: x.id, title: x.title })),
       };
     },
     async anexarLote(reviewIds, batchId) {
@@ -143,6 +172,29 @@ export function bancoDoSupabase(cliente: ClienteDoBanco): Banco {
     async recusarPublicacao(envio, recado) {
       return Boolean(
         await rpc<boolean>('revisao_recusar_publicacao', {
+          p_submission_id: envio.submissionId,
+          p_review_id: envio.reviewId,
+          p_content_sha256: envio.sha256,
+          p_note: recado,
+        }),
+      );
+    },
+    async paraPublicarQuestoes(max): Promise<ParaPublicarQuestoes[]> {
+      const linhas = (await rpc<LinhaParaPublicarQuestoes[] | null>('revisao_envios_de_questoes_para_publicar', { p_max: max })) ?? [];
+      return linhas.map((l) => ({ submissionId: l.submission_id, reviewId: l.review_id, texto: l.content_md, sha256: l.content_sha256 }));
+    },
+    async publicarQuestoes(envio, questoes) {
+      const r = await rpc<{ resultado: DesfechoDaPublicacao; question_ids?: string[] } | null>('revisao_publicar_questoes', {
+        p_submission_id: envio.submissionId,
+        p_review_id: envio.reviewId,
+        p_content_sha256: envio.sha256,
+        p_questoes: questoes,
+      });
+      return { desfecho: r?.resultado ?? 'fora_de_estado', questionIds: r?.question_ids ?? [] };
+    },
+    async recusarPublicacaoDeQuestoes(envio, recado) {
+      return Boolean(
+        await rpc<boolean>('revisao_recusar_publicacao_de_questoes', {
           p_submission_id: envio.submissionId,
           p_review_id: envio.reviewId,
           p_content_sha256: envio.sha256,
