@@ -712,6 +712,22 @@ nova, ver na hora quais materiais ela afeta.
 **Depende de.** 44-B e 44-C1.
 **Estado.** Planejada.
 
+### 44-D — Como escrever um material, dentro do site
+
+**Origem.** Pedido do dono (29/09): o NexusMed deve mostrar a estrutura do
+material, não só quem está por trás do sistema, e oferecer um prompt para
+criar material no padrão e um revisor que diz se ele está apto a entrar.
+
+**Aceite.** Todo usuário ativo abre, pelo menu, "Como escrever um material":
+a Parte 1 do padrão, as Disciplinas e os Temas do catálogo e dois textos para
+copiar (prompt de criação e prompt revisor), cada um com a Parte 1 junto. O
+padrão e os prompts vivem num arquivo só cada, lidos pelo site sem cópia; um
+teste reprova jargão interno neles.
+
+**Fora de escopo.** Enviar material (44-E); IA chamada pelo próprio site.
+**Depende de.** Nada.
+**Estado.** Em andamento.
+
 ---
 
 ## 9. Frente 45 — Confiabilidade
