@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, configure, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
+
+// As telas abrem por import dinâmico (lazy): com a suíte inteira rodando em paralelo o
+// padrão de 1 s é curto e o teste falha sem defeito nenhum.
+configure({ asyncUtilTimeout: 8000 });
+vi.setConfig({ testTimeout: 30000 });
 
 // jsdom não tem ResizeObserver (usado pelo Header real).
 (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = class {
@@ -59,6 +64,9 @@ vi.mock('../../src/repositories/MaterialSubmissionsRepository', () => ({
     listMine: vi.fn().mockResolvedValue([]),
     listAll: vi.fn().mockResolvedValue([]),
     submit: vi.fn(),
+    replaceText: vi.fn(),
+    retry: vi.fn(),
+    situacaoDaRevisao: vi.fn().mockResolvedValue(null),
   },
   envioDeMaterialDisponivel: true,
 }));

@@ -5,6 +5,7 @@ import {
   envioDeMaterialDisponivel,
   materialSubmissionsRepository,
   type MaterialSubmission,
+  type SituacaoDaRevisao,
 } from '../../repositories/MaterialSubmissionsRepository';
 import { useServerLoad } from '../../hooks/useServerLoad';
 import { ConnectionNotice } from '../common/ConnectionNotice';
@@ -13,6 +14,9 @@ import {
   LIMITE_LEITURA_DE_ARQUIVO_BYTES,
   LIMITE_TEXTO_BYTES,
   avaliarEnvio,
+  descreverAvisoDaImportacao,
+  fraseDaEspera,
+  frasesDoTituloLongo,
   lerArquivoParaEnvio,
   mensagemDeErroDoEnvio,
   tamanhoLegivel,
@@ -62,10 +66,24 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
   const [enviadoComo, setEnviadoComo] = useState('');
   const seletorDeArquivo = useRef<HTMLInputElement>(null);
 
+  // 44-F: envio "não apto" ou "erro" que está sendo corrigido (texto substituído).
+  const [substituindo, setSubstituindo] = useState<MaterialSubmission | null>(null);
+  const [ocupadoId, setOcupadoId] = useState<string | null>(null);
+  const [avisoDaLista, setAvisoDaLista] = useState('');
+  const topoDoFormulario = useRef<HTMLHeadingElement>(null);
+
   const [envios, setEnvios] = useState<MaterialSubmission[]>([]);
+  const [situacao, setSituacao] = useState<SituacaoDaRevisao | null>(null);
   const { status: statusDaLista, reload: recarregarEnvios } = useServerLoad(async () => {
-    const lista = await materialSubmissionsRepository.listMine();
-    return () => setEnvios(lista);
+    const [lista, sit] = await Promise.all([
+      materialSubmissionsRepository.listMine(),
+      // A situação só explica a espera: sem ela a lista aparece do mesmo jeito.
+      materialSubmissionsRepository.situacaoDaRevisao().catch(() => null),
+    ]);
+    return () => {
+      setEnvios(lista);
+      setSituacao(sit);
+    };
   }, 'meus-envios');
 
   const textoAvaliado = useDeferredValue(texto);
@@ -124,15 +142,20 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
     setEnviando(true);
     setErroDoEnvio('');
     setEnviadoComo('');
+    setAvisoDaLista('');
     try {
-      const criado = await materialSubmissionsRepository.submit({
+      const dados = {
         title: leitura.titulo,
         disciplineId,
         themeId,
         parentMaterialId: paiId || null,
         contentMd: texto,
-      });
+      };
+      const criado = substituindo
+        ? await materialSubmissionsRepository.replaceText(substituindo.id, dados)
+        : await materialSubmissionsRepository.submit(dados);
       setEnviadoComo(criado.title);
+      setSubstituindo(null);
       setTexto('');
       setNomeDoArquivo('');
       setDisciplinaEscolhida(null);
@@ -148,7 +171,53 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
     }
   };
 
-  const pendencias = avaliacao.pendencias;
+  // Os avisos da importação e as pendências do padrão vão na mesma lista.
+  const itensDePendencia = [
+    ...avaliacao.avisosDaImportacao.map((a) => ({ chave: `imp-${a}`, onde: 'Importação', texto: descreverAvisoDaImportacao(a) })),
+    ...avaliacao.pendencias.map((p, i) => ({
+      chave: `${p.regra}-${p.linha}-${i}`,
+      onde: `Linha ${p.linha} · ${p.secao}`,
+      texto: p.mensagem,
+    })),
+  ];
+  const corrigir = (envio: MaterialSubmission) => {
+    setSubstituindo(envio);
+    setEnviadoComo('');
+    setErroDoEnvio('');
+    setAvisoDaLista('');
+    setTexto('');
+    setNomeDoArquivo('');
+    setDisciplinaEscolhida(envio.disciplineId);
+    setTemaEscolhido(envio.themeId);
+    setPaiId(envio.parentMaterialId ?? '');
+    topoDoFormulario.current?.scrollIntoView?.({ block: 'start' });
+  };
+
+  const cancelarCorrecao = () => {
+    setSubstituindo(null);
+    setTexto('');
+    setNomeDoArquivo('');
+    setDisciplinaEscolhida(null);
+    setTemaEscolhido(null);
+    setPaiId('');
+  };
+
+  const tentarDeNovo = async (envio: MaterialSubmission) => {
+    setOcupadoId(envio.id);
+    setAvisoDaLista('');
+    setErroDoEnvio('');
+    try {
+      await materialSubmissionsRepository.retry(envio.id, envio.title);
+      setAvisoDaLista(`“${envio.title}” voltou para a fila de revisão.`);
+      await recarregarEnvios();
+    } catch (err) {
+      setErroDoEnvio(mensagemDeErroDoEnvio(err));
+      void recarregarEnvios();
+    } finally {
+      setOcupadoId(null);
+    }
+  };
+
   const podeEnviar = avaliacao.aceito && !atualizando && !enviando && !filaCheia && envioDeMaterialDisponivel;
 
   return (
@@ -188,9 +257,31 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
       )}
 
       <section aria-labelledby="enviar-material-form-titulo" className="space-y-4">
-        <h2 id="enviar-material-form-titulo" className="text-xl font-bold text-slate-900 dark:text-slate-100">
-          Novo envio
+        <h2
+          id="enviar-material-form-titulo"
+          ref={topoDoFormulario}
+          className="text-xl font-bold text-slate-900 dark:text-slate-100"
+        >
+          {substituindo ? 'Corrigir envio' : 'Novo envio'}
         </h2>
+        {substituindo && (
+          <div
+            id="envio-substituindo"
+            className="p-3 rounded-xl border border-teal-300 bg-teal-50 dark:bg-teal-950/30 dark:border-teal-800 text-sm text-teal-900 dark:text-teal-200 flex flex-wrap items-center justify-between gap-2"
+          >
+            <span>
+              Você está corrigindo “{substituindo.title}”. Cole o texto corrigido: ele substitui o anterior e o envio volta
+              para a fila de revisão.
+            </span>
+            <button
+              type="button"
+              onClick={cancelarCorrecao}
+              className="min-h-11 px-3 py-2 rounded-xl border border-teal-400 text-xs font-semibold cursor-pointer"
+            >
+              Cancelar correção
+            </button>
+          </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -355,24 +446,26 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
                   ))}
                 </ul>
               )}
-              {pendencias.length > 0 && (
+              {avaliacao.tituloLongo && (
+                <p className="text-sm text-slate-800 dark:text-slate-200" id="envio-erro-titulo">
+                  {frasesDoTituloLongo()}
+                </p>
+              )}
+              {itensDePendencia.length > 0 && (
                 <div>
                   <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                    {pendencias.length === 1 ? '1 pendência do padrão' : `${pendencias.length} pendências do padrão`}
+                    {itensDePendencia.length === 1 ? '1 pendência do padrão' : `${itensDePendencia.length} pendências do padrão`}
                   </p>
                   <ul className="list-disc pl-5 text-sm text-slate-800 dark:text-slate-200 space-y-1" id="envio-pendencias">
-                    {pendencias.slice(0, MAX_PENDENCIAS_NA_TELA).map((p, i) => (
-                      <li key={`${p.regra}-${p.linha}-${i}`}>
-                        <span className="text-slate-500 dark:text-slate-400">
-                          Linha {p.linha} · {p.secao}:
-                        </span>{' '}
-                        {p.mensagem}
+                    {itensDePendencia.slice(0, MAX_PENDENCIAS_NA_TELA).map((p) => (
+                      <li key={p.chave}>
+                        <span className="text-slate-500 dark:text-slate-400">{p.onde}:</span> {p.texto}
                       </li>
                     ))}
                   </ul>
-                  {pendencias.length > MAX_PENDENCIAS_NA_TELA && (
+                  {itensDePendencia.length > MAX_PENDENCIAS_NA_TELA && (
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      e mais {pendencias.length - MAX_PENDENCIAS_NA_TELA}. Corrija as primeiras e o resto aparece.
+                      e mais {itensDePendencia.length - MAX_PENDENCIAS_NA_TELA}. Corrija as primeiras e o resto aparece.
                     </p>
                   )}
                 </div>
@@ -419,7 +512,7 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
             className="min-h-11 px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 disabled:dark:bg-slate-700 disabled:text-slate-500 disabled:dark:text-slate-400 disabled:cursor-not-allowed text-white text-sm font-semibold flex items-center gap-2 cursor-pointer transition-colors"
           >
             <Send className="w-4 h-4" aria-hidden="true" />
-            <span>{enviando ? 'Enviando…' : 'Enviar'}</span>
+            <span>{enviando ? 'Enviando…' : substituindo ? 'Substituir o texto e enviar de novo' : 'Enviar'}</span>
           </button>
         </div>
       </section>
@@ -429,12 +522,21 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
           Meus envios
         </h2>
         <ConnectionNotice status={statusDaLista} />
+        {avisoDaLista && (
+          <p id="envio-aviso-da-lista" role="status" className="text-sm text-emerald-800 dark:text-emerald-300">
+            {avisoDaLista}
+          </p>
+        )}
         <ListaDeEnvios
           id="meus-envios-lista"
           envios={envios}
           disciplines={disciplines}
           themes={themes}
           vazio="Você ainda não enviou nenhum material."
+          avisoDaFila={fraseDaEspera(situacao)}
+          onCorrigir={corrigir}
+          onTentarDeNovo={tentarDeNovo}
+          ocupadoId={ocupadoId}
         />
       </section>
     </div>

@@ -257,6 +257,14 @@ describe('44-D — conteúdo mínimo de cada prompt', () => {
     expect(p.indexOf('não escreva o material: responda só pedindo')).toBeLessThan(p.indexOf('AO ENTREGAR'));
   });
 
+  it('criação: fonte colada pela pessoa pode ser citada com identificação completa; "não abriu, não entra" vale para o que a IA busca', () => {
+    const p = PROMPT_CRIAR_MATERIAL;
+    expect(p).toContain('Fonte que a pessoa colar nesta conversa');
+    expect(p).toContain('autores ou entidade responsável, título, ano ou versão, e DOI ou URL');
+    expect(p).toContain('A regra de só citar o que foi aberto vale para o que você busca sozinho');
+    expect(p).toContain('Fonte que você busca e não abriu não entra na lista de referências');
+  });
+
   it('nenhum dos dois prompts fala em atestação ou em pessoa que atesta (o revisor de IA é quem confere)', () => {
     expect(PROMPT_CRIAR_MATERIAL).not.toMatch(/ateste|atesta/i);
     expect(PROMPT_REVISAR_MATERIAL).not.toMatch(/ateste|atesta/i);

@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import type { Compendium, Question, Theme } from '../../src/types';
+
+// As telas abrem por import dinâmico (lazy): com a suíte inteira em paralelo o padrão de
+// 1 s do Testing Library é curto e este teste falhava só por carga (passa sozinho em 0,5 s).
+configure({ asyncUtilTimeout: 8000 });
 
 // jsdom não tem ResizeObserver (usado pelo Header real) — stub mínimo.
 (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = class {

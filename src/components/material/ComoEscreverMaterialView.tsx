@@ -10,6 +10,7 @@ import {
   TEXTO_COPIAR_REVISAR,
 } from '../../content/padraoMaterial';
 import { dividirEmBlocos, paraExibicao } from '../../utils/padraoMaterial';
+import { copiarTexto } from '../../utils/areaDeTransferencia';
 
 // ============================================================================
 // "Como escrever um material" (44-D)
@@ -29,32 +30,6 @@ interface ComoEscreverMaterialViewProps {
 }
 
 type EstadoCopia = 'parado' | 'copiado' | 'falhou';
-
-/** Copia para a área de transferência; devolve se conseguiu. */
-async function copiarTexto(texto: string): Promise<boolean> {
-  try {
-    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(texto);
-      return true;
-    }
-  } catch {
-    // cai no plano B abaixo
-  }
-  try {
-    const area = document.createElement('textarea');
-    area.value = texto;
-    area.setAttribute('readonly', '');
-    area.style.position = 'fixed';
-    area.style.opacity = '0';
-    document.body.appendChild(area);
-    area.select();
-    const ok = document.execCommand('copy');
-    document.body.removeChild(area);
-    return ok;
-  } catch {
-    return false;
-  }
-}
 
 interface CartaoPromptProps {
   id: string;

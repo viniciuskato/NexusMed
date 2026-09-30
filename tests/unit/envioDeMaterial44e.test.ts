@@ -6,8 +6,12 @@ import {
   ESTADOS_DO_ENVIO,
   LIMITE_ENVIOS_EM_ESPERA,
   LIMITE_TEXTO_BYTES,
+  LIMITE_TITULO_CARACTERES,
   avaliarEnvio,
+  descreverAvisoDaImportacao,
   estadoEmPalavras,
+  fraseDaEspera,
+  motivosDaReprovacao,
   lerArquivoParaEnvio,
   mensagemDeErroDoEnvio,
   tamanhoEmBytes,
@@ -117,6 +121,63 @@ describe('44-E — avaliação ao vivo do arquivo', () => {
     expect(r.tamanhoExcedido).toBe(true);
     expect(r.aceito).toBe(false);
     expect(tamanhoLegivel(LIMITE_TEXTO_BYTES)).toBe('300 KB');
+  });
+});
+
+describe('44-F — avisos da importação, título e motivos da reprovação', () => {
+  it('aviso da importação ("Citações em formato antigo") barra o envio e entra na lista de pendências', () => {
+    const r = avaliar(materialParaEnvio({ corpo: 'Texto com citação antiga [12] e outra [3].' }));
+    expect(r.avisosDaImportacao.join(' ')).toMatch(/Citações em formato antigo/);
+    expect(r.aceito).toBe(false);
+    expect(motivosDaReprovacao(r).join(' ')).toMatch(/Citações em formato antigo/);
+  });
+
+  it('a falta de Autor não é aviso que barre: o padrão manda omitir a linha', () => {
+    const l = lerArquivoParaEnvio(materialParaEnvio(), disciplinas, temas);
+    expect(l.avisosDaImportacao).toEqual([]);
+    expect(avaliar(materialParaEnvio()).aceito).toBe(true);
+  });
+
+  it('avisos de campo ausente viram uma frase com o nome do campo; avisos longos ficam como estão', () => {
+    expect(descreverAvisoDaImportacao('Palavras-chave')).toBe('Falta o campo “Palavras-chave”.');
+    const longo = 'Citações em formato antigo (ex.: "[12]", sem link) encontradas no texto — troque por "[N](#ref-N)"';
+    expect(descreverAvisoDaImportacao(longo)).toBe(longo);
+  });
+
+  it('título com mais de 300 caracteres barra o envio, com frase leiga', () => {
+    const titulo = 'T'.repeat(LIMITE_TITULO_CARACTERES + 1);
+    const r = avaliar(materialParaEnvio({ titulo }));
+    expect(r.tituloLongo).toBe(true);
+    expect(r.aceito).toBe(false);
+    expect(motivosDaReprovacao(r).join(' ')).toContain('O título passa de 300 caracteres');
+    expect(avaliar(materialParaEnvio({ titulo: 'T'.repeat(LIMITE_TITULO_CARACTERES) })).tituloLongo).toBe(false);
+  });
+
+  it('motivosDaReprovacao lista tudo o que barra, em frases, e nada quando o arquivo é aceito', () => {
+    expect(motivosDaReprovacao(avaliar(materialParaEnvio()))).toEqual([]);
+    const ruim = motivosDaReprovacao(avaliar(materialComPendencia({ disciplina: 'Inventada' })));
+    expect(ruim.some((m) => m.includes('“Inventada”'))).toBe(true);
+    expect(ruim.some((m) => /Linha \d+ · .*≤/.test(m))).toBe(true);
+  });
+
+  it('a frase da espera explica o limite do dia e o do mês, e some quando não há limite', () => {
+    expect(fraseDaEspera(null)).toBeNull();
+    expect(fraseDaEspera({ usadasHoje: 1, limitePorDia: 5, mesEsgotado: false })).toBeNull();
+    expect(fraseDaEspera({ usadasHoje: 5, limitePorDia: 5, mesEsgotado: false })).toBe(
+      'Você já usou as 5 revisões de hoje. Seu envio será revisado amanhã.',
+    );
+    expect(fraseDaEspera({ usadasHoje: 1, limitePorDia: 1, mesEsgotado: false })).toBe(
+      'Você já usou a sua única revisão de hoje. Seu envio será revisado amanhã.',
+    );
+    expect(fraseDaEspera({ usadasHoje: 0, limitePorDia: 5, mesEsgotado: true })).toMatch(/limite de revisões deste mês/);
+    // O mês esgotado vale mais que o dia.
+    expect(fraseDaEspera({ usadasHoje: 5, limitePorDia: 5, mesEsgotado: true })).toMatch(/deste mês/);
+  });
+
+  it('erro de envio já alterado é dito em uma frase, sem código', () => {
+    expect(mensagemDeErroDoEnvio({ code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned' })).toMatch(
+      /já não pode ser alterado/,
+    );
   });
 });
 

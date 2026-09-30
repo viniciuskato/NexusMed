@@ -742,6 +742,21 @@ esperando revisão por pessoa e 300 KB por texto, travados no banco.
 **Depende de.** 44-D.
 **Estado.** Em andamento.
 
+### 44-F — Revisor de IA do NexusMed
+
+**Origem.** Decisão do dono (29/09): tudo que for publicado passa por um
+revisor de IA dentro do site, pago por revisão, com teto mensal na conta.
+
+**Aceite.** Cada envio é revisado no servidor com o prompt revisor e a Parte 1
+do padrão, sem cópia; termina em apto, não apto ou erro (nunca apto por
+engano: veredito ilegível é erro). O autor vê achados e correção e reenvia.
+Tokens e buscas de cada revisão ficam guardados; limites por pessoa e mensal
+no banco.
+
+**Fora de escopo.** Publicar (44-G); questões.
+**Depende de.** 44-E; segredo da API criado pelo dono.
+**Estado.** Em andamento.
+
 ---
 
 ## 9. Frente 45 — Confiabilidade

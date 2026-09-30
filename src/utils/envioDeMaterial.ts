@@ -19,6 +19,8 @@ import { parseCompendiumMarkdownText } from './compendiumMarkdownImport';
 export const LIMITE_TEXTO_BYTES = 307200;
 /** Envios esperando revisão ao mesmo tempo, por pessoa — o mesmo limite do banco. */
 export const LIMITE_ENVIOS_EM_ESPERA = 3;
+/** Título mais longo que isto é recusado (o banco também recusa). */
+export const LIMITE_TITULO_CARACTERES = 300;
 /** Arquivo maior que isto nem é lido: não cabe no limite com folga e travaria a tela. */
 export const LIMITE_LEITURA_DE_ARQUIVO_BYTES = LIMITE_TEXTO_BYTES * 4;
 
@@ -64,12 +66,23 @@ export interface LeituraDoArquivo {
   titulo: string;
   /** A checagem do padrão e a recusa do importador, como em `npm run checar:material`. */
   checagem: ResultadoDaChecagem;
+  /**
+   * Avisos que a importação dá ao aceitar o arquivo (ex.: "Citações em formato
+   * antigo"), menos os que não são defeito: Autor é opcional no padrão, e
+   * Disciplina/Tema fora do catálogo são tratados à parte, com a escolha da tela.
+   */
+  avisosDaImportacao: string[];
   /** Disciplina e Tema que o arquivo declara, resolvidos no catálogo (id null = não existe no catálogo). */
   disciplinaDoArquivo: { nome: string; id: string | null } | null;
   temaDoArquivo: { nome: string; id: string | null } | null;
 }
 
 /** Lê o arquivo uma vez (a parte cara); `avaliarEnvio` só compara com o que a pessoa escolheu. */
+/** Aviso da importação que não é defeito do arquivo. */
+function avisoIgnorado(aviso: string): boolean {
+  return /^Autor$/i.test(aviso) || /^Disciplina ".*" não encontrada/.test(aviso) || /^Tema ".*" não encontrado/.test(aviso);
+}
+
 export function lerArquivoParaEnvio(texto: string, disciplines: Discipline[], themes: Theme[]): LeituraDoArquivo {
   const checagem = checarMaterialMarkdown(texto);
   const importacao = parseCompendiumMarkdownText(texto, disciplines, themes, []);
@@ -79,6 +92,7 @@ export function lerArquivoParaEnvio(texto: string, disciplines: Discipline[], th
     bytes: tamanhoEmBytes(texto),
     titulo: preview?.title ?? '',
     checagem,
+    avisosDaImportacao: preview ? preview.missingFields.filter((a) => !avisoIgnorado(a)) : [],
     disciplinaDoArquivo: preview ? { nome: preview.disciplineName, id: preview.disciplineId } : null,
     temaDoArquivo: preview ? { nome: preview.themeName, id: preview.themeId } : null,
   };
@@ -97,6 +111,10 @@ export interface AvaliacaoDoEnvio {
   errosDeImportacao: string[];
   /** Pendências da checagem do padrão. */
   pendencias: PendenciaDoPadrao[];
+  /** Avisos que a importação deu ao ler o arquivo: também barram o envio. */
+  avisosDaImportacao: string[];
+  /** O título passa de 300 caracteres. */
+  tituloLongo: boolean;
   /** Disciplina/Tema: faltam escolher, não existem no catálogo ou diferem do que o arquivo declara. */
   problemasDeCatalogo: string[];
   /** Só com tudo acima limpo o botão Enviar habilita. */
@@ -113,6 +131,8 @@ export function avaliarEnvio(
   const tamanhoExcedido = leitura.bytes > LIMITE_TEXTO_BYTES;
   const errosDeImportacao = vazio ? [] : leitura.checagem.errosDeImportacao;
   const pendencias = vazio ? [] : leitura.checagem.pendencias;
+  const avisosDaImportacao = vazio ? [] : leitura.avisosDaImportacao;
+  const tituloLongo = leitura.titulo.trim().length > LIMITE_TITULO_CARACTERES;
 
   const problemasDeCatalogo: string[] = [];
   if (!vazio) {
@@ -151,10 +171,65 @@ export function avaliarEnvio(
     !tamanhoExcedido &&
     errosDeImportacao.length === 0 &&
     pendencias.length === 0 &&
+    avisosDaImportacao.length === 0 &&
+    !tituloLongo &&
     problemasDeCatalogo.length === 0 &&
     leitura.titulo.trim().length > 0;
 
-  return { vazio, bytes: leitura.bytes, tamanhoExcedido, errosDeImportacao, pendencias, problemasDeCatalogo, aceito };
+  return {
+    vazio,
+    bytes: leitura.bytes,
+    tamanhoExcedido,
+    errosDeImportacao,
+    pendencias,
+    avisosDaImportacao,
+    tituloLongo,
+    problemasDeCatalogo,
+    aceito,
+  };
+}
+
+/** O aviso da importação em uma frase (os de campo ausente vêm só com o nome do campo). */
+export function descreverAvisoDaImportacao(aviso: string): string {
+  return /^[^—.]{1,40}$/.test(aviso) ? `Falta o campo “${aviso}”.` : aviso;
+}
+
+export function frasesDoTituloLongo(): string {
+  return `O título passa de ${LIMITE_TITULO_CARACTERES} caracteres. Encurte-o (uma linha só, direto ao assunto).`;
+}
+
+/**
+ * Por que o arquivo não pode ir à revisão, em frases (a lista que o servidor
+ * guarda como achados quando reprova o arquivo antes de gastar com a IA).
+ */
+export function motivosDaReprovacao(av: AvaliacaoDoEnvio): string[] {
+  const motivos: string[] = [];
+  if (av.vazio) motivos.push('O texto do material está vazio.');
+  if (av.tamanhoExcedido) {
+    motivos.push(`O texto tem ${tamanhoLegivel(av.bytes)} e o limite é ${tamanhoLegivel(LIMITE_TEXTO_BYTES)}.`);
+  }
+  motivos.push(...av.errosDeImportacao);
+  motivos.push(...av.problemasDeCatalogo);
+  if (av.tituloLongo) motivos.push(frasesDoTituloLongo());
+  motivos.push(...av.avisosDaImportacao.map(descreverAvisoDaImportacao));
+  motivos.push(...av.pendencias.map((p) => `Linha ${p.linha} · ${p.secao}: ${p.mensagem}`));
+  return motivos;
+}
+
+/**
+ * Por que um envio "aguardando revisão" está esperando, em uma frase (limite de
+ * custo do revisor de IA, travado no banco). Nulo quando não há motivo.
+ */
+export function fraseDaEspera(situacao: { usadasHoje: number; limitePorDia: number; mesEsgotado: boolean } | null): string | null {
+  if (!situacao) return null;
+  if (situacao.mesEsgotado) {
+    return 'O limite de revisões deste mês foi atingido. Seu envio continua na fila e será revisado quando o limite voltar.';
+  }
+  if (situacao.limitePorDia > 0 && situacao.usadasHoje >= situacao.limitePorDia) {
+    const usadas = situacao.limitePorDia === 1 ? 'a sua única revisão' : `as ${situacao.limitePorDia} revisões`;
+    return `Você já usou ${usadas} de hoje. Seu envio será revisado amanhã.`;
+  }
+  return null;
 }
 
 /** Frase leiga para o erro que o banco devolve ao gravar o envio. */
@@ -169,6 +244,9 @@ export function mensagemDeErroDoEnvio(err: unknown): string {
   }
   if (texto.includes('publicado') && texto.includes('material acima')) {
     return 'O material acima precisa estar publicado. Escolha outro ou deixe em branco.';
+  }
+  if (e.code === 'PGRST116') {
+    return 'Este envio já não pode ser alterado: o estado dele mudou. Atualize a página para ver como está.';
   }
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     return 'Sem conexão. O material não foi enviado; tente de novo quando a rede voltar.';

@@ -9,6 +9,24 @@ import { fetchAllRows } from './supabasePaging';
 // O autor NUNCA é enviado: o banco o define como auth.uid() (a coluna não tem
 // privilégio de gravação para o cliente). O estado nasce "aguardando revisão".
 // A RLS mostra a cada pessoa só os próprios envios; admin lê todos.
+//
+// 44-F: cada envio vem com a revisão de IA que vale para o TEXTO ATUAL dele
+// (mesmo hash). Revisão de um texto que já foi substituído não aparece.
+// Substituir o texto (ou tentar de novo) só mexe em colunas que o cliente pode
+// gravar; a volta à fila é do banco.
+
+export type VereditoDaRevisao = 'apto' | 'nao_apto' | 'erro';
+
+export interface MaterialReviewView {
+  id: string;
+  verdict: VereditoDaRevisao;
+  /** Os achados, em texto da IA (Markdown). Nunca HTML: quem exibe passa por SafeMarkdown. */
+  findingsText: string | null;
+  /** O bloco de correção, para devolver a quem escreveu o material. */
+  correctionBlock: string | null;
+  errorKind: string | null;
+  completedAt: string | null;
+}
 
 export interface MaterialSubmission {
   id: string;
@@ -19,6 +37,8 @@ export interface MaterialSubmission {
   status: string;
   createdAt: string;
   updatedAt: string;
+  /** A revisão de IA do texto atual, se já houve uma. */
+  review?: MaterialReviewView | null;
   /** Só na leitura de admin. */
   author?: { id: string; name: string; email: string } | null;
 }
@@ -31,17 +51,42 @@ export interface NewMaterialSubmission {
   contentMd: string;
 }
 
+/** Onde estão os limites de revisão da pessoa (44-F). */
+export interface SituacaoDaRevisao {
+  usadasHoje: number;
+  limitePorDia: number;
+  /** O teto mensal de revisões do site foi atingido: os envios esperam. */
+  mesEsgotado: boolean;
+}
+
 export interface MaterialSubmissionsRepository {
   /** Envios da própria pessoa, do mais novo para o mais antigo. */
   listMine(): Promise<MaterialSubmission[]>;
   /** Todos os envios (só admin; para os demais a RLS devolve só os próprios). */
   listAll(): Promise<MaterialSubmission[]>;
   submit(input: NewMaterialSubmission): Promise<MaterialSubmission>;
+  /** Substitui o texto de um envio "não apto" ou "erro" (o banco o devolve à fila). */
+  replaceText(id: string, input: NewMaterialSubmission): Promise<MaterialSubmission>;
+  /** Manda o mesmo texto de novo para revisão (envio "erro"). */
+  retry(id: string, title: string): Promise<MaterialSubmission>;
+  situacaoDaRevisao(): Promise<SituacaoDaRevisao | null>;
 }
 
 interface AuthorRow {
   display_name: string | null;
   email: string | null;
+}
+
+interface ReviewRow {
+  id: string;
+  status: string;
+  verdict: VereditoDaRevisao | null;
+  findings_text: string | null;
+  correction_block: string | null;
+  error_kind: string | null;
+  content_sha256: string;
+  completed_at: string | null;
+  created_at: string;
 }
 
 interface Row {
@@ -53,13 +98,35 @@ interface Row {
   status: string;
   created_at: string;
   updated_at: string;
+  content_sha256?: string | null;
+  reviews?: ReviewRow[] | null;
   // A junção com `profiles` é um-para-um; o tipo inferido a trata como lista.
   author?: AuthorRow | AuthorRow[] | null;
   author_id?: string;
 }
 
 // Sem `content_md`: as listas não precisam do texto (até 300 KB por linha).
-const COLUMNS = 'id, title, discipline_id, theme_id, parent_material_id, status, created_at, updated_at';
+const COLUMNS = 'id, title, discipline_id, theme_id, parent_material_id, status, created_at, updated_at, content_sha256';
+const REVIEW_COLUMNS =
+  'reviews:material_reviews(id, status, verdict, findings_text, correction_block, error_kind, content_sha256, completed_at, created_at)';
+
+/** A revisão terminada mais recente que vale para o texto atual (mesmo hash). */
+export function revisaoQueValeParaOTexto(row: Pick<Row, 'content_sha256' | 'reviews'>): MaterialReviewView | null {
+  if (!row.content_sha256) return null;
+  const validas = (row.reviews ?? [])
+    .filter((r) => r.content_sha256 === row.content_sha256 && r.verdict && (r.status === 'concluida' || r.status === 'erro'))
+    .sort((a, b) => (b.completed_at ?? b.created_at).localeCompare(a.completed_at ?? a.created_at));
+  const r = validas[0];
+  if (!r || !r.verdict) return null;
+  return {
+    id: r.id,
+    verdict: r.verdict,
+    findingsText: r.findings_text,
+    correctionBlock: r.correction_block,
+    errorKind: r.error_kind,
+    completedAt: r.completed_at,
+  };
+}
 
 function fromRow(row: Row): MaterialSubmission {
   const autor = Array.isArray(row.author) ? row.author[0] : row.author;
@@ -72,11 +139,20 @@ function fromRow(row: Row): MaterialSubmission {
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    review: revisaoQueValeParaOTexto(row),
     author: autor
       ? { id: row.author_id ?? '', name: autor.display_name ?? '', email: autor.email ?? '' }
       : undefined,
   };
 }
+
+const DADOS_DO_ENVIO = (input: NewMaterialSubmission) => ({
+  title: input.title,
+  discipline_id: input.disciplineId,
+  theme_id: input.themeId,
+  parent_material_id: input.parentMaterialId,
+  content_md: input.contentMd,
+});
 
 class SupabaseMaterialSubmissionsRepository implements MaterialSubmissionsRepository {
   async listMine(): Promise<MaterialSubmission[]> {
@@ -86,7 +162,7 @@ class SupabaseMaterialSubmissionsRepository implements MaterialSubmissionsReposi
     const rows = await fetchAllRows<Row>((from, to) =>
       supabase
         .from('material_submissions')
-        .select(COLUMNS)
+        .select(`${COLUMNS}, ${REVIEW_COLUMNS}`)
         .eq('author_id', uid)
         .order('created_at', { ascending: false })
         .order('id')
@@ -99,7 +175,7 @@ class SupabaseMaterialSubmissionsRepository implements MaterialSubmissionsReposi
     const rows = await fetchAllRows<Row>((from, to) =>
       supabase
         .from('material_submissions')
-        .select(`${COLUMNS}, author_id, author:profiles!author_id(display_name, email)`)
+        .select(`${COLUMNS}, ${REVIEW_COLUMNS}, author_id, author:profiles!author_id(display_name, email)`)
         .order('created_at', { ascending: false })
         .order('id')
         .range(from, to),
@@ -110,17 +186,43 @@ class SupabaseMaterialSubmissionsRepository implements MaterialSubmissionsReposi
   async submit(input: NewMaterialSubmission): Promise<MaterialSubmission> {
     const { data, error } = await supabase
       .from('material_submissions')
-      .insert({
-        title: input.title,
-        discipline_id: input.disciplineId,
-        theme_id: input.themeId,
-        parent_material_id: input.parentMaterialId,
-        content_md: input.contentMd,
-      })
+      .insert(DADOS_DO_ENVIO(input))
       .select(COLUMNS)
       .single();
     if (error) throw error;
     return fromRow(data as Row);
+  }
+
+  async replaceText(id: string, input: NewMaterialSubmission): Promise<MaterialSubmission> {
+    const { data, error } = await supabase
+      .from('material_submissions')
+      .update(DADOS_DO_ENVIO(input))
+      .eq('id', id)
+      .select(COLUMNS)
+      .single();
+    if (error) throw error;
+    return fromRow(data as Row);
+  }
+
+  async retry(id: string, title: string): Promise<MaterialSubmission> {
+    // Regravar o título como está é uma alteração como outra qualquer para o
+    // banco, que devolve o envio à fila; o texto não passa pela rede de novo.
+    const { data, error } = await supabase
+      .from('material_submissions')
+      .update({ title })
+      .eq('id', id)
+      .select(COLUMNS)
+      .single();
+    if (error) throw error;
+    return fromRow(data as Row);
+  }
+
+  async situacaoDaRevisao(): Promise<SituacaoDaRevisao | null> {
+    const { data, error } = await supabase.rpc('situacao_da_revisao');
+    if (error) throw error;
+    const s = data as { usadas_hoje?: number; limite_por_dia?: number; mes_esgotado?: boolean } | null;
+    if (!s) return null;
+    return { usadasHoje: s.usadas_hoje ?? 0, limitePorDia: s.limite_por_dia ?? 0, mesEsgotado: Boolean(s.mes_esgotado) };
   }
 }
 
@@ -135,6 +237,15 @@ class UnavailableMaterialSubmissionsRepository implements MaterialSubmissionsRep
   }
   async submit(): Promise<MaterialSubmission> {
     throw new Error('Envio de material indisponível sem o servidor.');
+  }
+  async replaceText(): Promise<MaterialSubmission> {
+    throw new Error('Envio de material indisponível sem o servidor.');
+  }
+  async retry(): Promise<MaterialSubmission> {
+    throw new Error('Envio de material indisponível sem o servidor.');
+  }
+  async situacaoDaRevisao(): Promise<SituacaoDaRevisao | null> {
+    return null;
   }
 }
 
