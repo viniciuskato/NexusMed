@@ -30,7 +30,11 @@
 -- Proteção contra atualização em cima de versão velha: o envio guarda o hash do
 -- material no momento do envio (`base_snapshot_hash`). Se o material mudar depois (outra
 -- atualização, edição do admin), o servidor recusa aplicar, com recado leigo; reenviar
--- refaz a base e volta o envio para a revisão.
+-- refaz a base e volta o envio para a revisão. A revisão de IA também guarda a base que o
+-- envio tinha quando ela foi reservada (`material_reviews.base_snapshot_hash`): o envio só
+-- fica "apto" sem revisão nova, e o servidor só aplica, quando a base de agora é a base da
+-- revisão que o aprovou — senão volta à revisão (uma revisão feita sobre a versão velha do
+-- material não vale para a versão nova).
 --
 -- AGENTS.md riscos 13 e 14: toda função nova com revoke de public/anon (e de
 -- authenticated quando é do servidor).
@@ -123,6 +127,59 @@ $$;
 revoke all on function public.pode_atualizar_material(uuid) from public, anon;
 grant execute on function public.pode_atualizar_material(uuid) to authenticated;
 
+-- A revisão guarda a BASE que o envio de atualização tinha quando foi reservada (só o banco grava,
+-- no mesmo gatilho que guarda o lugar). Nula em revisão de envio de material novo.
+alter table public.material_reviews add column base_snapshot_hash text;
+
+create or replace function app.material_reviews_guardar_lugar()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.submission_id is not null then
+    select s.discipline_id, s.theme_id, s.parent_material_id, s.base_snapshot_hash
+      into new.discipline_id, new.theme_id, new.parent_material_id, new.base_snapshot_hash
+      from public.material_submissions s where s.id = new.submission_id;
+  elsif new.question_submission_id is not null then
+    -- (44-H2) o "lugar" de um lote de questões é o conjunto de materiais a que elas se ligam.
+    select s.material_ids into new.material_ids
+      from public.question_submissions s where s.id = new.question_submission_id;
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function app.material_reviews_guardar_lugar() from public, anon, authenticated;
+
+-- Para o gatilho do envio de atualização: o envio é do próprio autor e a revisão "apto" válida do texto
+-- e do lugar foi feita sobre a MESMA base que o envio tem agora.
+create or replace function app.envio_tem_revisao_apto_do_autor_para_base(
+  p_submission uuid, p_discipline uuid, p_theme uuid, p_parent uuid, p_base text
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.material_submissions s
+    where s.id = p_submission
+      and (auth.uid() is null or s.author_id = auth.uid())
+      and exists (
+        select 1 from public.material_reviews r
+        where r.id = app.revisao_valida_do_envio_para_o_lugar(s.id, p_discipline, p_theme, p_parent)
+          and r.verdict = 'apto'
+          and r.base_snapshot_hash is not distinct from p_base
+      )
+  );
+$$;
+
+revoke all on function app.envio_tem_revisao_apto_do_autor_para_base(uuid, uuid, uuid, uuid, text) from public, anon;
+grant execute on function app.envio_tem_revisao_apto_do_autor_para_base(uuid, uuid, uuid, uuid, text) to authenticated;
+
 -- ----------------------------------------------------------------------------
 -- 2. Gatilho do envio (a versão da 44-G, com o tipo "atualização")
 -- ----------------------------------------------------------------------------
@@ -175,8 +232,11 @@ begin
       new.status := case
         when new.content_md = old.content_md
              and app.envio_tem_revisao_apto_do_autor(old.id, new.discipline_id, new.theme_id, new.parent_material_id)
-             -- Atualização: a revisão foi sobre o texto E sobre a versão do material daquela hora.
-             and (new.target_material_id is null or new.base_snapshot_hash is not distinct from old.base_snapshot_hash)
+             -- Atualização: a revisão que aprovou tem de ser a da base de agora (a que o material tem
+             -- agora), não a de uma versão velha do material.
+             and (new.target_material_id is null
+                  or app.envio_tem_revisao_apto_do_autor_para_base(
+                       old.id, new.discipline_id, new.theme_id, new.parent_material_id, new.base_snapshot_hash))
           then 'apto'
         else 'aguardando_revisao'
       end;
@@ -268,6 +328,10 @@ as $$
     and s.target_material_id is not null
     and s.applied_at is null
     and app.revisao_apto_do_envio(s.id) is not null
+    and exists (
+      select 1 from public.material_reviews r
+      where r.id = app.revisao_apto_do_envio(s.id) and r.base_snapshot_hash is not distinct from s.base_snapshot_hash
+    )
   order by s.updated_at, s.id
   limit greatest(p_max, 0);
 $$;
@@ -325,6 +389,12 @@ declare
   v_rf_txt text[];
   v_rf_used boolean[];
   v_rf_file uuid[] := '{}';
+  -- posições: só se regravam quando a ordem relativa muda
+  v_viu_nova boolean := false;
+  v_nova_no_meio boolean := false;
+  v_renum boolean;
+  v_resto uuid[];
+  v_prox int;
 begin
   -- Trava do envio: duas aplicações do mesmo envio ao mesmo tempo se serializam.
   select * into s from public.material_submissions where id = p_submission_id for update;
@@ -345,6 +415,10 @@ begin
     return jsonb_build_object('resultado', 'revisao_invalida');
   end if;
   select * into r from public.material_reviews where id = p_review_id;
+  -- E a revisão foi feita sobre a base que o envio tem (senão ela não viu esta versão do material).
+  if r.base_snapshot_hash is distinct from s.base_snapshot_hash then
+    return jsonb_build_object('resultado', 'revisao_invalida');
+  end if;
 
   if p_material is null or jsonb_typeof(p_material) <> 'object'
      or jsonb_typeof(p_material->'sections') is distinct from 'array'
@@ -368,7 +442,7 @@ begin
   elsif s.base_snapshot_hash is distinct from app.material_snapshot_hash(m.id) then
     v_motivo := 'O material mudou depois que você enviou esta atualização (outra atualização ou uma edição). Exporte o material de novo, refaça as mudanças sobre a versão atual e envie outra vez.';
   elsif exists (
-    select 1 from public.materials o where o.id <> m.id and lower(btrim(o.title)) = lower(v_title)
+    select 1 from public.materials o where o.id <> m.id and app.titulo_normalizado(o.title) = app.titulo_normalizado(v_title)
   ) then
     v_motivo := format('Já existe outro material com o título “%s”. Troque o título do arquivo e envie de novo (o texto muda, então o envio volta para a revisão).', v_title);
   end if;
@@ -425,6 +499,11 @@ begin
         end if;
       end loop;
       v_file_ids := v_file_ids || v_found;   -- nulo = seção nova
+      if v_found is null then
+        v_viu_nova := true;
+      elsif v_viu_nova then
+        v_nova_no_meio := true;   -- seção nova antes de uma que continua: as posições mudam
+      end if;
       v_idx := v_idx + 1;
     end loop;
 
@@ -432,9 +511,20 @@ begin
     -- a ligação da questão com a seção fica sem seção, mas com o material).
     delete from public.material_sections
      where material_id = m.id and id <> all (array_remove(v_file_ids, null));
-    -- Libera as posições (unique material_id + sort_order) antes de reordenar.
-    update public.material_sections set sort_order = sort_order + 1000000
-     where material_id = m.id and sort_order < 1000000;
+    -- As posições só são regravadas quando a ORDEM RELATIVA muda (seção reordenada ou nova antes de
+    -- uma que continua). Renumerar 0..n-1 um material cujas posições já estão em ordem (ex.: a
+    -- primeira seção na posição 1) mudaria o hash sem mudar o conteúdo: ida e volta sem mudança
+    -- precisa ser "sem mudança" (AGENTS.md, risco 17). Seção nova no fim entra depois da última.
+    select coalesce(array_agg(x.id order by x.sort_order), '{}') into v_resto
+      from public.material_sections x where x.material_id = m.id;
+    v_renum := v_nova_no_meio or v_resto is distinct from array_remove(v_file_ids, null);
+    select case when v_renum then 0 else coalesce(max(x.sort_order) + 1, 0) end into v_prox
+      from public.material_sections x where x.material_id = m.id;
+    if v_renum then
+      -- Libera as posições (unique material_id + sort_order) antes de reordenar.
+      update public.material_sections set sort_order = sort_order + 1000000
+       where material_id = m.id and sort_order < 1000000;
+    end if;
 
     v_idx := 0;
     for v_section in select * from jsonb_array_elements(p_material->'sections') loop
@@ -443,13 +533,14 @@ begin
         insert into public.material_sections
           (material_id, sort_order, title, mechanism_tag, content, key_takeaways, clinical_pearl, warning_alert)
         values (
-          m.id, v_idx, btrim(v_section->>'title'),
+          m.id, case when v_renum then v_idx else v_prox end, btrim(v_section->>'title'),
           nullif(v_section->>'mechanism_tag', ''), v_section->>'content', v_kt,
           nullif(v_section->>'clinical_pearl', ''), nullif(v_section->>'warning_alert', '')
         );
+        v_prox := v_prox + 1;
       else
         update public.material_sections set
-          sort_order = v_idx,
+          sort_order = case when v_renum then v_idx else sort_order end,
           title = btrim(v_section->>'title'),
           mechanism_tag = nullif(v_section->>'mechanism_tag', ''),
           content = v_section->>'content',
@@ -476,6 +567,8 @@ begin
       from public.material_references x where x.material_id = m.id;
     v_rf_used := array_fill(false, array[coalesce(cardinality(v_rf_ids), 0)]);
 
+    v_viu_nova := false;
+    v_nova_no_meio := false;
     for v_ref in select btrim(value) from jsonb_array_elements_text(coalesce(p_material->'references', '[]'::jsonb)) loop
       v_found := null;
       for v_j in 1 .. coalesce(cardinality(v_rf_ids), 0) loop
@@ -486,16 +579,28 @@ begin
         end if;
       end loop;
       v_rf_file := v_rf_file || v_found;
+      if v_found is null then
+        v_viu_nova := true;
+      elsif v_viu_nova then
+        v_nova_no_meio := true;
+      end if;
     end loop;
 
     delete from public.material_references
      where material_id = m.id and id <> all (array_remove(v_rf_file, null));
+    -- Mesma regra das seções: só regrava as posições quando a ordem relativa muda.
+    select coalesce(array_agg(x.id order by x.sort_order, x.created_at, x.id), '{}') into v_resto
+      from public.material_references x where x.material_id = m.id;
+    v_renum := v_nova_no_meio or v_resto is distinct from array_remove(v_rf_file, null);
+    select case when v_renum then 0 else coalesce(max(x.sort_order) + 1, 0) end into v_prox
+      from public.material_references x where x.material_id = m.id;
     v_idx := 0;
     for v_ref in select btrim(value) from jsonb_array_elements_text(coalesce(p_material->'references', '[]'::jsonb)) loop
       if v_rf_file[v_idx + 1] is null then
         insert into public.material_references (material_id, citation_text, sort_order)
-        values (m.id, v_ref, v_idx);
-      else
+        values (m.id, v_ref, case when v_renum then v_idx else v_prox end);
+        v_prox := v_prox + 1;
+      elsif v_renum then
         update public.material_references set sort_order = v_idx
          where id = v_rf_file[v_idx + 1] and sort_order is distinct from v_idx;
       end if;

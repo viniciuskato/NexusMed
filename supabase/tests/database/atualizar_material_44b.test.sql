@@ -190,7 +190,7 @@ as $$
   from public.materials m where m.id = p_material;
 $$;
 
-select * from no_plan();
+select plan(111);
 
 select tests.clear_auth();
 select tests.create_user('b.admin@test.local', 'admin', 'active') as v_admin \gset
@@ -542,6 +542,33 @@ select tests.clear_auth();
 select is((select status from public.material_submissions where id = :'v_ur'), 'aguardando_revisao', 'a base mudou: volta à revisão, não a "apto"');
 select is((select base_snapshot_hash from public.material_submissions where id = :'v_ur'), :'v_h_editado', 'com a base refeita sobre o material de agora');
 
+-- Um SEGUNDO reenvio, sem revisão nova: a revisão que existe (R1) viu a base ANTIGA; o envio não volta a "apto".
+select tests.authenticate_as(:'v_autor');
+select is(tests.affected_rows(format($$ update public.material_submissions set title = title where id = %L $$, :'v_ur')), 1, 'o autor reenvia de novo');
+select tests.clear_auth();
+select is((select status from public.material_submissions where id = :'v_ur'), 'aguardando_revisao', 'a revisão antiga viu a base antiga: o 2º reenvio não volta a "apto" com ela');
+-- Mesmo forçando "apto" (o servidor é a última defesa), a aplicação exige base atual = base da revisão.
+select base_snapshot_hash as v_base_r1 from public.material_reviews where id = tests.review_of(:'v_ur') \gset
+select isnt(:'v_base_r1'::text, :'v_h_editado'::text, 'a revisão R1 guardou a base antiga (a do envio quando foi reservada)');
+update public.material_submissions set status = 'apto' where id = :'v_ur';
+select tests.authenticate_as_service();
+select is((select count(*)::int from public.revisao_envios_de_atualizacao_para_aplicar(1000) where submission_id = :'v_ur'), 0, 'o envio com revisão de outra base está fora da fila de aplicar');
+select is(
+  (public.revisao_aplicar_atualizacao(:'v_ur', tests.review_of(:'v_ur'), tests.sha_do_envio(:'v_ur'), :'v_texto_novo'::jsonb))->>'resultado',
+  'revisao_invalida', 'e aplicar com a revisão de outra base é recusado'
+);
+select tests.clear_auth();
+select is(app.material_snapshot_hash(:'v_m'), :'v_h_editado'::text, 'nada mudou no ar (a edição do admin não foi pisada)');
+update public.material_submissions set status = 'nao_apto' where id = :'v_ur';
+-- Uma revisão NOVA (reservada com a base de agora) aprova: aí sim o reenvio volta a "apto" sem outra revisão.
+insert into public.material_reviews (submission_id, content_sha256, status, verdict, model, completed_at)
+select s.id, s.content_sha256, 'concluida', 'apto', 'claude-opus-5-5', now() from public.material_submissions s where s.id = :'v_ur';
+select is((select base_snapshot_hash from public.material_reviews where id = tests.review_of(:'v_ur')), :'v_h_editado'::text, 'a revisão nova guarda a base de agora');
+select tests.authenticate_as(:'v_autor');
+select is(tests.affected_rows(format($$ update public.material_submissions set title = title where id = %L $$, :'v_ur')), 1, 'o autor reenvia depois da revisão nova');
+select tests.clear_auth();
+select is((select status from public.material_submissions where id = :'v_ur'), 'apto', 'com a revisão da base de agora, o envio volta a "apto"');
+
 -- O material mudou de lugar depois do envio: recusado.
 select tests.envio_de_atualizacao(:'v_autor', :'v_m', 'lugar ' || :'v_sfx') as v_ul \gset
 update public.materials set theme_id = :'v_theme_b' where id = :'v_m';
@@ -567,6 +594,16 @@ select is(
 select tests.clear_auth();
 select ok((select publication_note like '%Já existe outro material%' from public.material_submissions where id = :'v_ut'), 'com o recado dizendo o motivo');
 select is((select title from public.materials where id = :'v_m'), 'Base 44B ' || :'v_sfx', 'e o título do material não mudou');
+-- A mesma normalização da importação (sem acento, sem maiúscula, espaços colapsados), e rascunho também conta.
+select tests.envio_de_atualizacao(:'v_autor', :'v_m', 'titulo2 ' || :'v_sfx') as v_ut2 \gset
+select tests.authenticate_as_service();
+select is(
+  (public.revisao_aplicar_atualizacao(:'v_ut2', tests.review_of(:'v_ut2'), tests.sha_do_envio(:'v_ut2'),
+     jsonb_set(:'v_texto_novo'::jsonb, '{title}', to_jsonb('  Óutro    MATERIAL 44B ' || :'v_sfx'))))->>'resultado',
+  'recusado', 'título que só difere em acento, maiúscula e espaços de um material (rascunho) já existente: recusado'
+);
+select tests.clear_auth();
+select ok((select publication_note like '%Já existe outro material%' from public.material_submissions where id = :'v_ut2'), 'com o recado dizendo o motivo');
 
 -- Material fora do ar.
 select tests.envio_de_atualizacao(:'v_autor', :'v_m', 'fora ' || :'v_sfx') as v_uf \gset
@@ -634,6 +671,71 @@ select is(app.revisao_apto_do_envio(:'v_ux'::uuid), null::uuid, 'um "não apto" 
 select tests.authenticate_as_service();
 select is((select count(*)::int from public.revisao_envios_de_atualizacao_para_aplicar(1000) where submission_id = :'v_ux'), 0, 'e o envio está fora da fila de aplicar');
 select tests.clear_auth();
+
+-- ---------------------------------------------------------------------------
+-- 7. Posições: ida e volta sem mudança não renumera (AGENTS.md, risco 17)
+-- ---------------------------------------------------------------------------
+-- Material como o do seed: posições fora de 0..n-1 (seções nas posições 1 e 3; referências em 5 e 9).
+insert into public.materials (discipline_id, theme_id, title, subtitle, tags) values (:'v_disc', :'v_theme', 'Posições 44B ' || :'v_sfx', 'sub', array['x']) returning id as v_pos \gset
+insert into public.material_sections (material_id, sort_order, title, content, key_takeaways) values
+  (:'v_pos', 1, 'Primeira', 'Texto 1.', array['a']), (:'v_pos', 3, 'Segunda', 'Texto 2.', array['b']);
+insert into public.material_references (material_id, citation_text, sort_order) values
+  (:'v_pos', 'Ref A', 5), (:'v_pos', 'Ref B', 9);
+update public.materials set status = 'published' where id = :'v_pos';
+select app.material_snapshot_hash(:'v_pos') as v_h_pos \gset
+select tests.envio_de_atualizacao(:'v_admin', :'v_pos', 'pos-igual ' || :'v_sfx') as v_up1 \gset
+select tests.leitura_do_material(:'v_pos')::text as v_texto_pos \gset
+select tests.authenticate_as_service();
+select is(
+  (public.revisao_aplicar_atualizacao(:'v_up1', tests.review_of(:'v_up1'), tests.sha_do_envio(:'v_up1'), :'v_texto_pos'::jsonb))->>'resultado',
+  'sem_mudanca', 'arquivo igual ao do ar, num material com posições fora de 0..n-1: sem mudança'
+);
+select tests.clear_auth();
+select is(app.material_snapshot_hash(:'v_pos'), :'v_h_pos'::text, 'o hash do material é o mesmo (nada foi renumerado)');
+select is((select count(*)::int from public.material_ai_provenance where material_id = :'v_pos'), 0, 'e nenhuma proveniência nova foi gravada');
+select results_eq(
+  format($$ select title, sort_order from public.material_sections where material_id = %L order by sort_order $$, :'v_pos'),
+  $$ values ('Primeira'::text, 1), ('Segunda'::text, 3) $$, 'as posições das seções continuam as de antes'
+);
+select results_eq(
+  format($$ select citation_text, sort_order from public.material_references where material_id = %L order by sort_order $$, :'v_pos'),
+  $$ values ('Ref A'::text, 5), ('Ref B'::text, 9) $$, 'as posições das referências continuam as de antes'
+);
+
+-- Seção e referência novas no FIM: entram depois da última, sem mexer nas que ficam.
+select tests.envio_de_atualizacao(:'v_admin', :'v_pos', 'pos-fim ' || :'v_sfx') as v_up2 \gset
+select jsonb_set(jsonb_set(:'v_texto_pos'::jsonb, '{sections}',
+         (:'v_texto_pos'::jsonb->'sections') || jsonb_build_array(jsonb_build_object('title', 'Terceira', 'content', 'Texto 3.', 'key_takeaways', '[]'::jsonb))),
+         '{references}', (:'v_texto_pos'::jsonb->'references') || jsonb_build_array('Ref C'))::text as v_texto_pos2 \gset
+select tests.authenticate_as_service();
+select is(
+  (public.revisao_aplicar_atualizacao(:'v_up2', tests.review_of(:'v_up2'), tests.sha_do_envio(:'v_up2'), :'v_texto_pos2'::jsonb))->>'resultado',
+  'aplicado', 'seção e referência novas no fim: aplicado'
+);
+select tests.clear_auth();
+select results_eq(
+  format($$ select title, sort_order from public.material_sections where material_id = %L order by sort_order $$, :'v_pos'),
+  $$ values ('Primeira'::text, 1), ('Segunda'::text, 3), ('Terceira'::text, 4) $$, 'as que ficam mantêm a posição e a nova entra depois da última'
+);
+select results_eq(
+  format($$ select citation_text, sort_order from public.material_references where material_id = %L order by sort_order $$, :'v_pos'),
+  $$ values ('Ref A'::text, 5), ('Ref B'::text, 9), ('Ref C'::text, 10) $$, 'o mesmo para as referências'
+);
+
+-- Ordem trocada: aí as posições mudam (0..n-1, na ordem do arquivo), e é uma mudança de verdade.
+select tests.envio_de_atualizacao(:'v_admin', :'v_pos', 'pos-ordem ' || :'v_sfx') as v_up3 \gset
+select jsonb_set(:'v_texto_pos2'::jsonb, '{sections}',
+         jsonb_build_array((:'v_texto_pos2'::jsonb->'sections'->1), (:'v_texto_pos2'::jsonb->'sections'->0), (:'v_texto_pos2'::jsonb->'sections'->2)))::text as v_texto_pos3 \gset
+select tests.authenticate_as_service();
+select is(
+  (public.revisao_aplicar_atualizacao(:'v_up3', tests.review_of(:'v_up3'), tests.sha_do_envio(:'v_up3'), :'v_texto_pos3'::jsonb))->>'resultado',
+  'aplicado', 'ordem das seções trocada: aplicado'
+);
+select tests.clear_auth();
+select results_eq(
+  format($$ select title, sort_order from public.material_sections where material_id = %L order by sort_order $$, :'v_pos'),
+  $$ values ('Segunda'::text, 0), ('Primeira'::text, 1), ('Terceira'::text, 2) $$, 'com a ordem trocada, as posições seguem o arquivo'
+);
 
 -- RLS: o envio de atualização é do autor (e do admin), de mais ninguém.
 select tests.authenticate_as(:'v_outro');
