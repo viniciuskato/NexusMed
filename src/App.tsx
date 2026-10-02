@@ -773,6 +773,8 @@ function AuthenticatedApp() {
               compendiums={compendiums}
               questions={questions}
               lastReadingSession={lastReadingSession}
+              dataReady={dataReady}
+              dataStatus={dataStatus}
               onResumeReading={(compendiumId, sectionId) => handleOpenCompendium(compendiumId, sectionId)}
               onTestarOQueLi={() => setIsTestarOpen(true)}
               onStartReview={(cards) => handleStartSRS(cards, 'today')}

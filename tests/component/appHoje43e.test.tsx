@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import React from 'react';
 import type { Compendium, Flashcard, Question } from '../../src/types';
-import { NAV_ENTRADA_KEY } from '../../src/utils/navEntrada';
+import { jaEntrouNestaAba, marcarEntradaNestaAba } from '../../src/utils/navEntrada';
 
 // jsdom não tem ResizeObserver (usado pelo Header real) — stub mínimo.
 (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = class {
@@ -194,7 +194,7 @@ describe('43-E — Hoje é a tela inicial', () => {
 
   it('recarregar a página (a aba já entrou) restaura a última tela salva, como na 22-A', async () => {
     ui['nav_active_view'] = 'questions';
-    window.sessionStorage.setItem(NAV_ENTRADA_KEY, 'user-a');
+    marcarEntradaNestaAba('user-a');
     render(<App />);
     expect(await screen.findByTestId('tela-questoes')).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Hoje', level: 1 })).toBeNull();
@@ -202,23 +202,51 @@ describe('43-E — Hoje é a tela inicial', () => {
 
   it('recarregar com tela salva inválida cai em Hoje, nunca numa tela inventada', async () => {
     ui['nav_active_view'] = 'tela-que-nao-existe';
-    window.sessionStorage.setItem(NAV_ENTRADA_KEY, 'user-a');
+    marcarEntradaNestaAba('user-a');
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'Hoje', level: 1 })).toBeTruthy();
   });
 
   it('a marca de entrada é de quem entrou: outra conta na mesma aba também entra por Hoje', async () => {
     ui['nav_active_view'] = 'questions';
-    window.sessionStorage.setItem(NAV_ENTRADA_KEY, 'user-b');
+    marcarEntradaNestaAba('user-b');
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'Hoje', level: 1 })).toBeTruthy();
-    expect(window.sessionStorage.getItem(NAV_ENTRADA_KEY)).toBe('user-a');
+    expect(jaEntrouNestaAba('user-a')).toBe(true);
+    expect(jaEntrouNestaAba('user-b')).toBe(false);
+  });
+
+  it('a aba sobreviveu até o dia seguinte: abrir de novo entra por Hoje, não pela tela salva', async () => {
+    ui['nav_active_view'] = 'questions';
+    marcarEntradaNestaAba('user-a'); // entrou hoje
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date(Date.now() + 24 * 60 * 60 * 1000)); // o relógio avança para o dia seguinte
+      render(<App />);
+      expect(await screen.findByRole('heading', { name: 'Hoje', level: 1 })).toBeTruthy();
+      expect(screen.queryByTestId('tela-questoes')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('link direto (#/questions) continua valendo sobre a tela inicial', async () => {
     window.history.replaceState(null, '', '#/questions');
     render(<App />);
     expect(await screen.findByTestId('tela-questoes')).toBeTruthy();
+  });
+
+  it('dia seguinte com link direto: o link continua vencendo', async () => {
+    marcarEntradaNestaAba('user-a');
+    window.history.replaceState(null, '', '#/questions');
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date(Date.now() + 24 * 60 * 60 * 1000));
+      render(<App />);
+      expect(await screen.findByTestId('tela-questoes')).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('Hoje também abre pelo menu, e Início continua sendo outra tela', async () => {

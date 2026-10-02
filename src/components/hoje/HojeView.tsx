@@ -9,6 +9,7 @@ import { retomadaDeLeitura, testePendenteHoje } from '../../services/hoje';
 import type { LeituraDeMaterial } from '../../services/testarOQueLi';
 import { useServerLoad } from '../../hooks/useServerLoad';
 import { ConnectionNotice } from '../common/ConnectionNotice';
+import type { LoadStatus } from '../../services/connectivity';
 
 // 43-E — tela "Hoje": a porta de entrada diária. Reúne o que já existe: continuar
 // lendo, testar o que li (43-C) e os cards vencidos. Sem meta, estatística nem
@@ -19,11 +20,19 @@ import { ConnectionNotice } from '../common/ConnectionNotice';
 // e nada é mostrado pela metade — em especial, "tudo feito" só aparece com o dia
 // inteiro carregado, nunca porque a carga falhou. O "Continuar lendo" vem da
 // sessão de leitura guardada neste aparelho e não espera a rede.
+//
+// Questões e materiais vêm do App (`useAppData`): enquanto `dataReady` for falso
+// (carga em andamento ou que falhou), as listas estão vazias por falta de dado,
+// não por não haver nada a fazer — então nem "Testar o que li" é calculado nem
+// "tudo feito" é afirmado, e o aviso de conexão do App também aparece aqui.
 
 export interface HojeViewProps {
   compendiums: Compendium[];
   questions: Question[];
   lastReadingSession: LastReadingSession | null;
+  /** Os dados do App (questões, materiais) são deste usuário e vieram do servidor. */
+  dataReady: boolean;
+  dataStatus: LoadStatus;
   onResumeReading: (compendiumId: string, sectionId?: string) => void;
   onTestarOQueLi: () => void;
   onStartReview: (cards: Flashcard[]) => void;
@@ -47,6 +56,8 @@ export const HojeView: React.FC<HojeViewProps> = ({
   compendiums,
   questions,
   lastReadingSession,
+  dataReady,
+  dataStatus,
   onResumeReading,
   onTestarOQueLi,
   onStartReview,
@@ -67,7 +78,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
 
   const pendentes = useMemo(
     () =>
-      dados
+      dados && dataReady
         ? testePendenteHoje({
             questions,
             leituras: dados.leituras,
@@ -75,16 +86,17 @@ export const HojeView: React.FC<HojeViewProps> = ({
             materiaisExistentes: compendiums.map((c) => c.id),
           }).pendentes
         : [],
-    [dados, questions, compendiums]
+    [dados, dataReady, questions, compendiums]
   );
   const cardsDeHoje = useMemo(() => (dados ? dados.flashcards.filter((fc) => isCardDueToday(fc)) : []), [dados]);
 
-  const carregado = dados !== null;
+  const carregado = dados !== null && dataReady;
   const tudoFeito = carregado && pendentes.length === 0 && cardsDeHoje.length === 0;
 
   return (
     <div id="hoje-view" className="w-full max-w-3xl mx-auto space-y-5 pb-12">
       <ConnectionNotice status={status} />
+      <ConnectionNotice status={dataStatus} />
 
       <div>
         <h1 className="text-2xl sm:text-3xl font-serif-reading font-bold tracking-tight text-slate-900 dark:text-white">
@@ -93,7 +105,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
         <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">O que fazer agora, num lugar só.</p>
       </div>
 
-      {!carregado && status === 'ok' && (
+      {!carregado && status === 'ok' && dataStatus === 'ok' && (
         <p role="status" className="text-sm text-slate-500 dark:text-slate-400">
           Carregando o seu dia…
         </p>

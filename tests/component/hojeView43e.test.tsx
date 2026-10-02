@@ -94,6 +94,8 @@ function renderHoje(props: Partial<React.ComponentProps<typeof HojeView>> = {}) 
       compendiums={compendiums}
       questions={questions}
       lastReadingSession={sessao}
+      dataReady
+      dataStatus="ok"
       {...handlers}
       {...props}
     />
@@ -228,5 +230,39 @@ describe('HojeView (43-E)', () => {
     expect(await screen.findByText(/Sem conexão/)).toBeTruthy();
     expect(screen.queryByRole('region', { name: 'Testar o que li' })).toBeNull();
     expect(screen.queryByText(/Tudo feito/)).toBeNull();
+  });
+
+  // Questões e materiais vêm do App: sem eles prontos, lista vazia não é "nada a fazer".
+  it('dados do App com falha (sem questões nem materiais): não afirma "tudo feito" e avisa a conexão', async () => {
+    getLeituras.mockResolvedValue([{ materialId: 'a', secoesLidas: 1, ultimaLeitura: agora }]);
+    renderHoje({ questions: [], compendiums: [], lastReadingSession: null, dataReady: false, dataStatus: 'error' });
+    expect(await screen.findByText(/Não foi possível carregar/)).toBeTruthy();
+    await waitFor(() => expect(getFlashcards).toHaveBeenCalled());
+    // Dá tempo de as três cargas da própria tela terminarem.
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByText(/Tudo feito/)).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Testar o que li' })).toBeNull();
+  });
+
+  it('dados do App ainda carregando: mostra carregando, sem "tudo feito"; quando chegam, calcula', async () => {
+    getLeituras.mockResolvedValue([{ materialId: 'a', secoesLidas: 1, ultimaLeitura: agora }]);
+    const props = {
+      compendiums: [] as Compendium[],
+      questions: [] as Question[],
+      lastReadingSession: null,
+      onResumeReading: vi.fn(),
+      onTestarOQueLi: vi.fn(),
+      onStartReview: vi.fn(),
+      onOpenLibrary: vi.fn(),
+    };
+    const { rerender } = render(<HojeView {...props} dataReady={false} dataStatus="ok" />);
+    await waitFor(() => expect(getFlashcards).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.getByText(/Carregando/)).toBeTruthy();
+    expect(screen.queryByText(/Tudo feito/)).toBeNull();
+
+    rerender(<HojeView {...props} compendiums={compendiums} questions={questions} dataReady dataStatus="ok" />);
+    expect(await screen.findByText('2 questões dos materiais que você leu hoje')).toBeTruthy();
+    expect(screen.queryByText(/Carregando/)).toBeNull();
   });
 });
