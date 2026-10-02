@@ -1071,7 +1071,7 @@ mesclada — `DECISIONS.md`, 24/09.)*
 **Restrições.** Pode ser dividida em 2 ou 3 PRs. Migrations no remoto antes do
 merge.
 **Depende de.** 45-A (a nota no servidor sai de lá) — concluída.
-**Estado.** Implementada na branch `fix/45h-endurecimento` (banco, guardas pgTAP e front), PR ainda não aberto; migration `20260930120000` a aplicar no remoto antes do merge. Faltam três itens que exigem mexer fora do escopo da ordem (`vite.config.ts` e CI para a CSP e para o build sem variáveis do Supabase; remoção do script antigo de `docs/archive`), à espera de decisão. Voltou à fila pela D-10 (29/09).
+**Estado.** Implementada na branch `fix/45h-endurecimento` (banco, guardas pgTAP e front), PR ainda não aberto; migration `20261002120000` a aplicar no remoto antes do merge. Inclui, por decisão da diretoria, `vite.config.ts` (CSP só do projeto; build sem variáveis do Supabase falha), o passo de build do CI e a remoção do script antigo de `docs/archive`. Voltou à fila pela D-10 (29/09).
 
 ---
 

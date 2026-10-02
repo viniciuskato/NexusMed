@@ -151,7 +151,7 @@ autocontido (#6), code splitting + botão voltar (#7), processo via PR
 - **Estado**: Aberto — o item da nota de simulado calculada no cliente foi
   concluído na unidade 45-A; validação de leitura/feedback/avatar e escrita
   direta nas tabelas seguem para a 45-H (ver AUD-31)
-  — 45-H (branch `fix/45h-endurecimento`, migration `20260930120000` a aplicar
+  — 45-H (branch `fix/45h-endurecimento`, migration `20261002120000` a aplicar
   no remoto): `set_section_read` valida a seção e calcula o percentual no
   servidor, `feedback` e demais textos livres têm limite de tamanho, escrita
   direta em simulado/progresso/status de feedback revogada; `avatar_url` só
@@ -168,10 +168,12 @@ autocontido (#6), code splitting + botão voltar (#7), processo via PR
 - **Contexto mínimo pra puxar**: `AuthContext.tsx`, `LoginView.tsx`,
   `scripts/check-no-debug-bundle.mjs` (pode também procurar
   `local-demo-user`).
-- **Estado**: Aberto (reconfirmado em 2026-09-19; inerte hoje porque a
-  produção tem as variáveis, mas o `build` não falha sem elas). 45-H: a
-  correção exige `vite.config.ts` e o passo `npm run build` do CI (que hoje
-  roda sem as variáveis), fora do escopo da ordem; aguarda decisão
+- **Estado**: Concluído (unidade 45-H; antes, aberto e reconfirmado em
+  2026-09-19, inerte porque a produção tem as variáveis, mas o `build` não
+  falhava sem elas): `vite.config.ts` chama `assertSupabaseEnv`
+  (`vite.seguranca.ts`) em todo `vite build`, e o passo `npm run build` do CI
+  passa valores de marcação (não são credencial). Quem roda `npm run build` na
+  máquina precisa de `.env.local`
 
 ### AUD-08 — Teto de intervalo do SRS também no SQL
 - **Registrado em**: 2026-09-18 pela sessão de auditoria
@@ -185,7 +187,7 @@ autocontido (#6), code splitting + botão voltar (#7), processo via PR
 - **Contexto mínimo pra puxar**: `tests/unit/srsAlgorithm.test.ts`
   (comentário no topo), migration do #1.
 - **Estado**: Concluído (unidade 45-H: `submit_flashcard_review` com teto de
-  36500 dias; migration `20260930120000` a aplicar no remoto)
+  36500 dias; migration `20261002120000` a aplicar no remoto)
 
 ### AUD-09 — Dívida de lint e acessibilidade
 - **Registrado em**: 2026-09-18 pela sessão de auditoria
@@ -661,7 +663,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
   from public` (global), um teste pgTAP de EXECUTE por `anon` e políticas
   só de SELECT/DELETE nas tabelas que têm RPC de escrita.
 - **Estado**: Concluído (unidade 45-H: pontos 1 a 4; guardas pgTAP em
-  `security_guards.test.sql`; migration `20260930120000` a aplicar no remoto)
+  `security_guards.test.sql`; migration `20261002120000` a aplicar no remoto)
 
 ### AUD-32 — Pequenos endurecimentos no front e no repositório
 - **Registrado em**: 2026-09-19 pela sessão de auditoria
@@ -683,9 +685,8 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
   feedback falso para o admin. O item 3 induz o revisor a erro.
 - **Prioridade relativa**: baixa. Dá para agrupar num PR só.
 - **Contexto mínimo pra puxar**: os arquivos citados.
-- **Estado**: Parcial (unidade 45-H: itens 1, 3 e 4; faltam o 2 (CSP em
-  `vite.config.ts`) e o 5 (remover o script de `docs/archive`), fora do
-  escopo da ordem, aguardando decisão)
+- **Estado**: Concluído (unidade 45-H: os 5 itens; a CSP libera só a origem de
+  `VITE_SUPABASE_URL`, e o script de `docs/archive` foi removido)
 
 ### AUD-33 — Fluxos críticos do aluno sem teste e2e
 - **Registrado em**: 2026-09-19 pela sessão de auditoria

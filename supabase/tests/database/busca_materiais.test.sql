@@ -56,7 +56,7 @@ $$;
 grant usage on schema tests to anon, authenticated;
 grant execute on function tests.clear_auth() to anon, authenticated;
 -- 45-H: função nova não nasce mais com EXECUTE para PUBLIC (default privileges
--- da migration 20260930120000). Os helpers deste schema de teste são chamados
+-- da migration 20261002120000). Os helpers deste schema de teste são chamados
 -- com o role já trocado para anon/authenticated (SET ROLE de sessão), então
 -- ganham o EXECUTE que tinham antes.
 grant execute on all functions in schema tests to public;

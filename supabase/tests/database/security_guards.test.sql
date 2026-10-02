@@ -6,7 +6,7 @@
 -- juntas, expõem dados a qualquer pessoa com a anon key (pública).
 -- Ver 20260918140000_revoke_anon_grants.sql.
 --
--- 45-H (AUD-31, migration 20260930120000_endurecimento_45h.sql): também falham
+-- 45-H (AUD-31, migration 20261002120000_endurecimento_45h.sql): também falham
 -- quando (a) uma função de `public` fica executável sem login — a próxima RPC
 -- SECURITY DEFINER que esquecer o `revoke ... from public, anon` —, (b) uma
 -- tabela dá TRUNCATE a anon/authenticated, ou (c) o estudante volta a poder
