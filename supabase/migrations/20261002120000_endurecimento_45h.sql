@@ -196,8 +196,9 @@ create trigger trg_limite_45h before insert or update on public.error_notebook
 create trigger trg_limite_45h before insert or update on public.profiles
   for each row execute function app.limite_de_tamanho_45h('display_name', '200', 'avatar_url', '2048');
 
--- O cadastro nunca falha por tamanho: nome e avatar vindos do provedor de login
--- entram cortados no limite.
+-- O cadastro nunca falha por tamanho: o nome vindo do provedor de login entra
+-- cortado no limite; o avatar acima do limite entra vazio (URL cortada seria
+-- outro endereço).
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -210,7 +211,10 @@ begin
     new.id,
     new.email,
     nullif(pg_catalog.left(trim(coalesce(new.raw_user_meta_data ->> 'display_name', new.raw_user_meta_data ->> 'full_name', '')), 200), ''),
-    nullif(pg_catalog.left(trim(coalesce(new.raw_user_meta_data ->> 'avatar_url', '')), 2048), ''),
+    case
+      when pg_catalog.char_length(trim(coalesce(new.raw_user_meta_data ->> 'avatar_url', ''))) > 2048 then null
+      else nullif(trim(coalesce(new.raw_user_meta_data ->> 'avatar_url', '')), '')
+    end,
     'student',
     'pending'
   )

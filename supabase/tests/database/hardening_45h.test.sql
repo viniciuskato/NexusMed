@@ -325,9 +325,9 @@ insert into auth.users (id, email, encrypted_password, raw_user_meta_data, creat
 values (gen_random_uuid(), 'h45.longo+' || gen_random_uuid()::text || '@test.local', 'x', jsonb_build_object('display_name', repeat('m', 300), 'avatar_url', 'https://exemplo.org/' || repeat('a', 3000)), now(), now(), 'authenticated', 'authenticated');
 
 select is(
-  (select char_length(display_name) || '/' || char_length(avatar_url) from public.profiles where email like 'h45.longo+%@test.local' order by created_at desc limit 1),
-  '200/2048',
-  'cadastro com nome de 300 e avatar de 3000+ caracteres cria o perfil, cortado nos limites'
+  (select char_length(display_name) || '/' || coalesce(avatar_url, 'nulo') from public.profiles where email like 'h45.longo+%@test.local' order by created_at desc limit 1),
+  '200/nulo',
+  'cadastro com nome de 300 e avatar de 3000+ caracteres cria o perfil: nome cortado em 200, avatar vazio'
 );
 
 -- ----------------------------------------------------------------------------
