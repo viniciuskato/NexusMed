@@ -1,6 +1,7 @@
 # Plano de produção — Antimicrobianos (piloto dos β-lactâmicos)
 
-**Versão:** 23/09/2026 — segue o padrão de conteúdos v2
+**Versão:** 23/09/2026, com tema, fluxo e fontes revistos em 28/09 (D-7) —
+segue o padrão de conteúdos v2
 ([`PADRAO-NEXUSMED-CONTEUDOS.md`](PADRAO-NEXUSMED-CONTEUDOS.md)).
 **Escopo:** o que produzir, em que ordem e o que entregar à IA para cada
 material. Não contém recomendação terapêutica — os tópicos listados em "Cobre"
@@ -29,9 +30,13 @@ Raiz:              Antibióticos — visão geral
   quando a plataforma ganhar o "também aparece em" (unidade 44-A de
   `docs/produto/PLANO-DE-DESENVOLVIMENTO.md`). Até lá, o estudante acha tudo pela
   busca. **Nunca copiar material para outra disciplina.**
-- **Tema:** se "Antimicrobianos" ainda não existir em Farmacologia, crie-o na
-  própria importação do primeiro material (menu do tema → "+ Criar novo
-  tema...").
+- **Tema:** antes de pedir o 01, a diretoria confere, só lendo, em que
+  disciplina está o tema "Antimicrobianos - fundamentos" (o que já tem
+  questões) e se algum dos 7 títulos da primeira leva já existe na plataforma
+  (a importação recusa título repetido; título repetido vira pergunta ao
+  dono). Se esse tema estiver em Farmacologia, use-o; se não, crie
+  "Antimicrobianos" em Farmacologia na própria importação do primeiro
+  material (menu do tema → "+ Criar novo tema...").
 
 ## 2. A árvore
 
@@ -113,31 +118,29 @@ qualquer mudança — pode haver questões ligadas a ele.
 
 ## 5. Como pedir cada material à IA
 
-Anexe três coisas: o padrão (`PADRAO-NEXUSMED-CONTEUDOS.md`), as fontes e o
-bloco do material (seção 6). Desde 24/09 quem escreve é o Gemini, e cada
-arquivo passa por checagem e revisão cruzada antes de importar — fluxo na
-seção 12 de `docs/produto/PLANO-DE-DESENVOLVIMENTO.md` (D-5). Mensagem sugerida:
+Quem escreve é o Gemini, no Gem "Redator NexusMed", que já tem o padrão; a
+diretoria prepara cada pedido e é a mesa editorial (D-7, 28/09). O pedido de
+cada material — o bloco da seção 6, o trecho do rascunho antigo e, do 02 em
+diante, o material aprovado do pai — fica na pasta local
+`docs/conteúdos/antimicrobianos/NN-*/`, fora do git. O passo a passo (pedir,
+levar a resposta à diretoria, corrigir, ler, importar, atestar, publicar e
+ligar questões) está em `docs/conteúdos/LEIA-ME.md`, também local. O 06 e o
+07 são irmãos, filhos do 05.
 
-```text
-Siga o documento anexo (padrão NexusMed de conteúdos, versão 2) e produza o
-material descrito no bloco abaixo, usando as fontes anexas. Entregue um único
-arquivo .md no formato da seção 1.7 do padrão. Se faltar alguma informação,
-pergunte antes de escrever.
-
-[cole aqui o bloco do material]
-```
-
-Fontes de referência para o ramo (anexe as que tiver; prefira edições
-recentes): Goodman & Gilman — As Bases Farmacológicas da Terapêutica;
-Katzung — Farmacologia Básica e Clínica; Mandell, Douglas and Bennett's
-Principles and Practice of Infectious Diseases; RENAME (disponibilidade no
-SUS); BrCAST (pontos de corte de sensibilidade no Brasil). Para a
-classificação dos grupos, o índice ATC/DDD da OMS (códigos J01C, J01CR,
-J01D).
+**Fontes (decisão do dono, 28/09): só material on-line, nenhum livro-texto.**
+Bula do profissional (bulário da ANVISA); BrCAST (pontos de corte no
+Brasil); OMS (AWaRe e o índice ATC/DDD, códigos J01C, J01CR e J01D); RENAME
+(disponibilidade no SUS); diretrizes públicas (ANVISA, SBI, CDC, IDSA, NICE);
+revisões de acesso aberto — sempre com referência completa. Afirmação de alto
+risco (dose, corte numérico, ajuste renal ou hepático, gestação, lactação,
+recém-nascido, idoso, contraindicação, interação) só com fonte primária
+pública identificável, citada na mesma frase; sem ela, LACUNA_DOCUMENTAL.
+Vale do 01 ao 07.
 
 ## 6. Blocos para a IA
 
-Todos os blocos usam **Disciplina: Farmacologia** e **Tema: Antimicrobianos**.
+Todos os blocos usam **Disciplina: Farmacologia** e **Tema: Antimicrobianos**
+(ou o tema existente que a diretoria confirmar, seção 1).
 
 ### Antibióticos — visão geral
 
