@@ -116,7 +116,11 @@ export function revisaoQueValeParaOTextoEOsMateriais(row: {
   const daquelesTexto = (row.reviews ?? []).filter(
     (r) => r.content_sha256 === row.content_sha256 && r.verdict && (r.status === 'concluida' || r.status === 'erro'),
   );
-  const maisRecente = [...daquelesTexto].sort((a, b) => (b.completed_at ?? b.created_at).localeCompare(a.completed_at ?? a.created_at))[0];
+  // "Mais recente" é só entre as CONCLUÍDAS, como no servidor: uma revisão de erro não tira a vez da concluída
+  // (sem nenhuma concluída, a de erro mais recente é a que a pessoa vê).
+  const maisRecenteDe = (lista: typeof daquelesTexto) =>
+    [...lista].sort((a, b) => (b.completed_at ?? b.created_at).localeCompare(a.completed_at ?? a.created_at))[0];
+  const maisRecente = maisRecenteDe(daquelesTexto.filter((r) => r.status === 'concluida')) ?? maisRecenteDe(daquelesTexto);
   if (!maisRecente || !maisRecente.material_ids || !mesmoConjunto(maisRecente.material_ids, row.material_ids ?? [])) return null;
   return revisaoQueValeParaOTexto({ content_sha256: row.content_sha256, status: row.status, reviews: [maisRecente] });
 }

@@ -217,6 +217,8 @@ class Mundo {
     publicar: async () => ({ desfecho: 'publicado' as const, materialId: 'material-1' }),
     paraPublicarQuestoes: async () => [],
     publicarQuestoes: async () => ({ desfecho: 'fora_de_estado' as const, questionIds: [] }),
+    paraAplicarAtualizacoes: async () => [],
+    aplicarAtualizacao: async () => ({ desfecho: 'fora_de_estado' as const, materialId: null }),
     recusarPublicacaoDeQuestoes: async () => false,
     recusarPublicacao: async () => true,
   };

@@ -39,6 +39,7 @@ import { ConnectionNotice } from '../common/ConnectionNotice';
 import { MaterialBreadcrumb, MaterialChildrenCards, MaterialLinkBoxes } from './MaterialNavigation';
 import { SeloDeRevisao } from '../material/SeloDeRevisao';
 import { ReportarErroDoMaterial } from '../material/ReportarErroDoMaterial';
+import { AtualizarMaterial } from '../material/AtualizarMaterial';
 
 interface CompendiumReaderProps {
   compendium: Compendium;
@@ -769,6 +770,8 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mt-4">
               <SeloDeRevisao materialId={compendium.id} />
               <ReportarErroDoMaterial materialId={compendium.id} materialTitle={compendium.title} />
+              {/* 44-B: "Exportar .md" e "Atualizar a partir de arquivo" (só admin e o autor do envio que o publicou). */}
+              <AtualizarMaterial compendium={compendium} disciplines={disciplines} themes={themes} />
             </div>
           )}
         </header>

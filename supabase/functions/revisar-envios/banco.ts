@@ -3,7 +3,9 @@
 import type {
   Banco,
   Catalogo,
+  DesfechoDaAplicacao,
   DesfechoDaPublicacao,
+  ParaAplicarAtualizacao,
   ParaPublicar,
   ParaPublicarQuestoes,
   Pendente,
@@ -74,6 +76,14 @@ interface LinhaParaPublicar {
   content_sha256: string;
   discipline_id: string;
   theme_id: string;
+}
+
+interface LinhaParaAplicar {
+  submission_id: string;
+  review_id: string;
+  content_md: string;
+  content_sha256: string;
+  target_material_id: string;
 }
 
 interface LinhaParaPublicarQuestoes {
@@ -194,6 +204,25 @@ export function bancoDoSupabase(cliente: ClienteDoBanco): Banco {
           p_note: recado,
         }),
       );
+    },
+    async paraAplicarAtualizacoes(max): Promise<ParaAplicarAtualizacao[]> {
+      const linhas = (await rpc<LinhaParaAplicar[] | null>('revisao_envios_de_atualizacao_para_aplicar', { p_max: max })) ?? [];
+      return linhas.map((l) => ({
+        submissionId: l.submission_id,
+        reviewId: l.review_id,
+        texto: l.content_md,
+        sha256: l.content_sha256,
+        materialId: l.target_material_id,
+      }));
+    },
+    async aplicarAtualizacao(envio, material) {
+      const r = await rpc<{ resultado: DesfechoDaAplicacao; material_id?: string } | null>('revisao_aplicar_atualizacao', {
+        p_submission_id: envio.submissionId,
+        p_review_id: envio.reviewId,
+        p_content_sha256: envio.sha256,
+        p_material: material,
+      });
+      return { desfecho: r?.resultado ?? 'fora_de_estado', materialId: r?.material_id ?? null };
     },
     async paraPublicarQuestoes(max): Promise<ParaPublicarQuestoes[]> {
       const linhas = (await rpc<LinhaParaPublicarQuestoes[] | null>('revisao_envios_de_questoes_para_publicar', { p_max: max })) ?? [];

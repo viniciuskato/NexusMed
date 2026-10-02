@@ -100,6 +100,24 @@ export interface ParaPublicar {
   themeId: string;
 }
 
+/** Envio de atualização "apto" pronto para ser aplicado ao material publicado (44-B). */
+export interface ParaAplicarAtualizacao {
+  submissionId: string;
+  reviewId: string;
+  texto: string;
+  sha256: string;
+  materialId: string;
+}
+
+export type DesfechoDaAplicacao =
+  | 'aplicado'
+  | 'sem_mudanca'
+  | 'ja_publicado'
+  | 'recusado'
+  | 'falhou'
+  | 'fora_de_estado'
+  | 'revisao_invalida';
+
 /** Envio de questões "apto" pronto para virar questões (44-H2). */
 export interface ParaPublicarQuestoes {
   submissionId: string;
@@ -145,6 +163,13 @@ export interface Banco {
    * fila de publicação, vai a "não apto" com o recado leigo, e a pessoa corrige e reenvia.
    */
   recusarPublicacao(envio: ParaPublicar, recado: string): Promise<boolean>;
+  /** 44-B: atualizações "apto" prontas para substituir o conteúdo do material publicado. */
+  paraAplicarAtualizacoes(max: number): Promise<ParaAplicarAtualizacao[]>;
+  /** Substitui o conteúdo do material publicado (ids de seção e vínculos preservados) e grava a nova proveniência: tudo ou nada. */
+  aplicarAtualizacao(
+    envio: ParaAplicarAtualizacao,
+    material: Record<string, unknown>,
+  ): Promise<{ desfecho: DesfechoDaAplicacao; materialId: string | null }>;
   /** 44-H2: envios de questões "apto" com revisão apto do texto atual, ainda sem questões. */
   paraPublicarQuestoes(max: number): Promise<ParaPublicarQuestoes[]>;
   /** Cria as questões do envio, liga aos materiais pelo título exato, publica e grava a proveniência: tudo ou nada. */
@@ -255,6 +280,8 @@ export interface ResumoDoCiclo {
   semLoteNovoPorIncerta: boolean;
   /** 44-G: envios que viraram material publicado neste ciclo. */
   publicados: number;
+  /** 44-B: atualizações aplicadas a material publicado neste ciclo (as que mudaram o conteúdo). */
+  atualizados: number;
   /** 44-G: envios que o banco recusou publicar (título repetido, material acima fora do ar) ou que falharam. */
   publicacoesRecusadas: number;
   erros: string[];
@@ -507,6 +534,7 @@ function recadoDoTextoNaoLido(motivos: string[]): string {
 
 async function publicar(deps: DepsDoCiclo, resumo: ResumoDoCiclo, dentroDoPrazo: () => boolean): Promise<void> {
   await publicarMateriais(deps, resumo, dentroDoPrazo);
+  await aplicarAtualizacoes(deps, resumo, dentroDoPrazo);
   await publicarQuestoes(deps, resumo, dentroDoPrazo);
 }
 
@@ -552,6 +580,63 @@ async function publicarMateriais(deps: DepsDoCiclo, resumo: ResumoDoCiclo, dentr
       else if (r.desfecho === 'recusado' || r.desfecho === 'falhou') resumo.publicacoesRecusadas += 1;
     } catch (e) {
       resumo.erros.push(`publicação ${envio.submissionId}: ${mensagemDoErro(e)}`);
+    }
+  }
+}
+
+/** O recado que a pessoa lê quando o texto aprovado da atualização não pôde ser montado. */
+function recadoDaAtualizacaoNaoLida(motivos: string[]): string {
+  const detalhe = motivos.slice(0, 5).join(' ');
+  return `O texto foi aprovado na revisão, mas não pôde ser montado como material: ${detalhe} O material publicado não foi alterado. Corrija o texto e envie de novo.`;
+}
+
+/** 44-B: atualizações aprovadas substituem o conteúdo do material publicado, uma vez só. */
+async function aplicarAtualizacoes(deps: DepsDoCiclo, resumo: ResumoDoCiclo, dentroDoPrazo: () => boolean): Promise<void> {
+  let prontos: ParaAplicarAtualizacao[];
+  try {
+    prontos = await deps.banco.paraAplicarAtualizacoes(MAX_PUBLICACOES_POR_CICLO);
+  } catch (e) {
+    resumo.erros.push(`atualização (buscar envios): ${mensagemDoErro(e)}`);
+    return;
+  }
+  if (prontos.length === 0) return;
+  let catalogo: Catalogo;
+  try {
+    catalogo = await deps.banco.catalogo();
+  } catch (e) {
+    resumo.erros.push(`atualização (catálogo): ${mensagemDoErro(e)}`);
+    return;
+  }
+  for (const envio of prontos) {
+    if (!dentroDoPrazo()) {
+      resumo.erros.push('prazo do ciclo esgotado: as atualizações que faltam ficam para o próximo disparo');
+      return;
+    }
+    try {
+      let leitura: ReturnType<LeitorDeMaterial>;
+      try {
+        leitura = deps.lerMaterial(
+          { submissionId: envio.submissionId, reviewId: envio.reviewId, texto: envio.texto, sha256: envio.sha256, disciplineId: '', themeId: '' },
+          catalogo,
+        );
+      } catch (e) {
+        leitura = { ok: false, motivos: [`erro ao ler o texto (${mensagemDoErro(e)})`] };
+      }
+      if (!leitura.ok) {
+        // Como na publicação: o envio não pode ficar "apto" para sempre; vai a "não apto" com recado, e o material não muda.
+        resumo.erros.push(`atualização ${envio.submissionId}: texto não lido (${leitura.motivos.join('; ')})`);
+        const recusado = await deps.banco.recusarPublicacao(
+          { submissionId: envio.submissionId, reviewId: envio.reviewId, texto: envio.texto, sha256: envio.sha256, disciplineId: '', themeId: '' },
+          recadoDaAtualizacaoNaoLida(leitura.motivos),
+        );
+        if (recusado) resumo.publicacoesRecusadas += 1;
+        continue;
+      }
+      const r = await deps.banco.aplicarAtualizacao(envio, leitura.material);
+      if (r.desfecho === 'aplicado') resumo.atualizados += 1;
+      else if (r.desfecho === 'recusado' || r.desfecho === 'falhou') resumo.publicacoesRecusadas += 1;
+    } catch (e) {
+      resumo.erros.push(`atualização ${envio.submissionId}: ${mensagemDoErro(e)}`);
     }
   }
 }
@@ -623,6 +708,7 @@ export async function executarCiclo(deps: DepsDoCiclo): Promise<ResumoDoCiclo> {
     loteIncerto: false,
     semLoteNovoPorIncerta: false,
     publicados: 0,
+    atualizados: 0,
     publicacoesRecusadas: 0,
     erros: [],
   };

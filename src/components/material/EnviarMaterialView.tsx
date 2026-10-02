@@ -640,6 +640,7 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
           onAbrirMaterial={onAbrirMaterial}
           onAbrirQuestoes={onAbrirQuestoes}
           ocupadoId={ocupadoId}
+          materiais={compendiums}
         />
       </section>
     </div>

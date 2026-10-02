@@ -76,6 +76,8 @@ function montar(c: Cenario = {}) {
     }),
     paraPublicarQuestoes: async () => [],
     publicarQuestoes: async () => ({ desfecho: 'fora_de_estado' as const, questionIds: [] }),
+    paraAplicarAtualizacoes: async () => [],
+    aplicarAtualizacao: async () => ({ desfecho: 'fora_de_estado' as const, materialId: null }),
     recusarPublicacaoDeQuestoes: async () => false,
     recusarPublicacao: vi.fn(async (envio: ParaPublicar, recado: string) => {
       ordem.push(`recusar:${envio.submissionId}`);
@@ -294,6 +296,8 @@ describe('44-G — do envio ao material publicado, com a revisão simulada (cicl
           : [],
       paraPublicarQuestoes: async () => [],
       publicarQuestoes: async () => ({ desfecho: 'fora_de_estado' as const, questionIds: [] }),
+      paraAplicarAtualizacoes: async () => [],
+      aplicarAtualizacao: async () => ({ desfecho: 'fora_de_estado' as const, materialId: null }),
       recusarPublicacaoDeQuestoes: async () => false,
       recusarPublicacao: async () => true,
       publicar: async () => {

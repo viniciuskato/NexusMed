@@ -131,6 +131,8 @@ function montar(c: Cenario = {}) {
     recusarPublicacao: vi.fn(async () => true),
     paraPublicarQuestoes: vi.fn(async () => c.paraPublicarQuestoes ?? []),
     publicarQuestoes: vi.fn(async () => ({ desfecho: c.desfecho ?? ('publicado' as const), questionIds: ['q-1'] })),
+    paraAplicarAtualizacoes: async () => [],
+    aplicarAtualizacao: async () => ({ desfecho: 'fora_de_estado' as const, materialId: null }),
     recusarPublicacaoDeQuestoes: vi.fn(async () => true),
   };
   const api: ApiDeLotes = {

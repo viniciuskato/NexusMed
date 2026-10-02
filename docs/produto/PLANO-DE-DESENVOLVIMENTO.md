@@ -617,7 +617,9 @@ do que já está ligado a ele (posição, questões, progresso de leitura).
 **Fora de escopo.** Exportar em lote; histórico de versões do material;
 editar o `.md` dentro da plataforma.
 **Depende de.** 43-A e 45-K.
-**Estado.** Planejada.
+**Estado.** Implementada na branch `feat/44b-exportar-atualizar` (sobre a pilha 44-E → 44-H3, ainda não mesclada), adaptada à D-11 — aguarda revisão e PR.
+
+**Achados da execução.** Adaptação à D-11 (29/09, "tudo que vai ao ar passa pelo revisor"): "Exportar .md" é livre (admin e o autor do envio que publicou o material); "Atualizar a partir de arquivo" não grava no material nem vira "edição pendente da 45-K" — é um envio do tipo "atualização" (`target_material_id`), revisado pelo mesmo revisor de IA, e só com o "apto" do texto e do lugar atuais o servidor troca o conteúdo, numa transação com a nova proveniência (o material no ar nunca fica sem revisão válida; "não apto" não muda nada). Ids de seção casam pelo título normalizado, referências pelo texto idêntico (mantêm o vínculo com a fonte); posição na árvore, filhos, ligações, progresso, anotações e questões não são tocados. Arquivo igual ao que está no ar não muda nada. O envio guarda o hash do material no momento do envio: se o material mudar antes da aplicação, o servidor recusa com recado leigo. Editar pelo formulário do Admin continua na 45-K.
 
 ---
 

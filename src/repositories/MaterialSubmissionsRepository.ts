@@ -41,10 +41,21 @@ export interface MaterialSubmission {
   publishedMaterialId?: string | null;
   /** 44-G: por que o servidor não publicou (título repetido etc.), em palavras leigas. */
   publicationNote?: string | null;
+  /** 44-B: o material publicado que este envio ATUALIZA (envio do tipo "atualização"); ausente nos envios de material novo. */
+  targetMaterialId?: string | null;
+  /** 44-B: quando o servidor aplicou a atualização. */
+  appliedAt?: string | null;
   /** A revisão de IA do texto atual, se já houve uma. */
   review?: MaterialReviewView | null;
   /** Só na leitura de admin. */
   author?: { id: string; name: string; email: string } | null;
+}
+
+/** 44-B: pedido de atualização de um material publicado (o lugar vem do material, no banco). */
+export interface NewMaterialUpdate {
+  targetMaterialId: string;
+  title: string;
+  contentMd: string;
 }
 
 export interface NewMaterialSubmission {
@@ -69,6 +80,12 @@ export interface MaterialSubmissionsRepository {
   /** Todos os envios (só admin; para os demais a RLS devolve só os próprios). */
   listAll(): Promise<MaterialSubmission[]>;
   submit(input: NewMaterialSubmission): Promise<MaterialSubmission>;
+  /** 44-B: pede a atualização de um material publicado a partir de um arquivo (passa pelo revisor de IA). */
+  submitUpdate(input: NewMaterialUpdate): Promise<MaterialSubmission>;
+  /** 44-B: a pessoa pode exportar e atualizar este material? (admin ativo, ou o autor do envio que o publicou; decide o banco) */
+  podeAtualizar(materialId: string): Promise<boolean>;
+  /** 44-B: as seções do material a que cada questão está ligada (uma entrada por questão ligada a uma seção), para a prévia. */
+  secoesDasQuestoes(materialId: string): Promise<string[]>;
   /** Substitui o texto de um envio "não apto" ou "erro" (o banco o devolve à fila). */
   replaceText(id: string, input: NewMaterialSubmission): Promise<MaterialSubmission>;
   /** Manda o mesmo texto de novo para revisão (envio "erro"). */
@@ -91,6 +108,10 @@ interface ReviewRow {
   content_sha256: string;
   completed_at: string | null;
   created_at: string;
+  /** O lugar que a IA recebeu junto com o texto (44-F). */
+  discipline_id?: string | null;
+  theme_id?: string | null;
+  parent_material_id?: string | null;
 }
 
 interface Row {
@@ -105,6 +126,8 @@ interface Row {
   content_sha256?: string | null;
   published_material_id?: string | null;
   publication_note?: string | null;
+  target_material_id?: string | null;
+  applied_at?: string | null;
   reviews?: ReviewRow[] | null;
   // A junção com `profiles` é um-para-um; o tipo inferido a trata como lista.
   author?: AuthorRow | AuthorRow[] | null;
@@ -113,23 +136,45 @@ interface Row {
 
 // Sem `content_md`: as listas não precisam do texto (até 300 KB por linha).
 const COLUMNS =
-  'id, title, discipline_id, theme_id, parent_material_id, status, created_at, updated_at, content_sha256, published_material_id, publication_note';
+  'id, title, discipline_id, theme_id, parent_material_id, status, created_at, updated_at, content_sha256, published_material_id, publication_note, target_material_id, applied_at';
 const REVIEW_COLUMNS =
-  'reviews:material_reviews(id, status, verdict, findings_text, correction_block, error_kind, content_sha256, completed_at, created_at)';
+  'reviews:material_reviews(id, status, verdict, findings_text, correction_block, error_kind, content_sha256, completed_at, created_at, discipline_id, theme_id, parent_material_id)';
+
+/** A revisão foi feita para o lugar (Disciplina, Tema e material acima) que o envio tem agora? */
+function mesmoLugarDoEnvio(
+  r: ReviewRow,
+  row: Pick<Row, 'discipline_id' | 'theme_id' | 'parent_material_id'>,
+): boolean {
+  return (
+    (r.discipline_id ?? null) === (row.discipline_id ?? null) &&
+    (r.theme_id ?? null) === (row.theme_id ?? null) &&
+    (r.parent_material_id ?? null) === (row.parent_material_id ?? null)
+  );
+}
 
 /**
- * A revisão terminada mais recente que vale para o texto atual (mesmo hash) — e
- * só enquanto o envio NÃO está na fila. Depois de "Tentar de novo", o texto é o
- * mesmo (o hash bate com a revisão antiga), mas o envio voltou a esperar uma
- * revisão nova: mostrar a antiga ali daria um veredito que já não vale.
+ * A revisão que vale para o texto E o lugar atuais, e só enquanto o envio NÃO está na fila
+ * (depois de "Tentar de novo", o texto é o mesmo, mas o envio voltou a esperar uma revisão
+ * nova: mostrar a antiga daria um veredito que já não vale). Mesma regra do servidor
+ * (44-H3): vale a revisão CONCLUÍDA mais recente do texto, em qualquer lugar — se ela é de
+ * outro lugar, nenhuma vale; uma revisão de erro só aparece se for do lugar de agora.
+ * Quando a linha não traz o lugar (as listas antigas), o lugar não é conferido.
  */
-export function revisaoQueValeParaOTexto(row: Pick<Row, 'content_sha256' | 'reviews' | 'status'>): MaterialReviewView | null {
+export function revisaoQueValeParaOTexto(
+  row: Pick<Row, 'content_sha256' | 'reviews' | 'status'> & Partial<Pick<Row, 'discipline_id' | 'theme_id' | 'parent_material_id'>>,
+): MaterialReviewView | null {
   if (row.status === 'aguardando_revisao' || row.status === 'em_revisao') return null;
   if (!row.content_sha256) return null;
-  const validas = (row.reviews ?? [])
-    .filter((r) => r.content_sha256 === row.content_sha256 && r.verdict && (r.status === 'concluida' || r.status === 'erro'))
-    .sort((a, b) => (b.completed_at ?? b.created_at).localeCompare(a.completed_at ?? a.created_at));
-  const r = validas[0];
+  const temLugar = row.discipline_id !== undefined;
+  const lugarOk = (r: ReviewRow) => !temLugar || mesmoLugarDoEnvio(r, row as Pick<Row, 'discipline_id' | 'theme_id' | 'parent_material_id'>);
+  const maisRecenteDe = (lista: ReviewRow[]) =>
+    [...lista].sort((a, b) => (b.completed_at ?? b.created_at).localeCompare(a.completed_at ?? a.created_at))[0];
+  const doTexto = (row.reviews ?? []).filter(
+    (r) => r.content_sha256 === row.content_sha256 && r.verdict && (r.status === 'concluida' || r.status === 'erro'),
+  );
+  const concluida = maisRecenteDe(doTexto.filter((r) => r.status === 'concluida'));
+  if (concluida && !lugarOk(concluida)) return null;
+  const r = maisRecenteDe([...(concluida ? [concluida] : []), ...doTexto.filter((x) => x.status === 'erro' && lugarOk(x))]);
   if (!r || !r.verdict) return null;
   return {
     id: r.id,
@@ -154,6 +199,8 @@ function fromRow(row: Row): MaterialSubmission {
     updatedAt: row.updated_at,
     publishedMaterialId: row.published_material_id ?? null,
     publicationNote: row.publication_note ?? null,
+    targetMaterialId: row.target_material_id ?? null,
+    appliedAt: row.applied_at ?? null,
     review: revisaoQueValeParaOTexto(row),
     author: autor
       ? { id: row.author_id ?? '', name: autor.display_name ?? '', email: autor.email ?? '' }
@@ -208,6 +255,36 @@ class SupabaseMaterialSubmissionsRepository implements MaterialSubmissionsReposi
     return fromRow(data as Row);
   }
 
+  async submitUpdate(input: NewMaterialUpdate): Promise<MaterialSubmission> {
+    // Sem Disciplina, Tema nem material acima: o banco os toma do material que se atualiza.
+    const { data, error } = await supabase
+      .from('material_submissions')
+      .insert({ title: input.title, content_md: input.contentMd, target_material_id: input.targetMaterialId })
+      .select(COLUMNS)
+      .single();
+    if (error) throw error;
+    return fromRow(data as Row);
+  }
+
+  async podeAtualizar(materialId: string): Promise<boolean> {
+    const { data, error } = await supabase.rpc('pode_atualizar_material', { p_material: materialId });
+    if (error) throw error;
+    return data === true;
+  }
+
+  async secoesDasQuestoes(materialId: string): Promise<string[]> {
+    const rows = await fetchAllRows<{ material_section_id: string | null }>((from, to) =>
+      supabase
+        .from('question_materials')
+        .select('material_section_id')
+        .eq('material_id', materialId)
+        .not('material_section_id', 'is', null)
+        .order('question_id')
+        .range(from, to),
+    );
+    return rows.map((r) => r.material_section_id).filter((id): id is string => Boolean(id));
+  }
+
   async replaceText(id: string, input: NewMaterialSubmission): Promise<MaterialSubmission> {
     const { data, error } = await supabase
       .from('material_submissions')
@@ -252,6 +329,15 @@ class UnavailableMaterialSubmissionsRepository implements MaterialSubmissionsRep
   }
   async submit(): Promise<MaterialSubmission> {
     throw new Error('Envio de material indisponível sem o servidor.');
+  }
+  async submitUpdate(): Promise<MaterialSubmission> {
+    throw new Error('Envio de material indisponível sem o servidor.');
+  }
+  async podeAtualizar(): Promise<boolean> {
+    return false;
+  }
+  async secoesDasQuestoes(): Promise<string[]> {
+    return [];
   }
   async replaceText(): Promise<MaterialSubmission> {
     throw new Error('Envio de material indisponível sem o servidor.');

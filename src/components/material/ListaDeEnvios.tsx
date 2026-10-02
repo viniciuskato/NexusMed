@@ -41,6 +41,8 @@ interface ListaDeEnviosProps {
   /** 44-H2: abre as questões que o servidor publicou a partir de um envio de questões. */
   onAbrirQuestoes?: (questionIds: string[]) => void;
   ocupadoId?: string | null;
+  /** 44-B: os materiais publicados, para dizer de qual deles o envio é a atualização. */
+  materiais?: Array<{ id: string; title: string }>;
 }
 
 export function dataDoEnvio(iso: string): string {
@@ -124,6 +126,7 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
   onAbrirMaterial,
   onAbrirQuestoes,
   ocupadoId,
+  materiais,
 }) => {
   if (envios.length === 0) {
     return <p className="text-sm text-slate-500 dark:text-slate-400">{vazio}</p>;
@@ -135,10 +138,23 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
         const questoes = 'kind' in item && item.kind === 'questoes';
         const envio = (questoes ? null : item) as MaterialSubmission | null;
         const idsPublicados = questoes ? ((item as QuestionSubmission).publishedQuestionIds ?? []) : [];
-        const estado = estadoEmPalavras(item.status, questoes ? 'questoes' : 'material');
+        const alvoDoEnvio = envio?.targetMaterialId ?? null;
+        const base = estadoEmPalavras(item.status, questoes ? 'questoes' : 'material');
+        // 44-B: na atualização, "publicado" é "o conteúdo no ar foi trocado" (ou já era igual).
+        const estado =
+          alvoDoEnvio && item.status === 'apto'
+            ? { ...base, explicacao: 'A revisão aprovou a atualização. O conteúdo que está no ar será trocado em alguns minutos.' }
+            : alvoDoEnvio && item.status === 'publicado'
+              ? { ...base, explicacao: 'O material que está no ar já tem o conteúdo desta atualização, com o selo de revisado por IA.' }
+              : alvoDoEnvio && item.status === 'nao_apto'
+                ? { ...base, explicacao: 'A atualização não foi aprovada: o material continua como estava. Corrija o arquivo, e use “Atualizar a partir de arquivo” no material para enviar de novo.' }
+                : base;
         const disciplina = envio ? disciplines.find((d) => d.id === envio.disciplineId)?.name : undefined;
         const tema = envio ? themes.find((t) => t.id === envio.themeId)?.name : undefined;
-        const podeCorrigir = onCorrigir && (item.status === 'nao_apto' || item.status === 'erro');
+        // 44-B: envio de atualização (o alvo é um material publicado). O texto novo vem de outro arquivo, pelo botão do material.
+        const alvoDaAtualizacao = envio?.targetMaterialId ?? null;
+        const tituloDoAlvo = alvoDaAtualizacao ? materiais?.find((m) => m.id === alvoDaAtualizacao)?.title : undefined;
+        const podeCorrigir = onCorrigir && !alvoDaAtualizacao && (item.status === 'nao_apto' || item.status === 'erro');
         const podeTentarDeNovo = onTentarDeNovo && item.status === 'erro';
         return (
           <li
@@ -155,6 +171,14 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
                     Questões
                   </span>
                 )}
+                {alvoDaAtualizacao && (
+                  <span
+                    data-testid="envio-de-atualizacao"
+                    className="px-2 py-0.5 rounded-md border border-slate-300 dark:border-slate-600 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                  >
+                    {tituloDoAlvo ? `Atualização de “${tituloDoAlvo}”` : 'Atualização'}
+                  </span>
+                )}
                 <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200">
                   {estado.rotulo}
                 </span>
@@ -169,7 +193,7 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
             {estado.explicacao && (
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{estado.explicacao}</p>
             )}
-            {item.publicationNote && item.status !== 'publicado' && (
+            {item.publicationNote && (item.status !== 'publicado' || alvoDoEnvio) && (
               <p data-testid="recado-do-servidor" className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
                 {item.publicationNote}
               </p>
@@ -191,12 +215,12 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
                 )}
               </div>
             )}
-            {envio && envio.status === 'publicado' && envio.publishedMaterialId && onAbrirMaterial && (
+            {envio && envio.status === 'publicado' && (envio.publishedMaterialId ?? envio.targetMaterialId) && onAbrirMaterial && (
               <div className="pt-1">
                 <button
                   type="button"
                   data-testid="abrir-material-publicado"
-                  onClick={() => onAbrirMaterial(envio.publishedMaterialId as string)}
+                  onClick={() => onAbrirMaterial((envio.publishedMaterialId ?? envio.targetMaterialId) as string)}
                   className="min-h-11 px-3 py-2 rounded-xl border border-teal-600 text-teal-700 dark:text-teal-300 dark:border-teal-500 bg-white dark:bg-slate-900 text-xs font-semibold cursor-pointer hover:bg-teal-50 dark:hover:bg-teal-950/40"
                 >
                   Abrir o material publicado

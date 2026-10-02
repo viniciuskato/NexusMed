@@ -310,6 +310,13 @@ export function mensagemDeErroDoEnvio(err: unknown, tipo: 'material' | 'questoes
       ? `O texto passa de ${tamanhoLegivel(LIMITE_TEXTO_BYTES)}. Divida o lote de questões em mais de um envio.`
       : `O texto passa de ${tamanhoLegivel(LIMITE_TEXTO_BYTES)}. Reduza o material ou divida-o em mais de um.`;
   }
+  // 44-B: pedido de atualização de um material.
+  if (texto.includes('só quem é admin ou enviou este material')) {
+    return 'Só quem é administrador ou enviou este material pode atualizá-lo.';
+  }
+  if (texto.includes('o material a atualizar precisa estar publicado')) {
+    return 'Este material não está mais publicado, então não dá para atualizá-lo.';
+  }
   if (texto.includes('publicado') && texto.includes('material acima')) {
     return 'O material acima precisa estar publicado. Escolha outro ou deixe em branco.';
   }
