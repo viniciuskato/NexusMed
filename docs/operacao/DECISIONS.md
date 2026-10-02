@@ -6,6 +6,36 @@
 > `docs/archive/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-09-29 — Conteúdo enviado pelo site, revisado por IA e publicado pelo "apto" (D-11)
+
+Origem: pedidos do dono de 29/09/2026: "Se alguém quiser postar, deve
+conseguir também."; "Opção B. Tudo que for publicado deve passar pelo
+revisor."; "aprovado, A." (com o apto, direto aos alunos, com selo e botão de
+reportar erro).
+
+1. Qualquer usuário ativo envia material e questões pelo site, no padrão que
+   o próprio site mostra (44-D, 44-E, 44-H1).
+2. Tudo o que é publicado passa pelo revisor de IA do site (Claude API, pago
+   por revisão; teto mensal na conta do dono e limites no banco) (44-F,
+   44-H2).
+3. Com o "apto" do texto e do lugar atuais, o conteúdo vai direto aos alunos
+   com o selo "Revisado por IA"; a leitura do dono deixa de ser exigida para
+   publicar e, quando acontece, reforça o selo. Qualquer usuário reporta erro
+   (44-G, 44-H2).
+4. Substitui, para publicar, a atestação humana obrigatória e o fluxo
+   "Gemini + atestação do dono" (D-5, D-7).
+
+## 2026-09-29 — O plano volta a andar (D-10)
+
+Origem: dono, 29/09/2026: "De manhã, quero que você tenha aplicado todas as
+ideias que temos nos arquivou do projeto ou ainda esteja trabalhando."
+
+As unidades congeladas pela D-7 voltam à fila: 43-E, 44-A, 44-B, 44-C2, 45-F,
+45-H, 45-I, 45-K, 46-A e 46-D (46-C segue dependendo da P-2). Da D-7 continuam
+valendo: até 2 merges por dia, nunca à noite, e nada no caminho de importar,
+atestar, publicar ou ligar questão mesclado antes de 03/10. A seção 14 do
+plano ("O que não construir") continua valendo.
+
 ## 2026-09-29 — O dono aprova o plano; a diretoria executa e publica o que ele descreve (D-9)
 
 Origem: decisão do dono de 29/09/2026, para todos os projetos dele, em teste

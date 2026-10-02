@@ -203,7 +203,8 @@ test.describe('Estudo Temático (22-A)', () => {
     await expect(page.locator('#thematic-study-view')).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('#thematic-invalid-pack-notice')).toBeVisible();
 
-    // Valor fora da lista de permissão cai em Início, nunca numa view inventada.
+    // Valor fora da lista de permissão cai em Hoje (a tela inicial desde a 43-E),
+    // nunca numa view inventada.
     await page.evaluate(
       ([key]) => window.localStorage.setItem(key, JSON.stringify('view-que-nao-existe')),
       [uiStateKey(user.id, 'nav_active_view')]
@@ -212,7 +213,7 @@ test.describe('Estudo Temático (22-A)', () => {
     // salvo — aqui o que se testa é o fallback do valor salvo.
     await page.goto('/');
     await expect(page.locator('#thematic-study-view')).toHaveCount(0, { timeout: 20_000 });
-    await expect(page.locator('#nav-dashboard')).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#nav-today')).toHaveAttribute('aria-current', 'page');
   });
 
   test('navegação Início / Estudo Temático / Recursos no desktop, no mobile e pelo teclado', async ({

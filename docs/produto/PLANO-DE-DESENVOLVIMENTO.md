@@ -575,7 +575,7 @@ existem, mas espalhadas.
 
 **Fora de escopo.** Metas, estatísticas novas, gamificação nova.
 **Depende de.** 43-C.
-**Estado.** Planejada. Congelada (D-7, 28/09).
+**Estado.** Concluída — PR #102.
 
 ---
 
@@ -767,6 +767,22 @@ nova, ver na hora quais materiais ela afeta.
 **Fora de escopo.** Correção automática; nota de qualidade; checagem por IA.
 **Depende de.** 44-B e 44-C1.
 **Estado.** Planejada. Congelada (D-7, 28/09).
+
+### 44-D — Como escrever um material, dentro do site
+
+**Origem.** Pedido do dono (29/09): o NexusMed deve mostrar a estrutura do
+material, não só quem está por trás do sistema, e oferecer um prompt para
+criar material no padrão e um revisor que diz se ele está apto a entrar.
+
+**Aceite.** Todo usuário ativo abre, pelo menu, "Como escrever um material":
+a Parte 1 do padrão, as Disciplinas e os Temas do catálogo e dois textos para
+copiar (prompt de criação e prompt revisor), cada um com a Parte 1 junto. O
+padrão e os prompts vivem num arquivo só cada, lidos pelo site sem cópia; um
+teste reprova jargão interno neles.
+
+**Fora de escopo.** Enviar material (44-E); IA chamada pelo próprio site.
+**Depende de.** Nada.
+**Estado.** Concluída — PR #100.
 
 ---
 
@@ -1397,7 +1413,7 @@ próximo "semana". Em dúvida, vale a linha "Estado" de cada unidade.*
 | 43-B | Concluída | #94 | a conferir |
 | 43-C | Concluída | #96 | a conferir |
 | 43-D | Concluída | #80 | 25/09 (migration aplicada ~13h45 depois do merge — INC-2026-005) |
-| 43-E | Congelada (D-7) | — | — |
+| 43-E | Concluída | #102 | a conferir |
 | 44-A | Congelada (D-7) | — | — |
 | 44-B | Congelada (D-7) | — | — |
 | 44-C1 | Concluída | #85 | a conferir |

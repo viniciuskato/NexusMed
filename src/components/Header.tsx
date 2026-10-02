@@ -3,6 +3,7 @@ import {
   Search,
   Compass,
   LayoutDashboard,
+  CalendarCheck,
   BookOpen,
   HelpCircle,
   Layers,
@@ -14,6 +15,7 @@ import {
   ChevronDown,
   MessageSquarePlus,
   Settings,
+  FilePenLine,
 } from 'lucide-react';
 import { UserPlan, UserStats, ThemeMode } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -80,6 +82,7 @@ export const Header: React.FC<HeaderProps> = ({
   }, [resourcesOpen]);
 
   // Navegação principal (Prompt 22-A): Início, Estudo Temático e Recursos —
+  // desde a 43-E, com "Hoje" antes de Início, que é a tela inicial —
   // este último agrupando os três acervos (Biblioteca, Questões, Cards).
   const resourceItems = [
     { id: 'compendiums', label: 'Biblioteca', icon: BookOpen, activeAlso: ['compendium-reader'] },
@@ -114,7 +117,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Left: Brand Identity */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
           <button
-            onClick={() => onSelectView('dashboard')}
+            onClick={() => onSelectView('today')}
             className="min-h-11 flex items-center gap-1.5 sm:gap-2.5 text-left group focus:outline-hidden cursor-pointer min-w-0"
           >
             <Logo className="w-8 h-8 rounded-xl elev-sm shadow-teal-600/30 group-hover:scale-105 transition-transform shrink-0" />
@@ -132,6 +135,22 @@ export const Header: React.FC<HeaderProps> = ({
           aria-label="Navegação principal"
           className="hidden md:flex items-center gap-1 min-w-0"
         >
+          {/* Só a partir de xl: a barra já não cabe entre md e lg (medido em
+              768–900px sem este item), e o dock, presente em toda largura,
+              também leva a Hoje (43-E). */}
+          <div className="hidden xl:flex">
+            <button
+              type="button"
+              id="nav-today"
+              onClick={() => onSelectView('today')}
+              aria-current={activeView === 'today' ? 'page' : undefined}
+              className={navButtonClass(activeView === 'today')}
+            >
+              <CalendarCheck className="w-3.5 h-3.5" />
+              <span>Hoje</span>
+            </button>
+          </div>
+
           <button
             type="button"
             id="nav-dashboard"
@@ -361,6 +380,21 @@ export const Header: React.FC<HeaderProps> = ({
                       <span>Área Editorial / CMS</span>
                     </button>
                   )}
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    id="nav-como-escrever-material"
+                    aria-current={activeView === 'como-escrever-material' ? 'page' : undefined}
+                    onClick={() => {
+                      onSelectView('como-escrever-material');
+                      setUserDropdownOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-xs text-[#172033] dark:text-[#E5E7EB] hover:bg-slate-100 dark:hover:bg-[#182235] flex items-center gap-2 cursor-pointer"
+                  >
+                    <FilePenLine className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
+                    <span>Como escrever um material</span>
+                  </button>
 
                   {onOpenFeedback && (
                     <button

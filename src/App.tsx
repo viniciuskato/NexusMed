@@ -26,6 +26,7 @@ import { questionReactionsRepository } from './repositories/QuestionReactionsRep
 import { buildSimuladoSelection, SimuladoSelectionResult } from './services/simuladoSelection';
 import { packIdForCompendium, SCOPE_CUSTOM, SCOPE_UNLINKED } from './services/thematicPacks';
 import { questionMatchesMaterialScope } from './utils/questionMaterials';
+import { jaEntrouNestaAba, marcarEntradaNestaAba } from './utils/navEntrada';
 
 registerSyncHandlers();
 
@@ -77,6 +78,7 @@ import { PlanModal } from './components/PlanModal';
 
 // Views
 import { DashboardView } from './components/dashboard/DashboardView';
+import { HojeView } from './components/hoje/HojeView';
 import { CreateSimuladoModal } from './components/questions/CreateSimuladoModal';
 import { CreateFlashcardModal } from './components/flashcards/CreateFlashcardModal';
 import { ClinicalPomodoroWidget } from './components/common/ClinicalPomodoroWidget';
@@ -97,15 +99,23 @@ const FlashcardReviewSession = lazyWithReload(() => import('./components/flashca
 const SimuladosView = lazyWithReload(() => import('./components/simulados/SimuladosView').then((m) => ({ default: m.SimuladosView })));
 const AdminCMSView = lazyWithReload(() => import('./components/admin/AdminCMSView').then((m) => ({ default: m.AdminCMSView })));
 const ThematicStudyView = lazyWithReload(() => import('./components/thematic/ThematicStudyView').then((m) => ({ default: m.ThematicStudyView })));
+// 44-D: "Como escrever um material" traz o padrão e os prompts como texto do
+// build; fica fora do bundle inicial.
+const ComoEscreverMaterialView = lazyWithReload(() => import('./components/material/ComoEscreverMaterialView').then((m) => ({ default: m.ComoEscreverMaterialView })));
 
 // Views que podem ser restauradas depois de um reload (Prompt 22-A). É uma
 // lista de PERMISSÃO: qualquer outro valor salvo (inclusive um valor futuro
-// ainda não conhecido, ou lixo gravado por outra versão) cai em 'dashboard'.
+// ainda não conhecido, ou lixo gravado por outra versão) cai em 'today'.
 // Sessões efêmeras ficam deliberadamente de fora — 'simulado-session',
 // 'flashcard-session' e 'compendium-reader' dependem de estado em memória
 // (fila de cards, seleção sorteada, compêndio ativo) que não sobrevive ao
 // reload; restaurá-las abriria uma tela sem o conteúdo correspondente.
+//
+// 'today' (43-E) é a tela inicial. A restauração acima vale para o RELOAD: a
+// abertura nova da aba (sem link direto) entra por 'today', ver a restauração
+// de navegação abaixo.
 const PERSISTED_VIEWS = [
+  'today',
   'dashboard',
   'thematic-study',
   'compendiums',
@@ -113,6 +123,7 @@ const PERSISTED_VIEWS = [
   'flashcards',
   'simulados',
   'errors',
+  'como-escrever-material',
   'admin',
 ] as const;
 
@@ -124,7 +135,7 @@ function AuthenticatedApp() {
   const { user, profile, loading, isEmailVerified } = useAuth();
 
   // Navigation State
-  const [activeView, setActiveView] = useState<string>('dashboard');
+  const [activeView, setActiveView] = useState<string>('today');
   // Estudo Temático: pack aberto (id derivado do compêndio). Fica aqui, e não
   // dentro da view, porque o retorno ao pack depois de ler/responder/revisar
   // depende dele, e porque a validação do id salvo precisa dos dados já
@@ -240,7 +251,7 @@ function AuthenticatedApp() {
   const [shownForUserId, setShownForUserId] = useState<string | null>(user?.id ?? null);
   if (shownForUserId !== (user?.id ?? null)) {
     setShownForUserId(user?.id ?? null);
-    setActiveView('dashboard');
+    setActiveView('today');
     setDashboardTab('overview');
     setNavStateRestored(false);
     setReviewCardsQueue([]);
@@ -339,14 +350,19 @@ function AuthenticatedApp() {
   useEffect(() => {
     if (!user?.id || dataLoading || !dataReady || navStateRestored) return;
 
-    // Link direto (#/questoes etc.) tem prioridade sobre a tela salva.
+    // Link direto (#/questoes etc.) tem prioridade sobre a tela salva. Sem
+    // link, quem RECARREGOU a página volta à tela salva (22-A); quem ABRIU o
+    // app agora (aba nova, primeira vez, outra conta) entra por "Hoje" (43-E).
     const hashView = viewFromHash();
+    const reloaded = jaEntrouNestaAba(user.id);
     const savedView = (PERSISTED_VIEWS as readonly string[]).includes(hashView)
       ? hashView
-      : StorageService.getUIState<string>('nav_active_view', 'dashboard');
+      : reloaded
+      ? StorageService.getUIState<string>('nav_active_view', 'today')
+      : 'today';
     const isAllowedView = (PERSISTED_VIEWS as readonly string[]).includes(savedView);
     const canUseAdmin = profile?.role === 'admin' && profile?.status === 'active';
-    const restoredView = isAllowedView && (savedView !== 'admin' || canUseAdmin) ? savedView : 'dashboard';
+    const restoredView = isAllowedView && (savedView !== 'admin' || canUseAdmin) ? savedView : 'today';
 
     const savedPackId = StorageService.getUIState<string | null>('nav_thematic_pack', null);
     const isValidPack =
@@ -354,6 +370,7 @@ function AuthenticatedApp() {
       compendiums.some((c) => packIdForCompendium(c.id) === savedPackId);
 
     setActiveView(restoredView);
+    marcarEntradaNestaAba(user.id);
     if (isValidPack) {
       setSelectedPackId(savedPackId);
     } else if (typeof savedPackId === 'string' && savedPackId !== '') {
@@ -364,12 +381,12 @@ function AuthenticatedApp() {
   }, [user?.id, dataLoading, dataReady, navStateRestored, compendiums, profile?.role, profile?.status]);
 
   // Persistência só começa depois da restauração — gravar antes sobrescreveria
-  // o valor salvo com o 'dashboard' do estado inicial.
+  // o valor salvo com o 'today' do estado inicial.
   useEffect(() => {
     if (!navStateRestored) return;
     StorageService.setUIState(
       'nav_active_view',
-      (PERSISTED_VIEWS as readonly string[]).includes(activeView) ? activeView : 'dashboard'
+      (PERSISTED_VIEWS as readonly string[]).includes(activeView) ? activeView : 'today'
     );
   }, [activeView, navStateRestored]);
 
@@ -400,7 +417,7 @@ function AuthenticatedApp() {
       } else {
         // Entrada de sessão efêmera (via "avançar"): o estado dela não existe
         // mais — permanece na tela atual.
-        window.history.replaceState(null, '', `#/${previousViewRef.current ?? 'dashboard'}`);
+        window.history.replaceState(null, '', `#/${previousViewRef.current ?? 'today'}`);
       }
     };
     window.addEventListener('popstate', onPopState);
@@ -757,6 +774,20 @@ function AuthenticatedApp() {
               </div>
             }
           >
+          {activeView === 'today' && (
+            <HojeView
+              compendiums={compendiums}
+              questions={questions}
+              lastReadingSession={lastReadingSession}
+              dataReady={dataReady}
+              dataStatus={dataStatus}
+              onResumeReading={(compendiumId, sectionId) => handleOpenCompendium(compendiumId, sectionId)}
+              onTestarOQueLi={() => setIsTestarOpen(true)}
+              onStartReview={(cards) => handleStartSRS(cards, 'today')}
+              onOpenLibrary={() => handleSelectView('compendiums')}
+            />
+          )}
+
           {activeView === 'dashboard' && (
             <DashboardView
               disciplines={disciplines}
@@ -915,7 +946,11 @@ function AuthenticatedApp() {
                 refreshData();
                 // Volta para onde a sessão começou: o pack continua selecionado,
                 // então "Estudo Temático" reabre exatamente o mesmo pack.
-                setActiveView(flashcardOriginView === 'thematic-study' ? 'thematic-study' : 'flashcards');
+                setActiveView(
+                  flashcardOriginView === 'thematic-study' || flashcardOriginView === 'today'
+                    ? flashcardOriginView
+                    : 'flashcards'
+                );
               }}
               onOpenCompendium={handleOpenCompendium}
             />
@@ -971,6 +1006,11 @@ function AuthenticatedApp() {
             />
           )}
 
+          {/* 44-D: qualquer usuário ativo (o gate de status vem antes, no topo do componente) */}
+          {activeView === 'como-escrever-material' && (
+            <ComoEscreverMaterialView disciplines={disciplines} themes={themes} />
+          )}
+
           {/* Admin CMS - Apenas para papel admin */}
           {activeView === 'admin' && (
             isAdmin ? (
@@ -1018,7 +1058,7 @@ function AuthenticatedApp() {
         onSelectView={handleSelectView}
         dueCardsCount={dueCardsCount}
         errorLogCount={errorCount}
-        lastReadingSession={lastReadingSession}
+        lastReadingSession={activeView === 'today' ? null : lastReadingSession}
         onResumeReading={handleResumeReading}
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenCreateSimulado={() => setIsCreateSimuladoOpen(true)}
