@@ -141,6 +141,8 @@ const { default: App } = await import('../../src/App');
 
 beforeEach(() => {
   authState.user = { id: 'user-a' };
+  // Desde a 43-E o app abre em "Hoje"; este teste parte do Início (link direto).
+  window.history.replaceState(null, '', '#/dashboard');
 });
 afterEach(() => {
   cleanup();

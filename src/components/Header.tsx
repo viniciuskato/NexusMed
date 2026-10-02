@@ -3,6 +3,7 @@ import {
   Search,
   Compass,
   LayoutDashboard,
+  CalendarCheck,
   BookOpen,
   HelpCircle,
   Layers,
@@ -81,6 +82,7 @@ export const Header: React.FC<HeaderProps> = ({
   }, [resourcesOpen]);
 
   // Navegação principal (Prompt 22-A): Início, Estudo Temático e Recursos —
+  // desde a 43-E, com "Hoje" antes de Início, que é a tela inicial —
   // este último agrupando os três acervos (Biblioteca, Questões, Cards).
   const resourceItems = [
     { id: 'compendiums', label: 'Biblioteca', icon: BookOpen, activeAlso: ['compendium-reader'] },
@@ -115,7 +117,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Left: Brand Identity */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
           <button
-            onClick={() => onSelectView('dashboard')}
+            onClick={() => onSelectView('today')}
             className="min-h-11 flex items-center gap-1.5 sm:gap-2.5 text-left group focus:outline-hidden cursor-pointer min-w-0"
           >
             <Logo className="w-8 h-8 rounded-xl elev-sm shadow-teal-600/30 group-hover:scale-105 transition-transform shrink-0" />
@@ -133,6 +135,22 @@ export const Header: React.FC<HeaderProps> = ({
           aria-label="Navegação principal"
           className="hidden md:flex items-center gap-1 min-w-0"
         >
+          {/* Só a partir de xl: a barra já não cabe entre md e lg (medido em
+              768–900px sem este item), e o dock, presente em toda largura,
+              também leva a Hoje (43-E). */}
+          <div className="hidden xl:flex">
+            <button
+              type="button"
+              id="nav-today"
+              onClick={() => onSelectView('today')}
+              aria-current={activeView === 'today' ? 'page' : undefined}
+              className={navButtonClass(activeView === 'today')}
+            >
+              <CalendarCheck className="w-3.5 h-3.5" />
+              <span>Hoje</span>
+            </button>
+          </div>
+
           <button
             type="button"
             id="nav-dashboard"

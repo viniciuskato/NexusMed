@@ -171,6 +171,9 @@ test.describe('43-C — Testar o que li', () => {
     registrarLeitura(student.id, matD, 'now()');
 
     await login(page, student);
+    // O app abre em "Hoje" (43-E), que só oferece o teste quando há questão para
+    // o que foi lido; este cenário parte do botão do Início.
+    await page.locator('#nav-dashboard').click();
     await page.getByRole('button', { name: 'Testar o que li' }).click();
     const modal = page.getByRole('dialog', { name: 'Testar o que li' });
     await expect(modal.getByRole('checkbox', { name: titleD })).toBeChecked();

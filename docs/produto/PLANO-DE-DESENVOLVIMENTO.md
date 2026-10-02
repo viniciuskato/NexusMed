@@ -575,7 +575,7 @@ existem, mas espalhadas.
 
 **Fora de escopo.** Metas, estatísticas novas, gamificação nova.
 **Depende de.** 43-C.
-**Estado.** Planejada. Congelada (D-7, 28/09).
+**Estado.** Concluída — PR #102.
 
 ---
 
@@ -1414,7 +1414,7 @@ próximo "semana". Em dúvida, vale a linha "Estado" de cada unidade.*
 | 43-B | Concluída | #94 | a conferir |
 | 43-C | Concluída | #96 | a conferir |
 | 43-D | Concluída | #80 | 25/09 (migration aplicada ~13h45 depois do merge — INC-2026-005) |
-| 43-E | Congelada (D-7) | — | — |
+| 43-E | Concluída | #102 | a conferir |
 | 44-A | Congelada (D-7) | — | — |
 | 44-B | Congelada (D-7) | — | — |
 | 44-C1 | Concluída | #85 | a conferir |
