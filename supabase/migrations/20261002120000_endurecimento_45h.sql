@@ -3,8 +3,9 @@
 -- ============================================================================
 --
 -- Nada aqui altera nem apaga dado existente: só privilégios, políticas,
--- limites de tamanho (NOT VALID: valem para o que for gravado daqui em diante,
--- sem revalidar linhas antigas) e o corpo de três RPCs.
+-- limites de tamanho (gatilhos que só conferem a coluna limitada quando ela é
+-- inserida ou muda; linha antiga acima do limite não é tocada nem trava outra
+-- atualização) e o corpo de quatro funções.
 --
 -- 1. AUD-31.1 — função nova não nasce chamável sem login. Funções de `public`
 --    nascem com EXECUTE para PUBLIC (e o anon herda); o `alter default
@@ -143,22 +144,80 @@ grant insert (id, user_id, type, title, description, question_id, material_id)
   on public.feedback to authenticated;
 
 -- ----------------------------------------------------------------------------
--- 4. Limite de tamanho (NOT VALID: não revalida linhas existentes)
+-- 4. Limite de tamanho
 -- ----------------------------------------------------------------------------
+-- Gatilho, e não CHECK: um CHECK (mesmo NOT VALID) é conferido em todo UPDATE da
+-- linha, e uma linha antiga acima do limite passaria a recusar atualização de
+-- OUTRA coluna (status de feedback, status do perfil). O gatilho só confere a
+-- coluna limitada quando ela é inserida ou muda; linha antiga não é tocada.
 
-alter table public.feedback
-  add constraint feedback_title_max_length check (char_length(title) <= 200) not valid,
-  add constraint feedback_description_max_length check (char_length(description) <= 5000) not valid;
-alter table public.notes
-  add constraint notes_note_text_max_length check (char_length(note_text) <= 50000) not valid;
-alter table public.flashcards
-  add constraint flashcards_front_max_length check (char_length(front) <= 5000) not valid,
-  add constraint flashcards_back_max_length check (char_length(back) <= 20000) not valid;
-alter table public.error_notebook
-  add constraint error_notebook_user_notes_max_length check (char_length(user_notes) <= 5000) not valid;
-alter table public.profiles
-  add constraint profiles_display_name_max_length check (char_length(display_name) <= 200) not valid,
-  add constraint profiles_avatar_url_max_length check (char_length(avatar_url) <= 2048) not valid;
+create function app.limite_de_tamanho_45h()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+declare
+  i int := 0;
+  v_coluna text;
+  v_limite int;
+  v_novo text;
+  v_antigo text;
+begin
+  -- TG_ARGV: coluna1, limite1, coluna2, limite2...
+  while i < TG_NARGS loop
+    v_coluna := TG_ARGV[i];
+    v_limite := TG_ARGV[i + 1]::int;
+    v_novo := pg_catalog.to_jsonb(new) ->> v_coluna;
+    if TG_OP = 'UPDATE' then
+      v_antigo := pg_catalog.to_jsonb(old) ->> v_coluna;
+    else
+      v_antigo := null;
+    end if;
+    if v_novo is not null
+       and pg_catalog.char_length(v_novo) > v_limite
+       and (TG_OP = 'INSERT' or v_novo is distinct from v_antigo) then
+      raise exception '% de % excede % caracteres', v_coluna, TG_TABLE_NAME, v_limite
+        using errcode = '23514';
+    end if;
+    i := i + 2;
+  end loop;
+  return new;
+end;
+$$;
+
+create trigger trg_limite_45h before insert or update on public.feedback
+  for each row execute function app.limite_de_tamanho_45h('title', '200', 'description', '5000');
+create trigger trg_limite_45h before insert or update on public.notes
+  for each row execute function app.limite_de_tamanho_45h('note_text', '50000');
+create trigger trg_limite_45h before insert or update on public.flashcards
+  for each row execute function app.limite_de_tamanho_45h('front', '5000', 'back', '20000');
+create trigger trg_limite_45h before insert or update on public.error_notebook
+  for each row execute function app.limite_de_tamanho_45h('user_notes', '5000');
+create trigger trg_limite_45h before insert or update on public.profiles
+  for each row execute function app.limite_de_tamanho_45h('display_name', '200', 'avatar_url', '2048');
+
+-- O cadastro nunca falha por tamanho: nome e avatar vindos do provedor de login
+-- entram cortados no limite.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.profiles (id, email, display_name, avatar_url, role, status)
+  values (
+    new.id,
+    new.email,
+    nullif(pg_catalog.left(trim(coalesce(new.raw_user_meta_data ->> 'display_name', new.raw_user_meta_data ->> 'full_name', '')), 200), ''),
+    nullif(pg_catalog.left(trim(coalesce(new.raw_user_meta_data ->> 'avatar_url', '')), 2048), ''),
+    'student',
+    'pending'
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
 
 -- ----------------------------------------------------------------------------
 -- 5. RPCs (mesmo contrato e mesmos grants; só os corpos mudam)

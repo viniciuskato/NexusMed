@@ -27,6 +27,23 @@ export function supabaseOrigin(rawUrl: string | undefined): string | null {
 }
 
 /**
+ * Diz por que a chave não pode ir ao bundle público, ou null se pode: chave
+ * secreta (sb_secret_...) ou JWT cujo role não é "anon" (ex.: service_role).
+ * Chave publishable (sb_publishable_...) e demais valores seguem aceitos.
+ */
+export function chaveNaoPublica(chave: string): string | null {
+  if (chave.startsWith('sb_secret_')) return 'é uma chave secreta (sb_secret_)';
+  if (!chave.startsWith('eyJ')) return null;
+  try {
+    const payload = chave.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const role = JSON.parse(Buffer.from(payload, 'base64').toString('utf8')).role;
+    return role === 'anon' ? null : `é um JWT com role "${String(role)}", não "anon"`;
+  } catch {
+    return 'é um JWT ilegível (não dá para conferir o role)';
+  }
+}
+
+/**
  * AUD-07: um build sem as variáveis do Supabase abriria o app em modo local,
  * com o botão de demonstração que cria um perfil admin. Falha o build.
  */
@@ -37,6 +54,13 @@ export function assertSupabaseEnv(env: Env): void {
       `Build recusado: faltam ${faltando.join(' e ')}. Sem elas o app abriria em modo demonstração ` +
         '(perfil admin local). Defina as variáveis do Supabase antes do build (Vercel: Environment Variables; ' +
         'local: .env.local; e2e: .env.test.local).',
+    );
+  }
+  const motivoChave = chaveNaoPublica(env.VITE_SUPABASE_ANON_KEY!.trim());
+  if (motivoChave) {
+    throw new Error(
+      `Build recusado: VITE_SUPABASE_ANON_KEY ${motivoChave}. A chave vai para o bundle público e ignoraria toda a RLS; ` +
+        'use a chave anon/publishable.',
     );
   }
   if (!supabaseOrigin(env.VITE_SUPABASE_URL)) {

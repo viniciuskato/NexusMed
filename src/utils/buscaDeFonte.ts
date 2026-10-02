@@ -1,8 +1,9 @@
 // 45-H (AUD-32.3) — filtro `.or()` do PostgREST para a busca de fontes.
 //
 // Dentro de `or=(a,b,c)` o PostgREST separa por vírgula e lê parênteses como
-// agrupamento: "Harrison (21ª ed.)" solto no filtro devolvia 400, e o seletor
-// mostrava "Fonte não cadastrada". O valor vai entre aspas duplas (a forma que
+// agrupamento: "Harrison (21ª ed.)" solto no filtro não dava erro, mas a lista
+// voltava vazia (medido no PostgREST local, 45-H), e o seletor mostrava "Fonte
+// não cadastrada" para uma fonte que existe. O valor vai entre aspas duplas (a forma que
 // o PostgREST define para valor com caractere reservado), com `"` escapado.
 // `%` e `\` digitados saem: seriam curinga e escape do LIKE.
 

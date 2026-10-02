@@ -60,7 +60,7 @@ grant execute on function tests.clear_auth() to anon, authenticated;
 -- ganham o EXECUTE que tinham antes.
 grant execute on all functions in schema tests to public;
 
-select plan(32);
+select plan(37);
 
 select tests.clear_auth();
 
@@ -284,14 +284,50 @@ select throws_ok(
 );
 
 select is(
-  (select count(*) from pg_constraint
-    where conname in (
-      'feedback_title_max_length', 'feedback_description_max_length', 'notes_note_text_max_length',
-      'flashcards_front_max_length', 'flashcards_back_max_length', 'error_notebook_user_notes_max_length',
-      'profiles_display_name_max_length', 'profiles_avatar_url_max_length')
-      and not convalidated),
-  8::bigint,
-  'os oito limites existem e são NOT VALID (linhas antigas não são revalidadas nem alteradas)'
+  (select count(*) from pg_trigger where tgname = 'trg_limite_45h' and not tgisinternal),
+  5::bigint,
+  'os limites de tamanho são gatilhos nas 5 tabelas (feedback, notes, flashcards, error_notebook, profiles)'
+);
+
+-- Linha antiga acima do limite (de antes da migration): o limite só vale quando
+-- a coluna limitada é gravada ou muda; outra coluna continua atualizável.
+alter table public.feedback disable trigger trg_limite_45h;
+insert into public.feedback (user_id, type, title, description)
+values (:'v_a', 'sugestao', repeat('t', 300), 'd') returning id as v_fb_antigo \gset
+alter table public.feedback enable trigger trg_limite_45h;
+
+select lives_ok(
+  format($$ update public.feedback set status = 'resolvido' where id = %L $$, :'v_fb_antigo'),
+  'linha antiga com título acima do limite: atualizar o status continua funcionando'
+);
+
+select lives_ok(
+  format($$ update public.feedback set title = title where id = %L $$, :'v_fb_antigo'),
+  'regravar o mesmo título antigo (sem aumentar nada) não é recusado'
+);
+
+select throws_ok(
+  format($$ update public.feedback set title = repeat('u', 400) where id = %L $$, :'v_fb_antigo'),
+  '23514', null,
+  'mas aumentar a coluna limitada acima do limite é recusado'
+);
+
+alter table public.profiles disable trigger trg_limite_45h;
+update public.profiles set display_name = repeat('n', 300) where id = :'v_a';
+alter table public.profiles enable trigger trg_limite_45h;
+
+select lives_ok(
+  format($$ update public.profiles set avatar_url = 'https://exemplo.org/a.png' where id = %L $$, :'v_a'),
+  'perfil antigo com nome acima do limite: atualizar o avatar continua funcionando'
+);
+
+insert into auth.users (id, email, encrypted_password, raw_user_meta_data, created_at, updated_at, aud, role)
+values (gen_random_uuid(), 'h45.longo+' || gen_random_uuid()::text || '@test.local', 'x', jsonb_build_object('display_name', repeat('m', 300), 'avatar_url', 'https://exemplo.org/' || repeat('a', 3000)), now(), now(), 'authenticated', 'authenticated');
+
+select is(
+  (select char_length(display_name) || '/' || char_length(avatar_url) from public.profiles where email like 'h45.longo+%@test.local' order by created_at desc limit 1),
+  '200/2048',
+  'cadastro com nome de 300 e avatar de 3000+ caracteres cria o perfil, cortado nos limites'
 );
 
 -- ----------------------------------------------------------------------------

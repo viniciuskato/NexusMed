@@ -160,10 +160,14 @@ seção "Armadilhas já descobertas".
     privileges de outro role do Supabase. Toda migration que cria tabela
     precisa de `revoke all on table public.<tabela> from anon;` explícito —
     a guarda `security_guards.test.sql` reprova se esquecer (NOVO-02).
-14. **Função nova em `public` nasce com EXECUTE para `PUBLIC`** (e `anon`
-    herda); o revoke de default privileges só tira `anon`. Toda RPC nova
-    precisa de `revoke all on function ... from public, anon;` explícito —
-    a guarda pgTAP ainda não confere isso (AUD-31).
+14. **Função nova não nasce mais com EXECUTE para `PUBLIC`** (default
+    privileges global sem PUBLIC, migration `20261002120000`, 45-H/AUD-31):
+    a guarda `security_guards.test.sql` reprova função de `public` chamável
+    por `anon`/PUBLIC. Consequência: RPC nova precisa de `grant execute ...
+    to authenticated` explícito (e a quem mais deva chamar); função em
+    schema fora de `public` e `app` também precisa de grant explícito. Só
+    `app` tem default que concede a `authenticated` e `service_role` (as
+    policies RLS chamam helpers de lá).
 15. **Campo de seção do compêndio com Markdown inline (`content`,
     `keyTakeaways`, `clinicalPearl`, `warningAlert`, `examConsensus`, e
     campos derivados como `Flashcard.back`/`mechanismHighlight`) renderizado

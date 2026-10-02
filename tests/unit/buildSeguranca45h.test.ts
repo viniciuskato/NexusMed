@@ -25,6 +25,21 @@ describe('AUD-07: build sem as variáveis do Supabase', () => {
   it('URL que não identifica um projeto Supabase, recusa', () => {
     expect(() => assertSupabaseEnv({ VITE_SUPABASE_URL: 'sb_publishable_xyz', VITE_SUPABASE_ANON_KEY: 'k' })).toThrow(/não é uma URL do Supabase/);
   });
+  const jwt = (role: string) =>
+    `eyJhbGciOiJIUzI1NiJ9.${Buffer.from(JSON.stringify({ role })).toString('base64url')}.assinatura`;
+  it('chave service_role (JWT) no lugar da anon, recusa', () => {
+    expect(() => assertSupabaseEnv({ VITE_SUPABASE_URL: PROJETO, VITE_SUPABASE_ANON_KEY: jwt('service_role') })).toThrow(/role "service_role"/);
+  });
+  it('chave secreta nova (sb_secret_), recusa', () => {
+    expect(() => assertSupabaseEnv({ VITE_SUPABASE_URL: PROJETO, VITE_SUPABASE_ANON_KEY: 'sb_secret_abc' })).toThrow(/secreta/);
+  });
+  it('JWT ilegível, recusa', () => {
+    expect(() => assertSupabaseEnv({ VITE_SUPABASE_URL: PROJETO, VITE_SUPABASE_ANON_KEY: 'eyJxxx' })).toThrow(/ilegível/);
+  });
+  it('JWT anon e chave publishable passam', () => {
+    expect(() => assertSupabaseEnv({ VITE_SUPABASE_URL: PROJETO, VITE_SUPABASE_ANON_KEY: jwt('anon') })).not.toThrow();
+    expect(() => assertSupabaseEnv({ VITE_SUPABASE_URL: PROJETO, VITE_SUPABASE_ANON_KEY: 'sb_publishable_abc' })).not.toThrow();
+  });
   it('com as duas variáveis, passa', () => {
     expect(() => assertSupabaseEnv({ VITE_SUPABASE_URL: PROJETO, VITE_SUPABASE_ANON_KEY: 'k' })).not.toThrow();
   });

@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { filtroBuscaDeFonte } from '../../src/utils/buscaDeFonte';
 
-// 45-H (AUD-32.3): a busca de fonte com parênteses monta um filtro que o
-// PostgREST aceita. Contra o PostgREST de verdade: tests/e2e/specs/busca-fonte-45h.spec.ts.
+// 45-H (AUD-32.3): a busca de fonte com parênteses monta o filtro com o valor
+// entre aspas. Que o PostgREST de verdade ENCONTRA a fonte "Harrison (21ª ed.)":
+// tests/e2e/specs/busca-fonte-45h.spec.ts (este arquivo só confere a forma do filtro).
 
 describe('filtroBuscaDeFonte', () => {
   it('o texto com parênteses vai entre aspas, em cada uma das três condições', () => {

@@ -21,6 +21,18 @@ describe('SafeMarkdown — links internos e externos', () => {
     expect(container.querySelector('a')!.getAttribute('href')).toBe('#');
   });
 
+  it.each([
+    ['TAB', '/\t/evil.example'],
+    ['LF', '/\n/evil.example'],
+    ['CR', '/\r/evil.example'],
+    ['TAB depois de http', 'https://exemplo.org/\tx'],
+  ])('href com %s (que o navegador remove, virando outro site) sai como "#"', (_nome, href) => {
+    const { container } = render(<>{parseInline(`Veja [aqui](${href}) agora.`)}</>);
+    const a = container.querySelector('a')!;
+    expect(a.getAttribute('href')).toBe('#');
+    expect(a.getAttribute('target')).toBeNull();
+  });
+
   it('caminho interno com uma barra continua interno, na mesma aba', () => {
     const a = linkDe('Veja [aqui](/interno/pagina) agora.');
     expect(a.getAttribute('href')).toBe('/interno/pagina');
