@@ -54,8 +54,11 @@ vi.mock('../../src/hooks/useAppData', () => ({
   }),
 }));
 
-vi.mock('../../src/components/dashboard/DashboardView', () => ({
-  DashboardView: () => <div data-testid="painel">painel</div>,
+// 43-E: a tela inicial agora é "Hoje", que lê estas três cargas do servidor.
+vi.mock('../../src/repositories/LeiturasRepository', () => ({ leiturasRepository: { getLeituras: async () => [] } }));
+vi.mock('../../src/repositories/AnswersRepository', () => ({ answersRepository: { getAnswers: async () => ({}) } }));
+vi.mock('../../src/repositories/FlashcardsRepository', () => ({
+  flashcardsRepository: { getFlashcards: async () => [] },
 }));
 vi.mock('../../src/components/AppErrorBoundary', () => ({
   AppErrorBoundary: ({ children }: { children: React.ReactNode }) => children,
@@ -97,7 +100,7 @@ afterEach(() => {
 describe('44-D — "Como escrever um material" no app', () => {
   it('estudante ativo abre a página pelo menu do usuário', async () => {
     render(<App />);
-    await screen.findByTestId('painel');
+    await screen.findByRole('heading', { level: 1, name: 'Hoje' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Como escrever um material' }));
