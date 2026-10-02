@@ -99,6 +99,9 @@ const FlashcardReviewSession = lazyWithReload(() => import('./components/flashca
 const SimuladosView = lazyWithReload(() => import('./components/simulados/SimuladosView').then((m) => ({ default: m.SimuladosView })));
 const AdminCMSView = lazyWithReload(() => import('./components/admin/AdminCMSView').then((m) => ({ default: m.AdminCMSView })));
 const ThematicStudyView = lazyWithReload(() => import('./components/thematic/ThematicStudyView').then((m) => ({ default: m.ThematicStudyView })));
+// 44-D: "Como escrever um material" traz o padrão e os prompts como texto do
+// build; fica fora do bundle inicial.
+const ComoEscreverMaterialView = lazyWithReload(() => import('./components/material/ComoEscreverMaterialView').then((m) => ({ default: m.ComoEscreverMaterialView })));
 
 // Views que podem ser restauradas depois de um reload (Prompt 22-A). É uma
 // lista de PERMISSÃO: qualquer outro valor salvo (inclusive um valor futuro
@@ -120,6 +123,7 @@ const PERSISTED_VIEWS = [
   'flashcards',
   'simulados',
   'errors',
+  'como-escrever-material',
   'admin',
 ] as const;
 
@@ -971,6 +975,11 @@ function AuthenticatedApp() {
               onTestarOQueLi={() => setIsTestarOpen(true)}
               onUpdate={refreshData}
             />
+          )}
+
+          {/* 44-D: qualquer usuário ativo (o gate de status vem antes, no topo do componente) */}
+          {activeView === 'como-escrever-material' && (
+            <ComoEscreverMaterialView disciplines={disciplines} themes={themes} />
           )}
 
           {/* Admin CMS - Apenas para papel admin */}
