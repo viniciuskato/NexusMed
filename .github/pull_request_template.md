@@ -14,7 +14,7 @@
 
 - [ ] Sem migration
 - [ ] Com migration — aplicar no remoto (`supabase db push --linked`)
-      **antes** / **depois** do merge (riscar a que não vale) porque: …
+      **antes** do merge; o check `migration-no-remoto` confere (D-4)
 
 ## Riscos e o que não foi verificado
 

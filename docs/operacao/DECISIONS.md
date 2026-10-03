@@ -405,6 +405,9 @@ falharam, e o processo produz mais do que o dono consegue revisar e mesclar.
 5. **Três números por semana:** materiais publicados, questões publicadas
    ligadas a material publicado, estudantes com cards em 7 dias
    (`docs/produto/METRICAS.md`).
+6. **Revisto em 27/09 (INC-2026-006):** o rótulo "revisado" é posto pela
+   sessão que revisou, e não pelo dono, que só mescla com todos os checks
+   verdes. A 46-E entrou no mesmo PR.
 
 ## 2026-09-24 — Produção de conteúdo em paralelo, com o Gemini como redator (D-5)
 
