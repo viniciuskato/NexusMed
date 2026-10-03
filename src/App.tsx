@@ -131,6 +131,10 @@ const PERSISTED_VIEWS = [
   'admin',
 ] as const;
 
+// P6 (03/10): só o dono (admin) envia material e questões. As telas de envio, e as de "como escrever"
+// que levam a elas, não existem para quem não é admin; o banco recusa o envio de qualquer forma (RLS).
+const VIEWS_DE_ENVIO: readonly string[] = ['como-escrever-material', 'como-escrever-questoes', 'enviar-material'];
+
 function viewFromHash(): string {
   return window.location.hash.replace(/^#\/?/, '');
 }
@@ -140,6 +144,11 @@ function AuthenticatedApp() {
 
   // Navigation State
   const [activeView, setActiveView] = useState<string>('today');
+  // P6: só o admin abre as telas de envio; a ref deixa o handler do histórico (sem dependências) saber.
+  const canSendRef = useRef(false);
+  useEffect(() => {
+    canSendRef.current = profile?.role === 'admin' && profile?.status === 'active';
+  }, [profile?.role, profile?.status]);
   // Estudo Temático: pack aberto (id derivado do compêndio). Fica aqui, e não
   // dentro da view, porque o retorno ao pack depois de ler/responder/revisar
   // depende dele, e porque a validação do id salvo precisa dos dados já
@@ -196,6 +205,8 @@ function AuthenticatedApp() {
   const [dashboardTab, setDashboardTab] = useState<'overview' | 'errors'>('overview');
 
   const handleSelectView = (view: string) => {
+    // P6: quem não é admin não abre as telas de envio (menu escondido; isto cobre atalhos e links).
+    if (VIEWS_DE_ENVIO.includes(view) && !canSendRef.current) return;
     // O menu "Enviar material" abre sempre na aba Material; quem quer a aba Questões a pede depois
     // ("Como escrever questões"), com setModoDoEnvio('questoes') logo em seguida.
     if (view === 'enviar-material') setModoDoEnvio('material');
@@ -371,7 +382,10 @@ function AuthenticatedApp() {
       : 'today';
     const isAllowedView = (PERSISTED_VIEWS as readonly string[]).includes(savedView);
     const canUseAdmin = profile?.role === 'admin' && profile?.status === 'active';
-    const restoredView = isAllowedView && (savedView !== 'admin' || canUseAdmin) ? savedView : 'today';
+    const restoredView =
+      isAllowedView && (savedView !== 'admin' || canUseAdmin) && (!VIEWS_DE_ENVIO.includes(savedView) || canUseAdmin)
+        ? savedView
+        : 'today';
 
     const savedPackId = StorageService.getUIState<string | null>('nav_thematic_pack', null);
     const isValidPack =
@@ -421,7 +435,7 @@ function AuthenticatedApp() {
   useEffect(() => {
     const onPopState = () => {
       const view = viewFromHash();
-      if ((PERSISTED_VIEWS as readonly string[]).includes(view)) {
+      if ((PERSISTED_VIEWS as readonly string[]).includes(view) && !(VIEWS_DE_ENVIO.includes(view) && !canSendRef.current)) {
         setActiveView(view);
       } else {
         // Entrada de sessão efêmera (via "avançar"): o estado dela não existe
@@ -1029,7 +1043,7 @@ function AuthenticatedApp() {
           )}
 
           {/* 44-D: qualquer usuário ativo (o gate de status vem antes, no topo do componente) */}
-          {activeView === 'como-escrever-material' && (
+          {activeView === 'como-escrever-material' && isAdmin && (
             <ComoEscreverMaterialView
               disciplines={disciplines}
               themes={themes}
@@ -1041,7 +1055,7 @@ function AuthenticatedApp() {
           )}
 
           {/* 44-H1: idem, para questões */}
-          {activeView === 'como-escrever-questoes' && (
+          {activeView === 'como-escrever-questoes' && isAdmin && (
             <ComoEscreverQuestoesView
               disciplines={disciplines}
               themes={themes}
@@ -1054,7 +1068,7 @@ function AuthenticatedApp() {
           )}
 
           {/* 44-E: qualquer usuário ativo envia material; o envio só é guardado, não publica nada. */}
-          {activeView === 'enviar-material' && (
+          {activeView === 'enviar-material' && isAdmin && (
             <EnviarMaterialView
               disciplines={disciplines}
               themes={themes}

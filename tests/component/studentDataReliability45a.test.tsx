@@ -164,6 +164,8 @@ describe('45-A parte 2 — confirmação de resposta', () => {
 
     await waitFor(() => expect(screen.getByText(/Resposta incorreta/i)).toBeTruthy());
     expect(createFlashcardMock).toHaveBeenCalledTimes(1);
+    // P6: o card do erro recebe a revisão confirmada pelo servidor (dela sai o verso, também para quem não é admin).
+    expect(createFlashcardMock).toHaveBeenCalledWith(question, incorrectReview);
     expect(onAnswerRecorded).toHaveBeenCalledTimes(1);
   });
 

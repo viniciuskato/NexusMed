@@ -82,7 +82,7 @@ test.describe('Questões: revisão por IA e publicação pelo veredito (44-H2)',
     const tituloMaterial = `${MATERIAL_PREFIX}h2-${tag}`;
     const materialId = insertPublishedMaterial(`h2-${tag}`);
     cleanup.push(() => deleteE2EMaterials());
-    const autor = await novoUsuario('h2-autor');
+    const autor = await novoUsuario('h2-autor', 'admin');
     const admin = await novoUsuario('h2-admin', 'admin');
     const totalPublicadasAntes = Number(psqlLocal(`select count(*) from public.questions where status = 'published';`));
 
@@ -204,7 +204,7 @@ test.describe('Questões: revisão por IA e publicação pelo veredito (44-H2)',
     const tituloMaterial = `${MATERIAL_PREFIX}h2n-${tag}`;
     insertPublishedMaterial(`h2n-${tag}`);
     cleanup.push(() => deleteE2EMaterials());
-    const autor = await novoUsuario('h2-corrige');
+    const autor = await novoUsuario('h2-corrige', 'admin');
     const nome = `Lote H2 corrigido ${tag}`;
     const tituloSql = q(nome);
 
@@ -278,7 +278,7 @@ test.describe('Questões: revisão por IA e publicação pelo veredito (44-H2)',
     insertPublishedMaterial(`h2-igual-${tag}`);
     insertPublishedMaterial(`h2-igual-${tag}`);
     cleanup.push(() => deleteE2EMaterials());
-    const autor = await novoUsuario('h2-ambiguo');
+    const autor = await novoUsuario('h2-ambiguo', 'admin');
     const nome = `Lote ambíguo ${tag}`;
 
     await login(page, autor);

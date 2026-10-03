@@ -105,7 +105,7 @@ test.describe('Exportar e atualizar material pelo revisor de IA (44-B)', () => {
     browser,
   }) => {
     const titulo = `Atualizável ${Date.now()}`;
-    const autor = await novoUsuario('b-autor');
+    const autor = await novoUsuario('b-autor', 'admin');
     const leitor = await novoUsuario('b-leitor');
     const outro = await novoUsuario('b-outro');
     const materialId = await publicarComoAutor(page, autor, titulo);
@@ -229,7 +229,7 @@ test.describe('Exportar e atualizar material pelo revisor de IA (44-B)', () => {
 
   test('revisão "não apto": o material no ar não muda e o autor vê o motivo', async ({ page }) => {
     const titulo = `Atualização reprovada ${Date.now()}`;
-    const autor = await novoUsuario('b-reprovado');
+    const autor = await novoUsuario('b-reprovado', 'admin');
     const materialId = await publicarComoAutor(page, autor, titulo);
     const hashAntes = psqlLocal(`select app.material_snapshot_hash('${materialId}'::uuid);`);
 

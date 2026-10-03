@@ -75,7 +75,8 @@ test.describe('Revisor de IA: o autor vê o resultado e corrige (44-F)', () => {
     const user = await createTestUser({
       emailLocalPart: `${prefixo}-${Date.now()}`,
       password: 'senha-teste-123',
-      role: 'student',
+      // P6 (03/10): só o admin envia; o "estudante" destes testes é o dono.
+      role: 'admin',
       status: 'active',
     });
     cleanup.push(() => deleteTestUser(user.id));

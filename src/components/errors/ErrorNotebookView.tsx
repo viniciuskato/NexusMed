@@ -219,7 +219,7 @@ export const ErrorNotebookView: React.FC<ErrorNotebookViewProps> = ({
   };
 
   const handleCreateFlashcard = async (q: Question) => {
-    await flashcardsRepository.createFlashcardFromQuestion(q);
+    await flashcardsRepository.createFlashcardFromQuestion(q, reviews[q.id]);
     alert('Flashcard adicionado à sua rotina de repetição espaçada!');
   };
 

@@ -21,11 +21,12 @@ test.describe('Como escrever um material (44-D)', () => {
     await runCleanup(fns);
   });
 
-  test('estudante ativo abre a página pelo menu e vê o padrão, o catálogo e os dois botões', async ({ page }) => {
+  // P6 (03/10): só o dono (admin) envia material, então só ele vê esta página; o amigo (estudante) não.
+  test('admin ativo abre a página pelo menu e vê o padrão, o catálogo e os dois botões', async ({ page }) => {
     const student = await createTestUser({
       emailLocalPart: `como-escrever-${Date.now()}`,
       password: 'senha-teste-123',
-      role: 'student',
+      role: 'admin',
       status: 'active',
     });
     cleanup.push(() => deleteTestUser(student.id));
@@ -51,11 +52,11 @@ test.describe('Como escrever um material (44-D)', () => {
     await expect(page.getByRole('button', { name: 'Copiar prompt revisor' })).toBeVisible();
   });
 
-  test('link direto abre a página para usuário ativo, e pendente vê só a espera de aprovação', async ({ page, browser }) => {
+  test('link direto abre a página para o admin ativo, e pendente vê só a espera de aprovação', async ({ page, browser }) => {
     const student = await createTestUser({
       emailLocalPart: `como-escrever-link-${Date.now()}`,
       password: 'senha-teste-123',
-      role: 'student',
+      role: 'admin',
       status: 'active',
     });
     cleanup.push(() => deleteTestUser(student.id));

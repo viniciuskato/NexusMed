@@ -69,7 +69,7 @@ test.describe('Como escrever e enviar questões (44-H1)', () => {
     const titulo = `${MATERIAL_PREFIX}questoes-${tag}`;
     insertPublishedMaterial(`questoes-${tag}`);
     cleanup.push(() => deleteE2EMaterials());
-    const student = await novoUsuario('q-como');
+    const student = await novoUsuario('q-como', 'admin');
 
     await login(page, student);
     await abrirPeloMenu(page, '#nav-como-escrever-questoes', 'Como escrever questões');
@@ -112,7 +112,7 @@ test.describe('Como escrever e enviar questões (44-H1)', () => {
     const tituloMaterial = `${MATERIAL_PREFIX}lote-${tag}`;
     const materialId = insertPublishedMaterial(`lote-${tag}`);
     cleanup.push(() => deleteE2EMaterials());
-    const student = await novoUsuario('q-envio');
+    const student = await novoUsuario('q-envio', 'admin');
     const totalDeQuestoesAntes = psqlLocal('select count(*) from public.questions;');
 
     await login(page, student);
@@ -156,7 +156,7 @@ test.describe('Como escrever e enviar questões (44-H1)', () => {
 
   test('arquivo com pendência: mostra a questão e o que corrigir, e não deixa enviar', async ({ page }) => {
     const { disciplina, tema } = catalogoDoSeed();
-    const student = await novoUsuario('q-pend');
+    const student = await novoUsuario('q-pend', 'admin');
     await login(page, student);
     await abrirPeloMenu(page, '#nav-enviar-material', 'Enviar material');
     await page.locator('#enviar-modo-questoes').click();
@@ -174,8 +174,8 @@ test.describe('Como escrever e enviar questões (44-H1)', () => {
   });
 
   test('estudante A não vê o lote do estudante B, e o admin vê os dois na aba de envios (RLS)', async ({ page, browser }) => {
-    const a = await novoUsuario('q-a');
-    const b = await novoUsuario('q-b');
+    const a = await novoUsuario('q-a', 'admin');
+    const b = await novoUsuario('q-b', 'admin');
     const admin = await novoUsuario('q-admin', 'admin');
     const tituloA = `Lote do A ${Date.now()}`;
     const tituloB = `Lote do B ${Date.now()}`;
@@ -221,7 +221,7 @@ test.describe('Como escrever e enviar questões (44-H1)', () => {
     const tag = `${Date.now()}`;
     insertPublishedMaterial(`limite-${tag}`);
     cleanup.push(() => deleteE2EMaterials());
-    const student = await novoUsuario('q-lim');
+    const student = await novoUsuario('q-lim', 'admin');
     for (let i = 1; i <= 3; i += 1) {
       psqlLocal(`insert into public.question_submissions (author_id, title, content_md) values ('${student.id}', 'Esperando ${i} ${tag}', '## Questão 1');`);
     }

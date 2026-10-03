@@ -77,7 +77,7 @@ test.describe('Publicar pelo veredito do revisor de IA (44-G)', () => {
   }) => {
     const { disciplina, tema } = catalogoDoSeed();
     const titulo = `Publicado pela IA ${Date.now()}`;
-    const autor = await novoUsuario('g-autor');
+    const autor = await novoUsuario('g-autor', 'admin');
     const leitor = await novoUsuario('g-leitor');
     const admin = await novoUsuario('g-admin', 'admin');
     // O material que o servidor criar é removido no fim (como postgres, o único papel que apaga material publicado).
@@ -177,7 +177,7 @@ test.describe('Publicar pelo veredito do revisor de IA (44-G)', () => {
   test('revisão "não apto": nada é publicado e o autor vê o motivo', async ({ page }) => {
     const { disciplina, tema } = catalogoDoSeed();
     const titulo = `Reprovado pela IA ${Date.now()}`;
-    const autor = await novoUsuario('g-reprovado');
+    const autor = await novoUsuario('g-reprovado', 'admin');
     await login(page, autor);
     await abrirEnvio(page);
     await page.locator('#envio-texto').fill(materialParaEnvio({ titulo, disciplina, tema }));
@@ -201,7 +201,7 @@ test.describe('Publicar pelo veredito do revisor de IA (44-G)', () => {
   test('título que já existe: o servidor não publica e o autor recebe o motivo, em palavras leigas', async ({ page }) => {
     const { disciplina, tema } = catalogoDoSeed();
     const titulo = `Título repetido ${Date.now()}`;
-    const autor = await novoUsuario('g-repetido');
+    const autor = await novoUsuario('g-repetido', 'admin');
     const seed = getSeedIds();
     // Já existe um material com o mesmo título.
     psqlLocal(

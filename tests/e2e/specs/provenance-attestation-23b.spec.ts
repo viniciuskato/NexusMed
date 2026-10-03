@@ -5,7 +5,6 @@ import {
   psqlLocal,
   getSeedIds,
   runCleanup,
-  vincularRevisaoDeIaAoMaterial,
   type CreatedTestUser,
 } from '../fixtures/localSupabase';
 
@@ -74,7 +73,7 @@ test.describe('Proveniência e atestação editorial (23-B)', () => {
     await runCleanup(fns);
   });
 
-  test('material sem revisão aprovada não publica; fluxo completo de revisão/atestação libera a publicação', async ({
+  test('fluxo completo de revisão/atestação e publicação pelo admin, sem exigir revisão de IA', async ({
     page,
   }) => {
     const admin = await createTestUser({
@@ -93,15 +92,6 @@ test.describe('Proveniência e atestação editorial (23-B)', () => {
 
     const row = page.locator(`[data-compendium-row-id="${materialId}"]`);
     await expect(row).toBeVisible();
-    await expect(row).toContainText('rascunho');
-
-    // Sem revisão aprovada: publicar falha com o toast de erro do próprio
-    // gate no banco (publish_material rejeita), não um erro genérico. O
-    // toast some sozinho em 3.5s (ver showToast em AdminCMSView.tsx) — usa
-    // waitForFunction (varre o texto renderizado assim que aparece) em vez
-    // de toBeVisible (mais sujeito a perder uma janela curta sob carga).
-    await row.getByRole('button', { name: 'Publicar', exact: true }).click();
-    await page.waitForFunction(() => document.body.innerText.includes('publicação bloqueada'), { timeout: 10_000 });
     await expect(row).toContainText('rascunho');
 
     // Abre o painel de revisão para este material.
@@ -130,20 +120,9 @@ test.describe('Proveniência e atestação editorial (23-B)', () => {
     await page.locator('#provenance-review-close').click();
     await expect(panel).not.toBeVisible();
 
-    // 44-G: a atestação humana sozinha já não publica. O gate agora é a revisão de IA
-    // "apto" do conteúdo atual (o caminho real é "Enviar material"); sem ela, a
-    // mensagem diz o que fazer, em palavras leigas.
+    // P6 (03/10): o admin publica sem exigir revisão de IA "apto" (o revisor só aconselha); a atestação
+    // humana acima continua existindo e vale como selo mais forte.
     await expect(row).toBeVisible();
-    await row.getByRole('button', { name: 'Publicar', exact: true }).click();
-    await page.waitForFunction(
-      () => document.body.innerText.includes('ainda não passou pelo revisor de IA') && document.body.innerText.includes('Enviar material'),
-      { timeout: 10_000 }
-    );
-    await expect(row).toContainText('rascunho');
-
-    // Com a revisão de IA apto vinculada a este conteúdo (fixture), publica.
-    vincularRevisaoDeIaAoMaterial(materialId, admin.id);
-    await page.waitForFunction(() => !document.body.innerText.includes('ainda não passou pelo revisor de IA'), { timeout: 10_000 });
     await row.getByRole('button', { name: 'Publicar', exact: true }).click();
     await expect(row).toContainText('publicado', { timeout: 10_000 });
 

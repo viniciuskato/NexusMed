@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { Flashcard, Question, QuestionAnswerRecord, UserFeedback } from '../../src/types';
+import type { Flashcard, Question, QuestionAnswerRecord, QuestionReviewResult, UserFeedback } from '../../src/types';
 
 // Cobertura dos wrappers `Resilient*Repository` (src/repositories/*Repository.ts)
 // antes da refatoração do App.tsx. Prova o comportamento OBSERVÁVEL do padrão
@@ -770,6 +770,99 @@ describe('FlashcardsRepository.createFlashcardFromQuestion', () => {
     expect(new Set(matching.map((op) => op.id)).size).toBe(2);
     expect(new Set(matching.map((op) => op.clientOpId))).toEqual(new Set([first.id]));
     expect(matching.map((op) => op.state)).toEqual(['synced', 'synced']);
+  });
+});
+
+// P6 (03/10): para quem não é admin, a questão carregada não traz o gabarito (todas as alternativas com
+// isCorrect false, resumo vazio): o verso do card do erro tem de sair da revisão pós-resposta.
+function makeQuestionSemGabarito(): Question {
+  return {
+    ...makeQuestionForFlashcard(),
+    id: 'q-sem-gabarito',
+    options: [
+      { letter: 'A', text: 'Alternativa A', isCorrect: false, explanation: '' },
+      { letter: 'B', text: 'Alternativa B', isCorrect: false, explanation: '' },
+    ],
+    highYieldSummary: '',
+    generalCommentary: '',
+  } as Question;
+}
+
+function makeRevisao(): QuestionReviewResult {
+  return {
+    isCorrect: false,
+    correctOptionId: 'opt-b',
+    generalCommentary: 'Comentário do servidor',
+    highYieldSummary: 'Pérola do servidor',
+    options: [
+      { optionId: 'opt-a', letter: 'A', isCorrect: false, explanation: 'Errada' },
+      { optionId: 'opt-b', letter: 'B', isCorrect: true, explanation: 'Certa' },
+    ],
+    references: [],
+  };
+}
+
+describe('FlashcardsRepository.createFlashcardFromQuestion — verso para quem não é admin (P6)', () => {
+  it('com a revisão em mãos, o verso traz a alternativa correta e a explicação, mesmo sem gabarito na questão', async () => {
+    await setup({ configured: false });
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+
+    const card = await flashcardsRepository.createFlashcardFromQuestion(makeQuestionSemGabarito(), makeRevisao());
+
+    expect(card.back).toBe('Resposta Correta:' + '\n' + 'Alternativa B\n\nExplicação:\nPérola do servidor');
+    expect(card.mechanismHighlight).toBe('Pérola do servidor');
+  });
+
+  it('sem a revisão, busca a do servidor (RPC pós-resposta) e o card sai completo, também na fila de sincronização', async () => {
+    const getQuestionReview = vi.fn().mockResolvedValue(makeRevisao());
+    const { queue } = await setup({ configured: true, supa: { Questions: { getQuestionReview } } });
+    queue.registerHandler('flashcard_create_from_question', async (payload) => (payload as { flashcard: Flashcard }).flashcard);
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+
+    const card = await flashcardsRepository.createFlashcardFromQuestion(makeQuestionSemGabarito());
+
+    expect(getQuestionReview).toHaveBeenCalledTimes(1);
+    expect(getQuestionReview).toHaveBeenCalledWith('q-sem-gabarito');
+    expect(card.back).toContain('Alternativa B');
+    expect(card.back).toContain('Pérola do servidor');
+    const op = queue.getOps(UID).find((o) => o.category === 'flashcard_create_from_question');
+    expect((op?.payload as { flashcard: Flashcard }).flashcard.back).toContain('Alternativa B');
+  });
+
+  it('se a revisão não puder ser buscada, o erro sobe e nenhum card vazio é criado', async () => {
+    const getQuestionReview = vi.fn().mockRejectedValue(networkError());
+    const { StorageService, queue } = await setup({ configured: true, supa: { Questions: { getQuestionReview } } });
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+
+    await expect(flashcardsRepository.createFlashcardFromQuestion(makeQuestionSemGabarito())).rejects.toThrow('Failed to fetch');
+
+    expect(StorageService.getFlashcards()).toHaveLength(0);
+    expect(queue.getOps(UID).filter((o) => o.category === 'flashcard_create_from_question')).toHaveLength(0);
+  });
+
+  it('quem vê o gabarito (admin) continua com o verso de antes, sem pedir a revisão', async () => {
+    const getQuestionReview = vi.fn();
+    await setup({ configured: false, supa: { Questions: { getQuestionReview } } });
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+
+    const card = await flashcardsRepository.createFlashcardFromQuestion(makeQuestionForFlashcard());
+
+    expect(card.back).toBe('Resposta Correta:\nAlternativa A\n\nExplicação:\nResumo de alto rendimento');
+    expect(getQuestionReview).not.toHaveBeenCalled();
+  });
+
+  it('card já existente para a questão não pede a revisão de novo', async () => {
+    const getQuestionReview = vi.fn().mockResolvedValue(makeRevisao());
+    const { queue } = await setup({ configured: true, supa: { Questions: { getQuestionReview } } });
+    queue.registerHandler('flashcard_create_from_question', async (payload) => (payload as { flashcard: Flashcard }).flashcard);
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+    const question = makeQuestionSemGabarito();
+
+    const first = await flashcardsRepository.createFlashcardFromQuestion(question);
+    const second = await flashcardsRepository.createFlashcardFromQuestion(question);
+
+    expect(second.id).toBe(first.id);
+    expect(getQuestionReview).toHaveBeenCalledTimes(1);
   });
 });
 
