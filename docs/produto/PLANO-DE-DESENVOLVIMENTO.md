@@ -1300,9 +1300,12 @@ três trilhas produzindo migrations em paralelo, a chance só cresce.
 **Fora de escopo.** Conferir conteúdo, grants e RLS do remoto (resto da
 AUD-34 e 46-D); aplicar migration pelo CI.
 **Depende de.** P-4 — o dono cria o papel e o segredo com os passos que a
-sessão desta unidade entregar; o PR só mescla depois disso.
+sessão desta unidade entregar; o PR só mescla depois disso. O check entra no
+ruleset depois do merge.
 **Executa.** Sessão avulsa, fora das trilhas (CI não é área de nenhuma).
-**Estado.** Pronta.
+**Estado.** Concluída — PR da 46-E (INC-2026-006). Falta a P-4 e incluir o
+check `migration-no-remoto` no ruleset; aceite verde/vermelho no primeiro PR com
+migration depois dela.
 
 ---
 
@@ -1331,9 +1334,10 @@ no GitHub, o segredo com a conexão do banco usada pela rotina de backup.
 Destrava: 46-C.
 
 **P-4 — Credencial só de leitura para o CI conferir migrations** (46-E):
-criar no Supabase de produção o papel que só lê o histórico de migrations e,
-no GitHub, o segredo com a conexão dele; incluir o check no ruleset do `main`,
-se for um check novo. Os passos exatos vêm da sessão que executar a 46-E.
+antes do merge da 46-E, criar no Supabase de produção o papel que só lê o
+histórico de migrations e, no GitHub, o segredo com a conexão dele; depois do
+merge, incluir o check no ruleset do `main` (antes, o check não existe e o PR
+ficaria preso). Passos: `RUNBOOK.md`, seção 3.2.
 Destrava: 46-E.
 
 *A P-3 (pendências de 18/09, AUD-16) saiu em 23/09.* O dono definiu que o

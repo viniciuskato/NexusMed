@@ -95,15 +95,23 @@ revisão.
    validado, se há migration e a ordem de publicação.
 2. Esperar o CI (`fast` e `full`) **verde**. CI vermelho não se mescla —
    nem "porque a falha já existia": conserte a falha antes ou em PR
-   separado. E o check `revisado` verde: rótulo posto depois da revisão em
-   sessão nova (`EXECUTOR_PROTOCOL.md`, "Revisão").
+   separado. E o check `revisado` verde: rótulo posto pela sessão que
+   revisou (`EXECUTOR_PROTOCOL.md`, "Revisão"). Com migration, também o
+   `migration-no-remoto` (passo 4).
 3. Conferir o *preview* da Vercel (link no próprio PR) quando a mudança
    afeta tela/fluxo de usuário.
 4. Se a mudança inclui migration nova: aplicar no Supabase remoto faz
    parte do merge, não é um passo opcional posterior
    (`supabase db push --linked --yes`, rodado pelo usuário; no PowerShell
    dele, o CLI só roda pelo caminho completo,
-   `C:\Users\vinic\bin\supabase.exe db push --linked --yes`). **Se o
+   `C:\Users\vinic\bin\supabase.exe db push --linked --yes`). O check
+   `migration-no-remoto` (46-E) fica vermelho enquanto a migration do PR não
+   está no remoto; depois de aplicar, "Re-run jobs" nele o deixa verde. O
+   check compara a versão, não o conteúdo: migration já aplicada no remoto
+   não se corrige no mesmo arquivo, porque o `db push` não a aplica de novo —
+   a correção vai numa migration nova. PR que altera (`modified`) uma
+   migration já aplicada reprova; migration nova do próprio PR editada depois
+   de aplicada continua verde, e o check não vê a diferença. **Se o
    frontend novo depende da migration (RPC nova, coluna nova), aplicar a
    migration ANTES do merge** — o deploy da Vercel é imediato. Conferir
    depois com uma query direta contra o schema remoto — não confiar só na
@@ -130,6 +138,74 @@ Uma vez por semana, a diretoria (ou o dono) roda
 arquivo no SQL Editor) e acrescenta uma linha em
 [`docs/produto/METRICAS.md`](../produto/METRICAS.md). O arquivo só lê; nunca
 escreve.
+
+## 3.2. Credencial do check de migrations (P-4, uma vez)
+
+O check `migration-no-remoto` (46-E) lê o histórico de migrations do Supabase
+de produção com um papel cujo único privilégio concedido é ler esse histórico
+(o que ele herda de `PUBLIC` está no passo 1).
+
+**Ordem.** Os passos 1 a 3 vêm **antes** do merge do PR que traz o workflow:
+sem o segredo, o push no `main` fica vermelho e todo PR com migration
+reprova. Os passos 4 e 5 vêm **só depois** desse merge, nessa ordem: o check
+roda pela versão do workflow que está no `main` (`pull_request_target`),
+então antes do merge ele não existe e não aparece no próprio PR — torná-lo
+obrigatório antes prende o PR para sempre.
+
+1. No Supabase, SQL Editor do projeto `synapsemed`, trocando a senha por uma
+   que você gerar (não a use em mais nada). **Só letras e números, com uns 40
+   caracteres, sem símbolos:** símbolo como `@`, `/` ou `%` quebra a URI do
+   passo 2, e a mensagem de erro de conexão pode mostrar pedaços da senha.
+   ```sql
+   create role ci_migracoes_leitura with login password 'TROQUE-POR-UMA-SENHA-SO-LETRAS-E-NUMEROS'
+     noinherit connection limit 3;
+   grant usage on schema supabase_migrations to ci_migracoes_leitura;
+   grant select on supabase_migrations.schema_migrations to ci_migracoes_leitura;
+   alter role ci_migracoes_leitura set default_transaction_read_only = on;
+   alter role ci_migracoes_leitura set statement_timeout = '10s';
+   ```
+   A barreira é o `grant`: o papel só tem `select` no histórico de
+   migrations. O `default_transaction_read_only` é uma camada a mais, não a
+   barreira — a própria sessão consegue desligá-lo. O papel também herda o
+   que `PUBLIC` concede, e isso não se fecha só para ele: o Postgres não tem
+   negação por papel (um `revoke` tira só o que foi dado ao próprio papel, e
+   tirar de `PUBLIC` tiraria de todos). O limite: objeto novo com permissão
+   para `PUBLIC` passaria a valer para ele também — inclusive uma função
+   `security definer` nova sem o `revoke ... from public` (risco 14 do
+   `AGENTS.md`), que seria chamável com esta credencial, e a sessão pode
+   definir `request.jwt.claims`, que é o que `auth.uid()` lê: a chamada
+   valeria como a de qualquer usuário, admin inclusive. **Isso está fechado
+   por mecanismo (AUD-31.1):** a guarda pgTAP
+   `supabase/tests/database/security_guards.test.sql` reprova, nomeando a
+   função ou procedure, qualquer função ou procedure chamável (que não seja
+   de gatilho) de um schema que o repositório cria e onde `PUBLIC`/`anon`
+   tem `USAGE` (`public`; `app` entra pela mesma lista, mesmo sem ter
+   `USAGE` hoje) que fique com `EXECUTE` para `PUBLIC` ou para `anon` — o PR
+   que criar essa função ou procedure fica com o check full vermelho, o que
+   impede o merge; pelo RUNBOOK, seção 3, a migration só se aplica no
+   remoto com o CI verde. Função de gatilho (`returns trigger`/`returns
+   event trigger`) de `public` com
+   `EXECUTE` para `PUBLIC` não é risco, porque não é chamável fora do
+   disparo do gatilho — em 28/09 há 15 assim, todas sem esse revoke, como
+   esperado; `rls_auto_enable()` não é uma delas, porque não está em nenhuma
+   migration deste repositório. O que a guarda não cobre é o que o Supabase
+   gerencia fora das migrations do repositório (schemas como `auth`,
+   `storage`, `extensions`, e funções internas deles).
+2. No Supabase, botão "Connect", aba "Session pooler": copie a URI. Nela,
+   troque `postgres.jfvhwwvixwvgjfqzlkkb` por
+   `ci_migracoes_leitura.jfvhwwvixwvgjfqzlkkb` e `[YOUR-PASSWORD]` pela senha
+   do passo 1. No fim, acrescente `?sslmode=require`.
+3. No GitHub: Settings → Secrets and variables → Actions → New repository
+   secret. Nome `MIGRACOES_REMOTO_URL`, valor a URI do passo 2.
+4. **Depois do merge**, conferir: Actions → migracoes → Run workflow no
+   `main`. Verde é "a versão de todas as migrations do repositório está no
+   histórico do Supabase de produção". Vermelho mostra só a categoria do erro
+   (senha recusada, URI inválida, não conectou), nunca a mensagem do psql.
+5. Com o passo 4 verde, no ruleset "Proteger main": inclua
+   `migration-no-remoto` (e `revisado`) entre os checks obrigatórios. Um PR
+   já aberto no momento desse passo só ganha o check novo num evento novo
+   (push de commit ou "Update branch") — sem isso ele fica preso, exigindo
+   um check que nunca rodou nele.
 
 ## 4. Rollback
 

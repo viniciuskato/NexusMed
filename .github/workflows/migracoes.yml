@@ -1,0 +1,135 @@
+name: migracoes
+
+# 46-E (D-4; INC-2026-003 a INC-2026-006). Merge em `main` é deploy imediato,
+# e o front novo chama o que a migration cria. O check `migration-no-remoto`
+# fica vermelho enquanto alguma migration que o PR traz não estiver no
+# Supabase de produção, e diz qual falta. Depois de aplicar
+# (`supabase db push --linked`), "Re-run jobs" deixa o check verde, sem commit
+# novo. PR sem migration (Dependabot incluído) passa direto. No push do
+# `main`, confere todas as migrations do repositório: vermelho ali é aviso de
+# que algo foi mesclado sem a migration.
+#
+# O check compara a versão, não o conteúdo. PR que altera (status `modified`)
+# uma migration cuja versão já está no remoto reprova: o remoto não recebe a
+# alteração (o CLI também compara só a versão), e a correção vai numa
+# migration nova. Migration nova do próprio PR editada depois de aplicada não
+# é detectada.
+#
+# Credencial (P-4): segredo `MIGRACOES_REMOTO_URL`, conexão de um papel cujo
+# único privilégio concedido é ler `supabase_migrations.schema_migrations`.
+# O só-leitura da sessão é camada a mais, que a sessão desliga; o que o papel
+# herda de `PUBLIC` está no RUNBOOK, seção 3.2. Sem o
+# segredo, PR com migration reprova (falha fechada). O CI nunca escreve no
+# remoto. O GitHub mascara o segredo inteiro no log, mas não pedaços dele, e
+# o erro do psql com URI mal formada mostra pedaços da senha: o script nunca
+# imprime o segredo nem a saída de erro do psql, só a categoria do erro.
+#
+# `pull_request_target` roda a versão deste arquivo que está na base: um PR
+# não consegue trocar o check nem ler o segredo. É seguro porque o job nunca
+# faz checkout nem executa código do PR: pega a lista de arquivos pela API e
+# só aproveita dela a versão da migration (os dígitos antes do primeiro `_`,
+# a mesma regra do CLI do Supabase) do nome do arquivo.
+on:
+  pull_request_target:
+    branches: ['**']
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: migracoes-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  no-remoto:
+    name: migration-no-remoto
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      EVENTO: ${{ github.event_name }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      # Só fora de PR: o `main` (ou a branch do workflow_dispatch) é código
+      # confiável. Em PR, nada do PR é baixado.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name != 'pull_request_target'
+        with:
+          persist-credentials: false
+
+      - name: Confere se as migrations estão no Supabase de produção
+        env:
+          MIGRACOES_REMOTO_URL: ${{ secrets.MIGRACOES_REMOTO_URL }}
+        run: |
+          set -euo pipefail
+          alteradas=""
+          if [ "$EVENTO" = pull_request_target ]; then
+            # Uma linha por arquivo: "<status> <caminho>".
+            lista_api=$(gh api "repos/$GH_REPO/pulls/$PR/files" --paginate \
+              --jq '.[] | select(.status != "removed") | "\(.status) \(.filename)"')
+            arquivos=$(printf '%s\n' "$lista_api" | sed -E 's/^[a-z]+ //')
+            alteradas=$(printf '%s\n' "$lista_api" \
+              | sed -nE 's#^(modified|changed) supabase/migrations/([0-9]+)_[^/]*\.sql$#\2#p' | sort -u)
+            em="neste PR"; de="deste PR"
+          else
+            arquivos=$(ls supabase/migrations/*.sql)
+            em="no repositório"; de="do repositório"
+          fi
+          # Só a versão: os dígitos antes do primeiro `_`, como o CLI do
+          # Supabase lê. Nada mais do nome entra na consulta.
+          versoes=$(printf '%s\n' "$arquivos" \
+            | sed -nE 's#^supabase/migrations/([0-9]+)_[^/]*\.sql$#\1#p' | sort -u)
+          if [ -z "$versoes" ]; then
+            echo "Sem migration $em."
+            exit 0
+          fi
+          echo "Migrations $de: $(echo $versoes)"
+
+          if [ -z "${MIGRACOES_REMOTO_URL:-}" ]; then
+            echo "::error::Há migration $em, mas o segredo MIGRACOES_REMOTO_URL não está configurado (P-4). Sem ele o check reprova: não dá para saber se a migration está no remoto."
+            exit 1
+          fi
+
+          lista=$(printf "'%s'," $versoes)
+          lista=${lista%,}
+          # O log é público e o erro do psql pode conter pedaços da senha
+          # (URI mal formada): a saída de erro vai para um arquivo que nunca
+          # é impresso, e só a categoria do erro aparece.
+          erro_psql=$(mktemp)
+          if ! remotas=$(PGCONNECT_TIMEOUT=15 psql "$MIGRACOES_REMOTO_URL" -X -q -At -v ON_ERROR_STOP=1 \
+            -c "select version from supabase_migrations.schema_migrations where version in ($lista)" \
+            2>"$erro_psql"); then
+            if grep -qi 'password authentication failed' "$erro_psql"; then
+              motivo="senha recusada"
+            elif grep -qiE 'invalid|missing "="|unexpected|unterminated' "$erro_psql"; then
+              motivo="URI inválida; a senha deve ter só letras e números"
+            elif grep -qiE 'timeout|could not (connect|translate)|connection refused|unreachable' "$erro_psql"; then
+              motivo="não conectou"
+            elif grep -qi 'permission denied' "$erro_psql"; then
+              motivo="o papel não tem permissão de leitura"
+            else
+              motivo="erro não classificado"
+            fi
+            echo "::error::Não consegui ler o histórico de migrations do Supabase de produção ($motivo). A mensagem do psql não aparece porque pode conter a senha. Confira o segredo MIGRACOES_REMOTO_URL (RUNBOOK.md, seção 3.2) e rode de novo."
+            exit 1
+          fi
+          remotas=$(printf '%s\n' "$remotas" | sort -u)
+
+          faltam=$(comm -23 <(printf '%s\n' $versoes) <(printf '%s\n' $remotas))
+          ja_aplicadas_alteradas=$(comm -12 <(printf '%s\n' $alteradas) <(printf '%s\n' $remotas))
+          for v in $faltam; do
+            echo "::error::A migration $v ainda não está no Supabase de produção. Aplique antes do merge (supabase db push --linked) e rode este check de novo (Re-run jobs)."
+          done
+          for v in $ja_aplicadas_alteradas; do
+            echo "::error::A migration $v já está no Supabase de produção e este PR a altera. O remoto não recebe a alteração (o CLI compara só a versão): ponha a mudança numa migration nova."
+          done
+          if [ -n "$faltam" ] || [ -n "$ja_aplicadas_alteradas" ]; then
+            exit 1
+          fi
+          echo "A versão de todas as migrations $de está no histórico do Supabase de produção. O check confere a versão, não o conteúdo."
