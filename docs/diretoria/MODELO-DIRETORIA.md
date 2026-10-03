@@ -84,7 +84,9 @@ diretoria, no "sim" do dono à pergunta da primeira rodada de cada janela
 nova (D-7, item 8).
 
 Limites, autorizações, métrica e a revisão da D-7 em 09/10: na própria
-decisão. Textos para abrir a diretoria e a sessão de defeitos: seção 0 do
+decisão (revisto pela D-12, 03/10: sem limite de merges por dia nem proibição à
+noite; a revisão dos envios da D-11 é feita pela equipe no Claude Code, sem
+API paga, D-12 item 2). Textos para abrir a diretoria e a sessão de defeitos: seção 0 do
 plano canônico. A sessão de auditoria continua só sob pedido explícito do
 dono (seção própria, abaixo). As seções "Três papéis" e "Trilhas e revisão"
 ficam como histórico; o resto deste documento vale onde não contradiz esta

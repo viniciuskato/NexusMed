@@ -9,9 +9,10 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
   disconnect() {}
 };
 
-// 44-D — o item "Como escrever um material" está no menu do usuário, para
-// TODO usuário ativo (não só admin). O gate de status vive no App (testado em
-// appComoEscreverMaterial44d.test.tsx).
+// 44-D — o item "Como escrever um material" e, desde a 44-E/44-H1, "Como escrever questões" e
+// "Enviar material" estão no menu do usuário. P6 (03/10): só o dono (admin) envia, então esses três
+// itens existem só para admin; para o amigo (estudante ativo) o menu de envio não aparece. O gate de
+// status vive no App (testado em appComoEscreverMaterial44d.test.tsx).
 
 const authState: { role: string } = { role: 'student' };
 
@@ -44,29 +45,36 @@ function renderHeader(onSelectView = vi.fn(), activeView = 'dashboard') {
 
 afterEach(() => cleanup());
 
-describe('44-D — item de menu "Como escrever um material"', () => {
-  it('estudante (não admin) vê o item no menu do usuário e ele abre a tela certa', () => {
+describe('44-D / P6 — itens de envio no menu do usuário', () => {
+  it('P6: estudante (não admin) não vê nenhum item de envio, nem o de Área Editorial', () => {
     authState.role = 'student';
-    const onSelectView = renderHeader();
-    expect(screen.queryByRole('menuitem', { name: 'Como escrever um material' })).toBeNull();
-
+    renderHeader();
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Como escrever um material' }));
-
-    expect(onSelectView).toHaveBeenCalledWith('como-escrever-material');
-    // O item de admin não aparece para estudante.
+    expect(screen.queryByRole('menuitem', { name: 'Como escrever um material' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Como escrever questões' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Enviar material' })).toBeNull();
     expect(screen.queryByRole('menuitem', { name: /Área Editorial/ })).toBeNull();
+    // O resto do menu continua: o amigo ainda pode mandar um feedback e sair.
+    expect(screen.getByRole('menuitem', { name: /Sair/ })).toBeTruthy();
   });
 
-  it('44-E: estudante (não admin) vê "Enviar material" no mesmo menu, e ele abre a tela de envio', () => {
-    authState.role = 'student';
+  it('admin vê "Como escrever um material" e abre a tela certa', () => {
+    authState.role = 'admin';
+    const onSelectView = renderHeader();
+    fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Como escrever um material' }));
+    expect(onSelectView).toHaveBeenCalledWith('como-escrever-material');
+  });
+
+  it('44-E: admin vê "Enviar material" no mesmo menu, e ele abre a tela de envio', () => {
+    authState.role = 'admin';
     const onSelectView = renderHeader();
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Enviar material' }));
     expect(onSelectView).toHaveBeenCalledWith('enviar-material');
   });
 
-  it('admin também vê o item', () => {
+  it('admin também vê a Área Editorial', () => {
     authState.role = 'admin';
     renderHeader();
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
@@ -75,7 +83,7 @@ describe('44-D — item de menu "Como escrever um material"', () => {
   });
 
   it('marca o item como página atual quando a tela está aberta', () => {
-    authState.role = 'student';
+    authState.role = 'admin';
     renderHeader(vi.fn(), 'como-escrever-material');
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
     expect(
@@ -83,8 +91,8 @@ describe('44-D — item de menu "Como escrever um material"', () => {
     ).toBe('page');
   });
 
-  it('44-H1: estudante (não admin) vê "Como escrever questões" no menu, e ele abre a página certa', () => {
-    authState.role = 'student';
+  it('44-H1: admin vê "Como escrever questões" no menu, e ele abre a página certa', () => {
+    authState.role = 'admin';
     const onSelectView = renderHeader();
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Como escrever questões' }));
@@ -92,7 +100,7 @@ describe('44-D — item de menu "Como escrever um material"', () => {
   });
 
   it('44-H1: o item de questões é marcado como página atual só na página dele', () => {
-    authState.role = 'student';
+    authState.role = 'admin';
     renderHeader(vi.fn(), 'como-escrever-questoes');
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
     expect(screen.getByRole('menuitem', { name: 'Como escrever questões' }).getAttribute('aria-current')).toBe('page');

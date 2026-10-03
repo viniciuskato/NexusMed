@@ -1,8 +1,9 @@
 -- ============================================================================
 -- 44-H1 — Envio de questões pelo site
--- Tabela `question_submissions`: qualquer usuário ativo envia o texto de um lote
--- de questões (.md) e ele fica guardado como "envio", com estado, visível só
--- para quem enviou e para admin. Nada aqui revisa nem publica questão nem toca
+-- Tabela `question_submissions` (P6, 03/10: só o admin envia): o admin ativo envia
+-- o texto de um lote de questões (.md) e ele fica guardado como "envio", com
+-- estado, visível só para quem enviou e para admin. Usuário comum não cria nem
+-- reenvia, mas continua lendo os envios que já fez. Nada aqui revisa nem publica questão nem toca
 -- `questions`. Fila irmã da `material_submissions` (44-E): mesmas regras.
 -- Um teste por regra (RLS, grants, limite de volume).
 -- ============================================================================
@@ -79,20 +80,21 @@ begin
 end;
 $$;
 
-select plan(68);
+select plan(71);
 
 select tests.clear_auth();
 select tests.create_user('qsub.admin@test.local', 'admin', 'active') as v_admin \gset
-select tests.create_user('qsub.a@test.local', 'student', 'active') as v_a \gset
+select tests.create_user('qsub.a@test.local', 'admin', 'active') as v_a \gset
 select tests.create_user('qsub.b@test.local', 'student', 'active') as v_b \gset
-select tests.create_user('qsub.c@test.local', 'student', 'active') as v_c \gset
+select tests.create_user('qsub.c@test.local', 'admin', 'active') as v_c \gset
 select tests.create_user('qsub.rev@test.local', 'student', 'active') as v_rev \gset
 select tests.create_user('qsub.pend@test.local', 'student', 'active') as v_pend \gset
 select tests.create_user('qsub.block@test.local', 'student', 'active') as v_block \gset
-select tests.create_user('qsub.lim@test.local', 'student', 'active') as v_lim \gset
-select tests.create_user('qsub.ok3@test.local', 'student', 'active') as v_ok3 \gset
-select tests.create_user('qsub.big@test.local', 'student', 'active') as v_big \gset
-select tests.create_user('qsub.mat@test.local', 'student', 'active') as v_mat \gset
+select tests.create_user('qsub.lim@test.local', 'admin', 'active') as v_lim \gset
+select tests.create_user('qsub.ok3@test.local', 'admin', 'active') as v_ok3 \gset
+select tests.create_user('qsub.big@test.local', 'admin', 'active') as v_big \gset
+select tests.create_user('qsub.mat@test.local', 'admin', 'active') as v_mat \gset
+select tests.create_user('qsub.s@test.local', 'student', 'active') as v_s \gset
 
 insert into public.disciplines (name, code, cycle)
 values ('Disciplina Envio Q', 'ENQ-' || substr(gen_random_uuid()::text, 1, 8), 'clinico')
@@ -122,6 +124,11 @@ insert into public.question_submissions (author_id, title, content_md, status)
 values (:'v_pend', 'Do pendente', '## Questão 1', 'aguardando_revisao') returning id as v_sub_pend \gset
 insert into public.question_submissions (author_id, title, content_md, status)
 values (:'v_block', 'Do bloqueado', '## Questão 1', 'nao_apto') returning id as v_sub_block \gset
+-- Usuário comum (não admin): os envios dele já existem (feitos antes da P6) e continuam dele.
+insert into public.question_submissions (author_id, title, content_md, status)
+values (:'v_s', 'Do S aguardando', '## Questão 1', 'aguardando_revisao') returning id as v_sub_s_ag \gset
+insert into public.question_submissions (author_id, title, content_md, status)
+values (:'v_s', 'Do S não apto', '## Questão 1', 'nao_apto') returning id as v_sub_s_nao \gset
 -- Só depois do envio o usuário deixa de ser ativo.
 update public.profiles set status = 'pending' where id = :'v_pend';
 update public.profiles set status = 'blocked' where id = :'v_block';
@@ -149,10 +156,10 @@ select ok(not has_function_privilege('authenticated', 'app.question_submissions_
 select tests.authenticate_as(:'v_a');
 select lives_ok(
   $$ insert into public.question_submissions (title, content_md) values ('Primeiro lote do A', '## Questão 1') $$,
-  'usuário ativo envia um lote de questões'
+  'admin ativo envia um lote de questões'
 );
 select results_eq(
-  $$ select author_id::text, status from public.question_submissions where title = 'Primeiro lote do A' $$,
+  format($$ select author_id::text, status from public.question_submissions where title = 'Primeiro lote do A' and author_id = %L $$, :'v_a'),
   format($$ values (%L::text, 'aguardando_revisao'::text) $$, :'v_a'),
   'o autor é quem enviou e o estado nasce "aguardando revisão"'
 );
@@ -171,6 +178,13 @@ select throws_ok(
 select throws_ok(
   $$ insert into public.question_submissions (title, content_md) values ('Sem texto', '') $$,
   '23514', NULL, 'texto vazio é recusado'
+);
+select tests.clear_auth();
+
+select tests.authenticate_as(:'v_s');
+select throws_ok(
+  $$ insert into public.question_submissions (title, content_md) values ('Do S novo', '## Questão 1') $$,
+  '42501', NULL, 'P6: usuário ativo que não é admin não envia'
 );
 select tests.clear_auth();
 
@@ -202,7 +216,7 @@ select lives_ok(
   'material publicado é aceito'
 );
 select is(
-  (select material_ids from public.question_submissions where title = 'Com material publicado'),
+  (select material_ids from public.question_submissions where title = 'Com material publicado' and author_id = :'v_mat'),
   array[:'v_pub']::uuid[],
   'e fica guardado no envio'
 );
@@ -225,7 +239,7 @@ select throws_ok(
 select tests.clear_auth();
 select tests.authenticate_as(:'v_mat');
 select throws_ok(
-  format($$ update public.question_submissions set material_ids = array[%L]::uuid[] where title = 'Com material publicado' $$, :'v_draft'),
+  format($$ update public.question_submissions set material_ids = array[%L]::uuid[] where title = 'Com material publicado' and author_id = %L $$, :'v_draft', :'v_mat'),
   'P0001', NULL, 'substituir os materiais por um rascunho também é recusado'
 );
 select tests.clear_auth();
@@ -233,13 +247,13 @@ select tests.clear_auth();
 -- ---------------------------------------------------------------------------
 -- 4. Leitura: o próprio autor e admin; ninguém mais
 -- ---------------------------------------------------------------------------
-select tests.authenticate_as(:'v_a');
+select tests.authenticate_as(:'v_s');
 select is(
-  (select count(*)::int from public.question_submissions where author_id in (:'v_a', :'v_b', :'v_c', :'v_rev', :'v_pend', :'v_block')),
-  5,
-  'A vê os 5 envios que são dele (4 semeados + 1 pela API) e nenhum dos outros'
+  (select count(*)::int from public.question_submissions where author_id in (:'v_a', :'v_b', :'v_c', :'v_s', :'v_rev', :'v_pend', :'v_block')),
+  2,
+  'S (não admin) continua vendo os 2 envios que são dele e nenhum dos outros'
 );
-select is((select count(*)::int from public.question_submissions where id = :'v_sub_b'), 0, 'A não vê o envio do B');
+select is((select count(*)::int from public.question_submissions where id = :'v_sub_b'), 0, 'S não vê o envio do B');
 select tests.clear_auth();
 
 select tests.authenticate_as(:'v_b');
@@ -315,6 +329,14 @@ select throws_ok(
   format($$ delete from public.question_submissions where id = %L $$, :'v_sub_a_erro'),
   '42501', NULL, 'usuário não apaga envio'
 );
+select tests.clear_auth();
+
+select tests.authenticate_as(:'v_s');
+select is(
+  tests.affected_rows(format($$ update public.question_submissions set content_md = '## reenvio' where id = %L $$, :'v_sub_s_nao')),
+  0, 'P6: quem não é admin não reenvia nem o próprio envio "não apto"'
+);
+select is((select status from public.question_submissions where id = :'v_sub_s_nao'), 'nao_apto', 'e o envio dele fica como estava');
 select tests.clear_auth();
 
 select tests.authenticate_as(:'v_rev');
@@ -395,7 +417,7 @@ select lives_ok(
 select tests.clear_auth();
 
 -- 44-H2: a fila é UMA só por pessoa: 3 esperando, somando material e questões.
-select tests.create_user('qsub.irmas@test.local', 'student', 'active') as v_irmas \gset
+select tests.create_user('qsub.irmas@test.local', 'admin', 'active') as v_irmas \gset
 insert into public.question_submissions (author_id, title, content_md)
 select :'v_irmas', 'Lote esperando ' || g, '## Questão 1' from generate_series(1, 3) g;
 select tests.authenticate_as(:'v_irmas');
@@ -404,7 +426,7 @@ select throws_ok(
   'P0001', NULL, '3 lotes de questões esperando travam também o envio de material (fila única)'
 );
 select tests.clear_auth();
-select tests.create_user('qsub.irmas2@test.local', 'student', 'active') as v_irmas2 \gset
+select tests.create_user('qsub.irmas2@test.local', 'admin', 'active') as v_irmas2 \gset
 insert into public.material_submissions (author_id, title, discipline_id, theme_id, content_md)
 select :'v_irmas2', 'Material esperando ' || g, :'v_disc', :'v_theme', '# m' from generate_series(1, 3) g;
 select tests.authenticate_as(:'v_irmas2');
@@ -413,7 +435,7 @@ select throws_ok(
   'P0001', NULL, '3 materiais esperando travam também o envio de questões (fila única)'
 );
 select tests.clear_auth();
-select tests.create_user('qsub.mista@test.local', 'student', 'active') as v_mista \gset
+select tests.create_user('qsub.mista@test.local', 'admin', 'active') as v_mista \gset
 insert into public.material_submissions (author_id, title, discipline_id, theme_id, content_md)
 select :'v_mista', 'Material misto ' || g, :'v_disc', :'v_theme', '# m' from generate_series(1, 2) g;
 insert into public.question_submissions (author_id, title, content_md) values (:'v_mista', 'Lote misto', '## Questão 1');

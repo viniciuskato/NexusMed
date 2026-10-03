@@ -29,3 +29,26 @@ describe('44-F — o pgTAP do agendamento testa o mesmo bloco da migration', () 
     expect(entre?.trim()).toBe(daMigration);
   });
 });
+
+// P6 (03/10): a migration 20261003120700 desagenda o job. O pgTAP repete o bloco que a desagenda.
+describe('P6 — o pgTAP do desagendamento testa o mesmo bloco da migration', () => {
+  const migration = normalizar(
+    readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261003120700_caderno_pessoal_p6.sql'), 'utf8'),
+  );
+  const teste = normalizar(
+    readFileSync(path.resolve(process.cwd(), 'supabase/tests/database/agendar_revisor_44f.test.sql'), 'utf8'),
+  );
+
+  it('a migration desagenda revisar-envios e não agenda nada', () => {
+    const bloco = migration.match(DO_BLOCO)?.[0] ?? '';
+    expect(bloco).toContain("cron.unschedule('revisar-envios')");
+    expect(migration).not.toContain('cron.schedule(');
+  });
+
+  it('o bloco do teste é idêntico ao da migration', () => {
+    const daMigration = migration.match(DO_BLOCO)?.[0];
+    const entre = teste.split('-- inicio-do-bloco-da-p6\n')[1]?.split('-- fim-do-bloco-da-p6')[0];
+    expect(daMigration).toBeTruthy();
+    expect(entre?.trim()).toBe(daMigration);
+  });
+});

@@ -1,8 +1,9 @@
 import { sourceUrl } from '../utils/bibliographicSources';
-import { Flashcard, FlashcardSRS, Question } from '../types';
+import { Flashcard, FlashcardSRS, Question, QuestionReviewResult } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { calculateNextSRS, createInitialSRS } from '../services/srsAlgorithm';
 import { FlashcardsRepository } from './FlashcardsRepository';
+import { textoDoFlashcardDoErro } from '../utils/flashcardDoErro';
 import { fetchAllRows, fetchAllRowsByIds } from './supabasePaging';
 
 // ============================================================================
@@ -271,12 +272,8 @@ export class SupabaseFlashcardsRepository implements FlashcardsRepository {
     if (error) throw error;
   }
 
-  async createFlashcardFromQuestion(question: Question): Promise<Flashcard> {
-    const template = question.flashcardTemplate || {
-      front: `[${question.institution} ${question.year}] ${question.questionStem.slice(0, 180)}...`,
-      back: `Resposta Correta:\n${question.options.find((o) => o.isCorrect)?.text || ''}\n\nExplicação:\n${question.highYieldSummary}`,
-      mechanismNote: question.highYieldSummary,
-    };
+  async createFlashcardFromQuestion(question: Question, review?: QuestionReviewResult): Promise<Flashcard> {
+    const template = textoDoFlashcardDoErro(question, review);
 
     const newCard: Flashcard = {
       id: crypto.randomUUID(),

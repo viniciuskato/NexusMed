@@ -6,6 +6,13 @@
 > `docs/archive/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-10-03 — Publicação sem limite por dia nem horário; revisão dos envios pela equipe (D-12)
+
+Origem: dono, 03/10/2026: "Não estou entendendo essa limitação de duas por dia e a peridiodização que você fez, ela é engessada e sem lógica." (escolheu tirar os dois limites); e "nós não queremos pagar diretamente. Iriamos gastar tokens da conta." (escolheu a revisão dos envios pela equipe, com a cota da conta).
+
+1. **Sem limite de publicações por dia e sem proibição à noite.** O que estiver pronto, revisado e com todos os checks verdes vai ao ar na hora, nas demais condições da D-9 (itens 2 e 3). Revê a D-7 (item 7, "até 2 merges por dia, nunca à noite"), a D-9 (item 2, "limites da D-7") e a D-10 nesse ponto.
+2. **Revisão dos envios sem API paga.** A revisão de que trata a D-11 é feita pela equipe no Claude Code, com a cota da assinatura do dono: um verificador sem custo olha a fila a cada 15 minutos e só chama a IA quando há envio esperando. A Edge Function `revisar-envios` com a Claude API fica desligada (sem segredos). Revê a D-11, item 2, só no "como"; o resto da D-11 continua.
+
 ## 2026-09-29 — Conteúdo enviado pelo site, revisado por IA e publicado pelo "apto" (D-11)
 
 Origem: pedidos do dono de 29/09/2026: "Se alguém quiser postar, deve

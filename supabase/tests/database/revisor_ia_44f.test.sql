@@ -151,7 +151,7 @@ select plan(135);
 
 select tests.clear_auth();
 select tests.create_user('rev.admin@test.local', 'admin', 'active') as v_admin \gset
-select tests.create_user('rev.a@test.local', 'student', 'active') as v_a \gset
+select tests.create_user('rev.a@test.local', 'admin', 'active') as v_a \gset
 select tests.create_user('rev.b@test.local', 'student', 'active') as v_b \gset
 select tests.create_user('rev.pend@test.local', 'student', 'active') as v_pend \gset
 select tests.create_user('rev.daily@test.local', 'student', 'active') as v_daily \gset
@@ -466,7 +466,12 @@ select is(
   4,
   'o autor lê as revisões dos próprios envios'
 );
-select is((select count(*)::int from public.material_reviews where submission_id = :'v_b_t'), 0, 'e não lê a revisão do envio de outra pessoa');
+select tests.clear_auth();
+-- P6: o autor dos envios acima é admin (só o admin envia) e lê tudo; quem não é admin lê só as próprias.
+select tests.authenticate_as(:'v_b');
+select is((select count(*)::int from public.material_reviews where submission_id in (:'v_a1', :'v_a2', :'v_a_n1', :'v_a_e1')), 0, 'e quem não é admin não lê a revisão do envio de outra pessoa');
+select tests.clear_auth();
+select tests.authenticate_as(:'v_a');
 select is((select findings_text from public.material_reviews where id = :'v_r_n1'), 'achados N', 'o autor lê os achados');
 select throws_ok(
   format($$ select continuation from public.material_reviews where id = %L $$, :'v_r_n1'),
@@ -509,7 +514,7 @@ select tests.authenticate_as(:'v_admin');
 select is((select count(*)::int from public.review_settings), 1, 'admin lê os tetos');
 select throws_ok($$ update public.review_settings set monthly_review_cap = 1 $$, '42501', NULL, 'admin não altera os tetos pelo cliente');
 select tests.clear_auth();
-select tests.authenticate_as(:'v_a');
+select tests.authenticate_as(:'v_b');
 select is((select count(*)::int from public.review_settings), 0, 'estudante não lê os tetos');
 select tests.clear_auth();
 
@@ -624,7 +629,7 @@ select is(app.revisao_valida_do_envio(:'v_a_n1'), null::uuid, 'a revisão do tex
 select is(app.revisao_valida_do_envio(:'v_a1'), :'v_r_a1'::uuid, 'já a do texto que não mudou vale');
 
 -- 8.2 Conferência do servidor antes de gastar: registra "não apto" direto da reserva, sem lote e sem custo.
-select tests.create_user('rev.pre@test.local', 'student', 'active') as v_pre_autor \gset
+select tests.create_user('rev.pre@test.local', 'admin', 'active') as v_pre_autor \gset
 select tests.new_submission(:'v_pre_autor', :'v_disc', :'v_theme', 'Fora do padrão', '# fora', 'aguardando_revisao') as v_b_pre \gset
 select tests.authenticate_as_service();
 select count(*) from public.revisao_reservar_envios(1000) where submission_id = :'v_b_pre' \gset
@@ -661,7 +666,7 @@ select lives_ok(
 insert into public.materials (discipline_id, theme_id, title) values (:'v_disc', :'v_theme', 'Pai que será despublicado') returning id as v_pai \gset
 insert into public.material_sections (material_id, sort_order, title, content) values (:'v_pai', 0, 'S', 'C.');
 select tests.force_publish_material(:'v_pai');
-select tests.create_user('rev.pai@test.local', 'student', 'active') as v_pai_autor \gset
+select tests.create_user('rev.pai@test.local', 'admin', 'active') as v_pai_autor \gset
 insert into public.material_submissions (author_id, title, discipline_id, theme_id, parent_material_id, content_md, status)
 values (:'v_pai_autor', 'Com pai', :'v_disc', :'v_theme', :'v_pai', '# com pai', 'nao_apto') returning id as v_sub_pai \gset
 select tests.authenticate_as(:'v_pai_autor');
@@ -689,7 +694,7 @@ select tests.clear_auth();
 --    continuação com histórico, extensões nos schemas certos
 -- ---------------------------------------------------------------------------
 -- 9.1 Tentativa gravada antes de pedir o lote: "incerta" conta no limite e não volta sozinha.
-select tests.create_user('rev.inc@test.local', 'student', 'active') as v_inc_autor \gset
+select tests.create_user('rev.inc@test.local', 'admin', 'active') as v_inc_autor \gset
 select tests.new_submission(:'v_inc_autor', :'v_disc', :'v_theme', 'Incerto 1', '# inc1', 'aguardando_revisao') as v_inc1 \gset
 select tests.new_submission(:'v_inc_autor', :'v_disc', :'v_theme', 'Incerto 2', '# inc2', 'aguardando_revisao') as v_inc2 \gset
 select tests.authenticate_as_service();

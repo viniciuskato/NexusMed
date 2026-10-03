@@ -293,6 +293,12 @@ nova está congelada. O código só termina o que está em voo e não congela,
 conserta defeito e atende pedido da produção aprovado pelo dono. Decisão
 completa: `docs/operacao/DECISIONS.md`, D-7.
 
+> **D-12 (03/10):** o limite de "2 merges por dia" e o "nunca à noite" da
+> D-7 foram revistos (revisto pela D-12, 03/10: sem limite por dia nem
+> horário); e a revisão dos envios da D-11 é feita pela equipe no Claude Code,
+> com a cota da conta, sem API paga (`docs/operacao/DECISIONS.md`, D-12).
+> Nenhuma outra regra desta seção muda.
+
 **Meta.** Materiais 01 a 03 do piloto (seção 12) publicados, com questões
 ligadas, e o "Testar o que li" (43-C) no ar até 02/10; 04 a 07 até 09/10.
 Nunca encurtar a atestação para bater data: se não couber, passa para a
@@ -369,6 +375,8 @@ que passar pela fronteira vira issue (a diretoria classifica). A 46-C
 (backup com restauração ensaiada) não é decidida aqui: continua esperando a
 P-2; quando o dono resolver a P-2, a diretoria pergunta a ele se ela entra
 como prevenção de perda de dado ou só por pedido da produção.
+
+Caderno pessoal (03/10): P6 — admin publica sem 'apto' (revisor aconselha), envio só admin, verso do card do erro — PR #107
 
 O Supabase local continua um só para todas as worktrees: banco de teste,
 pgTAP e E2E com a trava de `EXECUTOR_PROTOCOL.md`. Migration com data
@@ -803,7 +811,9 @@ esperando revisão por pessoa e 300 KB por texto, travados no banco.
 ### 44-F — Revisor de IA do NexusMed
 
 **Origem.** Decisão do dono (29/09): tudo que for publicado passa por um
-revisor de IA dentro do site, pago por revisão, com teto mensal na conta.
+revisor de IA dentro do site, pago por revisão, com teto mensal na conta
+(revisto pela D-12, 03/10: a revisão é feita pela equipe no Claude Code, com a
+cota da conta, sem API paga; a Edge Function `revisar-envios` fica desligada).
 
 **Aceite.** Cada envio é revisado no servidor com o prompt revisor e a Parte 1
 do padrão, sem cópia; termina em apto, não apto ou erro (nunca apto por

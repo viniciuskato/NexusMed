@@ -80,9 +80,10 @@ mudança** — uma autorização anterior não cobre outra.
 > **Exceção explícita (D-9, 29/09):** o "aprovado" do dono a um plano é a
 > autorização para cada PR dele e para a manutenção técnica (D-9, item 1): a
 > diretoria aplica antes a migration no remoto e mescla, por squash e preso
-> ao commit aprovado, nas condições dos itens 2 e 3 da D-9; se o
-> classificador ou as permissões barrarem, o PR vai ao dono pelos cliques
-> (`DECISIONS.md`, D-9).
+> ao commit aprovado, nas condições dos itens 2 e 3 da D-9 (revisto pela
+> D-12, 03/10: sem limite por dia nem horário); se o classificador ou as
+> permissões barrarem, o PR vai ao dono pelos cliques (`DECISIONS.md`, D-9 e
+> D-12).
 
 Desde 2026-09-18, **toda mudança entra em `main` por Pull Request** — nunca
 por push direto. O PR dá três coisas que o push direto não dá: o CI roda
@@ -198,7 +199,7 @@ obrigatório antes prende o PR para sempre.
 
 ## 3.3. Revisor de IA dos envios (44-F)
 
-Em 03/10 o dono decidiu não usar a API paga; até o revisor ser refeito para rodar no Claude Code, os passos (a)–(c) não se aplicam e os envios ficam aguardando revisão.
+Em 03/10 o dono decidiu não usar a API paga (`DECISIONS.md`, D-12, item 2, que revê a D-11 só no "como": a revisão dos envios é feita pela equipe no Claude Code, com a cota da conta); até o revisor ser refeito para rodar no Claude Code, os passos (a)–(c) não se aplicam, a Edge Function `revisar-envios` fica desligada (sem segredos) e os envios ficam aguardando revisão.
 
 > O revisor lê cada material enviado pelo site, confere fontes e formato e
 > dá o veredito ("apto", "não apto" ou "erro"). Ele roda no servidor (uma
