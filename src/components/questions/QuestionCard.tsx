@@ -334,7 +334,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       // Só nasce depois que o servidor confirmou o erro. A RPC dedicada de
       // criação converge concorrência/replay para um único card.
       try {
-        await flashcardsRepository.createFlashcardFromQuestion(question);
+        await flashcardsRepository.createFlashcardFromQuestion(question, review);
       } catch {
         // A fila resiliente mantém a criação pendente quando a rede cai.
       }

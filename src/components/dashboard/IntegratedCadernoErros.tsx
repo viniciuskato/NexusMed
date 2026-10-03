@@ -281,7 +281,7 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
   };
 
   const handleCreateFlashcard = async (q: Question) => {
-    await flashcardsRepository.createFlashcardFromQuestion(q);
+    await flashcardsRepository.createFlashcardFromQuestion(q, reviews[q.id]);
     setCreatedFlashcardQuestionIds((prev) => [...prev, q.id]);
     onUpdate();
     showToast('Flashcard gerado com sucesso! Já agendado na sua rotina de SRS.');

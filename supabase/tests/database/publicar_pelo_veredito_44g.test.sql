@@ -166,11 +166,11 @@ as $$
   );
 $$;
 
-select plan(190);
+select plan(193);
 
 select tests.clear_auth();
 select tests.create_user('g.admin@test.local', 'admin', 'active') as v_admin \gset
-select tests.create_user('g.autor@test.local', 'student', 'active') as v_autor \gset
+select tests.create_user('g.autor@test.local', 'admin', 'active') as v_autor \gset
 select tests.create_user('g.aluno@test.local', 'student', 'active') as v_aluno \gset
 select tests.create_user('g.outro@test.local', 'student', 'active') as v_outro \gset
 select tests.create_user('g.pend@test.local', 'student', 'pending') as v_pend \gset
@@ -500,7 +500,7 @@ select is((select status from public.material_submissions where id = :'v_e_retry
 
 -- Envio recusado na publicação (ex.: material acima que saiu do ar): o autor escolhe outro material acima.
 -- O lugar mudou, e a IA revisou o lugar antigo: o envio volta à REVISÃO (não a "apto").
-select tests.create_user('g.autor2@test.local', 'student', 'active') as v_autor2 \gset
+select tests.create_user('g.autor2@test.local', 'admin', 'active') as v_autor2 \gset
 select tests.envio_revisado(:'v_autor2', :'v_disc', :'v_theme', 'Retry recusado ' || :'v_sfx', null, 'apto', 'nao_apto') as v_e_retry4 \gset
 update public.material_submissions set publication_note = 'O material acima não está mais publicado.' where id = :'v_e_retry4';
 select tests.authenticate_as(:'v_autor2');
@@ -529,7 +529,7 @@ insert into public.disciplines (name, code, cycle) values ('Outra Disciplina 44G
 insert into public.themes (discipline_id, name) values (:'v_disc2', 'Outro Tema 44G') returning id as v_theme2 \gset
 
 -- A revisão guarda o lugar que a IA recebeu, gravado pelo banco na reserva.
-select tests.create_user('g.autor4@test.local', 'student', 'active') as v_autor4 \gset
+select tests.create_user('g.autor4@test.local', 'admin', 'active') as v_autor4 \gset
 insert into public.material_submissions (author_id, title, discipline_id, theme_id, parent_material_id, content_md)
 values (:'v_autor4', 'Lugar reservado ' || :'v_sfx', :'v_disc', :'v_theme', :'v_pai', '# lugar reservado') returning id as v_e_lug \gset
 select tests.authenticate_as_service();
@@ -549,7 +549,7 @@ select tests.clear_auth();
 select is((select status from public.material_submissions where id = :'v_e_lug'), 'em_revisao', 'lugar mudado durante a revisão: o resultado não leva o envio a "apto"');
 
 -- A sonda do revisor: o autor troca o lugar de um envio em "erro" com revisão apto do MESMO texto.
-select tests.create_user('g.autor3@test.local', 'student', 'active') as v_autor3 \gset
+select tests.create_user('g.autor3@test.local', 'admin', 'active') as v_autor3 \gset
 select tests.envio_revisado(:'v_autor3', :'v_disc', :'v_theme', 'Sonda tema ' || :'v_sfx', null, 'apto', 'erro') as v_e_s1 \gset
 select tests.envio_revisado(:'v_autor3', :'v_disc', :'v_theme', 'Sonda disciplina ' || :'v_sfx', null, 'apto', 'erro') as v_e_s2 \gset
 select tests.envio_revisado(:'v_autor3', :'v_disc', :'v_theme', 'Sonda pai ' || :'v_sfx', null, 'apto', 'erro') as v_e_s3 \gset
@@ -596,7 +596,7 @@ select is(app.revisao_apto_do_envio(:'v_e_s1'::uuid), tests.review_of(:'v_e_s1')
 -- 44-H3: só vale a revisão MAIS RECENTE do texto, em qualquer lugar. (T, Tema A) apto → a publicação
 -- falha ("erro") → o autor muda para o Tema B → a IA julga o MESMO texto "não apto" no Tema B → o autor
 -- volta ao Tema A: a revisão antiga de "apto" NÃO volta a valer (o texto foi julgado não apto depois).
-select tests.create_user('g.autor5@test.local', 'student', 'active') as v_autor5 \gset
+select tests.create_user('g.autor5@test.local', 'admin', 'active') as v_autor5 \gset
 select tests.envio_revisado(:'v_autor5', :'v_disc', :'v_theme', 'Sonda recente ' || :'v_sfx', null, 'apto', 'erro') as v_e_r1 \gset
 select tests.review_of(:'v_e_r1') as v_r_r1 \gset
 select tests.authenticate_as(:'v_autor5');
@@ -698,22 +698,22 @@ insert into public.material_sections (material_id, sort_order, title, content) v
 select tests.authenticate_as(:'v_aluno');
 select throws_ok(format($$ select public.publish_material(%L) $$, :'v_rasc'), NULL, 'apenas administradores ativos podem publicar materiais', 'estudante não publica');
 select tests.clear_auth();
+-- P6 (03/10): o revisor só aconselha. O admin publica o rascunho sem nenhuma revisão, e o selo
+-- "Revisado por IA" só aparece onde há revisão "apto" do conteúdo atual.
 select tests.authenticate_as(:'v_admin');
-select throws_like(
+select lives_ok(
   format($$ select public.publish_material(%L) $$, :'v_rasc'),
-  '%revisor de IA%Enviar material%', 'admin não publica rascunho sem revisão, e a mensagem diz o que fazer'
+  'P6: o admin publica rascunho sem nenhuma revisão (o revisor só aconselha)'
 );
 select tests.clear_auth();
-
--- Atestação humana sozinha já não basta.
-select tests.approve_material_revision(:'v_rasc'::uuid);
-select tests.authenticate_as(:'v_admin');
-select throws_like(
-  format($$ select public.publish_material(%L) $$, :'v_rasc'),
-  '%revisor de IA%', 'atestação humana sem revisão de IA não libera a publicação'
-);
+select is((select status from public.materials where id = :'v_rasc'), 'published', 'e o material vai ao ar');
+select tests.authenticate_as(:'v_aluno');
+select is(public.selo_de_revisao(:'v_rasc'), null, 'sem revisão de IA "apto", o estudante não vê o selo');
 select tests.clear_auth();
-select is((select status from public.materials where id = :'v_rasc'), 'draft', 'o rascunho continua rascunho');
+select tests.authenticate_as(:'v_admin');
+select lives_ok(format($$ select public.unpublish_material(%L) $$, :'v_rasc'), 'o admin despublica sem precisar de revisão');
+select tests.clear_auth();
+select is((select status from public.materials where id = :'v_rasc'), 'draft', 'e o material volta a rascunho');
 
 -- Revisão apto vinculada a ESTE conteúdo: libera.
 select tests.envio_revisado(:'v_autor', :'v_disc', :'v_theme', 'Envio do rascunho ' || :'v_sfx') as v_e_rasc \gset
@@ -734,9 +734,12 @@ select :'v_edit', s.id, tests.review_of(s.id), 'apto', now(), 'claude-opus-5-5',
   from public.material_submissions s where s.id = :'v_e_edit';
 update public.material_sections set content = 'texto alterado depois da revisão' where material_id = :'v_edit';
 select tests.authenticate_as(:'v_admin');
-select throws_like(format($$ select public.publish_material(%L) $$, :'v_edit'), '%revisor de IA%', 'conteúdo alterado depois da revisão: a revisão não vale mais');
+select lives_ok(format($$ select public.publish_material(%L) $$, :'v_edit'), 'P6: conteúdo alterado depois da revisão: o admin publica mesmo assim');
 select tests.clear_auth();
-select ok(not app.material_tem_revisao_apto(:'v_edit'::uuid), 'a função de conferência também diz que não');
+select ok(not app.material_tem_revisao_apto(:'v_edit'::uuid), 'mas a revisão não vale mais para esse conteúdo');
+select tests.authenticate_as(:'v_aluno');
+select is(public.selo_de_revisao(:'v_edit'), null, 'e o estudante não vê o selo "Revisado por IA"');
+select tests.clear_auth();
 
 -- Proveniência cuja revisão não é "apto": não vale.
 insert into public.materials (discipline_id, theme_id, title) values (:'v_disc', :'v_theme', 'Rascunho revisão ruim ' || :'v_sfx') returning id as v_ruim \gset
@@ -760,12 +763,9 @@ update public.materials set status = 'published' where id = :'v_leg';
 insert into public.material_publicado_antes_44g (material_id, snapshot_hash) values (:'v_leg', app.material_snapshot_hash(:'v_leg'::uuid));
 select tests.authenticate_as(:'v_admin');
 select lives_ok(format($$ select public.unpublish_material(%L) $$, :'v_leg'), 'o admin despublica o material antigo');
-select throws_like(format($$ select public.publish_material(%L) $$, :'v_leg'), '%já esteve no ar%', 'material antigo sem atestação do conteúdo atual: a regra antiga o barra, com mensagem leiga');
+select lives_ok(format($$ select public.publish_material(%L) $$, :'v_leg'), 'P6: material antigo volta ao ar sem atestação nem revisão (a regra antiga acabou)');
 select tests.clear_auth();
 select tests.approve_material_revision(:'v_leg'::uuid);
-select tests.authenticate_as(:'v_admin');
-select lives_ok(format($$ select public.publish_material(%L) $$, :'v_leg'), 'material antigo com atestação do conteúdo atual volta ao ar pela regra antiga');
-select tests.clear_auth();
 select is((select status from public.materials where id = :'v_leg'), 'published', 'e está publicado');
 
 -- A exceção vale só para o CONTEÚDO que já estava no ar: reescrito, precisa de revisão de IA.
@@ -781,14 +781,16 @@ update public.materials set title = 'Material NOVO escrito pelo admin ' || :'v_s
 update public.material_sections set title = 'Seção nova', content = 'texto totalmente novo, escrito pelo admin' where material_id = :'v_leg2';
 select tests.approve_material_revision(:'v_leg2'::uuid);
 select tests.authenticate_as(:'v_admin');
-select throws_like(
+select lives_ok(
   format($$ select public.publish_material(%L) $$, :'v_leg2'),
-  '%mudou depois de ir ao ar%revisor de IA%',
-  'material antigo reescrito e atestado pelo admin: não republica sem revisor de IA'
+  'P6: material antigo reescrito pelo admin republica sem revisor de IA'
 );
 select tests.clear_auth();
-select is((select status from public.materials where id = :'v_leg2'), 'draft', 'e continua rascunho');
+select is((select status from public.materials where id = :'v_leg2'), 'published', 'e vai ao ar');
 select is((select count(*)::int from public.material_ai_provenance where material_id = :'v_leg2'), 0, 'sem proveniência de IA');
+select tests.authenticate_as(:'v_admin');
+select lives_ok(format($$ select public.unpublish_material(%L) $$, :'v_leg2'), 'o admin despublica de novo para seguir o teste');
+select tests.clear_auth();
 -- Voltar ao texto original (mesmo hash de antes) devolve a exceção.
 update public.materials set title = 'Legado reescrito ' || :'v_sfx' where id = :'v_leg2';
 update public.material_sections set title = 'S1', content = 'texto legado original' where material_id = :'v_leg2';
@@ -814,7 +816,7 @@ select ok(
   'e o hash guardado do conteúdo antigo continua o de antes (não acompanha as edições)'
 );
 
--- Material novo (fora da lista do que já estava publicado) com atestação humana e sem IA: barrado.
+-- Material novo (fora da lista do que já estava publicado) nunca entra na lista.
 select is((select count(*)::int from public.material_publicado_antes_44g where material_id = :'v_rasc'), 0, 'material novo nunca entra na lista do que já estava publicado');
 
 -- ---------------------------------------------------------------------------
@@ -872,7 +874,7 @@ select throws_ok(
   '42501', NULL, 'não dá para gravar o estado'
 );
 select throws_ok(
-  format($$ insert into public.material_error_reports (material_id, description) values (%L, 'erro num rascunho') $$, :'v_edit'),
+  format($$ insert into public.material_error_reports (material_id, description) values (%L, 'erro num rascunho') $$, :'v_ruim'),
   '42501', NULL, 'reporte de material não publicado é recusado (o rascunho não é dos alunos)'
 );
 select throws_ok(
@@ -924,7 +926,7 @@ select throws_ok(
 select tests.clear_auth();
 
 -- Limite de 20 por pessoa por dia, travado no banco.
-select tests.create_user('g.limite@test.local', 'student', 'active') as v_lim \gset
+select tests.create_user('g.limite@test.local', 'admin', 'active') as v_lim \gset
 insert into public.material_error_reports (material_id, reporter_id, description)
 select :'v_rep_m', :'v_lim', 'reporte ' || i from generate_series(1, 19) i;
 select tests.authenticate_as(:'v_lim');

@@ -61,7 +61,7 @@ test.describe('Enviar material (44-E)', () => {
   }) => {
     const { disciplina, tema } = catalogoDoSeed();
     const titulo = `Envio E2E ${Date.now()}`;
-    const student = await novoUsuario('envio-feliz');
+    const student = await novoUsuario('envio-feliz', 'admin');
     await login(page, student);
     await abrirEnvio(page);
     await expect(page).toHaveURL(/#\/enviar-material$/);
@@ -87,7 +87,7 @@ test.describe('Enviar material (44-E)', () => {
   test('arquivo com pendência do padrão: mostra a pendência e não deixa enviar', async ({ page }) => {
     const { disciplina, tema } = catalogoDoSeed();
     const titulo = `Pendencia E2E ${Date.now()}`;
-    const student = await novoUsuario('envio-pendencia');
+    const student = await novoUsuario('envio-pendencia', 'admin');
     await login(page, student);
     await abrirEnvio(page);
 
@@ -100,8 +100,8 @@ test.describe('Enviar material (44-E)', () => {
   test('estudante A não vê o envio do estudante B, e admin vê os dois na Área Editorial', async ({ page, browser }) => {
     const tituloA = `Envio do A ${Date.now()}`;
     const tituloB = `Envio do B ${Date.now()}`;
-    const a = await novoUsuario('envio-a');
-    const b = await novoUsuario('envio-b');
+    const a = await novoUsuario('envio-a', 'admin');
+    const b = await novoUsuario('envio-b', 'admin');
     const admin = await novoUsuario('envio-admin', 'admin');
     const seed = getSeedIds();
     for (const [autor, titulo] of [
@@ -142,7 +142,7 @@ test.describe('Enviar material (44-E)', () => {
   test('com 3 envios esperando revisão, a tela avisa e não deixa enviar outro', async ({ page }) => {
     const { disciplina, tema } = catalogoDoSeed();
     const seed = getSeedIds();
-    const student = await novoUsuario('envio-fila');
+    const student = await novoUsuario('envio-fila', 'admin');
     for (let i = 1; i <= 3; i += 1) {
       psqlLocal(
         `insert into public.material_submissions (author_id, title, discipline_id, theme_id, content_md, status) ` +
@@ -158,13 +158,32 @@ test.describe('Enviar material (44-E)', () => {
   });
 
   test('a tela de envio e a página de instruções levam uma à outra', async ({ page }) => {
-    const student = await novoUsuario('envio-links');
+    const student = await novoUsuario('envio-links', 'admin');
     await login(page, student);
     await abrirEnvio(page);
     await page.locator('#enviar-material-como-escrever').click();
     await expect(page.locator('#como-escrever-material-view')).toBeVisible();
     await page.locator('#como-escrever-enviar').click();
     await expect(page.locator('#enviar-material-view')).toBeVisible();
+  });
+
+  test('P6: estudante ativo não vê os menus de envio e não abre as telas de envio, nem pelo endereço direto', async ({ page }) => {
+    const amigo = await novoUsuario('envio-amigo');
+    await login(page, amigo);
+    await page.locator('#btn-user-profile-menu').click();
+    await expect(page.locator('#btn-logout')).toBeVisible();
+    await expect(page.locator('#nav-enviar-material')).toHaveCount(0);
+    await expect(page.locator('#nav-como-escrever-material')).toHaveCount(0);
+    await expect(page.locator('#nav-como-escrever-questoes')).toHaveCount(0);
+
+    for (const rota of ['enviar-material', 'como-escrever-material', 'como-escrever-questoes']) {
+      await page.goto(`/#/${rota}`);
+      await page.reload();
+      await expect(page.locator('#btn-user-profile-menu')).toBeVisible({ timeout: 20_000 });
+      await expect(page.locator('#enviar-material-view')).toHaveCount(0);
+      await expect(page.locator('#como-escrever-material-view')).toHaveCount(0);
+      await expect(page.locator('#como-escrever-questoes-view')).toHaveCount(0);
+    }
   });
 
   test('usuário pendente não abre a tela de envio, nem pelo endereço direto', async ({ page }) => {
