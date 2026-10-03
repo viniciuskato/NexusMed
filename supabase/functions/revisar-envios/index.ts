@@ -15,7 +15,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { bancoDoSupabase, type ClienteDoBanco } from './banco.ts';
 import { apiDeLotesDaAnthropic, TIMEOUT_DA_API_MS, type ClienteDaAnthropic } from './api.ts';
-import { executarCiclo, type Conferencia, type LeitorDeMaterial, type LeitorDeQuestoes } from './ciclo.ts';
+import { executarCiclo } from './ciclo.ts';
+import { montarConferencias } from './conferencias.ts';
 import { montarSistema, montarSistemaDeQuestoes } from './montagem.ts';
 import { BASE_DO_REVISOR, BASE_DO_REVISOR_DE_QUESTOES } from './gerado/textos.ts';
 import * as validacao from './gerado/validacao.js';
@@ -51,31 +52,8 @@ async function tratar(req: Request): Promise<Response> {
   });
   const api = apiDeLotesDaAnthropic(anthropic as unknown as ClienteDaAnthropic);
 
-  const modulo = validacao as unknown as ModuloDeValidacao;
-  const conferir: Conferencia = (envio, catalogo) => {
-    if (envio.tipo === 'questoes') {
-      // 44-H2: o mesmo importador de questões da tela (e do Admin), sem escolha manual.
-      const leituraDoLote = modulo.lerLoteDeQuestoes(envio.texto, catalogo.disciplines, catalogo.themes);
-      const avaliacaoDoLote = modulo.avaliarLote(leituraDoLote, catalogo.materiais ?? [], envio.materiais ?? []);
-      return { aceito: avaliacaoDoLote.aceito, motivos: modulo.motivosDaRecusaDoLote(avaliacaoDoLote) };
-    }
-    const leitura = modulo.lerArquivoParaEnvio(envio.texto, catalogo.disciplines, catalogo.themes);
-    const avaliacao = modulo.avaliarEnvio(
-      leitura,
-      { disciplineId: envio.disciplineId ?? '', themeId: envio.themeId ?? '' },
-      catalogo.disciplines,
-      catalogo.themes,
-    );
-    return { aceito: avaliacao.aceito, motivos: modulo.motivosDaReprovacao(avaliacao) };
-  };
-
-  // 44-G: o texto aprovado vira material pelo mesmo importador da tela.
-  const lerMaterial: LeitorDeMaterial = (envio, catalogo) =>
-    modulo.lerMaterialParaPublicar(envio.texto, catalogo.disciplines, catalogo.themes);
-
-  // 44-H2: o texto aprovado de um lote vira as questões pelo mesmo importador da tela.
-  const lerQuestoes: LeitorDeQuestoes = (envio, catalogo) =>
-    modulo.lerQuestoesParaPublicar(envio.texto, catalogo.disciplines, catalogo.themes);
+  // As mesmas conferências do revisor local (D-12): ver conferencias.ts.
+  const { conferir, lerMaterial, lerQuestoes } = montarConferencias(validacao as unknown as ModuloDeValidacao);
 
   const sistemaCompleto = montarSistema(BASE_DO_REVISOR);
   const sistemaDeQuestoes = montarSistemaDeQuestoes(BASE_DO_REVISOR_DE_QUESTOES);
