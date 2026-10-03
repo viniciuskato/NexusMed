@@ -218,9 +218,9 @@ obrigatório antes prende o PR para sempre.
 > (b). Enquanto eles não forem feitos, os envios ficam "aguardando revisão" e
 > nada é gasto.
 
-### (a) Publicar a função e ligar o agendamento
+### (a) Publicar a função e guardar os segredos do agendamento
 
-Ordem: primeiro a migration no banco remoto (`20260930120000_revisor_ia_44f.sql`,
+Ordem: primeiro a migration no banco remoto (`20261003120100_revisor_ia_44f.sql`,
 como qualquer outra), depois os passos abaixo. Os comandos são para o
 PowerShell, na pasta do projeto.
 
@@ -239,16 +239,19 @@ PowerShell, na pasta do projeto.
    C:\Users\vinic\bin\supabase.exe functions deploy revisar-envios --project-ref jfvhwwvixwvgjfqzlkkb
    ```
    Se o comando reclamar do Docker, repita com `--use-api` no fim.
-4. Ligar o agendamento. No painel do Supabase, menu da esquerda, **SQL Editor**
-   → **New query**. Cole o texto abaixo, troque `COLE-AQUI-O-SEGREDO` pelo
-   **mesmo** segredo do `REVISOR_SEGREDO` (bloco (b)) e clique em **Run**:
+4. Guardar os segredos no cofre do banco. O agendamento em si já veio com a
+   migration `20261003120600_agendar_revisor_44f.sql` (um job,
+   `revisar-envios`, a cada 5 minutos, que chama `app.disparar_revisao()`);
+   enquanto os dois segredos não existem, o job roda e não faz nada. No painel
+   do Supabase, menu da esquerda, **SQL Editor** → **New query**. Cole o texto
+   abaixo, troque `COLE-AQUI-O-SEGREDO` pelo **mesmo** segredo do
+   `REVISOR_SEGREDO` (bloco (b)) e clique em **Run**:
    ```sql
    select vault.create_secret('https://jfvhwwvixwvgjfqzlkkb.supabase.co/functions/v1/revisar-envios', 'revisor_url');
    select vault.create_secret('COLE-AQUI-O-SEGREDO', 'revisor_segredo');
-   select cron.schedule('revisar-envios', '*/5 * * * *', $$select app.disparar_revisao()$$);
    ```
-   Isto guarda o endereço e o segredo no cofre do banco (o Vault) e manda o
-   banco chamar a função a cada 5 minutos. Para **desligar** a qualquer
+   Isto guarda o endereço e o segredo no cofre do banco (o Vault); a partir daí
+   o banco chama a função a cada 5 minutos. Para **desligar** a qualquer
    momento (por exemplo, se o gasto assustar), rode no mesmo lugar:
    ```sql
    select cron.unschedule('revisar-envios');

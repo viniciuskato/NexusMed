@@ -10,7 +10,7 @@ import type { MaterialParaPublicar } from './envioDeMaterial';
 // ANTES de enviar, o que vai mudar: seções novas, alteradas e removidas, referências novas
 // e removidas, e quantas questões apontam para seções que vão sumir. O banco continua sendo
 // a autoridade (é ele que aplica); a regra de casamento é a de
-// `supabase/migrations/20261002130000_atualizar_material_pelo_veredito_44b.sql`.
+// `supabase/migrations/20261003120500_atualizar_material_pelo_veredito_44b.sql`.
 // ============================================================================
 
 export function tituloNormalizado(titulo: string): string {

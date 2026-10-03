@@ -1,5 +1,5 @@
 // Ponte entre o ciclo e o Supabase (44-F): cada método é uma chamada às funções
-// `revisao_*` da migration 20260930120000, que só o service_role executa.
+// `revisao_*` da migration 20261003120100, que só o service_role executa.
 import type {
   Banco,
   Catalogo,

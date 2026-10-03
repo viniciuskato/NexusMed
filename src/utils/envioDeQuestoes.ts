@@ -11,7 +11,7 @@ import { LIMITE_TEXTO_BYTES, tamanhoEmBytes, tamanhoLegivel } from './envioDeMat
 // escolha manual: o envio guarda o texto, não uma escolha por questão), o tipo da
 // questão (banca real ou autoral), a fonte on-line no comentário e o material a
 // que cada questão se liga. O banco é a autoridade nos limites (300 KB e 3 lotes
-// esperando revisão, migration 20260930140000): a tela só antecipa a resposta.
+// esperando revisão, migration 20261003120300): a tela só antecipa a resposta.
 // ============================================================================
 
 /** O campo Instituição / Banca de uma questão autoral, como o padrão manda. */

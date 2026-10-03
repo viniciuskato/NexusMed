@@ -12,7 +12,7 @@ import { parseCompendiumMarkdownText } from './compendiumMarkdownImport';
 // o Tema escolhidos na tela contra os que o arquivo declara.
 //
 // O banco é a autoridade nos limites (300 KB e 3 envios esperando revisão,
-// migration 20260929120000): a tela só antecipa a resposta.
+// migration 20261003120000): a tela só antecipa a resposta.
 // ============================================================================
 
 /** 300 KB, em bytes — o mesmo limite da tabela `material_submissions`. */

@@ -203,6 +203,9 @@ begin
 end;
 $$;
 
+-- 45-H: função nova não nasce executável por PUBLIC; os helpers rodam como service_role/authenticated.
+grant execute on all functions in schema tests to public;
+
 select plan(191);
 
 select tests.clear_auth();

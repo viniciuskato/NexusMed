@@ -775,8 +775,9 @@ $$;
 -- 6. Agendador: quem chama a Edge Function
 -- ----------------------------------------------------------------------------
 
--- O agendamento em si (cron.schedule) e os dois segredos do Vault ficam no
--- RUNBOOK, porque dependem do endereço da função e do segredo que o dono cria.
+-- O agendamento (cron.schedule) vem na migration 20261003120600_agendar_revisor_44f; os
+-- dois segredos do Vault ficam no RUNBOOK (3.3), porque dependem do endereço da função e
+-- do segredo que o dono cria.
 -- Sem os segredos, a função abaixo não faz nada (é o caso do banco local).
 -- pg_net no schema "extensions" (como o painel do Supabase o cria; nunca em
 -- public, onde as funções dele ficariam expostas pela API). pg_cron só se instala

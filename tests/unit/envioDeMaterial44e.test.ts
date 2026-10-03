@@ -183,7 +183,7 @@ describe('44-F — avisos da importação, título e motivos da reprovação', (
 
 describe('44-E — os limites da tela são os do banco', () => {
   const migration = readFileSync(
-    path.resolve(process.cwd(), 'supabase/migrations/20260929120000_envio_de_material_44e.sql'),
+    path.resolve(process.cwd(), 'supabase/migrations/20261003120000_envio_de_material_44e.sql'),
     'utf8',
   );
 

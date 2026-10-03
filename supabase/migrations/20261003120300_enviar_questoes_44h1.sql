@@ -149,7 +149,7 @@ $$;
 
 revoke all on function app.question_submission_waiting_count(uuid, uuid) from public, anon;
 revoke all on function app.check_question_submission_refs(uuid[]) from public, anon;
-revoke all on function app.question_submissions_before_write() from public, anon;
+revoke all on function app.question_submissions_before_write() from public, anon, authenticated;
 -- O gatilho roda com o papel de quem grava e chama as duas funções acima.
 grant execute on function app.question_submission_waiting_count(uuid, uuid) to authenticated;
 grant execute on function app.check_question_submission_refs(uuid[]) to authenticated;

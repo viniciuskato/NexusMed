@@ -73,8 +73,11 @@ vi.mock('../../src/repositories/MaterialSubmissionsRepository', () => ({
 vi.mock('../../src/repositories/QuestionSubmissionsRepository', () => ({
   questionSubmissionsRepository: { listMine: vi.fn().mockResolvedValue([]), submit: vi.fn() },
 }));
-vi.mock('../../src/components/dashboard/DashboardView', () => ({
-  DashboardView: () => <div data-testid="painel">painel</div>,
+// 43-E: a tela inicial agora é "Hoje", que lê estas três cargas do servidor.
+vi.mock('../../src/repositories/LeiturasRepository', () => ({ leiturasRepository: { getLeituras: async () => [] } }));
+vi.mock('../../src/repositories/AnswersRepository', () => ({ answersRepository: { getAnswers: async () => ({}) } }));
+vi.mock('../../src/repositories/FlashcardsRepository', () => ({
+  flashcardsRepository: { getFlashcards: async () => [] },
 }));
 vi.mock('../../src/components/AppErrorBoundary', () => ({
   AppErrorBoundary: ({ children }: { children: React.ReactNode }) => children,
@@ -116,7 +119,7 @@ afterEach(() => {
 describe('44-H1 — "Como escrever questões" no app', () => {
   it('estudante ativo abre a página pelo menu do usuário', async () => {
     render(<App />);
-    await screen.findByTestId('painel');
+    await screen.findByRole('heading', { level: 1, name: 'Hoje' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Como escrever questões' }));
@@ -132,7 +135,7 @@ describe('44-H1 — "Como escrever questões" no app', () => {
 
   it('o link da página leva a "Enviar material" já na aba de questões, e de lá volta às instruções', async () => {
     render(<App />);
-    await screen.findByTestId('painel');
+    await screen.findByRole('heading', { level: 1, name: 'Hoje' });
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Como escrever questões' }));
     await screen.findByRole('heading', { level: 1, name: 'Como escrever questões' });
@@ -148,7 +151,7 @@ describe('44-H1 — "Como escrever questões" no app', () => {
 
   it('o item "Enviar material" do menu abre sempre na aba Material, mesmo depois de a aba Questões ter sido aberta (44-H2)', async () => {
     render(<App />);
-    await screen.findByTestId('painel');
+    await screen.findByRole('heading', { level: 1, name: 'Hoje' });
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Como escrever questões' }));
     await screen.findByRole('heading', { level: 1, name: 'Como escrever questões' });
