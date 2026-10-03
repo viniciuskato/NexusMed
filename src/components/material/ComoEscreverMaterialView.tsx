@@ -9,7 +9,8 @@ import {
   TEXTO_COPIAR_CRIAR,
   TEXTO_COPIAR_REVISAR,
 } from '../../content/padraoMaterial';
-import { dividirEmBlocos } from '../../utils/padraoMaterial';
+import { dividirEmBlocos, paraExibicao } from '../../utils/padraoMaterial';
+import { copiarTexto } from '../../utils/areaDeTransferencia';
 
 // ============================================================================
 // "Como escrever um material" (44-D)
@@ -24,37 +25,15 @@ import { dividirEmBlocos } from '../../utils/padraoMaterial';
 interface ComoEscreverMaterialViewProps {
   disciplines: Discipline[];
   themes: Theme[];
+  /** Abre a tela "Enviar material" (44-E). */
+  onAbrirEnvio?: () => void;
 }
 
 type EstadoCopia = 'parado' | 'copiado' | 'falhou';
 
-/** Copia para a área de transferência; devolve se conseguiu. */
-async function copiarTexto(texto: string): Promise<boolean> {
-  try {
-    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(texto);
-      return true;
-    }
-  } catch {
-    // cai no plano B abaixo
-  }
-  try {
-    const area = document.createElement('textarea');
-    area.value = texto;
-    area.setAttribute('readonly', '');
-    area.style.position = 'fixed';
-    area.style.opacity = '0';
-    document.body.appendChild(area);
-    area.select();
-    const ok = document.execCommand('copy');
-    document.body.removeChild(area);
-    return ok;
-  } catch {
-    return false;
-  }
-}
-
 interface CartaoPromptProps {
+  /** Como o padrão colado junto é chamado no texto do cartão (44-H1: o de questões usa o dele). */
+  nomeDoPadrao?: string;
   id: string;
   titulo: string;
   descricao: string;
@@ -63,7 +42,8 @@ interface CartaoPromptProps {
   textoCompleto: string;
 }
 
-const CartaoPrompt: React.FC<CartaoPromptProps> = ({
+export const CartaoPrompt: React.FC<CartaoPromptProps> = ({
+  nomeDoPadrao = 'padrão de conteúdos',
   id,
   titulo,
   descricao,
@@ -150,7 +130,7 @@ const CartaoPrompt: React.FC<CartaoPromptProps> = ({
           Ver o texto do prompt
         </summary>
         <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-          O botão copia este texto seguido do padrão de conteúdos, mostrado mais abaixo nesta página.
+          O botão copia este texto seguido do {nomeDoPadrao}, mostrado mais abaixo nesta página.
         </p>
         <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs leading-relaxed text-slate-800 dark:text-slate-200 font-mono">
           {prompt}
@@ -160,9 +140,11 @@ const CartaoPrompt: React.FC<CartaoPromptProps> = ({
   );
 };
 
-export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> = ({
+/** Disciplinas e Temas do catálogo, com os nomes exatos (compartilhado com "Como escrever questões", 44-H1). */
+export const CatalogoDeTemas: React.FC<{ disciplines: Discipline[]; themes: Theme[]; objeto?: 'material' | 'questoes' }> = ({
   disciplines,
   themes,
+  objeto = 'material',
 }) => {
   const catalogo = useMemo(() => {
     const collator = new Intl.Collator('pt-BR');
@@ -176,6 +158,52 @@ export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> =
       }));
   }, [disciplines, themes]);
 
+  return (
+      <section aria-labelledby="como-escrever-catalogo" className="space-y-3">
+        <h2 id="como-escrever-catalogo" className="text-xl font-bold text-slate-900 dark:text-slate-100">
+          Disciplinas e Temas do catálogo
+        </h2>
+        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+          {objeto === 'questoes' ? 'Ao pedir as questões' : 'Ao pedir o material'}, use estes nomes exatamente como
+          aparecem aqui. Não crie Disciplina nem Tema novos.
+        </p>
+        {catalogo.length === 0 ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400">O catálogo ainda não foi carregado.</p>
+        ) : (
+          <ul id="como-escrever-catalogo-lista" className="grid gap-3 sm:grid-cols-2">
+            {catalogo.map(({ disciplina, temas }) => (
+              <li
+                key={disciplina.id}
+                className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
+              >
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{disciplina.name}</p>
+                {temas.length === 0 ? (
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Nenhum Tema cadastrado.</p>
+                ) : (
+                  <ul aria-label={`Temas de ${disciplina.name}`} className="mt-2 flex flex-wrap gap-1.5">
+                    {temas.map((tema) => (
+                      <li
+                        key={tema.id}
+                        className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-200"
+                      >
+                        {tema.name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+  );
+};
+
+export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> = ({
+  disciplines,
+  themes,
+  onAbrirEnvio,
+}) => {
   const blocosDoPadrao = useMemo(() => dividirEmBlocos(PARTE_1_DO_PADRAO), []);
 
   return (
@@ -198,9 +226,23 @@ export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> =
           className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed p-4 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700"
         >
           <strong>O caminho:</strong> crie o material com o primeiro prompt; se quiser, confira com o prompt
-          revisor, na sua própria IA (opcional); depois envie pelo site (em breve). O revisor de IA do
-          próprio NexusMed confere o material: com “APTO PARA ENVIAR”, ele vai ao ar com o selo “revisado
-          por IA”, e qualquer leitor pode reportar um erro.
+          revisor, na sua própria IA (opcional); depois envie pelo site
+          {onAbrirEnvio && (
+            <>
+              {' ('}
+              <button
+                type="button"
+                id="como-escrever-enviar"
+                onClick={onAbrirEnvio}
+                className="text-teal-700 dark:text-teal-400 font-semibold underline cursor-pointer"
+              >
+                Enviar material
+              </button>
+              {')'}
+            </>
+          )}
+          . O revisor de IA do próprio NexusMed confere o material: com “APTO PARA ENVIAR”, ele vai ao ar com
+          o selo “revisado por IA”, e qualquer leitor pode reportar um erro.
         </p>
       </header>
 
@@ -220,7 +262,7 @@ export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> =
           <CartaoPrompt
             id="como-escrever-cartao-revisar"
             titulo="2. Revisar o material"
-            descricao="Opcional, mas recomendado. Cole numa IA, depois cole o material pronto. Ela confere fontes e formato e termina dizendo “APTO PARA ENVIAR” ou “NÃO APTO”, com o texto pronto para devolver a quem escreveu."
+            descricao="Opcional, mas recomendado. Cole numa IA, depois cole o material pronto. Ela confere fontes e formato e termina com o veredito (“APTO PARA ENVIAR” ou “NÃO APTO”) e um bloco de correção, pronto para devolver a quem escreveu."
             rotuloBotao="Copiar prompt revisor"
             prompt={PROMPT_REVISAR_MATERIAL}
             textoCompleto={TEXTO_COPIAR_REVISAR}
@@ -228,52 +270,19 @@ export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> =
         </div>
       </section>
 
-      <section aria-labelledby="como-escrever-catalogo" className="space-y-3">
-        <h2 id="como-escrever-catalogo" className="text-xl font-bold text-slate-900 dark:text-slate-100">
-          Disciplinas e Temas do catálogo
-        </h2>
-        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          Ao pedir o material, use estes nomes exatamente como aparecem aqui. Não crie Disciplina nem Tema
-          novos.
-        </p>
-        {catalogo.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">O catálogo ainda não foi carregado.</p>
-        ) : (
-          <ul id="como-escrever-catalogo-lista" className="grid gap-3 sm:grid-cols-2">
-            {catalogo.map(({ disciplina, temas }) => (
-              <li
-                key={disciplina.id}
-                className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
-              >
-                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                  <span className="sr-only">Disciplina: </span>
-                  {disciplina.name}
-                </p>
-                {temas.length === 0 ? (
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Nenhum Tema cadastrado.</p>
-                ) : (
-                  <ul aria-label={`Temas de ${disciplina.name}`} className="mt-2 flex flex-wrap gap-1.5">
-                    {temas.map((tema) => (
-                      <li
-                        key={tema.id}
-                        className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-200"
-                      >
-                        <span className="sr-only">Tema: </span>
-                        {tema.name}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <CatalogoDeTemas disciplines={disciplines} themes={themes} />
 
       <section aria-labelledby="como-escrever-padrao" className="space-y-4">
         <h2 id="como-escrever-padrao" className="text-xl font-bold text-slate-900 dark:text-slate-100">
           O padrão de conteúdos
         </h2>
+        <p
+          id="como-escrever-aviso-fontes"
+          className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900"
+        >
+          No NexusMed só valem fontes disponíveis on-line: livro-texto não é aceito, mesmo que o padrão abaixo o
+          cite.
+        </p>
         <div
           id="como-escrever-padrao-texto"
           className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
@@ -287,7 +296,7 @@ export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> =
                 {bloco.conteudo}
               </pre>
             ) : (
-              <SafeMarkdown key={i} content={bloco.conteudo} />
+              <SafeMarkdown key={i} content={paraExibicao(bloco.conteudo)} />
             ),
           )}
         </div>

@@ -37,6 +37,9 @@ import { useScrollMemory } from '../../hooks/useScrollMemory';
 import { useServerLoad } from '../../hooks/useServerLoad';
 import { ConnectionNotice } from '../common/ConnectionNotice';
 import { MaterialBreadcrumb, MaterialChildrenCards, MaterialLinkBoxes } from './MaterialNavigation';
+import { SeloDeRevisao } from '../material/SeloDeRevisao';
+import { ReportarErroDoMaterial } from '../material/ReportarErroDoMaterial';
+import { AtualizarMaterial } from '../material/AtualizarMaterial';
 
 interface CompendiumReaderProps {
   compendium: Compendium;
@@ -759,6 +762,16 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
                   #{tag}
                 </span>
               ))}
+            </div>
+          )}
+
+          {/* 44-G: selo de revisão (só material publicado por revisão de IA) e "Reportar erro". */}
+          {compendium.publicationStatus === 'published' && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mt-4">
+              <SeloDeRevisao materialId={compendium.id} />
+              <ReportarErroDoMaterial materialId={compendium.id} materialTitle={compendium.title} />
+              {/* 44-B: "Exportar .md" e "Atualizar a partir de arquivo" (só admin e o autor do envio que o publicou). */}
+              <AtualizarMaterial compendium={compendium} disciplines={disciplines} themes={themes} />
             </div>
           )}
         </header>

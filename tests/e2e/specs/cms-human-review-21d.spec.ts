@@ -7,6 +7,7 @@ import {
   runCleanup,
   type CreatedTestUser,
 } from '../fixtures/localSupabase';
+import { aprovarQuestaoPorIA, residuosDaProveniencia } from '../fixtures/proveniencia';
 
 // Prompt 21-D — desbloquear o fluxo humano de revisão no CMS.
 //
@@ -130,6 +131,8 @@ test.describe('CMS — fluxo humano de revisão (21-D)', () => {
     // ainda executa as demais rotinas e agrega qualquer erro ao final.
     await runCleanup(cleanup.slice().reverse());
     cleanup = [];
+    // 44-H3: a fixture de revisão de IA não deixa resíduo (envio, revisão e proveniência), conferido por consulta.
+    expect(residuosDaProveniencia()).toBe(0);
   });
 
   test('painel de revisão abre e recebe foco na aba de Questões (antes invisível); fecha devolvendo o foco ao botão', async ({
@@ -260,6 +263,9 @@ test.describe('CMS — fluxo humano de revisão (21-D)', () => {
     await panel.getByRole('button', { name: 'Atestar — Aprovar revisão' }).click();
     await expect(panel).toHaveAttribute('data-provenance-status', 'aprovado_para_esta_versao', { timeout: 10_000 });
     await page.locator('#provenance-review-close').click();
+
+    // 44-H2: questão nova só é publicada com a revisão de IA "apto" do conteúdo atual (fixture: o que o servidor grava).
+    cleanup.push(aprovarQuestaoPorIA(questionId));
 
     await row.getByRole('button', { name: 'Publicar', exact: true }).click();
     await expect(row).toContainText('publicada', { timeout: 10_000 });

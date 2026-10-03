@@ -16,6 +16,8 @@ import {
   MessageSquarePlus,
   Settings,
   FilePenLine,
+  FileQuestion,
+  Upload,
 } from 'lucide-react';
 import { UserPlan, UserStats, ThemeMode } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -394,6 +396,36 @@ export const Header: React.FC<HeaderProps> = ({
                   >
                     <FilePenLine className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
                     <span>Como escrever um material</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    id="nav-como-escrever-questoes"
+                    aria-current={activeView === 'como-escrever-questoes' ? 'page' : undefined}
+                    onClick={() => {
+                      onSelectView('como-escrever-questoes');
+                      setUserDropdownOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-xs text-[#172033] dark:text-[#E5E7EB] hover:bg-slate-100 dark:hover:bg-[#182235] flex items-center gap-2 cursor-pointer"
+                  >
+                    <FileQuestion className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
+                    <span>Como escrever questões</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    id="nav-enviar-material"
+                    aria-current={activeView === 'enviar-material' ? 'page' : undefined}
+                    onClick={() => {
+                      onSelectView('enviar-material');
+                      setUserDropdownOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-xs text-[#172033] dark:text-[#E5E7EB] hover:bg-slate-100 dark:hover:bg-[#182235] flex items-center gap-2 cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
+                    <span>Enviar material</span>
                   </button>
 
                   {onOpenFeedback && (

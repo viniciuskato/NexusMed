@@ -24,6 +24,7 @@
     "check:no-debug-bundle": "node scripts/check-no-debug-bundle.mjs dist",
     "clean": "node scripts/clean.mjs",
     "checar:material": "tsx scripts/checar-material.ts",
+    "gerar:revisor": "tsx scripts/gerar-revisor.ts",
     "verify": "npm run typecheck && npm run lint && npm run test && npm run build",
     "verify:fast": "npm run typecheck && npm run lint && npm run test:unit && npm run build",
     "verify:full": "npm run verify:fast && npm run test:db && supabase db reset && npm run test:e2e"
@@ -37,6 +38,7 @@
     "yaml": "^2.9.1"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.129.0",
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.1.14",

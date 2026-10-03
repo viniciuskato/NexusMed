@@ -3,6 +3,10 @@
 // São lidos, em tempo de build, dos MESMOS arquivos que a equipe edita em
 // docs/editorial/ (import `?raw`): não há cópia do padrão nem dos prompts em
 // outro lugar. Mudou o arquivo, muda o site no próximo build.
+//
+// O `?raw` traz o arquivo inteiro para o pacote desta página, inclusive a Parte 2
+// (a de quem opera a plataforma): ela viaja no bundle, mas nunca é exibida nem
+// copiada — `extrairParte1` a corta antes de qualquer uso.
 import padraoBruto from '../../docs/editorial/PADRAO-NEXUSMED-CONTEUDOS.md?raw';
 import promptCriarBruto from '../../docs/editorial/PROMPT-CRIAR-MATERIAL.txt?raw';
 import promptRevisarBruto from '../../docs/editorial/PROMPT-REVISAR-MATERIAL.txt?raw';

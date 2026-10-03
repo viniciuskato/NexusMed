@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // ============================================================================
-// Gate: nenhuma instrumentação de debug/teste no bundle de PRODUÇÃO.
+// Gate: nenhuma instrumentação de debug/teste, nem segredo do revisor de IA (44-F),
+// no bundle de PRODUÇÃO.
 // ============================================================================
 //
 // Roda depois de `npm run build` (build de produção real — sem `--mode
@@ -20,7 +21,18 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const outDir = process.argv[2] ?? 'dist';
-const forbidden = ['__syncDebug', '__setTestBackoffOverride'];
+// 44-F: o mesmo gate vigia os segredos do revisor de IA. A chave da API, o segredo
+// do agendador e as funções que só o servidor executa nunca podem estar no pacote
+// que vai ao navegador (tudo isso vive na Edge Function `revisar-envios`).
+const forbidden = [
+  '__syncDebug',
+  '__setTestBackoffOverride',
+  'ANTHROPIC_API_KEY',
+  'REVISOR_SEGREDO',
+  'sk-ant-',
+  'revisao_reservar_envios',
+  'revisao_registrar_resultado',
+];
 
 function listJsFiles(dir) {
   const out = [];

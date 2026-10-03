@@ -113,6 +113,9 @@ select throws_ok(
 select tests.approve_material_revision(:'v_child_id');
 select tests.approve_material_revision(:'v_root_id');
 select tests.approve_material_revision(:'v_prereq_id');
+select tests.approve_material_by_ai(:'v_child_id');
+select tests.approve_material_by_ai(:'v_root_id');
+select tests.approve_material_by_ai(:'v_prereq_id');
 
 -- ============================================================================
 -- Fase 1.5 — o que a revisão da fundação corrigiu
@@ -367,6 +370,7 @@ values (:'v_discipline_id', :'v_theme_id', 'Neto') returning id as v_grandchild_
 select public.set_material_position(:'v_near_parent_id', :'v_grandparent_id', 0);
 select public.set_material_position(:'v_grandchild_id', :'v_near_parent_id', 0);
 select tests.approve_material_revision(:'v_grandchild_id');
+select tests.approve_material_by_ai(:'v_grandchild_id');
 select throws_like(
   format($$ select public.publish_material(%L) $$, :'v_grandchild_id'),
   '%"Avô" → "Pai próximo"%',
@@ -383,6 +387,7 @@ values (:'v_discipline_id', :'v_theme_id', 'Alvo prerequisite') returning id as 
 insert into public.materials (discipline_id, theme_id, title)
 values (:'v_discipline_id', :'v_theme_id', 'Alvo related 2') returning id as v_rel2_id \gset
 select tests.approve_material_revision(:'v_prereq2_id');
+select tests.approve_material_by_ai(:'v_prereq2_id');
 select public.publish_material(:'v_prereq2_id');
 select lives_ok(
   format($sql$

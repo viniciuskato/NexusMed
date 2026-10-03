@@ -673,7 +673,9 @@ do que já está ligado a ele (posição, questões, progresso de leitura).
 **Fora de escopo.** Exportar em lote; histórico de versões do material;
 editar o `.md` dentro da plataforma.
 **Depende de.** 43-A e 45-K.
-**Estado.** Planejada. Congelada (D-7, 28/09).
+**Estado.** Implementada na branch `feat/44b-exportar-atualizar` (sobre a pilha 44-E → 44-H3, ainda não mesclada), adaptada à D-11 — aguarda revisão e PR.
+
+**Achados da execução.** Adaptação à D-11 (29/09, "tudo que vai ao ar passa pelo revisor"): "Exportar .md" é livre (admin e o autor do envio que publicou o material); "Atualizar a partir de arquivo" não grava no material nem vira "edição pendente da 45-K" — é um envio do tipo "atualização" (`target_material_id`), revisado pelo mesmo revisor de IA, e só com o "apto" do texto e do lugar atuais o servidor troca o conteúdo, numa transação com a nova proveniência (o material no ar nunca fica sem revisão válida; "não apto" não muda nada). Ids de seção casam pelo título normalizado, referências pelo texto idêntico (mantêm o vínculo com a fonte); posição na árvore, filhos, ligações, progresso, anotações e questões não são tocados. Arquivo igual ao que está no ar não muda nada. O envio guarda o hash do material no momento do envio: se o material mudar antes da aplicação, o servidor recusa com recado leigo. Editar pelo formulário do Admin continua na 45-K.
 
 ---
 
@@ -783,6 +785,95 @@ teste reprova jargão interno neles.
 **Fora de escopo.** Enviar material (44-E); IA chamada pelo próprio site.
 **Depende de.** Nada.
 **Estado.** Concluída — PR #100.
+
+### 44-D — Como escrever um material, dentro do site
+
+**Origem.** Pedido do dono (29/09): o NexusMed deve mostrar a estrutura do
+material, não só quem está por trás do sistema, e oferecer um prompt para
+criar material no padrão e um revisor que diz se ele está apto a entrar.
+
+**Aceite.** Todo usuário ativo abre, pelo menu, "Como escrever um material":
+a Parte 1 do padrão, as Disciplinas e os Temas do catálogo e dois textos para
+copiar (prompt de criação e prompt revisor), cada um com a Parte 1 junto. O
+padrão e os prompts vivem num arquivo só cada, lidos pelo site sem cópia; um
+teste reprova jargão interno neles.
+
+**Fora de escopo.** Enviar material (44-E); IA chamada pelo próprio site.
+**Depende de.** Nada.
+**Estado.** Concluída — PR #100.
+
+### 44-E — Enviar material pelo site
+
+**Origem.** Pedido do dono (29/09): qualquer usuário aprovado pode postar
+material.
+
+**Aceite.** Usuário ativo envia o `.md` pelo site; só entra arquivo aceito
+pela importação e sem pendência da checagem do padrão. O envio fica guardado
+com estado, visível só para quem enviou e para admin; no máximo 3 envios
+esperando revisão por pessoa e 300 KB por texto, travados no banco.
+
+**Fora de escopo.** Revisor de IA (44-F); publicar (44-G); questões.
+**Depende de.** 44-D.
+**Estado.** Em andamento.
+
+### 44-F — Revisor de IA do NexusMed
+
+**Origem.** Decisão do dono (29/09): tudo que for publicado passa por um
+revisor de IA dentro do site, pago por revisão, com teto mensal na conta.
+
+**Aceite.** Cada envio é revisado no servidor com o prompt revisor e a Parte 1
+do padrão, sem cópia; termina em apto, não apto ou erro (nunca apto por
+engano: veredito ilegível é erro). O autor vê achados e correção e reenvia.
+Tokens e buscas de cada revisão ficam guardados; limites por pessoa e mensal
+no banco.
+
+**Fora de escopo.** Publicar (44-G); questões.
+**Depende de.** 44-E; segredo da API criado pelo dono.
+**Estado.** Em andamento.
+
+### 44-G — Publicar pelo veredito do revisor de IA
+
+**Origem.** Decisão do dono (29/09): com o "apto" do revisor de IA o material
+vai direto aos alunos, com selo e botão de reportar erro; a leitura dele deixa
+de ser exigida para publicar.
+
+**Aceite.** Envio com revisão apto do texto atual vira material publicado pelo
+servidor, uma vez só. Nenhum material novo é publicado sem revisão apto,
+inclusive pelo admin. Selo "Revisado por IA" no leitor (mais forte quando uma
+pessoa atesta). "Reportar erro" para todo usuário ativo, com limite diário e
+lista na Área Editorial.
+
+**Fora de escopo.** Questões (44-H); editar publicado (45-K).
+**Depende de.** 44-F.
+**Estado.** Em andamento.
+
+### 44-H1 — Questões: como escrever e enviar pelo site
+
+**Origem.** Decisões do dono (29/09): qualquer usuário aprovado posta
+conteúdo, e tudo que é publicado passa pelo revisor de IA.
+
+**Aceite.** O site mostra o padrão de questões e dois prompts para copiar
+(criar e revisar questões). Usuário ativo envia o `.md` de questões; só entra
+arquivo aceito pela importação; o envio fica guardado com estado, com as
+mesmas regras e limites dos envios de material.
+
+**Fora de escopo.** Revisão por IA e publicação de questões (44-H2).
+**Depende de.** 44-G.
+**Estado.** Em andamento.
+
+### 44-H2 — Questões: revisão por IA e publicação pelo veredito
+
+**Origem.** Decisões do dono (29/09): tudo que é publicado passa pelo revisor
+de IA; com o "apto", vai direto aos alunos, com selo e "reportar erro".
+
+**Aceite.** Envio de questões é revisado pelo mesmo revisor (mesmos limites de
+custo), e com apto do texto atual o servidor publica as questões ligadas aos
+materiais, uma vez só. Nenhuma questão nova é publicada sem revisão apto,
+inclusive pelo admin. Selo e "Reportar erro" nas questões.
+
+**Fora de escopo.** Editar publicado (45-K).
+**Depende de.** 44-H1.
+**Estado.** Em andamento.
 
 ---
 
