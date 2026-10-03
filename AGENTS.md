@@ -19,7 +19,10 @@ produção. Papéis: [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODEL
 sessão de defeitos é o subagente `dev-junior` e a revisão é do subagente
 `dev-revisor` (`DECISIONS.md`, D-8). Desde a D-9 (29/09), com o "aprovado"
 do dono a um plano, a diretoria executa e publica tudo o que ele descreve
-(`DECISIONS.md`, D-9).
+(`DECISIONS.md`, D-9). Desde a D-12 (03/10), sem limite de publicações por
+dia nem proibição à noite (revisto pela D-12, 03/10: sem limite por dia nem
+horário), e a revisão dos envios da D-11 é feita pela equipe no Claude Code,
+com a cota da conta, sem API paga (`DECISIONS.md`, D-12).
 
 **Se você é a sessão de defeitos:** este arquivo,
 [`docs/operacao/EXECUTOR_PROTOCOL.md`](docs/operacao/EXECUTOR_PROTOCOL.md)

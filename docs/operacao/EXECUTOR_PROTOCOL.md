@@ -27,6 +27,10 @@ diretoria. Quem mescla é o dono.
 > de um plano que o dono aprovou (D-9, 29/09), e nunca a sessão de defeitos.
 > Onde este protocolo disser outra coisa, valem a D-8 e a D-9
 > ([`DECISIONS.md`](DECISIONS.md)).
+>
+> **D-12 (03/10):** os limites de "2 merges por dia" e "nunca à noite" da D-7
+> foram revistos (revisto pela D-12, 03/10: sem limite por dia nem horário);
+> nenhuma outra regra deste protocolo muda.
 
 ## Ao abrir (uma vez)
 
