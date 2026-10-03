@@ -673,7 +673,7 @@ do que já está ligado a ele (posição, questões, progresso de leitura).
 **Fora de escopo.** Exportar em lote; histórico de versões do material;
 editar o `.md` dentro da plataforma.
 **Depende de.** 43-A e 45-K.
-**Estado.** Implementada na branch `feat/44b-exportar-atualizar` (sobre a pilha 44-E → 44-H3, ainda não mesclada), adaptada à D-11 — aguarda revisão e PR.
+**Estado.** Concluída — PR #104.
 
 **Achados da execução.** Adaptação à D-11 (29/09, "tudo que vai ao ar passa pelo revisor"): "Exportar .md" é livre (admin e o autor do envio que publicou o material); "Atualizar a partir de arquivo" não grava no material nem vira "edição pendente da 45-K" — é um envio do tipo "atualização" (`target_material_id`), revisado pelo mesmo revisor de IA, e só com o "apto" do texto e do lugar atuais o servidor troca o conteúdo, numa transação com a nova proveniência (o material no ar nunca fica sem revisão válida; "não apto" não muda nada). Ids de seção casam pelo título normalizado, referências pelo texto idêntico (mantêm o vínculo com a fonte); posição na árvore, filhos, ligações, progresso, anotações e questões não são tocados. Arquivo igual ao que está no ar não muda nada. O envio guarda o hash do material no momento do envio: se o material mudar antes da aplicação, o servidor recusa com recado leigo. Editar pelo formulário do Admin continua na 45-K.
 
@@ -786,22 +786,6 @@ teste reprova jargão interno neles.
 **Depende de.** Nada.
 **Estado.** Concluída — PR #100.
 
-### 44-D — Como escrever um material, dentro do site
-
-**Origem.** Pedido do dono (29/09): o NexusMed deve mostrar a estrutura do
-material, não só quem está por trás do sistema, e oferecer um prompt para
-criar material no padrão e um revisor que diz se ele está apto a entrar.
-
-**Aceite.** Todo usuário ativo abre, pelo menu, "Como escrever um material":
-a Parte 1 do padrão, as Disciplinas e os Temas do catálogo e dois textos para
-copiar (prompt de criação e prompt revisor), cada um com a Parte 1 junto. O
-padrão e os prompts vivem num arquivo só cada, lidos pelo site sem cópia; um
-teste reprova jargão interno neles.
-
-**Fora de escopo.** Enviar material (44-E); IA chamada pelo próprio site.
-**Depende de.** Nada.
-**Estado.** Concluída — PR #100.
-
 ### 44-E — Enviar material pelo site
 
 **Origem.** Pedido do dono (29/09): qualquer usuário aprovado pode postar
@@ -814,7 +798,7 @@ esperando revisão por pessoa e 300 KB por texto, travados no banco.
 
 **Fora de escopo.** Revisor de IA (44-F); publicar (44-G); questões.
 **Depende de.** 44-D.
-**Estado.** Em andamento.
+**Estado.** Concluída — PR #104.
 
 ### 44-F — Revisor de IA do NexusMed
 
@@ -829,7 +813,7 @@ no banco.
 
 **Fora de escopo.** Publicar (44-G); questões.
 **Depende de.** 44-E; segredo da API criado pelo dono.
-**Estado.** Em andamento.
+**Estado.** Concluída — PR #104.
 
 ### 44-G — Publicar pelo veredito do revisor de IA
 
@@ -845,7 +829,7 @@ lista na Área Editorial.
 
 **Fora de escopo.** Questões (44-H); editar publicado (45-K).
 **Depende de.** 44-F.
-**Estado.** Em andamento.
+**Estado.** Concluída — PR #104.
 
 ### 44-H1 — Questões: como escrever e enviar pelo site
 
@@ -859,7 +843,7 @@ mesmas regras e limites dos envios de material.
 
 **Fora de escopo.** Revisão por IA e publicação de questões (44-H2).
 **Depende de.** 44-G.
-**Estado.** Em andamento.
+**Estado.** Concluída — PR #104.
 
 ### 44-H2 — Questões: revisão por IA e publicação pelo veredito
 
@@ -873,7 +857,7 @@ inclusive pelo admin. Selo e "Reportar erro" nas questões.
 
 **Fora de escopo.** Editar publicado (45-K).
 **Depende de.** 44-H1.
-**Estado.** Em andamento.
+**Estado.** Concluída — PR #104.
 
 ---
 
