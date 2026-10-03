@@ -168,29 +168,18 @@ obrigatório antes prende o PR para sempre.
    migrations. O `default_transaction_read_only` é uma camada a mais, não a
    barreira — a própria sessão consegue desligá-lo. O papel também herda o
    que `PUBLIC` concede, e isso não se fecha só para ele: o Postgres não tem
-   negação por papel (um `revoke` tira só o que foi dado ao próprio papel, e
-   tirar de `PUBLIC` tiraria de todos). O limite: objeto novo com permissão
-   para `PUBLIC` passaria a valer para ele também — inclusive uma função
-   `security definer` nova sem o `revoke ... from public` (risco 14 do
-   `AGENTS.md`), que seria chamável com esta credencial, e a sessão pode
-   definir `request.jwt.claims`, que é o que `auth.uid()` lê: a chamada
-   valeria como a de qualquer usuário, admin inclusive. **Isso está fechado
-   por mecanismo (AUD-31.1):** a guarda pgTAP
-   `supabase/tests/database/security_guards.test.sql` reprova, nomeando a
-   função ou procedure, qualquer função ou procedure chamável (que não seja
-   de gatilho) de um schema que o repositório cria e onde `PUBLIC`/`anon`
-   tem `USAGE` (`public`; `app` entra pela mesma lista, mesmo sem ter
-   `USAGE` hoje) que fique com `EXECUTE` para `PUBLIC` ou para `anon` — o PR
-   que criar essa função ou procedure fica com o check full vermelho, o que
-   impede o merge; pelo RUNBOOK, seção 3, a migration só se aplica no
-   remoto com o CI verde. Função de gatilho (`returns trigger`/`returns
-   event trigger`) de `public` com
-   `EXECUTE` para `PUBLIC` não é risco, porque não é chamável fora do
-   disparo do gatilho — em 28/09 há 15 assim, todas sem esse revoke, como
-   esperado; `rls_auto_enable()` não é uma delas, porque não está em nenhuma
-   migration deste repositório. O que a guarda não cobre é o que o Supabase
-   gerencia fora das migrations do repositório (schemas como `auth`,
-   `storage`, `extensions`, e funções internas deles).
+   negação por papel. Uma função `security definer` chamável com esta
+   credencial valeria como a de qualquer usuário, admin inclusive, porque a
+   sessão define `request.jwt.claims`, que é o que `auth.uid()` lê. **Hoje
+   isso está fechado por mecanismo (45-H/AUD-31, risco 14 do `AGENTS.md`):**
+   função nova de `public` não nasce com `EXECUTE` para `PUBLIC` (a migration
+   `20261002120000` tirou o `PUBLIC` dos defaults e das funções existentes), e
+   a guarda pgTAP `supabase/tests/database/security_guards.test.sql` reprova,
+   nomeando a função ou procedure, qualquer uma chamável (que não seja de
+   gatilho) em `public` ou `app` com `EXECUTE` para `PUBLIC` ou `anon` — o PR
+   que criar uma fica com o check `full` vermelho. O que a guarda não cobre é
+   o que o Supabase gerencia fora das migrations do repositório (schemas como
+   `auth`, `storage`, `extensions`, e funções internas deles).
 2. No Supabase, botão "Connect", aba "Session pooler": copie a URI. Nela,
    troque `postgres.jfvhwwvixwvgjfqzlkkb` por
    `ci_migracoes_leitura.jfvhwwvixwvgjfqzlkkb` e `[YOUR-PASSWORD]` pela senha
@@ -208,6 +197,8 @@ obrigatório antes prende o PR para sempre.
    um check que nunca rodou nele.
 
 ## 3.3. Revisor de IA dos envios (44-F)
+
+Em 03/10 o dono decidiu não usar a API paga; até o revisor ser refeito para rodar no Claude Code, os passos (a)–(c) não se aplicam e os envios ficam aguardando revisão.
 
 > O revisor lê cada material enviado pelo site, confere fontes e formato e
 > dá o veredito ("apto", "não apto" ou "erro"). Ele roda no servidor (uma

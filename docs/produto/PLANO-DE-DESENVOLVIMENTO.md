@@ -1146,7 +1146,7 @@ mesclada — `DECISIONS.md`, 24/09.)*
 **Restrições.** Pode ser dividida em 2 ou 3 PRs. Migrations no remoto antes do
 merge.
 **Depende de.** 45-A (a nota no servidor sai de lá) — concluída.
-**Estado.** Concluída — PR #103 (banco, guardas pgTAP e front); migration `20261002120000` a aplicar no remoto antes do merge. Inclui, por decisão da diretoria, `vite.config.ts` (CSP só do projeto; build sem variáveis do Supabase falha), o passo de build do CI e a remoção do script antigo de `docs/archive`. Voltou à fila pela D-10 (29/09).
+**Estado.** Concluída — PR #104 (substitui o #103; banco, guardas pgTAP e front). Inclui, por decisão da diretoria, `vite.config.ts` (CSP só do projeto; build sem variáveis do Supabase falha), o passo de build do CI e a remoção do script antigo de `docs/archive`. Voltou à fila pela D-10 (29/09).
 
 ---
 
@@ -1494,9 +1494,15 @@ próximo "semana". Em dúvida, vale a linha "Estado" de cada unidade.*
 | 43-D | Concluída | #80 | 25/09 (migration aplicada ~13h45 depois do merge — INC-2026-005) |
 | 43-E | Concluída | #102 | a conferir |
 | 44-A | Congelada (D-7) | — | — |
-| 44-B | Congelada (D-7) | — | — |
+| 44-B | Concluída | #104 | — |
 | 44-C1 | Concluída | #85 | a conferir |
 | 44-C2 | Congelada (D-7) (antes 44-C) | — | — |
+| 44-D | Concluída | #100 | a conferir |
+| 44-E | Concluída | #104 | — |
+| 44-F | Concluída | #104 | — |
+| 44-G | Concluída | #104 | — |
+| 44-H1 | Concluída | #104 | — |
+| 44-H2 | Concluída | #104 | — |
 | 45-A | Concluída; correções da revisão do #76 no #81 | #74, #76, #81 | 24/09 (parte 2: migration depois do merge — INC-2026-004); correções: 25/09 (INC-2026-005) |
 | 45-B | Concluída | #71 | 24/09 |
 | 45-C | Concluída (item de desempenho movido para a 46-D) | #73 | 24/09 |
@@ -1504,7 +1510,7 @@ próximo "semana". Em dúvida, vale a linha "Estado" de cada unidade.*
 | 45-E | Concluída | #86 | a conferir |
 | 45-F | Pronta; D-7: item a item, como issue | — | — |
 | 45-G | Concluída | #93 | a conferir |
-| 45-H | Congelada (D-7), salvo AUD-31.1 e AUD-07 | — | — |
+| 45-H | Concluída (substitui o #103) | #104 | — |
 | 45-I | Congelada (D-7), salvo a parte LGPD | — | — |
 | 45-J | Concluída | #72 | 24/09 |
 | 45-K | Congelada (D-7); #97 em rascunho | — | — |
@@ -1512,7 +1518,7 @@ próximo "semana". Em dúvida, vale a linha "Estado" de cada unidade.*
 | 46-B | Em andamento; majors que faltam congeladas (D-7) | vários (Dependabot) | parcial |
 | 46-C | Planejada (P-2) | — | — |
 | 46-D | Congelada (D-7) | — | — |
-| 46-E | Pronta (P-4 no meio do caminho) | — | — |
+| 46-E | Concluída; falta a P-4 e incluir o check `migration-no-remoto` no ruleset | #98 | a conferir |
 
 **Concluído antes deste plano** (resumo; o detalhe está em
 `docs/operacao/TASKS.md` e nos PRs):

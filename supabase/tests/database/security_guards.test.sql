@@ -7,6 +7,9 @@
 -- juntas, expõem dados a qualquer pessoa com a anon key (pública).
 -- Ver 20260918140000_revoke_anon_grants.sql.
 --
+-- Desde a 45-H, função nova de `public` não nasce com EXECUTE para PUBLIC (default
+-- privileges); as guardas abaixo garantem que continue assim.
+--
 -- 45-H (AUD-31, migration 20261002120000_endurecimento_45h.sql): também falham
 -- quando (a) uma função de `public` fica executável sem login — a próxima RPC
 -- SECURITY DEFINER que esquecer o `revoke ... from public, anon` —, (b) uma
