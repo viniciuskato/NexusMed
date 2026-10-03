@@ -1,3 +1,4 @@
+import { exigirLinhaAtualizada } from './linhaAtualizada';
 import { sourceUrl } from '../utils/bibliographicSources';
 import { Discipline, Theme, Compendium, CompendiumSection, CompendiumSectionSnapshot, MaterialSectionVersion } from '../types';
 import { supabase } from '../lib/supabaseClient';
@@ -535,11 +536,13 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
     } else if (await this.referenceUrlCameFromItsSource(referenceId)) {
       patch.url = null;
     }
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('material_references')
       .update(patch)
-      .eq('id', referenceId);
+      .eq('id', referenceId)
+      .select('id');
     if (error) throw error;
+    exigirLinhaAtualizada(data, 'Vínculo da referência com a fonte');
   }
 
   /** A URL atual da referência é a da fonte a que ela está associada (herdada)? */
@@ -600,7 +603,7 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
     });
     if (versionErr) throw versionErr;
 
-    const { error: updateErr } = await supabase
+    const { data: updated, error: updateErr } = await supabase
       .from('material_sections')
       .update({
         title: after.title,
@@ -610,8 +613,10 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
         clinical_pearl: after.clinicalPearl ?? null,
         warning_alert: after.warningAlert ?? null,
       })
-      .eq('id', sectionId);
+      .eq('id', sectionId)
+      .select('id');
     if (updateErr) throw updateErr;
+    exigirLinhaAtualizada(updated, 'Edição da seção');
   }
 
   async getSectionVersions(sectionId: string): Promise<MaterialSectionVersion[]> {

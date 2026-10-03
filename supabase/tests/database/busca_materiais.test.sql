@@ -55,6 +55,11 @@ $$;
 
 grant usage on schema tests to anon, authenticated;
 grant execute on function tests.clear_auth() to anon, authenticated;
+-- 45-H: função nova não nasce mais com EXECUTE para PUBLIC (default privileges
+-- da migration 20261002120000). Os helpers deste schema de teste são chamados
+-- com o role já trocado para anon/authenticated (SET ROLE de sessão), então
+-- ganham o EXECUTE que tinham antes.
+grant execute on all functions in schema tests to public;
 
 select plan(42);
 
@@ -140,12 +145,14 @@ create function pg_temp.buscar(p_query text, p_disc uuid, p_only_unread boolean 
 returns setof uuid language sql as $fn$
   select s.material_id from public.search_materials(p_query, p_disc, p_only_unread) s
 $fn$;
+grant execute on function pg_temp.buscar(text, uuid, boolean) to public;
 
 create function pg_temp.guardar(p_query text, p_disc uuid) returns void language sql as $fn$
   delete from r;
   insert into r
   select row_number() over (), s.* from public.search_materials(p_query, p_disc) s;
 $fn$;
+grant execute on function pg_temp.guardar(text, uuid) to public;
 
 -- ── A. Normalização (sem acento, maiúscula, letra grega, hífen) ────────────
 select is(app.search_base('Β-Lactâmicos GERAÇÃO'), 'beta-lactamicos geracao',

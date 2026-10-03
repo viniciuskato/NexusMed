@@ -63,3 +63,10 @@ secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
 
 [analytics]
 enabled = false
+
+# 44-F: revisor de IA. A função não usa JWT de usuário: quem a chama é o
+# agendador do banco (pg_cron + pg_net), com um segredo próprio no cabeçalho
+# Authorization, conferido dentro da função (REVISOR_SEGREDO). Sem o segredo
+# certo ela responde 401 e não faz nada.
+[functions.revisar-envios]
+verify_jwt = false

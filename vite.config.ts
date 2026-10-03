@@ -2,6 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig, loadEnv, type Plugin} from 'vite';
+import {assertSupabaseEnv, connectSrc} from './vite.seguranca';
 
 // Content-Security-Policy injetada só no build (o dev server do Vite usa
 // script inline para o HMR). Como meta tag, vale também no `vite preview`
@@ -9,23 +10,13 @@ import {defineConfig, loadEnv, type Plugin} from 'vite';
 // frame-ancestors e os demais headers que não funcionam via meta ficam em
 // vercel.json.
 function contentSecurityPolicy(supabaseUrl: string | undefined): Plugin {
-  // *.supabase.co sempre: supabaseClient.ts aceita VITE_SUPABASE_URL em
-  // formatos não-URL (só o ref do projeto etc.) e os normaliza para esse
-  // domínio. A origem exata entra quando é uma URL válida (ex.: Supabase
-  // local em 127.0.0.1 na suíte e2e).
+  // connect-src libera só o projeto Supabase do app (45-H, AUD-32.2), a origem
+  // vem de VITE_SUPABASE_URL (Supabase local em 127.0.0.1 na suíte e2e).
   // api.crossref.org: CrossRefSourceLookup (Admin) busca candidatos de DOI
   // direto do navegador — sem isto o fetch é bloqueado pela CSP mesmo com
   // CORS liberado no servidor (achado real: "Failed to fetch" indistinguível
   // de falha de rede até checar a CSP).
-  const connect = ["'self'", 'https://*.supabase.co', 'wss://*.supabase.co', 'https://api.crossref.org'];
-  try {
-    const origin = new URL(supabaseUrl ?? '').origin;
-    if (!origin.endsWith('.supabase.co')) {
-      connect.push(origin, origin.replace(/^http/, 'ws'));
-    }
-  } catch {
-    // Não é URL: coberto pelo curinga acima.
-  }
+  const connect = connectSrc(supabaseUrl);
   const policy = [
     "default-src 'self'",
     "script-src 'self'",
@@ -51,8 +42,10 @@ function contentSecurityPolicy(supabaseUrl: string | undefined): Plugin {
   };
 }
 
-export default defineConfig(({mode}) => {
+export default defineConfig(({mode, command}) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_');
+  // AUD-07: build sem as variáveis do Supabase falha, em vez de abrir o modo demonstração.
+  if (command === 'build') assertSupabaseEnv(env);
   return {
     plugins: [react(), tailwindcss(), contentSecurityPolicy(env.VITE_SUPABASE_URL)],
     define: {

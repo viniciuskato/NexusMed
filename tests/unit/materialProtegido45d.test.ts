@@ -46,8 +46,11 @@ function fakeSupabase(rows: Record<string, unknown[]> = {}) {
         return builder;
       },
       select(arg: unknown) {
-        call.op = 'select';
-        call.arg = arg;
+        // `.update(...).select('id')` (45-H, AUD-32.4) continua sendo um update.
+        if (!call.op) {
+          call.op = 'select';
+          call.arg = arg;
+        }
         return builder;
       },
       eq(col: string, val: unknown) {

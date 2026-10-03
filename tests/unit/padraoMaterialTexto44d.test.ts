@@ -215,8 +215,12 @@ describe('44-D — conteúdo mínimo de cada prompt', () => {
       '5. Escopo do nível',
       '6. Formato e língua',
       '"APTO PARA ENVIAR"',
+      '"NÃO APTO — 1 achado grave"',
       '"NÃO APTO — N achados graves"',
-      'Qualquer achado grave (grupos 1 a 4) ou qualquer afirmação de alto risco não conferida torna o material NÃO APTO',
+      'Qualquer achado grave (grupos 1 a 4) torna o material NÃO APTO',
+      'Referência não conferida conta como achado grave do grupo 2',
+      'Afirmação de alto risco não conferida conta como achado grave do grupo 3',
+      'o veredito é obrigatoriamente NÃO APTO',
       'Corrija o material conforme os achados abaixo',
     ]) {
       expect(p, trecho).toContain(trecho);
@@ -230,10 +234,35 @@ describe('44-D — conteúdo mínimo de cada prompt', () => {
     expect(veredito).toBeGreaterThan(-1);
     expect(bloco).toBeGreaterThan(veredito);
     expect(p).toContain('nenhuma outra linha da resposta começa com "APTO" ou com "NÃO APTO"');
+    // As duas formas literais do veredito negativo (o singular e o plural com N ≥ 2).
+    expect(p).toContain('"NÃO APTO — 1 achado grave" (quando há um só)');
+    expect(p).toContain('"NÃO APTO — N achados graves" (em que N é o número de achados graves, sempre 2 ou mais)');
+    // Sem navegação, o veredito é NÃO APTO por regra, dita na regra do veredito.
+    const regra = p.slice(p.indexOf('REGRA DO VEREDITO'), p.indexOf('COMO TERMINAR A RESPOSTA'));
+    expect(regra).toContain('Se você não consegue abrir páginas da internet nesta conversa');
+    expect(regra).toContain('obrigatoriamente NÃO APTO');
     // Nada entre as duas exigências que pudesse ficar depois do veredito e antes do bloco.
     expect(p.indexOf('(b) O que você não conseguiu conferir')).toBeLessThan(veredito);
     // A regra do veredito vem antes de a resposta ser montada.
     expect(p.indexOf('REGRA DO VEREDITO')).toBeLessThan(p.indexOf('COMO TERMINAR A RESPOSTA'));
+  });
+
+  it('criação: sem navegação a IA não escreve o material, e ela mesma busca as fontes (sem contradição com "só dois blocos")', () => {
+    const p = PROMPT_CRIAR_MATERIAL;
+    expect(p).toContain('não escreva o material: responda só pedindo que a pessoa use uma IA com acesso à internet ou cole aqui as fontes');
+    expect(p).toContain('Você mesmo busca as fontes na internet');
+    expect(p).toContain('"Fontes disponíveis" da seção 1.2 do padrão não obriga a pessoa a fornecê-las');
+    expect(p).not.toContain('diga isso logo no início');
+    // A regra de "só dois blocos" vale para a entrega, e a entrega só existe com fontes abertas.
+    expect(p.indexOf('não escreva o material: responda só pedindo')).toBeLessThan(p.indexOf('AO ENTREGAR'));
+  });
+
+  it('criação: fonte colada pela pessoa pode ser citada com identificação completa; "não abriu, não entra" vale para o que a IA busca', () => {
+    const p = PROMPT_CRIAR_MATERIAL;
+    expect(p).toContain('Fonte que a pessoa colar nesta conversa');
+    expect(p).toContain('autores ou entidade responsável, título, ano ou versão, e DOI ou URL');
+    expect(p).toContain('A regra de só citar o que foi aberto vale para o que você busca sozinho');
+    expect(p).toContain('Fonte que você busca e não abriu não entra na lista de referências');
   });
 
   it('nenhum dos dois prompts fala em atestação ou em pessoa que atesta (o revisor de IA é quem confere)', () => {

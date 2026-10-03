@@ -168,29 +168,18 @@ obrigatório antes prende o PR para sempre.
    migrations. O `default_transaction_read_only` é uma camada a mais, não a
    barreira — a própria sessão consegue desligá-lo. O papel também herda o
    que `PUBLIC` concede, e isso não se fecha só para ele: o Postgres não tem
-   negação por papel (um `revoke` tira só o que foi dado ao próprio papel, e
-   tirar de `PUBLIC` tiraria de todos). O limite: objeto novo com permissão
-   para `PUBLIC` passaria a valer para ele também — inclusive uma função
-   `security definer` nova sem o `revoke ... from public` (risco 14 do
-   `AGENTS.md`), que seria chamável com esta credencial, e a sessão pode
-   definir `request.jwt.claims`, que é o que `auth.uid()` lê: a chamada
-   valeria como a de qualquer usuário, admin inclusive. **Isso está fechado
-   por mecanismo (AUD-31.1):** a guarda pgTAP
-   `supabase/tests/database/security_guards.test.sql` reprova, nomeando a
-   função ou procedure, qualquer função ou procedure chamável (que não seja
-   de gatilho) de um schema que o repositório cria e onde `PUBLIC`/`anon`
-   tem `USAGE` (`public`; `app` entra pela mesma lista, mesmo sem ter
-   `USAGE` hoje) que fique com `EXECUTE` para `PUBLIC` ou para `anon` — o PR
-   que criar essa função ou procedure fica com o check full vermelho, o que
-   impede o merge; pelo RUNBOOK, seção 3, a migration só se aplica no
-   remoto com o CI verde. Função de gatilho (`returns trigger`/`returns
-   event trigger`) de `public` com
-   `EXECUTE` para `PUBLIC` não é risco, porque não é chamável fora do
-   disparo do gatilho — em 28/09 há 15 assim, todas sem esse revoke, como
-   esperado; `rls_auto_enable()` não é uma delas, porque não está em nenhuma
-   migration deste repositório. O que a guarda não cobre é o que o Supabase
-   gerencia fora das migrations do repositório (schemas como `auth`,
-   `storage`, `extensions`, e funções internas deles).
+   negação por papel. Uma função `security definer` chamável com esta
+   credencial valeria como a de qualquer usuário, admin inclusive, porque a
+   sessão define `request.jwt.claims`, que é o que `auth.uid()` lê. **Hoje
+   isso está fechado por mecanismo (45-H/AUD-31, risco 14 do `AGENTS.md`):**
+   função nova de `public` não nasce com `EXECUTE` para `PUBLIC` (a migration
+   `20261002120000` tirou o `PUBLIC` dos defaults e das funções existentes), e
+   a guarda pgTAP `supabase/tests/database/security_guards.test.sql` reprova,
+   nomeando a função ou procedure, qualquer uma chamável (que não seja de
+   gatilho) em `public` ou `app` com `EXECUTE` para `PUBLIC` ou `anon` — o PR
+   que criar uma fica com o check `full` vermelho. O que a guarda não cobre é
+   o que o Supabase gerencia fora das migrations do repositório (schemas como
+   `auth`, `storage`, `extensions`, e funções internas deles).
 2. No Supabase, botão "Connect", aba "Session pooler": copie a URI. Nela,
    troque `postgres.jfvhwwvixwvgjfqzlkkb` por
    `ci_migracoes_leitura.jfvhwwvixwvgjfqzlkkb` e `[YOUR-PASSWORD]` pela senha
@@ -206,6 +195,171 @@ obrigatório antes prende o PR para sempre.
    já aberto no momento desse passo só ganha o check novo num evento novo
    (push de commit ou "Update branch") — sem isso ele fica preso, exigindo
    um check que nunca rodou nele.
+
+## 3.3. Revisor de IA dos envios (44-F)
+
+Em 03/10 o dono decidiu não usar a API paga; até o revisor ser refeito para rodar no Claude Code, os passos (a)–(c) não se aplicam e os envios ficam aguardando revisão.
+
+> O revisor lê cada material enviado pelo site, confere fontes e formato e
+> dá o veredito ("apto", "não apto" ou "erro"). Ele roda no servidor (uma
+> Edge Function do Supabase chamada `revisar-envios`), a cada 5 minutos, e usa
+> a API de lotes da Anthropic (metade do preço; a revisão de um material leva
+> de alguns minutos a algumas horas). **Cada revisão custa dinheiro**: os
+> limites abaixo protegem o bolso, mas só funcionam depois dos passos (a) e
+> (b). Enquanto eles não forem feitos, os envios ficam "aguardando revisão" e
+> nada é gasto.
+
+### (a) Publicar a função e guardar os segredos do agendamento
+
+Ordem: primeiro a migration no banco remoto (`20261003120100_revisor_ia_44f.sql`,
+como qualquer outra), depois os passos abaixo. Os comandos são para o
+PowerShell, na pasta do projeto.
+
+1. Conferir que os textos que a função usa estão em dia com `docs/editorial/`
+   e com a checagem do padrão:
+   ```
+   npm.cmd run gerar:revisor -- --check
+   ```
+   Deve responder `arquivos em dia`. Se disser que algum arquivo está
+   desatualizado, rode `npm.cmd run gerar:revisor`, confira o `git status` e
+   faça commit antes de publicar a função.
+2. Criar a chave da API e o segredo do agendador, e colá-los no Supabase
+   (bloco (b), logo abaixo). **Faça isso antes do passo 3.**
+3. Publicar a função:
+   ```
+   C:\Users\vinic\bin\supabase.exe functions deploy revisar-envios --project-ref jfvhwwvixwvgjfqzlkkb
+   ```
+   Se o comando reclamar do Docker, repita com `--use-api` no fim.
+4. Guardar os segredos no cofre do banco. O agendamento em si já veio com a
+   migration `20261003120600_agendar_revisor_44f.sql` (um job,
+   `revisar-envios`, a cada 5 minutos, que chama `app.disparar_revisao()`);
+   enquanto os dois segredos não existem, o job roda e não faz nada. No painel
+   do Supabase, menu da esquerda, **SQL Editor** → **New query**. Cole o texto
+   abaixo, troque `COLE-AQUI-O-SEGREDO` pelo **mesmo** segredo do
+   `REVISOR_SEGREDO` (bloco (b)) e clique em **Run**:
+   ```sql
+   select vault.create_secret('https://jfvhwwvixwvgjfqzlkkb.supabase.co/functions/v1/revisar-envios', 'revisor_url');
+   select vault.create_secret('COLE-AQUI-O-SEGREDO', 'revisor_segredo');
+   ```
+   Isto guarda o endereço e o segredo no cofre do banco (o Vault); a partir daí
+   o banco chama a função a cada 5 minutos. Para **desligar** a qualquer
+   momento (por exemplo, se o gasto assustar), rode no mesmo lugar:
+   ```sql
+   select cron.unschedule('revisar-envios');
+   ```
+5. Conferir que funcionou: envie um material de teste pelo site e espere
+   alguns minutos. Na tela "Meus envios" ele passa de "Aguardando revisão" a
+   "Em revisão". Se não passar, veja duas coisas no painel do Supabase: em
+   **Edge Functions** → `revisar-envios` → **Logs** (mensagem de erro da
+   função) e, no SQL Editor, `select * from cron.job_run_details order by start_time desc limit 5;`
+   (se o agendador está chamando).
+
+**Se um envio ficar "Em revisão" por muito tempo**: pode ser uma revisão
+"incerta" (o servidor pediu o lote e a resposta se perdeu). Ela já conta no
+limite e **não é reenviada sozinha**: em até 15 minutos o disparo seguinte acha
+o lote pela lista da Anthropic e o adota, ou, se ele não existir, devolve o
+envio à fila. Para ver:
+```sql
+select status, count(*) from public.material_reviews group by 1;
+```
+
+**Trocar os limites de custo** (no SQL Editor, botão **Run**):
+```sql
+-- máximo de revisões no mês, no site inteiro (começa em 60)
+update public.review_settings set monthly_review_cap = 100;
+-- máximo de revisões por pessoa por dia (começa em 5)
+update public.review_settings set daily_review_cap_per_user = 3;
+```
+Quando o teto do mês ou do dia é atingido, os envios ficam "aguardando revisão"
+e a pessoa lê na tela, em uma frase, que vão esperar. Dia e mês contam no
+horário de São Paulo.
+
+### (b) Criar a chave da API com teto mensal e colar o segredo no Supabase
+
+A chave é a "senha" que autoriza a função a usar a IA e cobrar da sua conta.
+**Nunca** cole a chave em conversa, em arquivo do projeto ou em mensagem: ela
+só vai em dois lugares, o painel da Anthropic (onde nasce) e o painel do
+Supabase (onde a função a lê).
+
+1. Abra o **Claude Console** (`https://platform.claude.com`) e entre com a
+   conta da empresa/projeto.
+2. **Teto mensal de gasto** (faça antes de criar a chave). Menu **Settings**
+   → **Billing**. Na seção **Spend limits**, clique em **Adjust limit** (ou
+   **Set limit**, se ainda não houver) e digite o valor máximo em dólares por
+   mês. Sugestão para começar: **US$ 100** (60 revisões a ~US$ 1 cada dão ~US$
+   60, com folga). Quando o gasto do mês chega nesse valor, a API para de
+   responder até o mês virar: é a trava final, acima da trava de 60 revisões do
+   próprio site.
+3. **Criar a chave.** Menu **Settings** → **API keys** → botão **Create Key**.
+   Dê o nome `nexusmed-revisor`, confirme e **copie a chave que aparece** (ela
+   só é mostrada uma vez; se perder, crie outra e apague a antiga).
+4. Gere o segredo do agendador (uma sequência aleatória qualquer). No
+   PowerShell:
+   ```
+   [guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N')
+   ```
+   Copie o resultado.
+5. Abra o painel do **Supabase** (`https://supabase.com/dashboard`), o projeto
+   `synapsemed`. Menu da esquerda → **Edge Functions** → **Secrets** (ou
+   "Manage secrets"). Clique em **Add new secret** duas vezes:
+   - nome `ANTHROPIC_API_KEY`, valor = a chave copiada no passo 3;
+   - nome `REVISOR_SEGREDO`, valor = a sequência do passo 4.
+   Clique em **Save**.
+6. Use a mesma sequência do passo 4 no comando do passo 4 do bloco (a)
+   (`COLE-AQUI-O-SEGREDO`).
+
+Se um dia precisar trocar a chave (vazou, ou você só quer renovar): crie uma
+nova em **Settings** → **API keys**, troque o valor de `ANTHROPIC_API_KEY` no
+Supabase e apague a antiga no Console.
+
+### (c) Medir o custo real de uma revisão
+
+Cada revisão guarda, na tabela `material_reviews`, os tokens de entrada, de
+saída, de cache e o número de buscas e leituras de página. No **SQL Editor**
+do Supabase, botão **Run**:
+
+```sql
+-- Custo estimado por revisão, em dólares. Preços do Claude Opus 5.5 conferidos em
+-- 25/09/2026, pela API de lotes (50% do preço normal), por milhão de tokens:
+--   entrada 2,00 | gravação de cache de 1 hora 4,00 (2x a entrada do lote)
+--   leitura de cache 0,20 (10% da entrada do lote) | saída 10,00
+--   busca na web: US$ 0,01 cada (US$ 10 por mil).
+-- PREÇOS MUDAM: confira sempre na tela de uso do Console (Usage e Billing) e
+-- ajuste as constantes abaixo se forem outras.
+select r.created_at::date as dia,
+       s.title as material,
+       r.input_tokens as entrada,
+       r.output_tokens as saida,
+       r.cache_creation_tokens as cache_gravado,
+       r.cache_read_tokens as cache_lido,
+       r.web_searches as buscas,
+       r.web_fetches as leituras,
+       round((
+         coalesce(r.input_tokens, 0) * 2.0
+         + coalesce(r.cache_creation_tokens, 0) * 4.0
+         + coalesce(r.cache_read_tokens, 0) * 0.2
+         + coalesce(r.output_tokens, 0) * 10.0
+       ) / 1000000.0 + coalesce(r.web_searches, 0) * 0.01, 3) as custo_usd
+from public.material_reviews r
+join public.material_submissions s on s.id = r.submission_id
+where r.billable
+order by r.created_at desc
+limit 50;
+```
+
+Para o custo médio do mês (mesmas constantes), troque o final por
+`group by 1` sobre `date_trunc('month', r.created_at)` e some
+`custo_usd`; ou compare o total com **Usage** e **Billing** no Claude
+Console. O número que interessa é o da coluna `custo_usd`, que decide se o teto
+mensal de 60 revisões cabe no orçamento. Se cada revisão sair mais cara que
+o esperado, há alavancas no código, em `supabase/functions/revisar-envios/montagem.ts`:
+o esforço de raciocínio (`ESFORCO`, começa em `medium`), o teto de buscas e de
+leituras de página por revisão (`MAX_BUSCAS` e `MAX_LEITURAS_DE_PAGINA`, começam
+em 8 cada) e o tamanho máximo de cada página lida (`MAX_TOKENS_POR_PAGINA`,
+15000); e, em `ciclo.ts`, quantos envios novos entram por disparo
+(`MAX_ENVIOS_NOVOS_POR_CICLO`, 5).
+Depois de mudar, rode `npm.cmd run gerar:revisor -- --check` e publique a
+função de novo (passo 3 do bloco (a)).
 
 ## 4. Rollback
 

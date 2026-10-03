@@ -86,11 +86,14 @@ select tests.clear_auth();
 -- outra "sessão" que já tenha adicionado outra seção)
 -- ----------------------------------------------------------------------------
 
+-- 45-H: a seção marcada como lida tem de ser do material, e o percentual usa as
+-- seções que o material tem (4 aqui) — não o total que o cliente informa.
+select tests.clear_auth();
+insert into public.material_sections (material_id, sort_order, title, content) values (:'v_material_id', 1, 'S1', 'c') returning id as v_section_1 \gset
+insert into public.material_sections (material_id, sort_order, title, content) values (:'v_material_id', 2, 'S2', 'c') returning id as v_section_2 \gset
+insert into public.material_sections (material_id, sort_order, title, content) values (:'v_material_id', 3, 'S3', 'c') returning id as v_section_3 \gset
+insert into public.material_sections (material_id, sort_order, title, content) values (:'v_material_id', 4, 'S4', 'c');
 select tests.authenticate_as(:'v_user_a');
-
-select gen_random_uuid() as v_section_1 \gset
-select gen_random_uuid() as v_section_2 \gset
-select gen_random_uuid() as v_section_3 \gset
 
 select lives_ok(
   format($$ select public.set_section_read(%L, %L, true, 4) $$, :'v_material_id', :'v_section_1'),

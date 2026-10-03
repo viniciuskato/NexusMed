@@ -1,6 +1,17 @@
 import React from 'react';
 import { extractTableCitations, splitReaderBlocks, TABLE_CITATION_PATTERN } from '../../utils/markdownBlocks';
 
+const ORIGEM_DE_TESTE = 'https://app.nexusmed.invalid';
+
+/** O caminho, resolvido como o navegador resolve, continua na mesma origem. */
+function resolvesToSameOrigin(path: string): boolean {
+  try {
+    return new URL(path, ORIGEM_DE_TESTE).origin === ORIGEM_DE_TESTE;
+  } catch {
+    return false;
+  }
+}
+
 interface SafeMarkdownProps {
   content: string;
   className?: string;
@@ -120,7 +131,21 @@ export function parseInline(text: string): React.ReactNode[] {
         // (ex.: [3](#ref-3) — usado para citação inline apontar pra
         // referência correspondente no rodapé, sem depender de HTML bruto).
         const isAnchor = href.startsWith('#');
-        const isSafe = /^https?:\/\//i.test(href) || href.startsWith('/') || isAnchor;
+        // "//site" e "/\site" começam com barra, mas o navegador os resolve
+        // como outro site (mesmo protocolo da página): não são caminho interno
+        // (45-H, AUD-32.1).
+        // TAB, CR e LF dentro do href são removidos pelo navegador ("/\t/evil.com"
+        // vira "//evil.com"): href com caractere de controle nunca é seguro. E o
+        // caminho interno só vale se, resolvido como o navegador resolve, fica
+        // na mesma origem (45-H, rodada 2).
+        const hasControlChar = Array.from(href).some((c) => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127);
+        const isInternalPath =
+          !hasControlChar &&
+          href.startsWith('/') &&
+          !href.startsWith('//') &&
+          !href.startsWith('/\\') &&
+          resolvesToSameOrigin(href);
+        const isSafe = !hasControlChar && (/^https?:\/\//i.test(href) || isInternalPath || isAnchor);
         // Citação inline (ex.: [3](#ref-3)) recebe estilo distinto do link
         // comum — menor, sobrescrito, com colchete visual via CSS (não faz
         // parte do texto do link, então nunca "gruda" em outra citação
@@ -149,7 +174,7 @@ export function parseInline(text: string): React.ReactNode[] {
           <a
             key={idx}
             href={isSafe ? href : '#'}
-            target={href.startsWith('/') || isAnchor ? undefined : '_blank'}
+            target={isSafe && !isInternalPath && !isAnchor ? '_blank' : undefined}
             rel="noopener noreferrer"
             className="text-teal-700 dark:text-teal-400 hover:underline font-medium"
           >

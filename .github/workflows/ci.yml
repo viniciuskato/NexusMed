@@ -73,8 +73,16 @@ jobs:
       - name: Testes unitários (vitest)
         run: npm run test:unit
 
+      # 45-H (AUD-07): o build falha sem as variáveis do Supabase, para não
+      # publicar o modo demonstração. Aqui entram valores de MARCAÇÃO, só para
+      # o bundle compilar: nenhum é credencial e nenhum projeto real é
+      # contatado (o build não faz requisição). A produção usa as variáveis
+      # reais da Vercel.
       - name: Build de produção
         run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://ci-build-placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-build-placeholder-nao-e-credencial
 
       - name: Gate — sem instrumentação de debug no bundle de produção
         run: npm run check:no-debug-bundle

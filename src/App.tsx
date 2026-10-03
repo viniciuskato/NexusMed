@@ -101,6 +101,8 @@ const AdminCMSView = lazyWithReload(() => import('./components/admin/AdminCMSVie
 const ThematicStudyView = lazyWithReload(() => import('./components/thematic/ThematicStudyView').then((m) => ({ default: m.ThematicStudyView })));
 // 44-D: "Como escrever um material" traz o padrão e os prompts como texto do
 // build; fica fora do bundle inicial.
+const EnviarMaterialView = lazyWithReload(() => import('./components/material/EnviarMaterialView').then((m) => ({ default: m.EnviarMaterialView })));
+const ComoEscreverQuestoesView = lazyWithReload(() => import('./components/material/ComoEscreverQuestoesView').then((m) => ({ default: m.ComoEscreverQuestoesView })));
 const ComoEscreverMaterialView = lazyWithReload(() => import('./components/material/ComoEscreverMaterialView').then((m) => ({ default: m.ComoEscreverMaterialView })));
 
 // Views que podem ser restauradas depois de um reload (Prompt 22-A). É uma
@@ -124,6 +126,8 @@ const PERSISTED_VIEWS = [
   'simulados',
   'errors',
   'como-escrever-material',
+  'como-escrever-questoes',
+  'enviar-material',
   'admin',
 ] as const;
 
@@ -154,6 +158,8 @@ function AuthenticatedApp() {
 
   // Deep-link / Context State
   const [selectedCompendiumId, setSelectedCompendiumId] = useState<string | null>(null);
+  // 44-H1: qual aba de "Enviar material" abre (a de questões, quando se vem de "Como escrever questões").
+  const [modoDoEnvio, setModoDoEnvio] = useState<'material' | 'questoes'>('material');
   const [selectedSectionId, setSelectedSectionId] = useState<string | undefined>(undefined);
   // Qual tela da Biblioteca estava ativa por último — 'reader' enquanto o
   // usuário está lendo um compêndio, mesmo depois de navegar temporariamente
@@ -190,6 +196,9 @@ function AuthenticatedApp() {
   const [dashboardTab, setDashboardTab] = useState<'overview' | 'errors'>('overview');
 
   const handleSelectView = (view: string) => {
+    // O menu "Enviar material" abre sempre na aba Material; quem quer a aba Questões a pede depois
+    // ("Como escrever questões"), com setModoDoEnvio('questoes') logo em seguida.
+    if (view === 'enviar-material') setModoDoEnvio('material');
     // Navegar pelo menu principal é sempre uma saída explícita do escopo de um
     // pack — sem isso, "Questões" no menu continuaria mostrando só as questões
     // do último material aberto, sem o usuário ter pedido esse recorte.
@@ -564,6 +573,19 @@ function AuthenticatedApp() {
     setActiveView('compendium-reader');
   };
 
+  // 44-G: o servidor publica o material fora desta sessão, então a lista carregada
+  // ainda não o tem: recarrega antes de abrir.
+  // 44-H2: "Abrir as questões publicadas" a partir de um envio de questões.
+  const handleAbrirQuestoesPublicadas = async (questionIds: string[]) => {
+    if (!questionIds.every((id) => questions.some((q) => q.id === id))) await refreshData();
+    handleStartTestarOQueLi(questionIds);
+  };
+
+  const handleAbrirMaterialPublicado = async (materialId: string) => {
+    if (!compendiums.some((c) => c.id === materialId)) await refreshData();
+    handleOpenCompendium(materialId);
+  };
+
   const handleReturnToQuestions = () => {
     if (libraryOrigin) {
       const targetView = libraryOrigin.view;
@@ -730,8 +752,10 @@ function AuthenticatedApp() {
     setActiveView('simulado-session');
   };
 
-  // Active Compendium Object
-  const activeCompendium = compendiums.find((c) => c.id === selectedCompendiumId) || compendiums[0];
+  // Material aberto no leitor. Sem fallback para outro material (45-H): um link
+  // para material inexistente ou despublicado mostra "não encontrado", nunca o
+  // primeiro da lista no lugar dele.
+  const activeCompendium = compendiums.find((c) => c.id === selectedCompendiumId);
 
   return (
     <div className="min-h-screen bg-[#F6F7F9] dark:bg-[#0B1220] text-[#172033] dark:text-[#E5E7EB] font-sans flex flex-col selection:bg-teal-500 selection:text-white antialiased transition-colors max-w-full overflow-x-hidden">
@@ -839,6 +863,33 @@ function AuthenticatedApp() {
               onReturnToQuestions={libraryOrigin ? handleReturnToQuestions : undefined}
               lastReadingSession={lastReadingSession}
             />
+          )}
+
+          {activeView === 'compendium-reader' && !activeCompendium && (
+            <div
+              id="material-nao-encontrado"
+              className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center max-w-lg mx-auto my-12 elev-md"
+            >
+              <h2 className="text-xl font-bold font-serif-reading text-slate-900 dark:text-white mb-2">
+                Material não encontrado
+              </h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                Este material não existe ou não está mais publicado.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setLibraryLastView('list');
+                  setSelectedCompendiumId(null);
+                  setSelectedSectionId(undefined);
+                  setLibraryOrigin(null);
+                  setActiveView('compendiums');
+                }}
+                className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold cursor-pointer transition-colors elev-xs"
+              >
+                Ir para a Biblioteca
+              </button>
+            </div>
           )}
 
           {activeView === 'compendium-reader' && activeCompendium && (
@@ -979,7 +1030,41 @@ function AuthenticatedApp() {
 
           {/* 44-D: qualquer usuário ativo (o gate de status vem antes, no topo do componente) */}
           {activeView === 'como-escrever-material' && (
-            <ComoEscreverMaterialView disciplines={disciplines} themes={themes} />
+            <ComoEscreverMaterialView
+              disciplines={disciplines}
+              themes={themes}
+              onAbrirEnvio={() => {
+                setModoDoEnvio('material');
+                handleSelectView('enviar-material');
+              }}
+            />
+          )}
+
+          {/* 44-H1: idem, para questões */}
+          {activeView === 'como-escrever-questoes' && (
+            <ComoEscreverQuestoesView
+              disciplines={disciplines}
+              themes={themes}
+              compendiums={compendiums}
+              onAbrirEnvio={() => {
+                handleSelectView('enviar-material');
+                setModoDoEnvio('questoes');
+              }}
+            />
+          )}
+
+          {/* 44-E: qualquer usuário ativo envia material; o envio só é guardado, não publica nada. */}
+          {activeView === 'enviar-material' && (
+            <EnviarMaterialView
+              disciplines={disciplines}
+              themes={themes}
+              compendiums={compendiums}
+              modoInicial={modoDoEnvio}
+              onAbrirComoEscrever={() => handleSelectView('como-escrever-material')}
+              onAbrirComoEscreverQuestoes={() => handleSelectView('como-escrever-questoes')}
+              onAbrirMaterial={handleAbrirMaterialPublicado}
+              onAbrirQuestoes={handleAbrirQuestoesPublicadas}
+            />
           )}
 
           {/* Admin CMS - Apenas para papel admin */}

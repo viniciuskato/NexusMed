@@ -367,6 +367,27 @@ export function insertMaterialLink(
   );
 }
 
+/**
+ * 44-G: `publish_material` só publica com revisão de IA "apto" vinculada ao conteúdo
+ * atual. Fixture (como postgres, o único papel que escreve revisão e proveniência):
+ * liga ao material uma revisão apto do conteúdo que ele tem agora, num envio de
+ * `autorId` (que sai junto quando o usuário é apagado). Para testar o
+ * caminho real (o servidor criando e publicando), use `rodarServidorDoRevisor`.
+ */
+export function vincularRevisaoDeIaAoMaterial(materialId: string, autorId: string): void {
+  psqlLocal(
+    `with s as (insert into public.material_submissions (author_id, title, discipline_id, theme_id, content_md, status, published_material_id) ` +
+      `select '${autorId}'::uuid, 'Fixture E2E ' || gen_random_uuid()::text, ` +
+      `m.discipline_id, m.theme_id, '# fixture', 'publicado', m.id from public.materials m where m.id = '${materialId}' ` +
+      `returning id, content_sha256), ` +
+      `r as (insert into public.material_reviews (submission_id, content_sha256, status, verdict, model, completed_at) ` +
+      `select id, content_sha256, 'concluida', 'apto', 'fixture', now() from s returning id, submission_id) ` +
+      `insert into public.material_ai_provenance (material_id, submission_id, review_id, review_verdict, reviewed_at, model, text_sha256, snapshot_hash) ` +
+      `select '${materialId}', s.id, r.id, 'apto', now(), 'fixture', s.content_sha256, app.material_snapshot_hash('${materialId}') ` +
+      `from s join r on r.submission_id = s.id;`
+  );
+}
+
 /** Despublica um material por SQL direto (para provar que o estudante deixa de vê-lo). */
 export function unpublishMaterialDirect(materialId: string): void {
   psqlLocal(`update public.materials set status = 'draft' where id = '${materialId}';`);

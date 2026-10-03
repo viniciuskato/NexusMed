@@ -16,10 +16,7 @@ import { ReadingProgressRepository } from './ReadingProgressRepository';
 //   readSectionIds <-> read_section_ids (uuid[])
 //   percent <-> percent
 //   unique (user_id, material_id): no máximo uma linha de progresso por
-//   compêndio por usuário — toggleSectionRead faz upsert lógico
-//   (update se já existir linha, insert caso contrário).
-//   user_id não tem default no schema: buscado via supabase.auth.getUser()
-//   apenas no caminho de insert (update não precisa, RLS já filtra por dono).
+//   compêndio por usuário. A gravação é só pela RPC set_section_read (45-H).
 // ============================================================================
 
 interface ReadingProgressRow {
@@ -47,36 +44,23 @@ export class SupabaseReadingProgressRepository implements Pick<ReadingProgressRe
   async toggleSectionRead(compendiumId: string, sectionId: string, totalSections: number): Promise<number> {
     const { data: existing, error: selErr } = await supabase
       .from('reading_progress')
-      .select('id, read_section_ids')
+      .select('read_section_ids')
       .eq('material_id', compendiumId)
       .maybeSingle();
     if (selErr) throw selErr;
 
-    const current: string[] = existing?.read_section_ids ?? [];
-    const idx = current.indexOf(sectionId);
-    const updated = idx >= 0 ? current.filter((_, i) => i !== idx) : [...current, sectionId];
-    const percent = Math.round((updated.length / Math.max(1, totalSections)) * 100);
-
-    if (existing) {
-      const { error } = await supabase
-        .from('reading_progress')
-        .update({ read_section_ids: updated, percent })
-        .eq('id', existing.id);
-      if (error) throw error;
-    } else {
-      const { data: userData, error: userErr } = await supabase.auth.getUser();
-      if (userErr) throw userErr;
-
-      const { error } = await supabase.from('reading_progress').insert({
-        user_id: userData.user?.id,
-        material_id: compendiumId,
-        read_section_ids: updated,
-        percent,
-      });
-      if (error) throw error;
-    }
-
-    return percent;
+    const isRead = !((existing?.read_section_ids ?? []) as string[]).includes(sectionId);
+    // Só pela RPC (45-H): ela valida que a seção é do material e calcula o
+    // percentual no servidor; o INSERT/UPDATE direto em reading_progress foi
+    // revogado de `authenticated`.
+    const { data, error } = await supabase.rpc('set_section_read', {
+      p_material_id: compendiumId,
+      p_section_id: sectionId,
+      p_is_read: isRead,
+      p_total_sections: totalSections,
+    });
+    if (error) throw error;
+    return Number((data as { percent?: number } | null)?.percent ?? 0);
   }
 }
 

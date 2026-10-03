@@ -162,10 +162,13 @@ seção "Armadilhas já descobertas".
     privileges de outro role do Supabase. Toda migration que cria tabela
     precisa de `revoke all on table public.<tabela> from anon;` explícito —
     a guarda `security_guards.test.sql` reprova se esquecer (NOVO-02).
-14. **Função nova em `public` nasce com EXECUTE para `PUBLIC`** (e `anon`
-    herda); o revoke de default privileges só tira `anon`. Toda RPC nova
-    precisa de `revoke all on function ... from public, anon;` explícito —
-    a guarda `security_guards.test.sql` confere isso (AUD-31.1).
+14. **Função nova não nasce mais chamável sem login** (default privileges
+    global sem `PUBLIC`, migration `20261002120000`, 45-H/AUD-31): a guarda
+    `security_guards.test.sql` reprova função de `public` executável por
+    `anon`/`PUBLIC`. A armadilha que sobra é a inversa: o default do `postgres`
+    em `public` concede EXECUTE a `authenticated` e `service_role`, então
+    função que deve ser só do servidor nasce chamável por qualquer usuário
+    logado e precisa de `revoke ... from authenticated` explícito.
 15. **Campo de seção do compêndio com Markdown inline (`content`,
     `keyTakeaways`, `clinicalPearl`, `warningAlert`, `examConsensus`, e
     campos derivados como `Flashcard.back`/`mechanismHighlight`) renderizado

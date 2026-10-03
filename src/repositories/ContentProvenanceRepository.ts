@@ -1,3 +1,5 @@
+import { exigirLinhaAtualizada } from './linhaAtualizada';
+import { filtroBuscaDeFonte } from '../utils/buscaDeFonte';
 import { sourceUrl } from '../utils/bibliographicSources';
 import { supabase } from '../lib/supabaseClient';
 import {
@@ -218,8 +220,9 @@ export class ContentProvenanceRepository {
   async decideClaim(claimId: string, decision: ClaimDecision): Promise<void> {
     // decided_by/decided_at são derivados de auth.uid()/horário do banco
     // pelo trigger guard_claim_writes — não enviados aqui.
-    const { error } = await supabase.from('claims').update({ decision }).eq('id', claimId);
+    const { data, error } = await supabase.from('claims').update({ decision }).eq('id', claimId).select('id');
     if (error) throw error;
+    exigirLinhaAtualizada(data, 'Decisão sobre a afirmação');
   }
 
   async listClaimSources(claimId: string): Promise<ClaimSource[]> {
@@ -272,10 +275,9 @@ export class ContentProvenanceRepository {
       .order('citation_text')
       .limit(20);
     if (q) {
-      const escaped = q.replace(/[%,]/g, '');
-      builder = builder.or(
-        `citation_text.ilike.%${escaped}%,identificadores->>doi.ilike.%${escaped}%,identificadores->>url.ilike.%${escaped}%`
-      );
+      // Valor entre aspas: parênteses e vírgula no texto ("Harrison (21ª ed.)")
+      // não quebram o filtro do PostgREST (45-H, AUD-32.3).
+      builder = builder.or(filtroBuscaDeFonte(q));
     }
     const { data, error } = await builder;
     if (error) throw error;

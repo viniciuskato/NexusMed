@@ -76,13 +76,16 @@ describe('44-D — página "Como escrever um material"', () => {
 
     const farma = within(lista).getByRole('list', { name: 'Temas de Farmacologia' });
     expect(within(farma).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      'Tema: Antimicrobianos',
-      'Tema: Farmacocinética básica',
+      'Antimicrobianos',
+      'Farmacocinética básica',
     ]);
     const cardio = within(lista).getByRole('list', { name: 'Temas de Cardiologia' });
     expect(within(cardio).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      'Tema: Insuficiência cardíaca',
+      'Insuficiência cardíaca',
     ]);
+    // Texto copiável do catálogo: só o nome, sem prefixo escondido para leitor de tela.
+    expect(lista.querySelector('.sr-only')).toBeNull();
+    expect(lista.textContent).not.toMatch(/Disciplina: |Tema: /);
     expect(within(lista).getByText('Disciplina sem temas')).toBeTruthy();
     expect(within(lista).getByText('Nenhum Tema cadastrado.')).toBeTruthy();
   });
@@ -98,7 +101,8 @@ describe('44-D — página "Como escrever um material"', () => {
     expect(fluxo).toMatch(/crie o material com o primeiro prompt/i);
     expect(fluxo).toMatch(/prompt\s+revisor/i);
     expect(fluxo).toMatch(/opcional/i);
-    expect(fluxo).toMatch(/envie pelo site \(em breve\)/i);
+    expect(fluxo).toMatch(/depois envie pelo site/i);
+    expect(fluxo).not.toMatch(/em breve/i);
     expect(fluxo).toMatch(/revisor de IA do próprio NexusMed confere/i);
     expect(fluxo).toContain('“APTO PARA ENVIAR”');
     expect(fluxo).toMatch(/selo “revisado\s+por IA”/);
@@ -106,6 +110,41 @@ describe('44-D — página "Como escrever um material"', () => {
     // Decisão do dono: a página não fala em atestação.
     expect(fluxo).not.toMatch(/atesta/i);
     expect(document.body.textContent ?? '').not.toMatch(/revisa e atesta/i);
+  });
+
+  it('44-E: o fluxo tem o link "Enviar material" quando a tela de envio existe, e ele a abre', () => {
+    const abrir = vi.fn();
+    const { rerender } = render(<ComoEscreverMaterialView disciplines={disciplinas} themes={temas} />);
+    expect(screen.queryByRole('button', { name: 'Enviar material' })).toBeNull();
+
+    rerender(<ComoEscreverMaterialView disciplines={disciplinas} themes={temas} onAbrirEnvio={abrir} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar material' }));
+    expect(abrir).toHaveBeenCalledTimes(1);
+  });
+
+  it('avisa, acima da Parte 1, que só valem fontes on-line e que livro-texto não é aceito', () => {
+    const { container } = render(<ComoEscreverMaterialView disciplines={disciplinas} themes={temas} />);
+    const aviso = container.querySelector('#como-escrever-aviso-fontes');
+    const padrao = container.querySelector('#como-escrever-padrao-texto');
+    expect(aviso?.textContent).toMatch(/só valem fontes disponíveis on-line/);
+    expect(aviso?.textContent).toMatch(/livro-texto não é aceito, mesmo que o padrão abaixo o cite/);
+    // O aviso vem antes do texto do padrão.
+    expect(aviso!.compareDocumentPosition(padrao!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('o checklist da seção 1.9 aparece com caixa (☐), sem o "[ ]" literal, e o texto copiado continua o do arquivo', () => {
+    const { container } = render(<ComoEscreverMaterialView disciplines={disciplinas} themes={temas} />);
+    const padrao = container.querySelector('#como-escrever-padrao-texto')?.textContent ?? '';
+    expect(padrao).not.toContain('[ ]');
+    expect(padrao).toContain('☐');
+    expect(PARTE_1_DO_PADRAO).toContain('- [ ] ');
+  });
+
+  it('o cartão do revisor diz que ele termina com o veredito e um bloco de correção', () => {
+    const { container } = render(<ComoEscreverMaterialView disciplines={disciplinas} themes={temas} />);
+    const cartao = container.querySelector('#como-escrever-cartao-revisar')?.textContent ?? '';
+    expect(cartao).toMatch(/termina com o veredito/);
+    expect(cartao).toMatch(/bloco de correção/);
   });
 
   it('"Copiar prompt para criar material" copia um único texto: prompt de criação + Parte 1, sem a Parte 2', async () => {

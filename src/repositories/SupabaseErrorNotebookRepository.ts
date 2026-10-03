@@ -1,3 +1,4 @@
+import { exigirLinhaAtualizada } from './linhaAtualizada';
 import { ErrorLogItem } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { ErrorNotebookRepository } from './ErrorNotebookRepository';
@@ -76,11 +77,13 @@ export class SupabaseErrorNotebookRepository implements ErrorNotebookRepository 
   }
 
   async updateErrorLog(errorItem: ErrorLogItem): Promise<void> {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('error_notebook')
       .update({ resolved: errorItem.resolved, user_notes: errorItem.userNotes })
-      .eq('id', errorItem.id);
+      .eq('id', errorItem.id)
+      .select('id');
     if (error) throw error;
+    exigirLinhaAtualizada(data, 'Caderno de erros');
   }
 }
 

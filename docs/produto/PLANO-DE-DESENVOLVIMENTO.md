@@ -673,7 +673,9 @@ do que já está ligado a ele (posição, questões, progresso de leitura).
 **Fora de escopo.** Exportar em lote; histórico de versões do material;
 editar o `.md` dentro da plataforma.
 **Depende de.** 43-A e 45-K.
-**Estado.** Planejada. Congelada (D-7, 28/09).
+**Estado.** Concluída — PR #104.
+
+**Achados da execução.** Adaptação à D-11 (29/09, "tudo que vai ao ar passa pelo revisor"): "Exportar .md" é livre (admin e o autor do envio que publicou o material); "Atualizar a partir de arquivo" não grava no material nem vira "edição pendente da 45-K" — é um envio do tipo "atualização" (`target_material_id`), revisado pelo mesmo revisor de IA, e só com o "apto" do texto e do lugar atuais o servidor troca o conteúdo, numa transação com a nova proveniência (o material no ar nunca fica sem revisão válida; "não apto" não muda nada). Ids de seção casam pelo título normalizado, referências pelo texto idêntico (mantêm o vínculo com a fonte); posição na árvore, filhos, ligações, progresso, anotações e questões não são tocados. Arquivo igual ao que está no ar não muda nada. O envio guarda o hash do material no momento do envio: se o material mudar antes da aplicação, o servidor recusa com recado leigo. Editar pelo formulário do Admin continua na 45-K.
 
 ---
 
@@ -783,6 +785,79 @@ teste reprova jargão interno neles.
 **Fora de escopo.** Enviar material (44-E); IA chamada pelo próprio site.
 **Depende de.** Nada.
 **Estado.** Concluída — PR #100.
+
+### 44-E — Enviar material pelo site
+
+**Origem.** Pedido do dono (29/09): qualquer usuário aprovado pode postar
+material.
+
+**Aceite.** Usuário ativo envia o `.md` pelo site; só entra arquivo aceito
+pela importação e sem pendência da checagem do padrão. O envio fica guardado
+com estado, visível só para quem enviou e para admin; no máximo 3 envios
+esperando revisão por pessoa e 300 KB por texto, travados no banco.
+
+**Fora de escopo.** Revisor de IA (44-F); publicar (44-G); questões.
+**Depende de.** 44-D.
+**Estado.** Concluída — PR #104.
+
+### 44-F — Revisor de IA do NexusMed
+
+**Origem.** Decisão do dono (29/09): tudo que for publicado passa por um
+revisor de IA dentro do site, pago por revisão, com teto mensal na conta.
+
+**Aceite.** Cada envio é revisado no servidor com o prompt revisor e a Parte 1
+do padrão, sem cópia; termina em apto, não apto ou erro (nunca apto por
+engano: veredito ilegível é erro). O autor vê achados e correção e reenvia.
+Tokens e buscas de cada revisão ficam guardados; limites por pessoa e mensal
+no banco.
+
+**Fora de escopo.** Publicar (44-G); questões.
+**Depende de.** 44-E; segredo da API criado pelo dono.
+**Estado.** Concluída — PR #104.
+
+### 44-G — Publicar pelo veredito do revisor de IA
+
+**Origem.** Decisão do dono (29/09): com o "apto" do revisor de IA o material
+vai direto aos alunos, com selo e botão de reportar erro; a leitura dele deixa
+de ser exigida para publicar.
+
+**Aceite.** Envio com revisão apto do texto atual vira material publicado pelo
+servidor, uma vez só. Nenhum material novo é publicado sem revisão apto,
+inclusive pelo admin. Selo "Revisado por IA" no leitor (mais forte quando uma
+pessoa atesta). "Reportar erro" para todo usuário ativo, com limite diário e
+lista na Área Editorial.
+
+**Fora de escopo.** Questões (44-H); editar publicado (45-K).
+**Depende de.** 44-F.
+**Estado.** Concluída — PR #104.
+
+### 44-H1 — Questões: como escrever e enviar pelo site
+
+**Origem.** Decisões do dono (29/09): qualquer usuário aprovado posta
+conteúdo, e tudo que é publicado passa pelo revisor de IA.
+
+**Aceite.** O site mostra o padrão de questões e dois prompts para copiar
+(criar e revisar questões). Usuário ativo envia o `.md` de questões; só entra
+arquivo aceito pela importação; o envio fica guardado com estado, com as
+mesmas regras e limites dos envios de material.
+
+**Fora de escopo.** Revisão por IA e publicação de questões (44-H2).
+**Depende de.** 44-G.
+**Estado.** Concluída — PR #104.
+
+### 44-H2 — Questões: revisão por IA e publicação pelo veredito
+
+**Origem.** Decisões do dono (29/09): tudo que é publicado passa pelo revisor
+de IA; com o "apto", vai direto aos alunos, com selo e "reportar erro".
+
+**Aceite.** Envio de questões é revisado pelo mesmo revisor (mesmos limites de
+custo), e com apto do texto atual o servidor publica as questões ligadas aos
+materiais, uma vez só. Nenhuma questão nova é publicada sem revisão apto,
+inclusive pelo admin. Selo e "Reportar erro" nas questões.
+
+**Fora de escopo.** Editar publicado (45-K).
+**Depende de.** 44-H1.
+**Estado.** Concluída — PR #104.
 
 ---
 
@@ -1071,8 +1146,7 @@ mesclada — `DECISIONS.md`, 24/09.)*
 **Restrições.** Pode ser dividida em 2 ou 3 PRs. Migrations no remoto antes do
 merge.
 **Depende de.** 45-A (a nota no servidor sai de lá) — concluída.
-**Estado.** Pronta. Congelada (D-7, 28/09), salvo AUD-31.1 e AUD-07, que viram
-defeito `grave`.
+**Estado.** Concluída — PR #104 (substitui o #103; banco, guardas pgTAP e front). Inclui, por decisão da diretoria, `vite.config.ts` (CSP só do projeto; build sem variáveis do Supabase falha), o passo de build do CI e a remoção do script antigo de `docs/archive`. Voltou à fila pela D-10 (29/09).
 
 ---
 
@@ -1420,9 +1494,15 @@ próximo "semana". Em dúvida, vale a linha "Estado" de cada unidade.*
 | 43-D | Concluída | #80 | 25/09 (migration aplicada ~13h45 depois do merge — INC-2026-005) |
 | 43-E | Concluída | #102 | a conferir |
 | 44-A | Congelada (D-7) | — | — |
-| 44-B | Congelada (D-7) | — | — |
+| 44-B | Concluída | #104 | — |
 | 44-C1 | Concluída | #85 | a conferir |
 | 44-C2 | Congelada (D-7) (antes 44-C) | — | — |
+| 44-D | Concluída | #100 | a conferir |
+| 44-E | Concluída | #104 | — |
+| 44-F | Concluída | #104 | — |
+| 44-G | Concluída | #104 | — |
+| 44-H1 | Concluída | #104 | — |
+| 44-H2 | Concluída | #104 | — |
 | 45-A | Concluída; correções da revisão do #76 no #81 | #74, #76, #81 | 24/09 (parte 2: migration depois do merge — INC-2026-004); correções: 25/09 (INC-2026-005) |
 | 45-B | Concluída | #71 | 24/09 |
 | 45-C | Concluída (item de desempenho movido para a 46-D) | #73 | 24/09 |
@@ -1430,7 +1510,7 @@ próximo "semana". Em dúvida, vale a linha "Estado" de cada unidade.*
 | 45-E | Concluída | #86 | a conferir |
 | 45-F | Pronta; D-7: item a item, como issue | — | — |
 | 45-G | Concluída | #93 | a conferir |
-| 45-H | Congelada (D-7), salvo AUD-31.1 e AUD-07 | — | — |
+| 45-H | Concluída (substitui o #103) | #104 | — |
 | 45-I | Congelada (D-7), salvo a parte LGPD | — | — |
 | 45-J | Concluída | #72 | 24/09 |
 | 45-K | Congelada (D-7); #97 em rascunho | — | — |
@@ -1438,7 +1518,7 @@ próximo "semana". Em dúvida, vale a linha "Estado" de cada unidade.*
 | 46-B | Em andamento; majors que faltam congeladas (D-7) | vários (Dependabot) | parcial |
 | 46-C | Planejada (P-2) | — | — |
 | 46-D | Congelada (D-7) | — | — |
-| 46-E | Pronta (P-4 no meio do caminho) | — | — |
+| 46-E | Concluída; falta a P-4 e incluir o check `migration-no-remoto` no ruleset | #98 | a conferir |
 
 **Concluído antes deste plano** (resumo; o detalhe está em
 `docs/operacao/TASKS.md` e nos PRs):
