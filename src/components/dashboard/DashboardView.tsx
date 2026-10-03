@@ -21,6 +21,7 @@ import {
   RotateCcw,
   BarChart3,
   BookMarked,
+  BookOpenCheck,
 } from 'lucide-react';
 import {
   Discipline,
@@ -47,6 +48,8 @@ import { IntegratedCadernoErros } from './IntegratedCadernoErros';
 import { ClinicalCognitiveProfile } from './ClinicalCognitiveProfile';
 import { BancaPerformanceRadar } from './BancaPerformanceRadar';
 import { DailyHandoffModal } from '../common/DailyHandoffModal';
+import { useServerLoad } from '../../hooks/useServerLoad';
+import { ConnectionNotice } from '../common/ConnectionNotice';
 
 interface DashboardViewProps {
   disciplines: Discipline[];
@@ -61,6 +64,8 @@ interface DashboardViewProps {
   initialTab?: 'overview' | 'errors';
   onTabChange?: (tab: 'overview' | 'errors') => void;
   onStartErrorSimulado?: () => void;
+  /** Abre "Testar o que li" — questões dos materiais lidos hoje (43-C). */
+  onTestarOQueLi?: () => void;
   onUpdate?: () => void;
 }
 
@@ -77,6 +82,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   initialTab = 'overview',
   onTabChange,
   onStartErrorSimulado,
+  onTestarOQueLi,
   onUpdate,
 }) => {
   const { user, profile } = useAuth();
@@ -111,35 +117,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   });
   const [showDailyHandoffModal, setShowDailyHandoffModal] = useState(false);
 
-  const reloadData = async () => {
+  // Do servidor (45-G, D-2): sem rede, o que já está na tela fica e o aviso aparece.
+  const { status: loadStatus, reload } = useServerLoad(async () => {
     const [nextAnswers, nextProgress, nextErrorLogs] = await Promise.all([
       answersRepository.getAnswers(),
       readingProgressRepository.getReadingProgress(),
       errorNotebookRepository.getErrorLogs(),
     ]);
-    setAnswers(nextAnswers);
-    setReadingProgress(nextProgress);
-    setErrorLogs(nextErrorLogs);
-    if (onUpdate) onUpdate();
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const [nextAnswers, nextProgress, nextErrorLogs] = await Promise.all([
-        answersRepository.getAnswers(),
-        readingProgressRepository.getReadingProgress(),
-        errorNotebookRepository.getErrorLogs(),
-      ]);
-      if (cancelled) return;
+    return () => {
       setAnswers(nextAnswers);
       setReadingProgress(nextProgress);
       setErrorLogs(nextErrorLogs);
-    })();
-    return () => {
-      cancelled = true;
     };
-  }, []);
+  });
+
+  const reloadData = async () => {
+    await reload();
+    if (onUpdate) onUpdate();
+  };
 
   const answersArray: QuestionAnswerRecord[] = useMemo(() => Object.values(answers), [answers]);
   const totalAnswered = answersArray.length;
@@ -272,6 +267,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="w-full max-w-[1680px] mx-auto space-y-7 pb-12">
+      <ConnectionNotice status={loadStatus} />
       {/* ── 1. Hero Pessoal de Desempenho & Nível ── */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950 border border-slate-800 text-white p-6 sm:p-8 2xl:p-10 elev-xl shadow-teal-950/20">
         <div className="absolute -top-24 -right-24 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -343,6 +339,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <HelpCircle className="w-4 h-4 group-hover:rotate-12 transition-transform" />
               <span>Resolver Questões (+50 XP)</span>
             </button>
+
+            {onTestarOQueLi && (
+              <button
+                type="button"
+                onClick={onTestarOQueLi}
+                className="px-4 py-3 rounded-2xl bg-slate-800/90 hover:bg-slate-750 text-slate-100 border border-slate-700/90 hover:border-teal-500/50 font-bold text-xs elev-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <BookOpenCheck className="w-4 h-4 text-teal-400" />
+                <span>Testar o que li</span>
+              </button>
+            )}
 
             <button
               type="button"

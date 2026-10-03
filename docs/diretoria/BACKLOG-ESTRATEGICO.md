@@ -44,6 +44,11 @@ e ficam como histórico (mesma lógica de preservação já usada em
 > estão no plano. Ao concluir uma unidade, a execução muda aqui o estado dos
 > achados que ela resolve para "Concluído (unidade NN-X)". Conferido em
 > 2026-09-23: nenhum achado aberto foi corrigido desde a 3ª rodada.
+>
+> **Desde a D-7 (28/09):** item daqui só vira issue se passar pela fronteira
+> defeito × evolução (seção 5 do plano), ou vira pedido da produção com o
+> "sim" do dono; a diretoria não puxa item por conta própria, e o estado
+> aqui é atualizado por ela, em lote, no PR do "semana".
 
 Itens da auditoria técnica de 2026-09-18 (arquitetura, qualidade,
 segurança e negócio). O que já virou PR não está aqui: RPCs de gabarito
@@ -127,8 +132,7 @@ autocontido (#6), code splitting + botão voltar (#7), processo via PR
   simplificar.
 - **Contexto mínimo pra puxar**: `src/repositories/Resilient*`,
   `src/services/storage.ts`, `docs/archive/SINCRONIZACAO-CONFIAVEL.md`.
-- **Estado**: Aberto (reconfirmado em 2026-09-19; o cache vazio já causa
-  bugs visíveis online — ver AUD-29 e AUD-20)
+- **Estado**: Concluído (unidade 45-G)
 
 ### AUD-06 — Integridade de dados controlada pelo cliente
 - **Registrado em**: 2026-09-18 pela sessão de auditoria
@@ -584,7 +588,7 @@ Auth e `max_rows`). Tudo que depende disso está em AUD-34.
   ser corrigida antes passando o estado desejado explicitamente.
 - **Contexto mínimo pra puxar**: os dois repositórios, os dois componentes
   e AUD-05.
-- **Estado**: Aberto
+- **Estado**: Concluído (unidade 45-G)
 
 ### AUD-30 — Observabilidade e privacidade: lacunas depois do PR #17
 - **Registrado em**: 2026-09-19 pela sessão de auditoria

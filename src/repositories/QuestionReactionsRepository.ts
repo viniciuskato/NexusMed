@@ -39,26 +39,20 @@ class LocalStorageQuestionReactionsRepository implements QuestionReactionsReposi
 // ANTES de chamar este repositório) entra na fila de sincronização
 // (`src/services/syncQueue.ts`), com o mesmo mecanismo de retry/backoff/
 // reconciliação online já usado por favoritos/progresso de leitura.
+// Leitura (45-G, D-2): com Supabase configurado, só do servidor. A falha sobe
+// para a tela, que diz "sem conexão" — nunca cai numa cópia local vazia ou velha.
 class ResilientQuestionReactionsRepository implements QuestionReactionsRepository {
   private supa = new SupabaseQuestionReactionsRepository();
   private local = new LocalStorageQuestionReactionsRepository();
 
   async getMyReaction(questionId: string): Promise<QuestionReactionValue | null> {
     if (!isSupabaseConfigured) return this.local.getMyReaction(questionId);
-    try {
-      return await this.supa.getMyReaction(questionId);
-    } catch {
-      return this.local.getMyReaction(questionId);
-    }
+    return this.supa.getMyReaction(questionId);
   }
 
   async getMyReactions(): Promise<Record<string, QuestionReactionValue>> {
     if (!isSupabaseConfigured) return this.local.getMyReactions();
-    try {
-      return await this.supa.getMyReactions();
-    } catch {
-      return this.local.getMyReactions();
-    }
+    return this.supa.getMyReactions();
   }
 
   async setReaction(questionId: string, reaction: QuestionReactionValue): Promise<void> {

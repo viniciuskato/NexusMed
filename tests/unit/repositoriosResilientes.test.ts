@@ -33,6 +33,7 @@ const SUPA_MODULES = [
   'ErrorNotebook',
   'Feedback',
   'Flashcards',
+  'Materials',
   'Notes',
   'QuestionReactions',
   'Questions',
@@ -131,11 +132,11 @@ afterEach(() => {
 
 const networkError = () => new Error('Failed to fetch');
 
-/** Popula a cópia local de todas as áreas lidas nos testes de fallback (fallback para "vazio" não provaria nada). */
+/** Popula a cópia local de todas as áreas lidas — para provar que, com o servidor falhando, ela NÃO é usada (45-G, D-2). */
 function seedLocal(S: Awaited<ReturnType<typeof setup>>['StorageService']) {
   S.saveNote('q-1', 'nota local');
-  S.toggleBookmark('questions', 'q-1');
-  S.toggleSectionRead('comp-1', 'sec-1', 2);
+  S.setBookmark('questions', 'q-1', true);
+  S.setSectionRead('comp-1', 'sec-1', true, 2);
   S.saveSimuladoSession({ id: 'sim-local' } as never);
   S.recordAnswer(makeAnswer()); // resposta errada também gera item no caderno de erros
   S.setQuestionReaction('q-1', 'up');
@@ -147,7 +148,10 @@ function seedLocal(S: Awaited<ReturnType<typeof setup>>['StorageService']) {
 // ---------------------------------------------------------------------------
 // Leitura com fallback
 // ---------------------------------------------------------------------------
-describe('Resilient*Repository — leitura com fallback', () => {
+// 45-G (D-2): sem leitura offline. Com Supabase configurado, a leitura vem só
+// do servidor; a falha sobe para a tela (que diz "sem conexão"), nunca cai
+// numa cópia local vazia ou velha.
+describe('Resilient*Repository — leitura só do servidor', () => {
   it('sem Supabase configurado, lê só do local e nunca consulta o Supabase', async () => {
     const getNotes = vi.fn();
     const { StorageService } = await setup({ configured: false, supa: { Notes: { getNotes } } });
@@ -171,6 +175,8 @@ describe('Resilient*Repository — leitura com fallback', () => {
 
   it.each([
     ['NotesRepository', 'notesRepository', 'Notes', 'getNotes'],
+    // Veio do #92 (45-D) engolindo a falha e devolvendo {} — mesma regra (45-G).
+    ['NotesRepository', 'notesRepository', 'Notes', 'getRemovedSectionNotes'],
     ['BookmarksRepository', 'bookmarksRepository', 'Bookmarks', 'getBookmarks'],
     ['ReadingProgressRepository', 'readingProgressRepository', 'ReadingProgress', 'getReadingProgress'],
     ['SimuladosRepository', 'simuladosRepository', 'Simulados', 'getSimulados'],
@@ -182,38 +188,46 @@ describe('Resilient*Repository — leitura com fallback', () => {
     ['QuestionsRepository', 'questionsRepository', 'Questions', 'getQuestions'],
     ['FlashcardsRepository', 'flashcardsRepository', 'Flashcards', 'getFlashcards'],
     ['FlashcardsRepository', 'flashcardsRepository', 'Flashcards', 'getDueFlashcards'],
-  ] as const)('%s.%s: falha do Supabase cai para a cópia local (sem propagar erro)', async (file, exportName, supaName, method) => {
+  ] as const)('%s.%s: falha do Supabase é propagada, sem cair na cópia local', async (file, exportName, supaName, method) => {
     const failing = vi.fn().mockRejectedValue(networkError());
     const { StorageService } = await setup({ configured: true, supa: { [supaName]: { [method]: failing } } });
-    seedLocal(StorageService);
-    const expectedLocal = await (StorageService as unknown as Record<string, () => unknown>)[
-      method === 'getMyReactions' ? 'getQuestionReactions' : method
-    ]();
-    // Garante que o fallback devolve dado real, não um vazio que passaria por acaso.
-    expect(JSON.stringify(expectedLocal)).not.toMatch(/^(\[\]|\{\})$/);
+    seedLocal(StorageService); // há cópia local — e mesmo assim ela não é usada
 
     const mod = (await REPO_LOADERS[file]()) as unknown as Record<string, Record<string, () => Promise<unknown>>>;
-    await expect(mod[exportName][method]()).resolves.toEqual(expectedLocal);
+    await expect(mod[exportName][method]()).rejects.toThrow('Failed to fetch');
     expect(failing).toHaveBeenCalledTimes(1);
   });
 
-  it('QuestionReactionsRepository.getMyReaction: falha do Supabase devolve a reação local', async () => {
+  it.each([['getDisciplines'], ['getThemes'], ['getCompendiums']] as const)(
+    'MaterialsRepository.%s: falha do Supabase é propagada, sem cair na cópia local',
+    async (method) => {
+      const failing = vi.fn().mockRejectedValue(networkError());
+      await setup({ configured: true, supa: { Materials: { [method]: failing } } });
+      const { materialsRepository } = await import('../../src/repositories/MaterialsRepository');
+      await expect((materialsRepository as unknown as Record<string, () => Promise<unknown>>)[method]()).rejects.toThrow('Failed to fetch');
+    }
+  );
+
+  it('QuestionReactionsRepository.getMyReaction e QuestionsRepository.getQuestionReview: falha do Supabase é propagada', async () => {
     const { StorageService } = await setup({
       configured: true,
-      supa: { QuestionReactions: { getMyReaction: vi.fn().mockRejectedValue(networkError()) } },
+      supa: {
+        QuestionReactions: { getMyReaction: vi.fn().mockRejectedValue(networkError()) },
+        Questions: { getQuestionReview: vi.fn().mockRejectedValue(networkError()) },
+      },
     });
     StorageService.setQuestionReaction('q-9', 'down');
     const { questionReactionsRepository } = await import('../../src/repositories/QuestionReactionsRepository');
-    expect(await questionReactionsRepository.getMyReaction('q-9')).toBe('down');
-    expect(await questionReactionsRepository.getMyReaction('q-inexistente')).toBeNull();
+    const { questionsRepository } = await import('../../src/repositories/QuestionsRepository');
+    await expect(questionReactionsRepository.getMyReaction('q-9')).rejects.toThrow('Failed to fetch');
+    await expect(questionsRepository.getQuestionReview('q-9')).rejects.toThrow('Failed to fetch');
   });
 
-  it('FlashcardsRepository: resposta vazia do Supabase também cai para o cache local', async () => {
+  it('FlashcardsRepository: resposta vazia do Supabase é o estado do servidor (não reaparece card da cópia local)', async () => {
     const { StorageService } = await setup({ configured: true, supa: { Flashcards: { getFlashcards: async () => [] } } });
     StorageService.saveFlashcards([makeCard('fc-local')]);
     const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
-    const cards = await flashcardsRepository.getFlashcards();
-    expect(cards.map((c) => c.id)).toEqual(['fc-local']);
+    expect(await flashcardsRepository.getFlashcards()).toEqual([]);
   });
 
   it('FeedbackRepository.getAllFeedback (admin): com Supabase configurado, erro é propagado — sem fallback silencioso para o local', async () => {
@@ -479,8 +493,23 @@ describe('Resilient*Repository — falha de rede e retentativa', () => {
 // ---------------------------------------------------------------------------
 // Toggles viram "set" explícito — reenvio é sempre seguro
 // ---------------------------------------------------------------------------
-describe('Resilient*Repository — toggles enviados como estado desejado', () => {
-  it('Bookmarks: marcar e desmarcar offline, depois reconectar — servidor converge para o estado local', async () => {
+// 45-G (AUD-29): a tela manda o estado que mostra e o que o estudante quer;
+// o repositório nunca "inverte" a partir da cópia local — que num aparelho
+// novo está vazia, e fazia a estrela preenchida gravar "favoritar".
+describe('Resilient*Repository — favorito e leitura com estado desejado explícito', () => {
+  it('Bookmarks: aparelho novo (cópia local vazia), favorito vindo do servidor — remover grava "desfavoritar"', async () => {
+    const { StorageService, queue } = await setup({ configured: true });
+    const { bookmarksRepository } = await import('../../src/repositories/BookmarksRepository');
+    expect(StorageService.getBookmarks().questions).toEqual([]); // nada local
+
+    expect(await bookmarksRepository.setBookmark('questions', 'q-1', false)).toBe(false);
+    await queue.flush(UID);
+
+    expect(queue.getOps(UID).map((o) => o.payload)).toEqual([{ type: 'questions', id: 'q-1', desired: false }]);
+    expect(StorageService.getBookmarks().questions).toEqual([]);
+  });
+
+  it('Bookmarks: favoritar e desfavoritar offline, depois reconectar — o servidor termina no último estado pedido', async () => {
     const { StorageService, queue } = await setup({ configured: true });
     const serverState = new Set<string>();
     let online = false;
@@ -492,37 +521,47 @@ describe('Resilient*Repository — toggles enviados como estado desejado', () =>
     });
     const { bookmarksRepository } = await import('../../src/repositories/BookmarksRepository');
 
-    expect(await bookmarksRepository.toggleBookmark('questions', 'q-1')).toBe(true);
+    expect(await bookmarksRepository.setBookmark('questions', 'q-1', true)).toBe(true);
     await queue.flush(UID);
-    expect(await bookmarksRepository.toggleBookmark('questions', 'q-1')).toBe(false);
+    expect(await bookmarksRepository.setBookmark('questions', 'q-1', false)).toBe(false);
     await queue.flush(UID);
-    // 45-E: o desfavoritar substitui o favoritar que ainda não saiu — só o estado final vai.
+    // 45-E: o desfavoritar substitui o favoritar que ainda não saiu.
     expect(queue.getOps(UID).map((o) => (o.payload as { desired: boolean }).desired)).toEqual([false]);
 
     online = true;
     await queue.flush(UID, true);
-    // Reenviar tudo de novo (ex.: reload antes de confirmar) é no-op seguro.
-    await queue.flush(UID, true);
+    await queue.flush(UID, true); // reenviar é no-op seguro
 
     expect(StorageService.getBookmarks().questions).toEqual([]);
     expect(serverState.has('q-1')).toBe(false);
     expect(queue.getOps(UID).every((o) => o.state === 'synced')).toBe(true);
   });
 
-  it('ReadingProgress: o estado desejado (isRead) é decidido antes do toggle local e enviado como set', async () => {
+  it('ReadingProgress: aparelho novo, seção lida vinda do servidor — desmarcar grava "não lida"', async () => {
+    const { queue } = await setup({ configured: true });
+    const { readingProgressRepository } = await import('../../src/repositories/ReadingProgressRepository');
+
+    await readingProgressRepository.setSectionRead('comp-1', 'sec-1', false, 4);
+    await queue.flush(UID);
+
+    expect(queue.getOps(UID).map((o) => o.payload)).toEqual([
+      { compendiumId: 'comp-1', sectionId: 'sec-1', isRead: false, totalSections: 4 },
+    ]);
+  });
+
+  it('ReadingProgress: marcar a mesma seção duas vezes como lida não a desmarca (set, não toggle)', async () => {
     const { StorageService, queue } = await setup({ configured: true });
     const { readingProgressRepository } = await import('../../src/repositories/ReadingProgressRepository');
 
-    expect(await readingProgressRepository.toggleSectionRead('comp-1', 'sec-1', 4)).toBe(25);
-    expect(await readingProgressRepository.toggleSectionRead('comp-1', 'sec-2', 4)).toBe(50);
-    expect(await readingProgressRepository.toggleSectionRead('comp-1', 'sec-1', 4)).toBe(25);
+    await readingProgressRepository.setSectionRead('comp-1', 'sec-1', true, 4);
+    await readingProgressRepository.setSectionRead('comp-1', 'sec-1', true, 4);
+    await readingProgressRepository.setSectionRead('comp-1', 'sec-2', true, 4);
     await queue.flush(UID);
 
-    expect(StorageService.getReadingProgress()['comp-1'].readSectionIds).toEqual(['sec-2']);
-    // 45-E: desmarcar sec-1 substitui o "lida" ainda não enviado da mesma seção.
+    expect(StorageService.getReadingProgress()['comp-1'].readSectionIds).toEqual(['sec-1', 'sec-2']);
     expect(queue.getOps(UID).map((o) => o.payload)).toEqual([
+      { compendiumId: 'comp-1', sectionId: 'sec-1', isRead: true, totalSections: 4 },
       { compendiumId: 'comp-1', sectionId: 'sec-2', isRead: true, totalSections: 4 },
-      { compendiumId: 'comp-1', sectionId: 'sec-1', isRead: false, totalSections: 4 },
     ]);
   });
 });

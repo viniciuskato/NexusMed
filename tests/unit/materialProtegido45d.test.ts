@@ -154,21 +154,19 @@ describe('SupabaseNotesRepository — anotação de seção removida', () => {
     expect(calls[0].filters).toContainEqual(['order', 'created_at', true]);
   });
 
-  it('erro ao ler as de seção removida fica registrado no console', async () => {
+  // 45-G (D-2): a falha sobe para a tela, que avisa "sem conexão" — antes,
+  // era registrada no console e a leitura devolvia {} ("nenhuma anotação de
+  // seção removida"), o que a tela não tinha como distinguir de verdade.
+  it('erro ao ler as de seção removida é propagado, sem {} silencioso', async () => {
     vi.doMock('../../src/lib/supabaseClient', () => ({ isSupabaseConfigured: true, supabase: {} }));
     vi.doMock('../../src/repositories/SupabaseNotesRepository', () => ({
       SupabaseNotesRepository: vi.fn().mockImplementation(() => ({
         getRemovedSectionNotes: vi.fn().mockRejectedValue(new Error('column notes.removed_section_title does not exist')),
       })),
     }));
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { notesRepository } = await import('../../src/repositories/NotesRepository');
 
-    expect(await notesRepository.getRemovedSectionNotes()).toEqual({});
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('getRemovedSectionNotes'),
-      expect.objectContaining({ message: expect.stringContaining('removed_section_title') })
-    );
+    await expect(notesRepository.getRemovedSectionNotes()).rejects.toThrow('removed_section_title');
   });
 });
 

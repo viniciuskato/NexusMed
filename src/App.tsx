@@ -4,12 +4,7 @@ import {
 } from 'lucide-react';
 import {
   UserPlan,
-  Discipline,
-  Theme,
-  Compendium,
-  Question,
   Flashcard,
-  UserStats,
   SimuladoConfig,
   ThemeMode,
   MigrationSummary,
@@ -17,10 +12,6 @@ import {
   LastReadingSession,
 } from './types';
 import { StorageService } from './services/storage';
-import { materialsRepository } from './repositories/MaterialsRepository';
-import { questionsRepository } from './repositories/QuestionsRepository';
-import { flashcardsRepository } from './repositories/FlashcardsRepository';
-import { answersRepository } from './repositories/AnswersRepository';
 import { registerSyncHandlers } from './services/syncHandlers';
 import { isCardDueToday } from './services/srsAlgorithm';
 import * as syncQueueDebug from './services/syncQueue';
@@ -35,6 +26,7 @@ import { questionReactionsRepository } from './repositories/QuestionReactionsRep
 import { buildSimuladoSelection, SimuladoSelectionResult } from './services/simuladoSelection';
 import { packIdForCompendium, SCOPE_CUSTOM, SCOPE_UNLINKED } from './services/thematicPacks';
 import { questionMatchesMaterialScope } from './utils/questionMaterials';
+import { jaEntrouNestaAba, marcarEntradaNestaAba } from './utils/navEntrada';
 
 registerSyncHandlers();
 
@@ -69,7 +61,6 @@ if (import.meta.env.DEV) {
     storage: StorageService,
   };
 }
-import { GamificationService } from './services/gamification';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LoadingScreen } from './components/common/LoadingScreen';
 import { LoginView } from './components/auth/LoginView';
@@ -87,10 +78,14 @@ import { PlanModal } from './components/PlanModal';
 
 // Views
 import { DashboardView } from './components/dashboard/DashboardView';
+import { HojeView } from './components/hoje/HojeView';
 import { CreateSimuladoModal } from './components/questions/CreateSimuladoModal';
 import { CreateFlashcardModal } from './components/flashcards/CreateFlashcardModal';
 import { ClinicalPomodoroWidget } from './components/common/ClinicalPomodoroWidget';
+import { TestarOQueLiModal } from './components/testar/TestarOQueLiModal';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
+import { ConnectionNotice } from './components/common/ConnectionNotice';
+import { useAppData } from './hooks/useAppData';
 import { lazyWithReload } from './lib/lazyWithReload';
 
 // Telas carregadas sob demanda: o bundle inicial leva só o painel. O CMS
@@ -104,15 +99,23 @@ const FlashcardReviewSession = lazyWithReload(() => import('./components/flashca
 const SimuladosView = lazyWithReload(() => import('./components/simulados/SimuladosView').then((m) => ({ default: m.SimuladosView })));
 const AdminCMSView = lazyWithReload(() => import('./components/admin/AdminCMSView').then((m) => ({ default: m.AdminCMSView })));
 const ThematicStudyView = lazyWithReload(() => import('./components/thematic/ThematicStudyView').then((m) => ({ default: m.ThematicStudyView })));
+// 44-D: "Como escrever um material" traz o padrão e os prompts como texto do
+// build; fica fora do bundle inicial.
+const ComoEscreverMaterialView = lazyWithReload(() => import('./components/material/ComoEscreverMaterialView').then((m) => ({ default: m.ComoEscreverMaterialView })));
 
 // Views que podem ser restauradas depois de um reload (Prompt 22-A). É uma
 // lista de PERMISSÃO: qualquer outro valor salvo (inclusive um valor futuro
-// ainda não conhecido, ou lixo gravado por outra versão) cai em 'dashboard'.
+// ainda não conhecido, ou lixo gravado por outra versão) cai em 'today'.
 // Sessões efêmeras ficam deliberadamente de fora — 'simulado-session',
 // 'flashcard-session' e 'compendium-reader' dependem de estado em memória
 // (fila de cards, seleção sorteada, compêndio ativo) que não sobrevive ao
 // reload; restaurá-las abriria uma tela sem o conteúdo correspondente.
+//
+// 'today' (43-E) é a tela inicial. A restauração acima vale para o RELOAD: a
+// abertura nova da aba (sem link direto) entra por 'today', ver a restauração
+// de navegação abaixo.
 const PERSISTED_VIEWS = [
+  'today',
   'dashboard',
   'thematic-study',
   'compendiums',
@@ -120,6 +123,7 @@ const PERSISTED_VIEWS = [
   'flashcards',
   'simulados',
   'errors',
+  'como-escrever-material',
   'admin',
 ] as const;
 
@@ -131,7 +135,7 @@ function AuthenticatedApp() {
   const { user, profile, loading, isEmailVerified } = useAuth();
 
   // Navigation State
-  const [activeView, setActiveView] = useState<string>('dashboard');
+  const [activeView, setActiveView] = useState<string>('today');
   // Estudo Temático: pack aberto (id derivado do compêndio). Fica aqui, e não
   // dentro da view, porque o retorno ao pack depois de ler/responder/revisar
   // depende dele, e porque a validação do id salvo precisa dos dados já
@@ -141,6 +145,9 @@ function AuthenticatedApp() {
   const [navStateRestored, setNavStateRestored] = useState(false);
   // Escopo de material aplicado a Questões/Cards quando se chega pelo pack.
   const [scopeCompendiumForQuestions, setScopeCompendiumForQuestions] = useState<string | undefined>(undefined);
+  // 43-C: recorte "Testar o que li" (ids escolhidos no modal).
+  const [scopeQuestionIdsForQuestions, setScopeQuestionIdsForQuestions] = useState<string[] | undefined>(undefined);
+  const [isTestarOpen, setIsTestarOpen] = useState(false);
   const [scopeCompendiumForFlashcards, setScopeCompendiumForFlashcards] = useState<string | undefined>(undefined);
   const [packReturnContext, setPackReturnContext] = useState<string | null>(null);
   const [flashcardOriginView, setFlashcardOriginView] = useState<string>('flashcards');
@@ -188,6 +195,7 @@ function AuthenticatedApp() {
     // do último material aberto, sem o usuário ter pedido esse recorte.
     if (view === 'questions') {
       setScopeCompendiumForQuestions(undefined);
+      setScopeQuestionIdsForQuestions(undefined);
       setFilterThemeForQuestions(undefined);
       setPackReturnContext(null);
     }
@@ -233,51 +241,101 @@ function AuthenticatedApp() {
     StorageService.getLastReadingSession()
   );
 
+  // Estado de SESSÃO deste componente raiz, que nunca desmonta entre logout
+  // e login (`App()` monta `<AuthenticatedApp/>` uma única vez). Sem isto,
+  // trocar de conta com a carga do usuário novo falhando deixava a tela na
+  // view (e no conteúdo em memória: fila de flashcards, seleção de simulado,
+  // compêndio aberto...) que a conta ANTERIOR tinha — o único portão antes do
+  // render normal era `dataLoading`, que `useAppData` volta a `false` ao fim
+  // de toda tentativa, mesmo numa carga que falhou (revisão do #93, item 2).
+  const [shownForUserId, setShownForUserId] = useState<string | null>(user?.id ?? null);
+  if (shownForUserId !== (user?.id ?? null)) {
+    setShownForUserId(user?.id ?? null);
+    setActiveView('today');
+    setDashboardTab('overview');
+    setNavStateRestored(false);
+    setReviewCardsQueue([]);
+    setActiveSimuladoConfig(null);
+    setActiveSimuladoSelection(null);
+    setSelectedCompendiumId(null);
+    setSelectedSectionId(undefined);
+    setLibraryLastView('list');
+    setLibraryOrigin(null);
+    setFocusQuestionId(undefined);
+    setFilterThemeForQuestions(undefined);
+    setFilterThemeForFlashcards(undefined);
+    setFilterStatusForQuestions(undefined);
+    setScopeCompendiumForQuestions(undefined);
+    // Recorte "Testar o que li" (43-C): escolhido a partir das leituras desta
+    // conta.
+    setScopeQuestionIdsForQuestions(undefined);
+    setScopeCompendiumForFlashcards(undefined);
+    setPackReturnContext(null);
+    setFlashcardOriginView('flashcards');
+    setSelectedPackId(null);
+    setInvalidSavedPackId(null);
+    // "Continuar lendo" e o aviso de dados antigos são desta conta
+    // especificamente — sem isto, a conta B via o card de retomada de
+    // leitura e/ou o modal de migração da conta A (achado do revisor e meu,
+    // rodada 2). `lastReadingSession` é relido (não só zerado): o
+    // `StorageService` já isola por UID ativo (`setActiveUser`, no
+    // `AuthContext`), então o valor novo é o de B, não um vazio à toa.
+    setLastReadingSession(StorageService.getLastReadingSession());
+    setMigrationSummary(null);
+    // Modais abertos (busca, plano, feedback, criar simulado/flashcard) não
+    // guardam dado de outra conta, mas um formulário aberto no meio da troca
+    // é um estado órfão — fecha todos, como o resto da tela.
+    setIsSearchOpen(false);
+    setIsPlanModalOpen(false);
+    setIsFeedbackOpen(false);
+    setIsCreateSimuladoOpen(false);
+    setIsCreateFlashcardOpen(false);
+    // O "Testar o que li" (43-C) mostra as leituras da conta que o abriu e só
+    // as busca ao montar: fechá-lo o desmonta, e a próxima abertura já é da
+    // conta nova.
+    setIsTestarOpen(false);
+  }
+
   // Core Data State (carregados do StorageService / Supabase)
   const [theme, setTheme] = useState<ThemeMode>(() => StorageService.getTheme());
   const [plan, setPlan] = useState<UserPlan>(() => StorageService.getUserPlan());
-  const [disciplines, setDisciplines] = useState<Discipline[]>([]);
-  const [themes, setThemes] = useState<Theme[]>([]);
-  const [compendiums, setCompendiums] = useState<Compendium[]>([]);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
-  const [answers, setAnswers] = useState<Record<string, QuestionAnswerRecord>>({});
-  const [stats, setStats] = useState<UserStats>(() => StorageService.getStats());
-  const [dataLoading, setDataLoading] = useState(true);
+  // Carregamento do servidor (45-G, D-2): troca de usuário limpa o estado
+  // antes de carregar; numa falha, o aviso aparece e a carga tenta de novo
+  // sozinha; `dataReady` diz se os dados na tela são deste usuário. Ver
+  // useAppData.
+  const {
+    disciplines,
+    themes,
+    compendiums,
+    questions,
+    flashcards,
+    answers,
+    stats,
+    loading: dataLoading,
+    ready: dataReady,
+    status: dataStatus,
+    refresh,
+  } = useAppData(user?.id ?? null);
 
+  // Nunca lança: as telas chamam isto como `onUpdate` depois de gravar.
   const refreshData = useCallback(async () => {
-    const [nextDisciplines, nextThemes, nextCompendiums, nextQuestions, nextFlashcards, nextAnswers] =
-      await Promise.all([
-        materialsRepository.getDisciplines(),
-        materialsRepository.getThemes(),
-        materialsRepository.getCompendiums(),
-        questionsRepository.getQuestions(),
-        flashcardsRepository.getFlashcards(),
-        answersRepository.getAnswers(),
-      ]);
-    setDisciplines(nextDisciplines);
-    setThemes(nextThemes);
-    setCompendiums(nextCompendiums);
-    setQuestions(nextQuestions);
-    setFlashcards(nextFlashcards);
-    setAnswers(nextAnswers);
-    setStats(GamificationService.computeRealStats(nextAnswers, nextFlashcards));
+    await refresh();
     setPlan(StorageService.getUserPlan());
     setTheme(StorageService.getTheme());
-  }, []);
+  }, [refresh]);
 
-  // Quando o usuário autenticado muda, recarrega os dados do namespace dele
+  // Quando o usuário autenticado muda (a carga dos dados dele é do useAppData)
   useEffect(() => {
     if (user?.id) {
       setNavStateRestored(false);
-      setDataLoading(true);
-      refreshData().finally(() => setDataLoading(false));
+      setPlan(StorageService.getUserPlan());
+      setTheme(StorageService.getTheme());
       const legacySummary = StorageService.checkLegacyDataSummary(user.id);
       if (legacySummary.hasLegacyData) {
         setMigrationSummary(legacySummary);
       }
     }
-  }, [user?.id, refreshData]);
+  }, [user?.id]);
 
   // ── Restauração de navegação depois de um reload (Prompt 22-A) ─────────────
   // Só roda depois que os dados do usuário terminaram de carregar: a view é
@@ -286,17 +344,25 @@ function AuthenticatedApp() {
   // disponíveis para ESTA conta agora — um material despublicado ou removido
   // entre sessões não pode ser reaberto, e o usuário é avisado em vez de cair
   // numa tela vazia. O estado é lido do StorageService, que já isola por UID.
+  // Espera os dados DESTE usuário terem vindo do servidor (`dataReady`): uma
+  // carga que falhou deixa a lista de compêndios vazia, e julgar o pack salvo
+  // contra ela o daria como despublicado e o apagaria (45-G, revisão do #93).
   useEffect(() => {
-    if (!user?.id || dataLoading || navStateRestored) return;
+    if (!user?.id || dataLoading || !dataReady || navStateRestored) return;
 
-    // Link direto (#/questoes etc.) tem prioridade sobre a tela salva.
+    // Link direto (#/questoes etc.) tem prioridade sobre a tela salva. Sem
+    // link, quem RECARREGOU a página volta à tela salva (22-A); quem ABRIU o
+    // app agora (aba nova, primeira vez, outra conta) entra por "Hoje" (43-E).
     const hashView = viewFromHash();
+    const reloaded = jaEntrouNestaAba(user.id);
     const savedView = (PERSISTED_VIEWS as readonly string[]).includes(hashView)
       ? hashView
-      : StorageService.getUIState<string>('nav_active_view', 'dashboard');
+      : reloaded
+      ? StorageService.getUIState<string>('nav_active_view', 'today')
+      : 'today';
     const isAllowedView = (PERSISTED_VIEWS as readonly string[]).includes(savedView);
     const canUseAdmin = profile?.role === 'admin' && profile?.status === 'active';
-    const restoredView = isAllowedView && (savedView !== 'admin' || canUseAdmin) ? savedView : 'dashboard';
+    const restoredView = isAllowedView && (savedView !== 'admin' || canUseAdmin) ? savedView : 'today';
 
     const savedPackId = StorageService.getUIState<string | null>('nav_thematic_pack', null);
     const isValidPack =
@@ -304,6 +370,7 @@ function AuthenticatedApp() {
       compendiums.some((c) => packIdForCompendium(c.id) === savedPackId);
 
     setActiveView(restoredView);
+    marcarEntradaNestaAba(user.id);
     if (isValidPack) {
       setSelectedPackId(savedPackId);
     } else if (typeof savedPackId === 'string' && savedPackId !== '') {
@@ -311,15 +378,15 @@ function AuthenticatedApp() {
       setInvalidSavedPackId(savedPackId);
     }
     setNavStateRestored(true);
-  }, [user?.id, dataLoading, navStateRestored, compendiums, profile?.role, profile?.status]);
+  }, [user?.id, dataLoading, dataReady, navStateRestored, compendiums, profile?.role, profile?.status]);
 
   // Persistência só começa depois da restauração — gravar antes sobrescreveria
-  // o valor salvo com o 'dashboard' do estado inicial.
+  // o valor salvo com o 'today' do estado inicial.
   useEffect(() => {
     if (!navStateRestored) return;
     StorageService.setUIState(
       'nav_active_view',
-      (PERSISTED_VIEWS as readonly string[]).includes(activeView) ? activeView : 'dashboard'
+      (PERSISTED_VIEWS as readonly string[]).includes(activeView) ? activeView : 'today'
     );
   }, [activeView, navStateRestored]);
 
@@ -350,7 +417,7 @@ function AuthenticatedApp() {
       } else {
         // Entrada de sessão efêmera (via "avançar"): o estado dela não existe
         // mais — permanece na tela atual.
-        window.history.replaceState(null, '', `#/${previousViewRef.current ?? 'dashboard'}`);
+        window.history.replaceState(null, '', `#/${previousViewRef.current ?? 'today'}`);
       }
     };
     window.addEventListener('popstate', onPopState);
@@ -525,6 +592,7 @@ function AuthenticatedApp() {
     setFocusQuestionId(undefined);
     // Recorte por tema, nunca herdado de um pack aberto antes.
     setScopeCompendiumForQuestions(undefined);
+    setScopeQuestionIdsForQuestions(undefined);
     setPackReturnContext(null);
     setActiveView('questions');
   };
@@ -540,6 +608,20 @@ function AuthenticatedApp() {
     setFilterThemeForQuestions(undefined);
     setFocusQuestionId(undefined);
     setScopeCompendiumForQuestions(compendiumId);
+    setScopeQuestionIdsForQuestions(undefined);
+    setPackReturnContext(null);
+    setActiveView('questions');
+  };
+
+  // 43-C: "Testar o que li" abre a lista recortada pelas questões escolhidas
+  // no modal — a mesma tela de sempre, onde errar já gera flashcard.
+  const handleStartTestarOQueLi = (questionIds: string[]) => {
+    setIsTestarOpen(false);
+    setFilterThemeForQuestions(undefined);
+    setFilterStatusForQuestions(undefined);
+    setFocusQuestionId(undefined);
+    setScopeCompendiumForQuestions(undefined);
+    setScopeQuestionIdsForQuestions(questionIds);
     setPackReturnContext(null);
     setActiveView('questions');
   };
@@ -554,6 +636,7 @@ function AuthenticatedApp() {
   // sumia da lista, e os erros ficavam só os daquele material (43-B).
   const clearQuestionsScope = () => {
     setScopeCompendiumForQuestions(undefined);
+    setScopeQuestionIdsForQuestions(undefined);
     setPackReturnContext(null);
   };
 
@@ -585,6 +668,7 @@ function AuthenticatedApp() {
     setFilterThemeForQuestions(undefined);
     setFocusQuestionId(undefined);
     setScopeCompendiumForQuestions(compendiumId);
+    setScopeQuestionIdsForQuestions(undefined);
     setPackReturnContext(packId);
     setActiveView('questions');
   };
@@ -602,6 +686,7 @@ function AuthenticatedApp() {
     setFilterThemeForQuestions(themeId);
     setFocusQuestionId(undefined);
     setScopeCompendiumForQuestions(SCOPE_UNLINKED);
+    setScopeQuestionIdsForQuestions(undefined);
     setPackReturnContext(selectedPackId ?? 'lista');
     setActiveView('questions');
   };
@@ -622,6 +707,7 @@ function AuthenticatedApp() {
 
   const handleReturnToThematicStudy = () => {
     setScopeCompendiumForQuestions(undefined);
+    setScopeQuestionIdsForQuestions(undefined);
     setScopeCompendiumForFlashcards(undefined);
     setFilterThemeForQuestions(undefined);
     setFilterThemeForFlashcards(undefined);
@@ -675,6 +761,8 @@ function AuthenticatedApp() {
           }`}
         >
 
+          <ConnectionNotice status={dataStatus} className="mb-4" />
+
           {/* View Router */}
           <AppErrorBoundary resetKey={activeView}>
           <Suspense
@@ -684,6 +772,20 @@ function AuthenticatedApp() {
               </div>
             }
           >
+          {activeView === 'today' && (
+            <HojeView
+              compendiums={compendiums}
+              questions={questions}
+              lastReadingSession={lastReadingSession}
+              dataReady={dataReady}
+              dataStatus={dataStatus}
+              onResumeReading={(compendiumId, sectionId) => handleOpenCompendium(compendiumId, sectionId)}
+              onTestarOQueLi={() => setIsTestarOpen(true)}
+              onStartReview={(cards) => handleStartSRS(cards, 'today')}
+              onOpenLibrary={() => handleSelectView('compendiums')}
+            />
+          )}
+
           {activeView === 'dashboard' && (
             <DashboardView
               disciplines={disciplines}
@@ -698,6 +800,7 @@ function AuthenticatedApp() {
               initialTab={dashboardTab}
               onTabChange={setDashboardTab}
               onStartErrorSimulado={handleTrainMistakesUntimed}
+              onTestarOQueLi={() => setIsTestarOpen(true)}
               onUpdate={refreshData}
             />
           )}
@@ -755,6 +858,7 @@ function AuthenticatedApp() {
               }}
               onOpenQuestionsForTheme={handleOpenQuestionsForTheme}
               onOpenQuestionsForMaterial={handleOpenQuestionsForMaterial}
+              onTestarOQueLi={() => setIsTestarOpen(true)}
               onOpenFlashcardsForTheme={handleOpenFlashcardsForTheme}
               targetSectionId={selectedSectionId}
               onSectionJumpHandled={() => setSelectedSectionId(undefined)}
@@ -773,6 +877,7 @@ function AuthenticatedApp() {
               onOpenCreateSimulado={() => setIsCreateSimuladoOpen(true)}
               filterThemeId={filterThemeForQuestions}
               filterCompendiumId={scopeCompendiumForQuestions}
+              scopeQuestionIds={scopeQuestionIdsForQuestions}
               focusQuestionId={focusQuestionId}
               initialStatusFilter={filterStatusForQuestions}
               onReturnToThematicStudy={packReturnContext ? handleReturnToThematicStudy : undefined}
@@ -812,7 +917,11 @@ function AuthenticatedApp() {
                 refreshData();
                 // Volta para onde a sessão começou: o pack continua selecionado,
                 // então "Estudo Temático" reabre exatamente o mesmo pack.
-                setActiveView(flashcardOriginView === 'thematic-study' ? 'thematic-study' : 'flashcards');
+                setActiveView(
+                  flashcardOriginView === 'thematic-study' || flashcardOriginView === 'today'
+                    ? flashcardOriginView
+                    : 'flashcards'
+                );
               }}
               onOpenCompendium={handleOpenCompendium}
             />
@@ -863,8 +972,14 @@ function AuthenticatedApp() {
                 setDashboardTab(tab);
               }}
               onStartErrorSimulado={handleTrainMistakesUntimed}
+              onTestarOQueLi={() => setIsTestarOpen(true)}
               onUpdate={refreshData}
             />
+          )}
+
+          {/* 44-D: qualquer usuário ativo (o gate de status vem antes, no topo do componente) */}
+          {activeView === 'como-escrever-material' && (
+            <ComoEscreverMaterialView disciplines={disciplines} themes={themes} />
           )}
 
           {/* Admin CMS - Apenas para papel admin */}
@@ -914,7 +1029,7 @@ function AuthenticatedApp() {
         onSelectView={handleSelectView}
         dueCardsCount={dueCardsCount}
         errorLogCount={errorCount}
-        lastReadingSession={lastReadingSession}
+        lastReadingSession={activeView === 'today' ? null : lastReadingSession}
         onResumeReading={handleResumeReading}
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenCreateSimulado={() => setIsCreateSimuladoOpen(true)}
@@ -949,6 +1064,20 @@ function AuthenticatedApp() {
         currentPlan={plan}
         onSelectPlan={handleSelectPlan}
       />
+
+      {isTestarOpen && (
+        <TestarOQueLiModal
+          compendiums={compendiums}
+          themes={themes}
+          questions={questions}
+          onClose={() => setIsTestarOpen(false)}
+          onStart={handleStartTestarOQueLi}
+          onOpenQuestionsForTheme={(themeId) => {
+            setIsTestarOpen(false);
+            handleOpenQuestionsForTheme(themeId);
+          }}
+        />
+      )}
 
       <CreateSimuladoModal
         isOpen={isCreateSimuladoOpen}

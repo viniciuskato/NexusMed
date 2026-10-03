@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
+  CalendarCheck,
   BookOpen,
   HelpCircle,
   Layers,
@@ -63,6 +64,14 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   );
 
   const navItems = [
+    {
+      id: 'today',
+      label: 'Hoje',
+      icon: CalendarCheck,
+      badge: null as number | null,
+      badgeColor: '',
+      isActive: activeView === 'today',
+    },
     {
       id: 'dashboard',
       label: 'Início',

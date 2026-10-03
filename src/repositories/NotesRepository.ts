@@ -30,17 +30,15 @@ class LocalStorageNotesRepository implements NotesRepository {
   }
 }
 
+// Leitura (45-G, D-2): com Supabase configurado, só do servidor. A falha sobe
+// para a tela, que diz "sem conexão" — nunca cai numa cópia local vazia ou velha.
 class ResilientNotesRepository implements NotesRepository {
   private supa = new SupabaseNotesRepository();
   private local = new LocalStorageNotesRepository();
 
   async getNotes(): Promise<Record<string, string>> {
     if (!isSupabaseConfigured) return this.local.getNotes();
-    try {
-      return await this.supa.getNotes();
-    } catch {
-      return this.local.getNotes();
-    }
+    return this.supa.getNotes();
   }
 
   // Sem cópia local para cair: em erro, nada a mostrar, mas registrado —
@@ -48,12 +46,9 @@ class ResilientNotesRepository implements NotesRepository {
   // remoto, rede).
   async getRemovedSectionNotes(): Promise<Record<string, RemovedSectionNote[]>> {
     if (!isSupabaseConfigured) return this.local.getRemovedSectionNotes();
-    try {
-      return await this.supa.getRemovedSectionNotes();
-    } catch (err) {
-      console.error('[NotesRepository] falha ao ler getRemovedSectionNotes do Supabase:', err);
-      return {};
-    }
+    // Sem `{}` numa falha (45-G, D-2): a tela diria "nenhuma anotação de seção
+    // removida" quando na verdade não conseguiu ler — a falha sobe e ela avisa.
+    return this.supa.getRemovedSectionNotes();
   }
 
   async saveNote(targetId: string, noteText: string): Promise<void> {

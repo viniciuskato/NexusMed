@@ -349,13 +349,15 @@ export const StorageService = {
   getReadingProgress(): Record<string, { readSectionIds: string[]; percent: number }> {
     return getItem(getUserKey(STORAGE_KEYS.READING_PROGRESS), {});
   },
-  toggleSectionRead(compendiumId: string, sectionId: string, totalSections: number): number {
+  // Estado explícito, nunca "inverter" (45-G, AUD-29): num aparelho novo a
+  // cópia local está vazia e não reflete o que a tela mostra.
+  setSectionRead(compendiumId: string, sectionId: string, isRead: boolean, totalSections: number): number {
     const progress = this.getReadingProgress();
     const compProgress = progress[compendiumId] || { readSectionIds: [], percent: 0 };
     const idx = compProgress.readSectionIds.indexOf(sectionId);
-    if (idx >= 0) {
+    if (!isRead && idx >= 0) {
       compProgress.readSectionIds.splice(idx, 1);
-    } else {
+    } else if (isRead && idx < 0) {
       compProgress.readSectionIds.push(sectionId);
     }
     compProgress.percent = Math.round((compProgress.readSectionIds.length / Math.max(1, totalSections)) * 100);
@@ -388,20 +390,15 @@ export const StorageService = {
       flashcards: [],
     });
   },
-  toggleBookmark(type: 'questions' | 'compendiums' | 'flashcards', id: string): boolean {
+  // Estado explícito, nunca "inverter" (45-G, AUD-29).
+  setBookmark(type: 'questions' | 'compendiums' | 'flashcards', id: string, desired: boolean): boolean {
     const bookmarks = this.getBookmarks();
     const list = bookmarks[type];
     const idx = list.indexOf(id);
-    let isBookmarked = false;
-    if (idx >= 0) {
-      list.splice(idx, 1);
-      isBookmarked = false;
-    } else {
-      list.push(id);
-      isBookmarked = true;
-    }
+    if (!desired && idx >= 0) list.splice(idx, 1);
+    else if (desired && idx < 0) list.push(id);
     setItem(getUserKey(STORAGE_KEYS.BOOKMARKS), bookmarks);
-    return isBookmarked;
+    return desired;
   },
 
   // --- Notes (Isolado por UID) ---

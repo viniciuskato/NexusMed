@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   AlertCircle,
   Layers,
@@ -10,6 +10,8 @@ import { Question, Discipline, Theme, QuestionAnswerRecord, Compendium } from '.
 import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { answersRepository } from '../../repositories/AnswersRepository';
 import { QuestionCard } from '../questions/QuestionCard';
+import { useServerLoad } from '../../hooks/useServerLoad';
+import { ConnectionNotice } from '../common/ConnectionNotice';
 
 interface CadernoErrosViewProps {
   questions: Question[];
@@ -33,16 +35,11 @@ export const CadernoErrosView: React.FC<CadernoErrosViewProps> = ({
 
   const [answers, setAnswers] = useState<Record<string, QuestionAnswerRecord>>({});
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const nextAnswers = await answersRepository.getAnswers();
-      if (!cancelled) setAnswers(nextAnswers);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Do servidor (45-G, D-2): sem rede, o que já está na tela fica e o aviso aparece.
+  const { status: loadStatus } = useServerLoad(async () => {
+    const nextAnswers = await answersRepository.getAnswers();
+    return () => setAnswers(nextAnswers);
+  });
 
   const mistakeRecords = (Object.values(answers) as QuestionAnswerRecord[]).filter((a) => !a.isCorrect);
 
@@ -78,6 +75,7 @@ export const CadernoErrosView: React.FC<CadernoErrosViewProps> = ({
 
   return (
     <div className="space-y-6 pb-16">
+      <ConnectionNotice status={loadStatus} />
       {/* Toast */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl elev-xl text-xs font-semibold flex items-center gap-2 border border-slate-800 animate-in fade-in">

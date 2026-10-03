@@ -17,6 +17,10 @@ import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { answersRepository } from '../../repositories/AnswersRepository';
 import { questionsRepository } from '../../repositories/QuestionsRepository';
 import { errorNotebookRepository } from '../../repositories/ErrorNotebookRepository';
+import { useServerLoad } from '../../hooks/useServerLoad';
+import { ConnectionNotice } from '../common/ConnectionNotice';
+import { LoadStatus, loadStatusOf } from '../../services/connectivity';
+import { useAutoRetry } from '../../hooks/useAutoRetry';
 
 interface ErrorNotebookViewProps {
   questions: Question[];
@@ -54,18 +58,33 @@ export const ErrorNotebookView: React.FC<ErrorNotebookViewProps> = ({
   // pelo caminho confiável já publicado (errorNotebookRepository.updateErrorLog).
   const [errorLogs, setErrorLogs] = useState<ErrorLogItem[]>([]);
 
-  const reloadAnswers = () => {
-    answersRepository.getAnswers().then(setAnswers);
-  };
+  // Do servidor (45-G, D-2): sem rede, o que já está na tela fica e o aviso aparece.
+  const { status: loadStatus, reload } = useServerLoad(async () => {
+    const [nextAnswers, nextErrorLogs] = await Promise.all([
+      answersRepository.getAnswers(),
+      errorNotebookRepository.getErrorLogs(),
+    ]);
+    return () => {
+      setAnswers(nextAnswers);
+      setErrorLogs(nextErrorLogs);
+    };
+  });
 
-  const reloadErrorLogs = () => {
-    errorNotebookRepository.getErrorLogs().then(setErrorLogs);
-  };
+  // Status da última busca de gabaritos. Só vale enquanto ainda falta o
+  // gabarito de alguma questão errada: se a questão deixou de ser erro (ou saiu
+  // da lista), não sobra nada a buscar e o aviso não pode ficar preso (45-G,
+  // revisão do #93).
+  const [lastReviewStatus, setLastReviewStatus] = useState<LoadStatus>('ok');
+  const [reviewAttempt, setReviewAttempt] = useState(0);
+  const missingReviewIds = Object.keys(answers).filter((qid) => !answers[qid].isCorrect && !reviews[qid]);
+  const reviewStatus: LoadStatus = missingReviewIds.length > 0 ? lastReviewStatus : 'ok';
+  // Nova tentativa dos gabaritos também relê as respostas: a questão pode ter
+  // deixado de ser erro (ou saído da lista) desde a última carga.
+  useAutoRetry(reviewStatus, () => {
+    void reload();
+    setReviewAttempt((n) => n + 1);
+  });
 
-  useEffect(() => {
-    reloadAnswers();
-    reloadErrorLogs();
-  }, []);
 
   // Mapa questionId -> entrada de error_notebook mais recente. Uma questão
   // pode ter mais de uma linha em error_notebook ao longo do tempo (cada
@@ -86,13 +105,21 @@ export const ErrorNotebookView: React.FC<ErrorNotebookViewProps> = ({
     const mistakeIds = Object.keys(answers).filter((qid) => !answers[qid].isCorrect && !reviews[qid]);
     if (mistakeIds.length === 0) return;
     let cancelled = false;
-    Promise.all(
+    // `allSettled`: a falha ao carregar o gabarito de UMA questão (rede, RPC,
+    // permissão) não esconde o das outras — com `Promise.all`, uma rejeição
+    // derrubava todas (correção da branch antiga, 45-G). As que faltaram
+    // mostram o aviso e são buscadas de novo sozinhas (useAutoRetry).
+    Promise.allSettled(
       mistakeIds.map((id) => questionsRepository.getQuestionReview(id).then((r) => [id, r] as const))
-    ).then((pairs) => {
+    ).then((results) => {
       if (cancelled) return;
+      const failure = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+      setLastReviewStatus(failure ? loadStatusOf(failure.reason) : 'ok');
       setReviews((prev) => {
         const next = { ...prev };
-        for (const [id, r] of pairs) next[id] = r;
+        for (const result of results) {
+          if (result.status === 'fulfilled') next[result.value[0]] = result.value[1];
+        }
         return next;
       });
     });
@@ -100,7 +127,7 @@ export const ErrorNotebookView: React.FC<ErrorNotebookViewProps> = ({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [answers]);
+  }, [answers, reviewAttempt]);
 
   // Filter mistakes
   const mistakes = useMemo(() => {
@@ -198,6 +225,7 @@ export const ErrorNotebookView: React.FC<ErrorNotebookViewProps> = ({
 
   return (
     <div className="space-y-6">
+      <ConnectionNotice status={loadStatus !== 'ok' ? loadStatus : reviewStatus} />
       {/* Header */}
       <div className="bg-gradient-to-r from-rose-950 via-slate-900 to-rose-900 rounded-3xl p-6 sm:p-8 text-white elev-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="max-w-2xl space-y-2">

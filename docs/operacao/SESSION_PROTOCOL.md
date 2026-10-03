@@ -1,22 +1,25 @@
 # SESSION_PROTOCOL.md — contrato de abertura e fechamento de sessão
 
 > Vale para qualquer sessão de IA que trabalhe neste repositório —
-> auditoria, diretoria ou execução (trilha), Claude, Codex ou outra
+> diretoria, sessão de defeitos ou auditoria, Claude, Codex ou outra
 > ferramenta. Papéis em
 > [`../diretoria/MODELO-DIRETORIA.md`](../diretoria/MODELO-DIRETORIA.md):
-> a sessão de auditoria é esporádica e só sob pedido explícito do
-> usuário; desde 2026-09-23 a execução é feita por trilhas.
+> desde 2026-09-28 (D-7), a diretoria e a sessão de defeitos; a sessão de
+> materiais (o Gemini) fica fora do repositório e não segue este protocolo;
+> a auditoria é esporádica e só sob pedido explícito do usuário.
 
 ## Abertura obrigatória
 
 1. Ler conforme o papel — a leitura é curta de propósito: documento lido
    sem necessidade custa tokens em toda sessão e dilui o que importa.
-   - **Trilha (execução):** `AGENTS.md` (raiz) e
-     [`EXECUTOR_PROTOCOL.md`](EXECUTOR_PROTOCOL.md); depois, a cada
-     unidade, a própria unidade no plano e os achados que ela cita. O resto
-     só quando a unidade apontar ou faltar um fato. [`RUNBOOK.md`](RUNBOOK.md)
+   - **Sessão de defeitos:** `AGENTS.md` (raiz) e
+     [`EXECUTOR_PROTOCOL.md`](EXECUTOR_PROTOCOL.md); depois, a cada item, a
+     issue e o que ela aponta. O resto só quando a issue apontar ou faltar
+     um fato. [`RUNBOOK.md`](RUNBOOK.md)
      quando for testar ou publicar.
-   - **Diretoria:** `AGENTS.md` → o plano canônico
+   - **Diretoria:** `AGENTS.md` →
+     [`../diretoria/MODELO-DIRETORIA.md`](../diretoria/MODELO-DIRETORIA.md)
+     → o plano canônico
      (`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`) →
      [`DECISIONS.md`](DECISIONS.md) (entradas recentes) →
      [`PROJECT_STATE.md`](PROJECT_STATE.md) quando o assunto tocar
@@ -47,9 +50,9 @@
 Toda sessão encerra devolvendo um relatório em linguagem executiva —
 alguém sem contexto técnico profundo precisa conseguir decidir "posso
 confiar nisso, e o que fazer a seguir" só lendo o relatório. Checklist
-mínimo, todos os itens. **Na trilha, o relatório é o bloco RETORNO na
-descrição do PR** (`EXECUTOR_PROTOCOL.md`), que já cobre estes itens; fora do
-PR, basta dizer em que unidade a trilha está e o que espera.
+mínimo, todos os itens. **Na sessão de defeitos, o relatório é o bloco
+RETORNO na descrição do PR** (`EXECUTOR_PROTOCOL.md`), que já cobre estes
+itens; fora do PR, basta dizer em que issue ela está e o que espera.
 
 - [ ] **Objetivo**: o que a sessão tentou fazer (uma frase).
 - [ ] **Impacto**: o que de fato mudou — arquivos, dados, comportamento
@@ -76,9 +79,9 @@ PR, basta dizer em que unidade a trilha está e o que espera.
       executável.
 
 Depois de reportar, **atualizar os documentos**, não só a conversa. A
-trilha atualiza só o que `EXECUTOR_PROTOCOL.md` manda (a linha "Estado" da
-unidade, achados, backlog) e, se for o caso, `AGENTS.md` e `incidents/`; o
-resto é da diretoria:
+sessão de defeitos não edita o plano, o backlog nem `PROJECT_STATE.md` (D-7)
+e, se for o caso, atualiza `AGENTS.md` e `incidents/`; o resto é da
+diretoria, em lote:
 
 - `TASKS.md`: estado real da(s) tarefa(s) tocada(s).
 - `DECISIONS.md`: se alguma decisão durável nova foi tomada (não tarefas,
@@ -92,6 +95,13 @@ resto é da diretoria:
   `standards/`, runbook, decisão e teste/CI sem duplicar a narrativa.
 
 ## Regras de segurança sempre válidas, sem exceção implícita
+
+> **Exceções explícitas (D-8, 28/09, e D-9, 29/09):** o "aprovado" do dono
+> a um plano autoriza a diretoria a aplicar a migration no remoto e a
+> mesclar os PRs dele, nas condições da D-9; push de branch de trabalho,
+> abrir PR, postar revisão e pôr o rótulo `revisado` são autorizações fixas
+> do dono (D-8, item 4). Fora disso, as regras abaixo valem sem exceção
+> (`DECISIONS.md`, D-8 e D-9).
 
 - Não fazer force push, `reset --hard` compartilhado, ou merge em `main`
   sem autorização explícita **para aquela mudança específica**.
