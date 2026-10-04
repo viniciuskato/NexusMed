@@ -19,15 +19,12 @@ import {
   FileQuestion,
   Upload,
 } from 'lucide-react';
-import { UserPlan, UserStats, ThemeMode } from '../types';
+import { UserStats, ThemeMode } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { SyncStatusIndicator } from './common/SyncStatusIndicator';
 import { Logo } from './common/Logo';
 
 interface HeaderProps {
-  currentPlan: UserPlan;
-  onOpenPlanModal?: () => void;
-  onTogglePlanQuick?: () => void;
   onOpenSearch: () => void;
   stats: UserStats;
   dueCardsCount: number;

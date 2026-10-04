@@ -133,6 +133,63 @@ describe('ImportQuestionsModal — materiais cobrados pelo lote (43-B)', () => {
   });
 });
 
+describe('ImportQuestionsModal — a seção do material citada no arquivo (P10)', () => {
+  const comSecoes: Compendium[] = [
+    {
+      ...material('mat-espiro', 'Espirometria'),
+      sections: [
+        { id: 'sec-obstrutivo', title: 'Padrão obstrutivo', content: '', keyTakeaways: [] },
+        { id: 'sec-restritivo', title: 'Padrão restritivo', content: '', keyTakeaways: [] },
+      ],
+    },
+    material('mat-dpoc', 'DPOC'),
+  ];
+  const lote = (materiais: string) => `
+## Questão 1
+
+**Disciplina:** Pneumologia
+**Tema:** Espirometria
+**Instituição / Banca:** ENARE
+**Ano:** 2025
+**Materiais cobertos:** ${materiais}
+
+**Comando da Questão (Pergunta):**
+Qual o padrão?
+
+**A)** Restritivo
+**Explicação A:** Incorreto.
+**B)** Obstrutivo [GABARITO]
+**Explicação B:** Correto.
+`;
+
+  it('"Material > Seção" do arquivo vira o vínculo com a seção, e vale no lugar do material do lote', async () => {
+    render(
+      <ImportQuestionsModal disciplines={[discipline]} themes={[theme]} compendiums={comSecoes} onClose={vi.fn()} onImported={vi.fn()} />
+    );
+    await selectFile(makeMarkdownFile(lote('Espirometria > padrao OBSTRUTIVO; DPOC')));
+    await waitFor(() => screen.getByText(/1 questão\(ões\) encontrada\(s\)/i));
+    fireEvent.click(screen.getByRole('button', { name: /importar 1 rascunho/i }));
+    await waitFor(() => expect(importQuestionDraftMock).toHaveBeenCalledTimes(1));
+    const saved = importQuestionDraftMock.mock.calls[0][0] as Question;
+    expect(saved.materialLinks).toEqual([{ materialId: 'mat-espiro', sectionId: 'sec-obstrutivo' }, { materialId: 'mat-dpoc' }]);
+    expect(saved.compendiumRefId).toBe('mat-espiro');
+    expect(saved.compendiumSectionId).toBe('sec-obstrutivo');
+  });
+
+  it('seção que não existe no material bloqueia a linha com uma frase clara e nada é gravado', async () => {
+    render(
+      <ImportQuestionsModal disciplines={[discipline]} themes={[theme]} compendiums={comSecoes} onClose={vi.fn()} onImported={vi.fn()} />
+    );
+    await selectFile(makeMarkdownFile(lote('Espirometria > Padrão misto')));
+    await waitFor(() => screen.getByText(/1 questão\(ões\) encontrada\(s\)/i));
+    expect(screen.getByText('Bloqueada')).toBeTruthy();
+    expect(screen.getByText(/A seção "Padrão misto" não existe no material "Espirometria"/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /importar 1 rascunho/i })).toBeNull();
+    expect((screen.getByRole('button', { name: /importar 0 rascunho/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect(importQuestionDraftMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('ImportQuestionsModal', () => {
   it('mostra a lista de questões do lote e só grava as prontas após confirmar', async () => {
     const onImported = vi.fn();

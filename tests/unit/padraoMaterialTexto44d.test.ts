@@ -114,10 +114,13 @@ describe('44-D — dividirEmBlocos separa código de texto', () => {
     ]);
   });
 
-  it('a Parte 1 real tem os dois blocos de código (árvore e formato) e o formato começa por "# Título"', () => {
+  it('a Parte 1 real tem os três blocos de código (árvore, esqueleto da condição clínica e formato) e o formato começa por "# Título"', () => {
     const codigos = dividirEmBlocos(PARTE_1_DO_PADRAO).filter((b) => b.tipo === 'codigo');
-    expect(codigos).toHaveLength(2);
-    expect(codigos[1].conteudo.startsWith('# Título completo do material')).toBe(true);
+    expect(codigos).toHaveLength(3);
+    expect(codigos[0].conteudo).toContain('Antibióticos — visão geral');
+    expect(codigos[1].conteudo).toContain('Introdução');
+    expect(codigos[1].conteudo).toContain('Como escolher o tratamento');
+    expect(codigos[2].conteudo.startsWith('# Título completo do material')).toBe(true);
   });
 });
 
@@ -229,8 +232,8 @@ describe('44-D — conteúdo mínimo de cada prompt', () => {
 
   it('revisão: a linha de veredito é a última antes do bloco de correção e única (o revisor automático a lê por máquina)', () => {
     const p = PROMPT_REVISAR_MATERIAL;
-    const veredito = p.indexOf('(c) Veredito: uma linha só, a última antes do bloco de correção');
-    const bloco = p.indexOf('(d) UM único bloco de código');
+    const veredito = p.indexOf('Terceira parte, o veredito: uma linha só, a última antes do bloco de correção');
+    const bloco = p.indexOf('Quarta parte, a correção: UM único bloco de código');
     expect(veredito).toBeGreaterThan(-1);
     expect(bloco).toBeGreaterThan(veredito);
     expect(p).toContain('nenhuma outra linha da resposta começa com "APTO" ou com "NÃO APTO"');
@@ -242,7 +245,7 @@ describe('44-D — conteúdo mínimo de cada prompt', () => {
     expect(regra).toContain('Se você não consegue abrir páginas da internet nesta conversa');
     expect(regra).toContain('obrigatoriamente NÃO APTO');
     // Nada entre as duas exigências que pudesse ficar depois do veredito e antes do bloco.
-    expect(p.indexOf('(b) O que você não conseguiu conferir')).toBeLessThan(veredito);
+    expect(p.indexOf('Segunda parte, o que você não conseguiu conferir')).toBeLessThan(veredito);
     // A regra do veredito vem antes de a resposta ser montada.
     expect(p.indexOf('REGRA DO VEREDITO')).toBeLessThan(p.indexOf('COMO TERMINAR A RESPOSTA'));
   });
@@ -268,5 +271,108 @@ describe('44-D — conteúdo mínimo de cada prompt', () => {
   it('nenhum dos dois prompts fala em atestação ou em pessoa que atesta (o revisor de IA é quem confere)', () => {
     expect(PROMPT_CRIAR_MATERIAL).not.toMatch(/ateste|atesta/i);
     expect(PROMPT_REVISAR_MATERIAL).not.toMatch(/ateste|atesta/i);
+  });
+});
+
+// P9 — padrão v3 e prompts: a proibição de imagem sai, a figura entra, e o fechamento da revisão não induz mais títulos.
+describe('P9 — padrão v3 e prompt de criação', () => {
+  it('o padrão é a versão 3, permite figura marcada como pendente e não proíbe mais imagem', () => {
+    const arquivo = readFileSync(ARQUIVO_PADRAO, 'utf8').replace(/\r\n/g, '\n');
+    expect(arquivo).toContain('**Versão 3 do padrão — 03/10/2026**');
+    expect(arquivo).toContain('**v3 — 03/10/2026.**');
+    expect(arquivo).not.toMatch(/Não use imagens nem HTML/);
+    expect(arquivo).not.toMatch(/\*\*Versão do padrão:\*\* 2/);
+    for (const trecho of ['figura:PENDENTE', 'Mostrar:', 'Você não gera nem busca', 'Enviar imagem']) {
+      expect(arquivo, trecho).toContain(trecho);
+    }
+    // A figura que a IA vê está na Parte 1; o botão da plataforma, só na Parte 2 (quem opera).
+    expect(PARTE_1_DO_PADRAO).toContain('figura:PENDENTE');
+    expect(PARTE_1_DO_PADRAO).not.toContain('Enviar imagem');
+  });
+
+  it('a Parte 1 traz a estrutura nova: esqueleto, fecho, blocos com função, camadas de referência', () => {
+    for (const trecho of [
+      '1.3.1 Esqueleto de uma condição clínica',
+      'Como escolher o tratamento',
+      'Complicações e exacerbação',
+      'Casos clínicos guiados',
+      'Revisão rápida',
+      'Pares para não confundir',
+      'Mensagens essenciais',
+      'Autoavaliação',
+      '**Essencial:**',
+      '**Raciocínio:**',
+      '**Cuidado:**',
+      '**Não confundir:**',
+      '**Atualização:**',
+      '**Aprofundar:**',
+      'Aplicando o conceito',
+      'Ponto de entrada',
+      'Aprofundamento',
+      'Consulta especializada',
+      '[Camada — tipo de evidência]',
+      '**Tabela N.**',
+      '**Figura N.**',
+    ]) {
+      expect(PARTE_1_DO_PADRAO, trecho).toContain(trecho);
+    }
+  });
+
+  it('criação: sem a proibição de imagem; manda marcar a figura como pendente e nunca inventar identificador', () => {
+    const p = PROMPT_CRIAR_MATERIAL;
+    expect(p).not.toMatch(/Nada de LaTeX, cifrão, HTML ou imagem/);
+    for (const trecho of [
+      'FIGURAS (você não gera imagem)',
+      'figura:PENDENTE',
+      'Você nunca escreve um identificador de figura, um endereço de imagem, um caminho de arquivo nem data:',
+      'Mostrar:',
+      'LACUNA_DOCUMENTAL',
+      'o esqueleto da seção 1.3.2',
+      'Revisão rápida',
+      'Autoavaliação',
+      'Casos clínicos guiados',
+      'Atualização diz o que mudou e desde quando',
+      'Aplicando o conceito',
+      '[Camada — tipo de evidência]',
+      '**Versão do padrão:** 3',
+      'uma linha por figura marcada como pendente',
+      'Se uma dessas quatro partes não tiver nada',
+    ]) {
+      expect(p, trecho).toContain(trecho);
+    }
+  });
+});
+
+describe('P9 — prompt revisor: figuras e fechamento sem títulos', () => {
+  it('aceita figuras: confere legenda, fonte e coerência sem exigir ver a imagem, e não faz da figura pendente um achado', () => {
+    const p = PROMPT_REVISAR_MATERIAL;
+    expect(p).toContain('FIGURAS');
+    expect(p).toContain('Você não vê a imagem e não precisa vê-la: não escreva achado por "imagem não vista"');
+    expect(p).toContain('a linha Fonte: não está vazia nem inventada');
+    expect(p).toContain('o texto da seção diz em palavras o que a figura mostra');
+    expect(p).toContain('um bloco de figura sem legenda ou sem Fonte:, é achado do grupo 6');
+    expect(p).toContain('figura:PENDENTE');
+    expect(p).toContain('isso não é achado');
+  });
+
+  it('as letras "(a)" a "(d)" que levavam o modelo a escrever títulos saíram; o fechamento proíbe título, letra e número', () => {
+    const p = PROMPT_REVISAR_MATERIAL;
+    expect(p).not.toMatch(/^\s*\([a-d]\)/m);
+    expect(p).not.toContain('(c) Veredito');
+    expect(p).not.toContain('(d) UM');
+    expect(p).toContain('não escreva título, letra, número, rótulo nem frase de introdução antes de nenhuma das quatro partes');
+    expect(p).toContain('elas não aparecem na resposta');
+    expect(p).toContain('Entre a linha do veredito e o bloco de correção (ou a frase "Nenhum achado muda o material.") não vai nenhum título, comentário ou texto');
+    // As quatro partes, na ordem: alto risco, o que não conferiu, veredito, correção.
+    const ordem = ['Primeira parte, o alto risco', 'Segunda parte, o que você não conseguiu conferir', 'Terceira parte, o veredito', 'Quarta parte, a correção'].map((t) => p.indexOf(t));
+    expect(ordem.every((i) => i > -1)).toBe(true);
+    expect([...ordem].sort((a, b) => a - b)).toEqual(ordem);
+  });
+
+  it('o texto dos achados e a estrutura de v3 entram no escopo da revisão', () => {
+    const p = PROMPT_REVISAR_MATERIAL;
+    expect(p).toContain('o esqueleto adaptado ao assunto, a Revisão rápida e a Autoavaliação');
+    expect(p).toContain('todo bloco Atualização (confira o que mudou e a data)');
+    expect(p).toContain('o "Aplicando o conceito" (confira o cálculo e o corte usados)');
   });
 });

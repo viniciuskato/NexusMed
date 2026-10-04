@@ -84,6 +84,8 @@ export interface PendenciaDeQuestao {
 export interface MaterialPublicado {
   id: string;
   title: string;
+  /** P10: seções do material (id e título). Sem a lista, a seção citada no arquivo não é conferida aqui. */
+  sections?: Array<{ id: string; title: string }>;
 }
 
 export interface AvaliacaoDoLote {
@@ -162,9 +164,23 @@ export function avaliarLote(
     if (publicados !== null && linha.materialTitles.length === 0 && materiaisEscolhidos.length === 0) {
       add('Sem material: escreva “Materiais cobertos” na questão ou escolha o material abaixo.');
     }
-    for (const titulo of publicados === null ? [] : linha.materialTitles) {
-      if (!achaMaterial(titulo, publicados ?? [])) {
-        add(`O material “${titulo}” não é o título exato de um material publicado.`);
+    for (const ligacao of publicados === null ? [] : linha.materialLinks) {
+      const material = achaMaterial(ligacao.title, publicados ?? []);
+      if (!material) {
+        add(`O material “${ligacao.title}” não é o título exato de um material publicado.`);
+      } else if (ligacao.sectionTitle && material.sections) {
+        // P10: a seção citada precisa existir no material, uma só com esse título.
+        const alvo = normalizar(ligacao.sectionTitle);
+        const achadas = material.sections.filter((sec) => normalizar(sec.title) === alvo).length;
+        if (achadas === 0) {
+          add(
+            `A seção “${ligacao.sectionTitle}” não existe no material “${material.title}”. Escreva o título exato de uma seção dele, ou tire o “>” e a seção para ligar ao material inteiro.`,
+          );
+        } else if (achadas > 1) {
+          add(
+            `O material “${material.title}” tem mais de uma seção chamada “${ligacao.sectionTitle}”: o NexusMed não sabe qual é. Tire o “>” e a seção para ligar ao material inteiro.`,
+          );
+        }
       }
     }
   }
@@ -223,6 +239,8 @@ export interface QuestaoParaPublicar {
   high_yield_summary: string;
   tags: string[];
   material_titles: string[];
+  /** P10: o mesmo que `material_titles`, com a seção citada em cada material (`null` = material inteiro). */
+  material_links: Array<{ title: string; section_title: string | null }>;
   options: Array<{ letter: string; text: string; explanation: string; is_correct: boolean }>;
 }
 
@@ -249,6 +267,7 @@ export function lerQuestoesParaPublicar(texto: string, disciplines: Discipline[]
       high_yield_summary: l.highYieldSummary,
       tags: l.tags,
       material_titles: l.materialTitles,
+      material_links: l.materialLinks.map((m) => ({ title: m.title, section_title: m.sectionTitle })),
       options: l.options.map((o) => ({
         letter: o.letter,
         text: o.text,

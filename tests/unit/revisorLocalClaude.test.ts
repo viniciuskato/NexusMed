@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -82,9 +82,11 @@ describe('como o claude é chamado', () => {
   const pergunta = { sistema: 'SISTEMA', mensagem: 'MENSAGEM' };
 
   it('só julga: sem ferramentas, sem pular permissões, sem sessão em disco, com opus', () => {
-    const { args, entrada, sistemaNaEntrada } = prepararChamada(pergunta, { exe: 'claude.exe' });
+    const preparo = prepararChamada(pergunta, { exe: 'claude.exe' });
+    if (!preparo.ok) throw new Error('esperava uma chamada pronta');
+    const { args, entrada, sistemaEmArquivo } = preparo;
     expect(entrada).toBe('MENSAGEM');
-    expect(sistemaNaEntrada).toBe(false);
+    expect(sistemaEmArquivo).toBeNull();
     expect(args).toContain('-p');
     expect(args[args.indexOf('--model') + 1]).toBe('opus');
     expect(args[args.indexOf('--tools') + 1]).toBe('');
@@ -98,28 +100,54 @@ describe('como o claude é chamado', () => {
   });
 
   it('com --web libera só a busca e a leitura de página da web, e nada além', () => {
-    const { args } = prepararChamada(pergunta, { exe: 'claude.exe', web: true });
+    const preparo = prepararChamada(pergunta, { exe: 'claude.exe', web: true });
+    if (!preparo.ok) throw new Error('esperava uma chamada pronta');
+    const { args } = preparo;
     expect(args[args.indexOf('--tools') + 1]).toBe('WebSearch,WebFetch');
     expect(args[args.indexOf('--allowedTools') + 1]).toBe('WebSearch,WebFetch');
     expect(args.join(' ')).not.toMatch(/Bash|Edit|Write|Read|dangerously/);
   });
 
-  it('o prompt revisor de verdade cabe na linha de comando do Windows, com folga conhecida', () => {
+  it('o prompt revisor de verdade (com o padrão v3, bem mais longo) passa do limite da linha de comando do Windows e vai por --system-prompt-file, nunca truncado nem misturado à mensagem', () => {
     const sistema = montarSistema(BASE_DO_REVISOR);
-    const { args, sistemaNaEntrada } = prepararChamada({ sistema, mensagem: 'x' }, { exe: 'C:/x/claude.exe', plataforma: 'win32' });
-    expect(sistemaNaEntrada).toBe(false);
-    expect(tamanhoDaLinhaDeComando('C:/x/claude.exe', args)).toBeLessThanOrEqual(LIMITE_DA_LINHA_DE_COMANDO);
+    // P9: o padrão v3 trouxe a estrutura, as figuras e os blocos com função; o texto passou de 30 mil caracteres.
+    expect(sistema.length).toBeGreaterThan(LIMITE_DA_LINHA_DE_COMANDO);
+    // Sem arquivo para ele, a chamada falha fechada: o prompt nunca vai cortado.
+    const semArquivo = prepararChamada({ sistema, mensagem: 'x' }, { exe: 'C:/x/claude.exe', plataforma: 'win32' });
+    expect(semArquivo).toEqual({ ok: false, motivo: 'o prompt de sistema não cabe na linha de comando e não há arquivo para ele' });
+    // Com o arquivo (que `perguntarAoClaude` cria e apaga), o prompt inteiro vai nele e só a mensagem vai pela entrada.
+    const preparo = prepararChamada({ sistema, mensagem: 'x' }, { exe: 'C:/x/claude.exe', plataforma: 'win32', arquivoDoSistema: 'C:/tmp/sistema.txt' });
+    if (!preparo.ok) throw new Error('esperava uma chamada pronta');
+    expect(preparo.sistemaEmArquivo).toEqual({ caminho: 'C:/tmp/sistema.txt', conteudo: sistema });
+    expect(preparo.entrada).toBe('x');
+    expect(preparo.args).not.toContain('--system-prompt');
+    expect(preparo.args[preparo.args.indexOf('--system-prompt-file') + 1]).toBe('C:/tmp/sistema.txt');
+    expect(tamanhoDaLinhaDeComando('C:/x/claude.exe', preparo.args)).toBeLessThanOrEqual(LIMITE_DA_LINHA_DE_COMANDO);
+    // Fora do Windows o limite é outro: continua como argumento, inteiro.
+    const linux = prepararChamada({ sistema, mensagem: 'x' }, { exe: 'claude', plataforma: 'linux' });
+    expect(linux.ok && linux.sistemaEmArquivo === null && linux.args.includes(sistema)).toBe(true);
   });
 
-  it('prompt grande demais para a linha de comando do Windows vai pela entrada padrão, antes da mensagem', () => {
+  it('prompt grande demais para a linha de comando do Windows vai por --system-prompt-file, nunca misturado à mensagem', () => {
     const grande = `${'"aspas" '.repeat(5000)}fim`;
-    const { args, entrada, sistemaNaEntrada } = prepararChamada({ sistema: grande, mensagem: 'MENSAGEM' }, { exe: 'claude.exe', plataforma: 'win32' });
-    expect(sistemaNaEntrada).toBe(true);
-    expect(args).not.toContain('--system-prompt');
-    expect(args[args.indexOf('--tools') + 1]).toBe('');
-    expect(entrada).toBe(`${grande}\n\nMENSAGEM`);
+    const preparo = prepararChamada({ sistema: grande, mensagem: 'MENSAGEM' }, { exe: 'claude.exe', plataforma: 'win32', arquivoDoSistema: 'C:/tmp/sistema.txt' });
+    if (!preparo.ok) throw new Error('esperava uma chamada pronta');
+    expect(preparo.args).not.toContain('--system-prompt');
+    expect(preparo.args[preparo.args.indexOf('--system-prompt-file') + 1]).toBe('C:/tmp/sistema.txt');
+    expect(preparo.args[preparo.args.indexOf('--tools') + 1]).toBe('');
+    expect(preparo.sistemaEmArquivo).toEqual({ caminho: 'C:/tmp/sistema.txt', conteudo: grande });
+    // A entrada é SÓ a mensagem (o material do envio): as instruções nunca vão junto.
+    expect(preparo.entrada).toBe('MENSAGEM');
+    expect(preparo.args.join(' ')).not.toContain('aspas');
     // Fora do Windows o limite é outro: continua como argumento.
-    expect(prepararChamada({ sistema: grande, mensagem: 'M' }, { exe: 'claude', plataforma: 'linux' }).sistemaNaEntrada).toBe(false);
+    const linux = prepararChamada({ sistema: grande, mensagem: 'M' }, { exe: 'claude', plataforma: 'linux' });
+    expect(linux.ok && linux.sistemaEmArquivo === null && linux.args.includes('--system-prompt')).toBe(true);
+  });
+
+  it('prompt grande demais e sem arquivo para ele: falha fechada, sem montar chamada nem misturar instruções e mensagem', () => {
+    const grande = `${'"aspas" '.repeat(5000)}fim`;
+    const preparo = prepararChamada({ sistema: grande, mensagem: 'MENSAGEM' }, { exe: 'claude.exe', plataforma: 'win32' });
+    expect(preparo).toEqual({ ok: false, motivo: expect.stringMatching(/não cabe na linha de comando/) });
   });
 
   it('nunca repassa ao claude as variáveis que o fariam cobrar de uma API paga', () => {
@@ -203,6 +231,46 @@ describe('o processo do claude (script de mentira)', () => {
     } finally {
       delete process.env.FAKE_CLAUDE_REGISTRO;
       delete process.env.ANTHROPIC_API_KEY;
+    }
+  });
+
+  it('prompt de sistema grande: o claude recebe --system-prompt-file com o arquivo gravado e a entrada só traz a mensagem; o arquivo some depois', async () => {
+    const registro = path.join(pasta, 'registro-sistema.jsonl');
+    const temporaria = path.join(pasta, 'temporaria');
+    mkdirSync(temporaria, { recursive: true });
+    process.env.FAKE_CLAUDE_REGISTRO = registro;
+    try {
+      const grande = `INSTRUCOES ${'"aspas" '.repeat(5000)}fim`;
+      const perguntar = perguntarAoClaude(opcoes({ plataforma: 'win32', pastaTemporaria: temporaria }));
+      const mensagem = ['=== INÍCIO DO MATERIAL abc ===', 'texto', '=== FIM DO MATERIAL abc ==='].join('\n');
+      const r = await perguntar({ sistema: grande, mensagem });
+      expect(r.ok).toBe(true);
+      const visto = JSON.parse(readFileSync(registro, 'utf8').trim().split('\n')[0]);
+      expect(visto.args).not.toContain('--system-prompt');
+      expect(visto.args).toContain('--system-prompt-file');
+      expect(visto.sistemaDoArquivo).toEqual({ tamanho: grande.length, comecaCom: 'INSTRUCOES' });
+      expect(visto.tamanhoDaEntrada).toBe(mensagem.length);
+      expect(visto.entradaTemInstrucoes).toBe(false);
+      // Nada fica no disco depois da chamada.
+      expect(readdirSync(temporaria)).toEqual([]);
+    } finally {
+      delete process.env.FAKE_CLAUDE_REGISTRO;
+    }
+  });
+
+  it('prompt de sistema grande e sem onde gravar o arquivo: falha fechada, o claude nem é executado', async () => {
+    const registro = path.join(pasta, 'registro-sem-arquivo.jsonl');
+    const naoEPasta = path.join(pasta, 'arquivo-no-lugar-da-pasta');
+    writeFileSync(naoEPasta, '');
+    process.env.FAKE_CLAUDE_REGISTRO = registro;
+    try {
+      const grande = `${'"aspas" '.repeat(5000)}fim`;
+      const perguntar = perguntarAoClaude(opcoes({ plataforma: 'win32', pastaTemporaria: naoEPasta }));
+      const r = await perguntar({ sistema: grande, mensagem: 'MENSAGEM' });
+      expect(r).toMatchObject({ ok: false, tipo: 'processo' });
+      expect(existsSync(registro)).toBe(false);
+    } finally {
+      delete process.env.FAKE_CLAUDE_REGISTRO;
     }
   });
 

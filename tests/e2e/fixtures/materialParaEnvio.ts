@@ -24,7 +24,7 @@ export function materialParaEnvio(opcoes: OpcoesDoMaterial = {}): string {
     `**Disciplina:** ${disciplina}`,
     `**Tema:** ${tema}`,
     '**Tempo estimado de leitura:** 12 minutos',
-    '**Versão do padrão:** 2',
+    '**Versão do padrão:** 3',
     '',
     '### Primeira seção',
     '**Tag de Mecanismo:** Visão geral',

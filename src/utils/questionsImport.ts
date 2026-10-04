@@ -1,4 +1,13 @@
-import { DifficultyLevel, Discipline, MedicalCycle, Question, QuestionOption, Theme } from '../types';
+import {
+  Compendium,
+  DifficultyLevel,
+  Discipline,
+  MedicalCycle,
+  Question,
+  QuestionMaterialLink,
+  QuestionOption,
+  Theme,
+} from '../types';
 
 // ============================================================================
 // Importação de questões a partir de Markdown — equivalente de
@@ -29,7 +38,8 @@ import { DifficultyLevel, Discipline, MedicalCycle, Question, QuestionOption, Th
 //   **Ano:** 2025
 //   **Ciclo:** internato_residencia (opcional; padrão internato_residencia)
 //   **Dificuldade:** medio (opcional; padrão medio)
-//   **Materiais cobertos:** Título exato; Outro título exato (opcional; 44-H1)
+//   **Materiais cobertos:** Título exato > Título exato da seção; Outro título exato (opcional; 44-H1,
+//   seção P10: o "> Seção" liga a questão ao trecho do material; sem ele, ao material inteiro)
 //
 //   **Enunciado Clínico (Caso / Vinheta):** (opcional)
 //   Texto da vinheta...
@@ -91,6 +101,33 @@ export interface QuestionImportOption {
   isCorrect: boolean;
 }
 
+/**
+ * Separa "Título do material > Título da seção". O separador é o ÚLTIMO " > " (com espaços dos dois lados):
+ * num material chamado "Eletrólitos > ácido-base", "Eletrólitos > ácido-base > Sódio" é o material
+ * "Eletrólitos > ácido-base" e a seção "Sódio". Por isso, um título com " > " só pode ser escrito junto
+ * de uma seção (sem ela, o fim do título seria lido como a seção). Sem " > ", o item todo é o título
+ * (um ">" colado, "A>B", é parte do título); um " >" no fim, sem nada depois, é "sem seção".
+ */
+export function separarMaterialESecao(item: string): { title: string; sectionTitle: string | null } {
+  const texto = item.trim();
+  let corte = -1;
+  let largura = 0;
+  for (const m of texto.matchAll(/\s>\s/g)) {
+    corte = m.index ?? -1;
+    largura = m[0].length;
+  }
+  if (corte === -1) {
+    return { title: texto.replace(/\s>$/, '').trim(), sectionTitle: null };
+  }
+  return { title: texto.slice(0, corte).trim(), sectionTitle: texto.slice(corte + largura).trim() || null };
+}
+
+/** P10: um material que a questão cobre e, opcionalmente, a seção dele (`Material > Seção`). */
+export interface QuestionImportMaterialLink {
+  title: string;
+  sectionTitle: string | null;
+}
+
 export interface QuestionImportPreview {
   /** Posição no arquivo (1-based), só para exibição ("Questão 3") — nunca persistida. */
   index: number;
@@ -114,6 +151,8 @@ export interface QuestionImportPreview {
    * O Admin ignora (vale o material escolhido para o lote); o envio pelo site os confere com os publicados.
    */
   materialTitles: string[];
+  /** P10: os mesmos materiais de `materialTitles`, cada um com a seção citada no arquivo (`Material > Seção`), se houver. */
+  materialLinks: QuestionImportMaterialLink[];
   /** Tudo que não pôde ser importado, está ausente ou usou um valor padrão — sempre mostrado, nunca escondido. */
   missingFields: string[];
   /** Torna esta linha impossível de importar, mesmo com disciplina/tema escolhidos manualmente. */
@@ -376,15 +415,27 @@ function parseQuestionBlock(
     '';
   if (!highYieldSummary) missingFields.push('Pérola High-Yield vazia — usando texto padrão.');
 
-  // 44-H1: "Materiais cobertos" — títulos separados por ";" (ou por linha), sem repetir.
-  const materialTitles = [
-    ...new Set(
-      (values['materiais cobertos'] ?? values['material coberto'] ?? '')
-        .split(/[;\n]/)
-        .map((t) => t.trim())
-        .filter(Boolean)
-    ),
-  ];
+  // 44-H1: "Materiais cobertos" — itens separados por ";" (ou por linha). P10: cada item pode ser
+  // "Título do material > Título da seção". O mesmo material repetido vale uma vez; com seções
+  // diferentes, a questão não sabe a qual se liga e a linha é recusada.
+  const materialLinks: QuestionImportMaterialLink[] = [];
+  const secaoRepetida = new Set<string>();
+  for (const item of (values['materiais cobertos'] ?? values['material coberto'] ?? '').split(/[;\n]/)) {
+    const { title, sectionTitle } = separarMaterialESecao(item);
+    if (!title) continue;
+    const existente = materialLinks.find((l) => l.title === title);
+    if (!existente) {
+      materialLinks.push({ title, sectionTitle });
+    } else if (!existente.sectionTitle) {
+      existente.sectionTitle = sectionTitle;
+    } else if (sectionTitle && normalizeLabel(sectionTitle) !== normalizeLabel(existente.sectionTitle) && !secaoRepetida.has(title)) {
+      secaoRepetida.add(title);
+      blockingErrors.push(
+        `O material "${title}" aparece com mais de uma seção em "Materiais cobertos" — a questão se liga a uma seção só: deixe uma.`
+      );
+    }
+  }
+  const materialTitles = materialLinks.map((l) => l.title);
 
   if (tags.length === 0) missingFields.push('Tags não informadas — usando padrão (Admin, CMS, Custom).');
 
@@ -405,6 +456,7 @@ function parseQuestionBlock(
     highYieldSummary: highYieldSummary || DEFAULT_HIGH_YIELD_SUMMARY,
     tags: tags.length > 0 ? tags : DEFAULT_TAGS,
     materialTitles,
+    materialLinks,
     missingFields,
     blockingErrors,
   };
@@ -463,4 +515,54 @@ export function buildQuestionFromImportRow(
     highYieldSummary: row.highYieldSummary,
     tags: row.tags,
   };
+}
+
+function compactar(s: string): string {
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+export interface LigacoesDoArquivo {
+  links: QuestionMaterialLink[];
+  /** Material ou seção do arquivo que não se acha (ou é ambíguo) entre os materiais dados, em frases. */
+  erros: string[];
+}
+
+/**
+ * P10: resolve o `Material > Seção` do arquivo contra os materiais carregados. O título do material
+ * é o exato (espaços repetidos não contam) e precisa ser de um só material; a seção é achada pelo
+ * título dentro dele, sem diferenciar acento nem caixa, e precisa ser uma só. Material ou seção que
+ * não se acha vira erro — nunca um palpite.
+ */
+export function resolverLigacoesDoArquivo(
+  ligacoes: QuestionImportMaterialLink[],
+  compendiums: Compendium[]
+): LigacoesDoArquivo {
+  const links: QuestionMaterialLink[] = [];
+  const erros: string[] = [];
+  for (const ligacao of ligacoes) {
+    const candidatos = compendiums.filter((c) => compactar(c.title) === compactar(ligacao.title));
+    if (candidatos.length === 0) {
+      erros.push(`O material "${ligacao.title}" não existe.`);
+      continue;
+    }
+    if (candidatos.length > 1) {
+      erros.push(`O título "${ligacao.title}" pertence a mais de um material: o NexusMed não sabe qual é.`);
+      continue;
+    }
+    const material = candidatos[0];
+    if (!ligacao.sectionTitle) {
+      links.push({ materialId: material.id });
+      continue;
+    }
+    const alvo = normalizeLabel(compactar(ligacao.sectionTitle));
+    const secoes = (material.sections ?? []).filter((sec) => normalizeLabel(compactar(sec.title)) === alvo);
+    if (secoes.length === 0) {
+      erros.push(`A seção "${ligacao.sectionTitle}" não existe no material "${material.title}".`);
+    } else if (secoes.length > 1) {
+      erros.push(`O material "${material.title}" tem mais de uma seção chamada "${ligacao.sectionTitle}".`);
+    } else {
+      links.push({ materialId: material.id, sectionId: secoes[0].id });
+    }
+  }
+  return { links, erros };
 }

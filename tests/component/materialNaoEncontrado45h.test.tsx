@@ -78,8 +78,6 @@ vi.mock('../../src/components/AppErrorBoundary', () => ({
 vi.mock('../../src/services/storage', () => ({
   StorageService: {
     getTheme: () => 'light',
-    getUserPlan: () => 'free',
-    setUserPlan: vi.fn(),
     getLastReadingSession: () => null,
     saveLastReadingSession: vi.fn(),
     checkLegacyDataSummary: () => ({ hasLegacyData: false }),

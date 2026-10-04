@@ -20,7 +20,8 @@ interface FlashcardReviewSessionProps {
   themes: Theme[];
   compendiums?: Compendium[];
   onFinishSession: () => void;
-  onOpenCompendium: (compendiumId: string) => void;
+  /** `sectionId`: o material abre naquela seção (P10); sem ela, abre do começo. */
+  onOpenCompendium: (compendiumId: string, sectionId?: string) => void;
 }
 
 export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
@@ -55,6 +56,14 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
       )
     : undefined;
   const compendiumIdToOpen = currentCard?.compendiumRefId || matchingCompendium?.id;
+  // P10: o card que guarda a seção abre o material NELA; só vale se é a seção do material do card.
+  const sectionIdToOpen =
+    currentCard?.compendiumSectionId && currentCard.compendiumRefId === compendiumIdToOpen
+      ? currentCard.compendiumSectionId
+      : undefined;
+  const sectionTitleToOpen = sectionIdToOpen
+    ? compendiums.find((c) => c.id === compendiumIdToOpen)?.sections.find((sec) => sec.id === sectionIdToOpen)?.title
+    : undefined;
   const discipline = disciplines.find((d) => d.id === currentCard?.disciplineId);
   const theme = themes.find((t) => t.id === currentCard?.themeId);
 
@@ -316,13 +325,15 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onOpenCompendium(compendiumIdToOpen);
+                        onOpenCompendium(compendiumIdToOpen, sectionIdToOpen);
                       }}
                       className="w-full p-2.5 rounded-xl bg-teal-50 dark:bg-teal-950/60 hover:bg-teal-100 dark:hover:bg-teal-900/80 text-teal-800 dark:text-teal-300 border border-teal-200/80 dark:border-teal-800/60 font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                     >
                       <BookOpen className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                       <span>
-                        Estudar Teoria na Biblioteca{matchingCompendium ? `: ${matchingCompendium.title}` : ''}
+                        {sectionIdToOpen
+                          ? `Ver no material${sectionTitleToOpen ? `: ${sectionTitleToOpen}` : ''}`
+                          : `Estudar Teoria na Biblioteca${matchingCompendium ? `: ${matchingCompendium.title}` : ''}`}
                       </span>
                     </button>
                   </div>
@@ -391,12 +402,12 @@ export const FlashcardReviewSession: React.FC<FlashcardReviewSessionProps> = ({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onOpenCompendium(compendiumIdToOpen);
+                  onOpenCompendium(compendiumIdToOpen, sectionIdToOpen);
                 }}
                 className="text-teal-700 dark:text-teal-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer"
               >
                 <BookOpen className="w-3.5 h-3.5" />
-                <span>Ver na Biblioteca</span>
+                <span>{sectionIdToOpen ? 'Ver no material' : 'Ver na Biblioteca'}</span>
               </button>
             )}
           </div>

@@ -49,8 +49,8 @@ export const ComoEscreverQuestoesView: React.FC<ComoEscreverQuestoesViewProps> =
         disciplina,
         titulos: publicados
           .filter((c) => c.disciplineId === disciplina.id)
-          .map((c) => c.title)
-          .sort((a, b) => collator.compare(a, b)),
+          .map((c) => ({ titulo: c.title, secoes: (c.sections ?? []).map((sec) => sec.title) }))
+          .sort((a, b) => collator.compare(a.titulo, b.titulo)),
       }))
       .filter((g) => g.titulos.length > 0);
   }, [disciplines, compendiums]);
@@ -106,7 +106,7 @@ export const ComoEscreverQuestoesView: React.FC<ComoEscreverQuestoesViewProps> =
             nomeDoPadrao="padrão de questões"
             id="como-escrever-questoes-cartao-criar"
             titulo="1. Criar questões"
-            descricao="Cole numa IA de sua escolha. Ela pergunta o que faltar (Disciplina, Tema, tipo, quantas questões e os materiais que elas cobrem) e entrega o arquivo .md no padrão, mais a lista de pontos de risco."
+            descricao="Cole numa IA de sua escolha. Ela pergunta o que faltar (Disciplina, Tema, tipo, quantas questões e os materiais que elas cobrem, com a seção de cada um) e entrega o arquivo .md no padrão, mais a lista de pontos de risco."
             rotuloBotao="Copiar prompt para criar questões"
             prompt={PROMPT_CRIAR_QUESTOES}
             textoCompleto={TEXTO_COPIAR_CRIAR_QUESTOES}
@@ -130,7 +130,8 @@ export const ComoEscreverQuestoesView: React.FC<ComoEscreverQuestoesViewProps> =
           Materiais publicados
         </h2>
         <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          No campo “Materiais cobertos” use o título exatamente como aparece aqui. Só materiais publicados valem.
+          No campo “Materiais cobertos” use o título exatamente como aparece aqui. Só materiais publicados valem. Para ligar a
+          questão a um trecho, escreva depois do título o sinal “&gt;” e o título exato da seção (as seções de cada material estão em “Seções”, logo abaixo do título).
         </p>
         {titulosPorDisciplina.length === 0 ? (
           <p className="text-sm text-slate-500 dark:text-slate-400">Nenhum material publicado ainda.</p>
@@ -145,8 +146,22 @@ export const ComoEscreverQuestoesView: React.FC<ComoEscreverQuestoesViewProps> =
                   {disciplina.name} ({titulos.length})
                 </summary>
                 <ul className="mt-2 space-y-1 text-sm text-slate-800 dark:text-slate-200">
-                  {titulos.map((t) => (
-                    <li key={t}>{t}</li>
+                  {titulos.map(({ titulo, secoes }) => (
+                    <li key={titulo}>
+                      {titulo}
+                      {secoes.length > 0 && (
+                        <details className="mt-1 ml-3">
+                          <summary className="text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none">
+                            Seções ({secoes.length})
+                          </summary>
+                          <ul className="mt-1 ml-3 space-y-0.5 text-xs text-slate-700 dark:text-slate-300 list-disc">
+                            {secoes.map((sec, i) => (
+                              <li key={`${i}-${sec}`}>{sec}</li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                    </li>
                   ))}
                 </ul>
               </details>

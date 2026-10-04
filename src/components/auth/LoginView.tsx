@@ -512,7 +512,7 @@ export const LoginView: React.FC = () => {
           {/* Informações sobre Papel & Privacidade */}
           <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800 text-center space-y-1.5">
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Novas contas iniciam no perfil <strong className="text-slate-700 dark:text-slate-300">Estudante</strong> com plano Free.
+              Novas contas iniciam no perfil <strong className="text-slate-700 dark:text-slate-300">Estudante</strong>.
             </p>
             <p className="text-[11px] text-slate-400 dark:text-slate-500">
               Autenticação gerenciada pelo Supabase Auth, com senhas armazenadas como hash (nunca em texto plano) e tráfego protegido por HTTPS/TLS.

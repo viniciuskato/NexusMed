@@ -38,7 +38,7 @@ Toda questão é de um de dois tipos. O tipo aparece no campo **Instituição / 
 6. **Alto risco** (dose, corte numérico, ajuste renal ou hepático, gestação, lactação, recém-nascido, idoso, contraindicação, interação): só com fonte primária pública identificável (bula do profissional, BrCAST, diretriz oficial ou de sociedade médica), citada na mesma frase do comentário. Sem ela, não use o número nem a restrição na questão.
 7. **Nunca invente** fonte, autor, ano, versão de diretriz, endereço, dose, corte ou grau de evidência. Sem fonte que sustente o gabarito, não escreva a questão e diga por quê.
 8. **Toda fonte com endereço**: cite o nome da fonte e sempre o endereço (URL) ou o DOI dela, por extenso ou como link no formato `[nome da fonte](https://endereço)`. Fonte sem endereço nem DOI não vale. Não use citação numerada do tipo `[1](#ref-1)`: a questão não tem lista de referências.
-9. **Ligação com o material**: indique no campo **Materiais cobertos** o título exato de cada material do NexusMed que a questão cobre, separados por ponto e vírgula. Copie o título exatamente como a pessoa que pediu a questão informou. Se ela não informou nenhum material, deixe o campo de fora: a pessoa escolhe o material na tela de envio. O ponto e vírgula separa os títulos, então um título que tem ponto e vírgula não pode ser escrito neste campo: nesse caso, deixe o campo de fora e a pessoa escolhe o material na tela de envio.
+9. **Ligação com o material**: indique no campo **Materiais cobertos** o título exato de cada material do NexusMed que a questão cobre, separados por ponto e vírgula. Quando a questão cobra um trecho específico do material, escreva depois do título o sinal `>` e o título exato da seção que traz esse trecho: `Título do material > Título da seção`. Cada material leva no máximo uma seção por questão. Copie os títulos exatamente como a pessoa que pediu a questão informou, e nunca invente uma seção: se ela não informou a seção, escreva só o título do material (a questão fica ligada ao material inteiro). Se ela não informou nenhum material, deixe o campo de fora: a pessoa escolhe o material na tela de envio. O ponto e vírgula separa os itens, então um título que tem ponto e vírgula não pode ser escrito neste campo: nesse caso, deixe o campo de fora e a pessoa escolhe o material na tela de envio. O material é separado da seção pelo ÚLTIMO ` > ` do item (o sinal `>` com um espaço de cada lado): num material chamado `Eletrólitos > ácido-base`, escreva `Eletrólitos > ácido-base > Título da seção`, e o que vem antes do último ` > ` é lido como o título do material. Por isso, um título de material que tem ` > ` só pode ser escrito junto de uma seção; se a questão cobre o material inteiro, deixe o campo de fora e a pessoa escolhe o material na tela de envio. Um `>` sem espaço dos dois lados (`A>B`) faz parte do título, não separa nada. Seção que não existe no material, ou que se repete nele, faz o lote ser recusado.
 10. **Texto puro com marcas simples**: português do Brasil, sem LaTeX, HTML ou imagem. `**negrito**`, `*itálico*` e links funcionam; título, tabela e lista dentro de um campo aparecem com os símbolos à mostra, então não use. Escreva β, ≥, ≤, ×, Cmáx em texto. Nunca escreva três crases seguidas dentro de uma questão.
 11. **Disciplina e Tema** com os nomes exatos do catálogo do NexusMed, como a pessoa informou. Nunca crie um Tema novo.
 12. **Tags**: de duas a cinco palavras-chave entre crases, no bloco `### Tags`.
@@ -61,7 +61,7 @@ Questão de banca real:
 **Instituição / Banca:** Nome real da banca ou instituição
 **Ano:** 2024
 **Dificuldade:** medio
-**Materiais cobertos:** Título exato de um material; Título exato de outro material
+**Materiais cobertos:** Título exato de um material > Título exato da seção; Título exato de outro material
 
 **Enunciado Clínico (Caso / Vinheta):**
 Caso clínico como a prova o traz (deixe em branco se a prova não traz caso).
@@ -93,7 +93,7 @@ Questão autoral (mudam só os campos de origem):
 **Disciplina:** Nome exato da Disciplina
 **Tema:** Nome exato do Tema
 **Instituição / Banca:** NexusMed (questão autoral)
-**Materiais cobertos:** Título exato de um material
+**Materiais cobertos:** Título exato de um material > Título exato da seção
 
 **Enunciado Clínico (Caso / Vinheta):**
 Caso clínico original, escrito por você.
@@ -124,7 +124,7 @@ Regras do formato:
 - O marcador `[GABARITO]` fica colado no fim do texto de uma única alternativa.
 - O campo **Enunciado Clínico (Caso / Vinheta)** pode ficar em branco só quando a questão realmente não traz caso.
 - O campo **Ano** só existe em questão de banca real, com quatro dígitos.
-- O campo **Materiais cobertos** pode ser omitido só como diz a regra 9 da seção 2.
+- O campo **Materiais cobertos** pode ser omitido só como diz a regra 9 da seção 2. A seção depois do `>` é opcional: sem ela, a questão se liga ao material inteiro.
 
 ## 5. Checklist antes de entregar
 
@@ -137,6 +137,6 @@ Regras do formato:
 - [ ] A afirmação que sustenta o gabarito tem fonte on-line identificável (autor ou entidade, título, ano ou versão, DOI ou endereço), que você abriu.
 - [ ] Nenhum livro-texto, nenhuma fonte inventada; alto risco só com fonte primária pública na mesma frase.
 - [ ] Nenhuma citação numerada `[N](#ref-N)`; nenhum título, tabela ou lista dentro de campo.
-- [ ] Disciplina e Tema com os nomes exatos do catálogo; Materiais cobertos com os títulos exatos, ou o campo omitido.
+- [ ] Disciplina e Tema com os nomes exatos do catálogo; Materiais cobertos com os títulos exatos e, quando a questão cobra um trecho, a seção exata depois do `>` (nunca inventada), ou o campo omitido.
 - [ ] Nenhum título de nível 2 além de `## Questão N`; nada antes da primeira questão; de duas a cinco Tags.
 - [ ] Português do Brasil, sem LaTeX, HTML, imagem nem três crases seguidas.

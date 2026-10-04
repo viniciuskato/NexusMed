@@ -26,7 +26,8 @@ interface FlashcardsViewProps {
   compendiums?: Compendium[];
   onStartReview: (cardsToReview: Flashcard[]) => void;
   onOpenCreateModal: () => void;
-  onOpenCompendium: (compendiumId: string) => void;
+  /** `sectionId`: o material abre naquela seção (P10). */
+  onOpenCompendium: (compendiumId: string, sectionId?: string) => void;
   onFlashcardUpdated: () => void;
   filterThemeId?: string;
   /**
@@ -373,7 +374,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              onOpenCompendium(compendiumId);
+                              onOpenCompendium(compendiumId, card.compendiumRefId === compendiumId ? card.compendiumSectionId : undefined);
                             }}
                             className="mt-2.5 w-full p-2 rounded-xl bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-900/80 text-teal-800 dark:text-teal-300 border border-teal-200/80 dark:border-teal-800/60 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                           >
