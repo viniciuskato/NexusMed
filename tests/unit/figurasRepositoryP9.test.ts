@@ -10,12 +10,13 @@ const mocks = vi.hoisted(() => {
   const createSignedUrl = vi.fn();
   const upload = vi.fn();
   const storageFrom = vi.fn(() => ({ createSignedUrl, upload }));
-  return { maybeSingle, eq, select, insert, from, createSignedUrl, upload, storageFrom };
+  const onAuthStateChange = vi.fn();
+  return { maybeSingle, eq, select, insert, from, createSignedUrl, upload, storageFrom, onAuthStateChange };
 });
 
 vi.mock('../../src/lib/supabaseClient', () => ({
   isSupabaseConfigured: true,
-  supabase: { from: mocks.from, storage: { from: mocks.storageFrom } },
+  supabase: { from: mocks.from, storage: { from: mocks.storageFrom }, auth: { onAuthStateChange: mocks.onAuthStateChange } },
 }));
 
 import {
@@ -30,6 +31,9 @@ import {
 
 const ID = '0b9f1a0e-5c2d-4e8a-9a41-3d6b7c8e9f10';
 const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4, 5, 6, 7, 8];
+
+// O ouvinte é registrado uma vez, ao carregar o módulo; guarda-se a função antes de os mocks serem limpos.
+const ouvinteDeAutenticacao = mocks.onAuthStateChange.mock.calls[0]?.[0] as ((evento: string) => void) | undefined;
 
 beforeEach(() => {
   limparCacheDeFiguras();
@@ -54,6 +58,22 @@ describe('urlDaFigura', () => {
     expect(a).toBe(b);
     await urlDaFigura(ID);
     expect(mocks.createSignedUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it('entrar ou sair da conta esquece as URLs guardadas (outra pessoa no mesmo navegador não herda a URL)', async () => {
+    expect(ouvinteDeAutenticacao).toBeTypeOf('function');
+    await urlDaFigura(ID);
+    await urlDaFigura(ID);
+    expect(mocks.createSignedUrl).toHaveBeenCalledTimes(1);
+    ouvinteDeAutenticacao!('TOKEN_REFRESHED');
+    await urlDaFigura(ID);
+    expect(mocks.createSignedUrl).toHaveBeenCalledTimes(1);
+    ouvinteDeAutenticacao!('SIGNED_OUT');
+    await urlDaFigura(ID);
+    expect(mocks.createSignedUrl).toHaveBeenCalledTimes(2);
+    ouvinteDeAutenticacao!('SIGNED_IN');
+    await urlDaFigura(ID);
+    expect(mocks.createSignedUrl).toHaveBeenCalledTimes(3);
   });
 
   it('identificador malformado nem chega ao servidor', async () => {

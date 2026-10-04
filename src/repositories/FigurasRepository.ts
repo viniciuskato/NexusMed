@@ -29,10 +29,21 @@ interface UrlEmCache {
 const cacheDeUrls = new Map<string, UrlEmCache>();
 const emVoo = new Map<string, Promise<string | null>>();
 
-/** Só para testes. */
 export function limparCacheDeFiguras(): void {
   cacheDeUrls.clear();
   emVoo.clear();
+}
+
+// A URL assinada foi pedida com a sessão de quem estava logado: ao entrar ou sair, nenhuma URL guardada passa para a
+// pessoa seguinte (o mesmo navegador pode trocar de conta).
+if (isSupabaseConfigured) {
+  try {
+    supabase.auth?.onAuthStateChange?.((evento) => {
+      if (evento === 'SIGNED_IN' || evento === 'SIGNED_OUT') limparCacheDeFiguras();
+    });
+  } catch {
+    // sem ouvinte: o cache só vale pela validade da URL
+  }
 }
 
 /**
