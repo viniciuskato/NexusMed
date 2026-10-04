@@ -5,7 +5,7 @@
 //
 // Opções:
 //   --local               usa o Supabase LOCAL (padrão: o projeto vinculado, ou seja, produção)
-//   --web                 libera ao claude só as ferramentas de busca e leitura de página da web
+//   --sem-web             desliga a busca e a leitura de página da web (padrão: ligadas, só elas; ou REVISOR_WEB=0)
 //   --projeto <pasta>     onde está o Supabase (padrão: a pasta deste repositório)
 //   --supabase <exe>      caminho do supabase.exe (ou variável REVISOR_SUPABASE)
 //   --claude <exe>        caminho do claude.exe (ou variável REVISOR_CLAUDE; senão, acha sozinho)
@@ -43,7 +43,7 @@ export function lerOpcoes(argv: string[], env: NodeJS.ProcessEnv = process.env):
   const claudeInformado = valor('--claude') ?? env.REVISOR_CLAUDE;
   return {
     alvo: argv.includes('--local') ? 'local' : 'linked',
-    web: argv.includes('--web') || env.REVISOR_WEB === '1',
+    web: !argv.includes('--sem-web') && env.REVISOR_WEB !== '0',
     projeto: valor('--projeto') ?? env.REVISOR_PROJETO ?? RAIZ_DO_REPOSITORIO,
     supabase: valor('--supabase') ?? env.REVISOR_SUPABASE ?? (existsSync(supabasePadrao) ? supabasePadrao : 'supabase'),
     claude: claudeInformado ?? localizarClaude(env),

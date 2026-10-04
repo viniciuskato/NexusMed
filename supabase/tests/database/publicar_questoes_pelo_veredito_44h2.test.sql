@@ -206,7 +206,7 @@ $$;
 -- 45-H: função nova não nasce executável por PUBLIC; os helpers rodam como service_role/authenticated.
 grant execute on all functions in schema tests to public;
 
-select plan(195);
+select plan(197);
 
 select tests.clear_auth();
 select tests.create_user('h2.admin@test.local', 'admin', 'active') as v_admin \gset
@@ -396,7 +396,7 @@ select results_eq(
 select tests.clear_auth();
 
 -- Limites de custo: as revisões de questões contam no teto diário por pessoa e no mensal.
-select tests.create_user('h2.cap@test.local', 'admin', 'active') as v_cap \gset
+select tests.create_user('h2.cap@test.local', 'student', 'active') as v_cap \gset
 update public.review_settings set daily_review_cap_per_user = 1;
 insert into public.question_submissions (author_id, title, content_md) values (:'v_cap', 'Lote do cap 1', '## Questão 1') returning id as v_qcap1 \gset
 insert into public.material_submissions (author_id, title, discipline_id, theme_id, content_md)
@@ -410,12 +410,30 @@ select is((select count(*)::int from public.revisao_reservar_envios(1000) where 
 select tests.clear_auth();
 select is((select status from public.material_submissions where id = :'v_mcap'), 'aguardando_revisao', 'e continua na fila');
 update public.review_settings set daily_review_cap_per_user = 50;
-select tests.create_user('h2.mes@test.local', 'admin', 'active') as v_mes \gset
+select tests.create_user('h2.mes@test.local', 'student', 'active') as v_mes \gset
 insert into public.question_submissions (author_id, title, content_md) values (:'v_mes', 'Lote do mês', '## Questão 1') returning id as v_qmes \gset
 select app.reviews_used_this_month() as v_usado_mes \gset
 update public.review_settings set monthly_review_cap = :v_usado_mes;
 select tests.authenticate_as_service();
 select is((select count(*)::int from public.revisao_reservar_envios(1000) where submission_id = :'v_qmes'), 0, 'com o teto mensal atingido, o envio de questões espera');
+select tests.clear_auth();
+update public.review_settings set monthly_review_cap = 100000;
+
+-- P7: o admin (o dono, que é quem envia) não é barrado pelos tetos do dia e do mês; os demais continuam.
+select tests.create_user('h2.dono@test.local', 'admin', 'active') as v_dono \gset
+update public.review_settings set daily_review_cap_per_user = 1;
+insert into public.question_submissions (author_id, title, content_md) values (:'v_dono', 'Lote do dono 1', '## Questão 1') returning id as v_qd1 \gset
+insert into public.material_submissions (author_id, title, discipline_id, theme_id, content_md)
+values (:'v_dono', 'Material do dono', :'v_disc', :'v_theme', '# m') returning id as v_md1 \gset
+select tests.authenticate_as_service();
+select is((select count(*)::int from public.revisao_reservar_envios(1000) where submission_id in (:'v_qd1', :'v_md1')), 2, 'P7: com o teto diário de 1, o admin não é barrado: os dois envios dele são reservados para revisão');
+select tests.clear_auth();
+update public.review_settings set daily_review_cap_per_user = 50;
+insert into public.question_submissions (author_id, title, content_md) values (:'v_dono', 'Lote do dono mês', '## Questão 1') returning id as v_qd2 \gset
+select app.reviews_used_this_month() as v_usado_mes2 \gset
+update public.review_settings set monthly_review_cap = :v_usado_mes2;
+select tests.authenticate_as_service();
+select is((select count(*)::int from public.revisao_reservar_envios(1000) where submission_id = :'v_qd2'), 1, 'P7: com o teto mensal atingido, o envio do admin ainda é revisado');
 select tests.clear_auth();
 update public.review_settings set monthly_review_cap = 100000;
 

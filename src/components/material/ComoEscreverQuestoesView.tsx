@@ -91,8 +91,8 @@ export const ComoEscreverQuestoesView: React.FC<ComoEscreverQuestoesViewProps> =
             </>
           )}
           . O envio só é aceito se o arquivo passa pela importação sem pendência. Uma revisão automática (feita por
-          IA) confere gabarito, fontes e formato; com o “apto”, as questões são publicadas ligadas aos materiais,
-          com a marca “Revisado por IA — ainda não lido por uma pessoa”. Se a revisão apontar problemas, você vê os
+          IA) confere gabarito, fontes e formato e dá o parecer; quem decide e publica é o dono do site. Se a
+          revisão apontar problemas, você vê os
           achados na lista de envios, corrige e envia de novo.
         </p>
       </header>

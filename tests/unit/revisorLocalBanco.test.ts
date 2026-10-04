@@ -5,6 +5,7 @@ import {
   SQL_DA_FILA,
   clienteDoBanco,
   dadosDaChamada,
+  falhaDeConexao,
   filaTemTrabalho,
   lerLinhas,
   literalSql,
@@ -73,6 +74,7 @@ describe('sqlDaChamada', () => {
 
   it('recusa função fora da lista, parâmetro desconhecido e escrita direta', () => {
     expect(() => sqlDaChamada('revisao_pausar', {})).toThrow(/fora da lista/);
+    expect(() => sqlDaChamada('revisao_publicar_envio', {})).toThrow(/fora da lista/);
     expect(() => sqlDaChamada('delete_everything', {})).toThrow(/fora da lista/);
     expect(() => sqlDaChamada('revisao_liberar; drop table x', {})).toThrow(/fora da lista/);
     expect(() => sqlDaChamada('revisao_reservar_envios', { p_max: 1, p_extra: 2 })).toThrow(/desconhecido/);
@@ -87,8 +89,21 @@ describe('sqlDaChamada', () => {
   });
 });
 
-describe('a lista cobre exatamente o que a ponte da Edge Function (banco.ts) chama', () => {
-  it('toda função e todo parâmetro de bancoDoSupabase estão na lista, com o tipo certo (menos `revisao_pausar`)', async () => {
+describe('a lista cobre o que a ponte da Edge Function (banco.ts) chama para ACONSELHAR, e nada que publique', () => {
+  /** Funções do banco.ts que o revisor local NÃO chama: publicam, aplicam, recusam publicação, ou só existem para a API de lotes. */
+  const FORA = new Set([
+    'revisao_pausar',
+    'revisao_envios_para_publicar',
+    'revisao_publicar_envio',
+    'revisao_recusar_publicacao',
+    'revisao_envios_de_atualizacao_para_aplicar',
+    'revisao_aplicar_atualizacao',
+    'revisao_envios_de_questoes_para_publicar',
+    'revisao_publicar_questoes',
+    'revisao_recusar_publicacao_de_questoes',
+  ]);
+
+  it('toda função e todo parâmetro que sobram em bancoDoSupabase estão na lista, com o tipo certo; as de publicar ficam recusadas', async () => {
     const chamadas: Array<{ fn: string; args: Record<string, unknown> | undefined }> = [];
     const cliente = {
       rpc: async (fn: string, args?: Record<string, unknown>) => {
@@ -124,18 +139,21 @@ describe('a lista cobre exatamente o que a ponte da Edge Function (banco.ts) cha
       modelo: 'm', sistemaSha256: 'h', uso, stopReason: 'end_turn', cobravel: true,
     });
 
-    const sem = chamadas.filter((c) => c.fn !== 'revisao_pausar');
-    expect(sem.length).toBeGreaterThanOrEqual(17);
-    for (const c of sem) {
+    const usadas = chamadas.filter((c) => !FORA.has(c.fn));
+    for (const c of usadas) {
       expect(RPCS_PERMITIDAS[c.fn], `função ${c.fn}`).toBeDefined();
       // Não pode lançar: parâmetros conhecidos e valores do tipo certo.
       expect(() => sqlDaChamada(c.fn, c.args ?? {}), `chamada ${c.fn}`).not.toThrow();
     }
-    // `revisao_pausar` fica de fora de propósito: sem lote da API não há pause_turn.
-    expect(() => sqlDaChamada('revisao_pausar', {})).toThrow();
+    for (const nome of FORA) {
+      expect(RPCS_PERMITIDAS[nome], `${nome} não pode estar na lista`).toBeUndefined();
+      expect(() => sqlDaChamada(nome, {})).toThrow(/fora da lista/);
+    }
     // E a lista não guarda função que ninguém chama.
-    const chamadas1 = new Set(sem.map((c) => c.fn));
+    const chamadas1 = new Set(usadas.map((c) => c.fn));
     for (const nome of Object.keys(RPCS_PERMITIDAS)) expect(chamadas1.has(nome), `lista tem ${nome} sem uso`).toBe(true);
+    // Nenhuma função que publique, aplique ou recuse publicação, por nome.
+    for (const nome of Object.keys(RPCS_PERMITIDAS)) expect(nome).not.toMatch(/publica|aplicar|recusar/);
   });
 });
 
@@ -169,7 +187,7 @@ describe('dados e erros', () => {
     expect(dadosDaChamada('revisao_tentar_travar', [{ r: U1 }])).toBe(U1);
     expect(dadosDaChamada('revisao_tentar_travar', [{ r: null }])).toBeNull();
     expect(dadosDaChamada('revisao_destravar', [{ r: true }])).toBeNull();
-    expect(dadosDaChamada('revisao_publicar_envio', [{ r: { resultado: 'publicado' } }])).toEqual({ resultado: 'publicado' });
+    expect(dadosDaChamada('revisao_registrar_resultado', [{ r: true }])).toBe(true);
   });
 
   it('lê a saída do supabase db query nos dois formatos', () => {
@@ -177,6 +195,14 @@ describe('dados e erros', () => {
     expect(lerLinhas('{"boundary":"x","rows":[{"a":1}],"warning":"w"}')).toEqual([{ a: 1 }]);
     expect(() => lerLinhas('{"x":1}')).toThrow();
     expect(() => lerLinhas('não é json')).toThrow();
+  });
+
+  it('só falha de CONEXÃO é repetida (nada rodou); erro depois do SQL enviado, nunca', () => {
+    expect(falhaDeConexao('supabase db query: failed to connect to postgres: failed to connect to `host=127.0.0.1`: Connection timed out')).toBe(true);
+    expect(falhaDeConexao('dial tcp 10.0.0.1:5432: connection refused')).toBe(true);
+    expect(falhaDeConexao('supabase db query: failed to execute query: error: Você já tem 3 envios esperando revisão')).toBe(false);
+    expect(falhaDeConexao('context deadline exceeded')).toBe(false);
+    expect(falhaDeConexao('supabase db query: Command failed: timeout')).toBe(false);
   });
 
   it('o erro leva só a primeira linha, no máximo 200 caracteres', () => {

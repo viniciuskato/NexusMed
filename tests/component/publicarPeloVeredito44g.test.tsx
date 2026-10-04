@@ -266,9 +266,9 @@ describe('44-G — "Meus envios": publicado com link para o material', () => {
     expect(screen.queryByTestId('abrir-material-publicado')).toBeNull();
   });
 
-  it('envio aprovado diz que será publicado em alguns minutos (não "falta publicar")', () => {
+  it('envio aprovado diz que o revisor deu parecer favorável e quem publica é o dono (não promete publicar sozinho)', () => {
     render(<ListaDeEnvios id="lista" envios={[envio({ status: 'apto' })]} disciplines={[disc]} themes={[tema]} vazio="nada" />);
-    expect(screen.getByText('Ele será publicado em alguns minutos.', { exact: false })).toBeTruthy();
+    expect(screen.getByText('Quem decide e publica é o dono do site.', { exact: false })).toBeTruthy();
   });
 
   it('o recado do servidor (ex.: título repetido) aparece no envio "precisa de correção"', () => {

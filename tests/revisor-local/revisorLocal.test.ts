@@ -17,6 +17,7 @@ import {
   deleteTestUser,
   getLocalConfig,
   getSeedIds,
+  insertPublishedMaterial,
   psqlLocal,
   runCleanup,
   type CreatedTestUser,
@@ -24,7 +25,7 @@ import {
 import { materialParaEnvio } from '../e2e/fixtures/materialParaEnvio';
 import { loteParaEnvio } from '../e2e/fixtures/questoesParaEnvio';
 
-// D-12 — o revisor local de ponta a ponta contra o Supabase LOCAL (nunca o remoto), com o `claude` SIMULADO
+// D-12/P7 — o revisor local (que só ACONSELHA: nada é publicado nem aplicado por ele) de ponta a ponta contra o Supabase LOCAL (nunca o remoto), com o `claude` SIMULADO
 // (tests/unit/helpers/claudeDeMentira.mjs, rodado como processo de verdade). A ponte com o banco é a real:
 // `supabase db query --local` chamando as funções `revisao_*`. O estado final é conferido no banco.
 //
@@ -55,8 +56,9 @@ let materialId = '';
 
 const tag = `${Date.now()}`;
 
-async function autor(prefixo: string): Promise<CreatedTestUser> {
-  const u = await createTestUser({ emailLocalPart: `rl-${prefixo}-${tag}`, password: 'senha-teste-123', role: 'student', status: 'active' });
+/** Quem envia é o admin (P6). `student` só para os envios antigos de outras pessoas, que ainda guardam os limites. */
+async function autor(prefixo: string, role: 'admin' | 'student' = 'admin'): Promise<CreatedTestUser> {
+  const u = await createTestUser({ emailLocalPart: `rl-${prefixo}-${tag}`, password: 'senha-teste-123', role, status: 'active' });
   limpeza.push(() => deleteTestUser(u.id));
   limpeza.unshift(() => apagarQuestoesPublicadasDe(u.id));
   return u;
@@ -120,7 +122,7 @@ async function rodar(extra: Partial<DepsDaRodada> = {}): Promise<{ resumo: Resum
   const linhas: string[] = [];
   const resumo = await executarRodada({
     exec,
-    perguntar: perguntarAoClaude({ exe: process.execPath, argsIniciais: [FALSO], pastaNeutra: path.join(pasta, 'neutra'), timeoutMs: 60_000 }),
+    perguntar: perguntarAoClaude({ exe: process.execPath, argsIniciais: [FALSO], pastaNeutra: path.join(pasta, 'neutra'), timeoutMs: 60_000, web: true }),
     claudeDisponivel: true,
     falhas: contadorEmArquivo(path.join(pasta, 'falhas.json')),
     registrar: (l) => linhas.push(l),
@@ -139,6 +141,9 @@ beforeAll(async () => {
   process.env.FAKE_CLAUDE_REGISTRO = registroDoClaude;
   exec = executorViaCli({ alvo: 'local', supabase: SUPABASE, projeto: process.cwd() });
   seed = getSeedIds();
+  // O material publicado que as questões citam e que a atualização mira (publicado pelo admin, como o dono faz).
+  materialId = insertPublishedMaterial(`rl-${tag}`, seed);
+  tituloDoMaterial = `${MATERIAL_PREFIX}rl-${tag}`;
   disciplina = um(`select name from public.disciplines where id = '${seed.disciplineId}';`);
   tema = um(`select name from public.themes where id = '${seed.themeId}';`);
   const fila = await exec(SQL_DA_FILA);
@@ -157,19 +162,22 @@ afterAll(async () => {
 });
 
 describe('material novo', () => {
-  it('apto: o claude simulado é chamado uma vez, o veredito chega igual ao que a Edge Function gravaria, e o material é publicado', async () => {
+  it('apto: o claude simulado é chamado uma vez, o veredito chega igual ao que a Edge Function gravaria, e NADA é publicado', async () => {
     const a = await autor('apto');
-    tituloDoMaterial = `${MATERIAL_PREFIX}rl-${tag}`;
-    const envio = envioDeMaterial(a.id, tituloDoMaterial, materialParaEnvio({ titulo: tituloDoMaterial, disciplina, tema }));
+    const titulo = `${MATERIAL_PREFIX}rl-apto-${tag}`;
+    const envio = envioDeMaterial(a.id, titulo, materialParaEnvio({ titulo, disciplina, tema }));
     expect(statusDoEnvio('material_submissions', envio)).toBe('aguardando_revisao');
+    const materiaisAntes = um(`select count(*) from public.materials;`);
 
     const { resumo, linhas } = await rodar();
 
     expect(resumo).toMatchObject({ fila: 'com trabalho', ciclos: 2, chamadasAoClaude: 1, falha: null });
-    expect(resumo.totais).toMatchObject({ enviados: 1, resultados: 1, publicados: 1, reprovadosAntesDaIa: 0 });
+    expect(resumo.totais).toMatchObject({ enviados: 1, resultados: 1, reprovadosAntesDaIa: 0 });
     const chamadas = chamadasAoClaude();
     expect(chamadas).toHaveLength(1);
     expect(chamadas[0].entradaTemFronteira).toBe(true);
+    // A busca e a leitura de página da web estão ligadas (padrão da P7), e só elas.
+    expect(chamadas[0].args[chamadas[0].args.indexOf('--tools') + 1]).toBe('WebSearch,WebFetch');
 
     // O veredito gravado é o que `lerVeredito` (o código da Edge Function) tira do texto do claude.
     const esperado = lerVeredito({ stopReason: 'end_turn', texto: TEXTO_APTO });
@@ -195,17 +203,21 @@ describe('material novo', () => {
     expect(r.verdict).toBe('apto');
     expect(r.batch_id).toMatch(/^local-/);
 
-    // Estado final: publicado pelo banco, com o selo "revisado por IA".
-    expect(statusDoEnvio('material_submissions', envio)).toBe('publicado');
-    materialId = um(`select published_material_id from public.material_submissions where id = '${envio}';`);
-    expect(materialId).toMatch(/^[0-9a-f-]{36}$/);
-    expect(um(`select status from public.materials where id = '${materialId}';`)).toBe('published');
-    expect(um(`select count(*) from public.material_ai_provenance where material_id = '${materialId}';`)).toBe('1');
-    expect(um(`select app.material_tem_revisao_apto('${materialId}'::uuid)::text;`)).toBe('true');
+    // Estado final: o envio fica "apto" (o parecer), sem material criado nem publicado: quem publica é o dono, pelo admin.
+    expect(statusDoEnvio('material_submissions', envio)).toBe('apto');
+    expect(um(`select (published_material_id is null)::text from public.material_submissions where id = '${envio}';`)).toBe('true');
+    expect(um(`select count(*) from public.materials;`)).toBe(materiaisAntes);
+    expect(um(`select count(*) from public.material_ai_provenance;`)).toBe('0');
+
+    // Rodar de novo não faz nada: o envio "apto" não é fila do revisor.
+    const antes = chamadasAoClaude().length;
+    const outra = await rodar();
+    expect(outra.resumo.fila).toBe('vazia');
+    expect(chamadasAoClaude()).toHaveLength(antes);
 
     // O registro da rodada não leva o texto nem o título do envio.
     const registro = linhas.join('\n');
-    expect(registro).not.toContain(tituloDoMaterial);
+    expect(registro).not.toContain(titulo);
     expect(registro).not.toContain('Texto de exemplo');
   });
 
@@ -250,17 +262,16 @@ describe('material novo', () => {
 });
 
 describe('questões', () => {
-  it('lote apto: as questões são criadas, ligadas ao material pelo título e publicadas', async () => {
-    expect(materialId, 'o material do primeiro teste precisa existir').not.toBe('');
+  it('lote apto: o parecer fica gravado e nenhuma questão é criada nem publicada', async () => {
     const a = await autor('questoes');
     const nome = `Lote RL ${tag}`;
     const texto = loteParaEnvio(2, { disciplina, tema, materiais: tituloDoMaterial });
     const envio = envioDeQuestoes(a.id, nome, texto);
+    const questoesAntes = um(`select count(*) from public.questions;`);
 
     const { resumo } = await rodar();
 
     expect(resumo).toMatchObject({ falha: null, chamadasAoClaude: 1 });
-    expect(resumo.totais.publicados).toBe(1);
     const esperado = lerVeredito({ stopReason: 'end_turn', texto: TEXTO_APTO });
     expect(revisaoDe('question_submission_id', envio)).toMatchObject({
       status: 'concluida',
@@ -269,18 +280,17 @@ describe('questões', () => {
       findings_text: esperado.achados,
       prompt_sha256: await sha256Hex(montarSistemaDeQuestoes(BASE_DO_REVISOR_DE_QUESTOES)),
     });
-    expect(statusDoEnvio('question_submissions', envio)).toBe('publicado');
-    const ids = `(select unnest(published_question_ids) from public.question_submissions where id = '${envio}')`;
-    expect(um(`select count(*) from public.questions where id in ${ids} and status = 'published';`)).toBe('2');
-    expect(um(`select count(*) from public.question_materials where material_id = '${materialId}' and question_id in ${ids};`)).toBe('2');
+    expect(statusDoEnvio('question_submissions', envio)).toBe('apto');
+    expect(um(`select coalesce(cardinality(published_question_ids), 0) from public.question_submissions where id = '${envio}';`)).toBe('0');
+    expect(um(`select count(*) from public.questions;`)).toBe(questoesAntes);
   });
 });
 
 describe('atualização de material', () => {
-  it('apto: o conteúdo do material publicado é substituído (mesmo material, mesmas seções) e o selo passa a valer para o conteúdo novo', async () => {
-    expect(materialId).not.toBe('');
+  it('apto: o parecer fica gravado e o material publicado NÃO é alterado', async () => {
     const a = await autor('atualiza');
-    const secaoAntes = um(`select id from public.material_sections where material_id = '${materialId}' order by sort_order limit 1;`);
+    const secao = um(`select id from public.material_sections where material_id = '${materialId}' order by sort_order limit 1;`);
+    const conteudoAntes = um(`select content from public.material_sections where id = '${secao}';`);
     const hashAntes = um(`select app.material_snapshot_hash('${materialId}'::uuid);`);
     const texto = materialParaEnvio({ titulo: tituloDoMaterial, disciplina, tema, corpo: 'Texto ATUALIZADO pela revisão com citação [1](#ref-1) e outra [2](#ref-2).' });
     const envio = um(
@@ -291,77 +301,95 @@ describe('atualização de material', () => {
     const { resumo } = await rodar();
 
     expect(resumo).toMatchObject({ falha: null, chamadasAoClaude: 1 });
-    expect(resumo.totais.atualizados).toBe(1);
     expect(revisaoDe('submission_id', envio)).toMatchObject({ status: 'concluida', verdict: 'apto' });
-    expect(um(`select status || '|' || (applied_at is not null)::text from public.material_submissions where id = '${envio}';`)).toBe('publicado|true');
-    expect(um(`select content from public.material_sections where id = '${secaoAntes}';`)).toContain('Texto ATUALIZADO pela revisão');
-    expect(um(`select app.material_snapshot_hash('${materialId}'::uuid);`)).not.toBe(hashAntes);
-    expect(um(`select app.material_tem_revisao_apto('${materialId}'::uuid)::text;`)).toBe('true');
+    expect(um(`select status || '|' || (applied_at is null)::text from public.material_submissions where id = '${envio}';`)).toBe('apto|true');
+    expect(um(`select content from public.material_sections where id = '${secao}';`)).toBe(conteudoAntes);
+    expect(um(`select app.material_snapshot_hash('${materialId}'::uuid);`)).toBe(hashAntes);
     expect(um(`select status from public.materials where id = '${materialId}';`)).toBe('published');
   });
 });
 
-describe('limites de custo e trava', () => {
+describe('limites de custo (o admin não é barrado) e trava', () => {
   let tetos = { mensal: 0, diario: 0 };
   beforeAll(() => {
     const t = um(`select monthly_review_cap || '|' || daily_review_cap_per_user from public.review_settings;`).split('|');
     tetos = { mensal: Number(t[0]), diario: Number(t[1]) };
   });
   const restaurarTetos = () => psqlLocal(`update public.review_settings set monthly_review_cap = ${tetos.mensal}, daily_review_cap_per_user = ${tetos.diario};`);
+  const novoEnvio = (autorId: string, rotulo: string) => {
+    const t = `${MATERIAL_PREFIX}rl-${rotulo}-${tag}`;
+    return envioDeMaterial(autorId, t, materialParaEnvio({ titulo: t, disciplina, tema }));
+  };
 
-  it('teto por pessoa por dia: com teto 1, só o primeiro envio da pessoa é revisado; o outro espera', async () => {
-    const a = await autor('diario');
+  it('teto por pessoa por dia: o admin com teto 1 tem os dois envios revisados; outra pessoa (envio antigo) só o primeiro', async () => {
+    const dono = await autor('diario-admin');
+    const antigo = await autor('diario-antigo', 'student');
+    let a2 = '';
     psqlLocal(`update public.review_settings set monthly_review_cap = 100000, daily_review_cap_per_user = 1;`);
     try {
-      const t1 = `${MATERIAL_PREFIX}rl-d1-${tag}`;
-      const t2 = `${MATERIAL_PREFIX}rl-d2-${tag}`;
-      const e1 = envioDeMaterial(a.id, t1, materialParaEnvio({ titulo: t1, disciplina, tema }));
-      const e2 = envioDeMaterial(a.id, t2, materialParaEnvio({ titulo: t2, disciplina, tema }));
+      const d1 = novoEnvio(dono.id, 'da1');
+      const d2 = novoEnvio(dono.id, 'da2');
+      const a1 = novoEnvio(antigo.id, 'dn1');
+      a2 = novoEnvio(antigo.id, 'dn2');
       const antes = chamadasAoClaude().length;
 
       const { resumo } = await rodar();
 
       expect(resumo.falha).toBeNull();
-      expect(chamadasAoClaude()).toHaveLength(antes + 1);
-      expect(statusDoEnvio('material_submissions', e1)).toBe('publicado');
-      expect(statusDoEnvio('material_submissions', e2)).toBe('aguardando_revisao');
-      expect(um(`select count(*) from public.material_reviews where submission_id = '${e2}';`)).toBe('0');
+      expect(chamadasAoClaude()).toHaveLength(antes + 3);
+      expect([d1, d2].map((e) => statusDoEnvio('material_submissions', e))).toEqual(['apto', 'apto']);
+      expect(statusDoEnvio('material_submissions', a1)).toBe('apto');
+      expect(statusDoEnvio('material_submissions', a2)).toBe('aguardando_revisao');
+      expect(um(`select count(*) from public.material_reviews where submission_id = '${a2}';`)).toBe('0');
     } finally {
       restaurarTetos();
     }
+    // Com o teto de volta, o envio que esperava é revisado (a fila não fica presa) e não sobra nada para o próximo teste.
+    expect((await rodar()).resumo.falha).toBeNull();
+    expect(statusDoEnvio('material_submissions', a2)).toBe('apto');
   });
 
-  it('teto do mês: no teto, nenhum envio novo é revisado e o claude nem é chamado', async () => {
-    const a = await autor('mensal');
+  it('teto do mês: no teto, o envio do admin ainda é revisado e o de outra pessoa espera até abrir vaga', async () => {
+    const dono = await autor('mensal-admin');
+    const antigo = await autor('mensal-antigo', 'student');
     const usadas = Number(um(`select app.reviews_used_this_month();`));
-    // Folga para um envio só (o do dia anterior, que esperava, não conta: é de outra pessoa e já foi para a vez dele depois).
     psqlLocal(`update public.review_settings set monthly_review_cap = ${usadas}, daily_review_cap_per_user = 50;`);
     try {
-      const t = `${MATERIAL_PREFIX}rl-m-${tag}`;
-      const e = envioDeMaterial(a.id, t, materialParaEnvio({ titulo: t, disciplina, tema }));
+      const ed = novoEnvio(dono.id, 'ma');
+      const ea = novoEnvio(antigo.id, 'mn');
       const antes = chamadasAoClaude().length;
 
       const { resumo } = await rodar();
 
       expect(resumo.falha).toBeNull();
-      expect(chamadasAoClaude()).toHaveLength(antes);
-      expect(statusDoEnvio('material_submissions', e)).toBe('aguardando_revisao');
+      expect(chamadasAoClaude()).toHaveLength(antes + 1);
+      expect(statusDoEnvio('material_submissions', ed)).toBe('apto');
+      expect(statusDoEnvio('material_submissions', ea)).toBe('aguardando_revisao');
 
-      // Abre uma vaga: o mesmo envio passa a ser revisado.
-      psqlLocal(`update public.review_settings set monthly_review_cap = ${usadas + 1};`);
+      // Abre vaga (o teto sobe): o envio de outra pessoa passa a ser revisado.
+      psqlLocal(`update public.review_settings set monthly_review_cap = 100000;`);
       const depois = await rodar();
       expect(depois.resumo.falha).toBeNull();
-      expect(chamadasAoClaude()).toHaveLength(antes + 1);
-      expect(statusDoEnvio('material_submissions', e)).toBe('publicado');
+      expect(chamadasAoClaude()).toHaveLength(antes + 2);
+      expect(statusDoEnvio('material_submissions', ea)).toBe('apto');
     } finally {
       restaurarTetos();
     }
   });
 
-  it('o envio que esperava pelo teto do dia é revisado quando o teto sobe (a fila não fica presa)', async () => {
+  it('o admin pode ter mais de 3 envios esperando: todos são aceitos e revisados; quem não é admin continua limitado a 3', async () => {
+    const dono = await autor('espera-admin');
+    const antigo = await autor('espera-antigo', 'student');
+    const ids = [1, 2, 3, 4, 5].map((n) => novoEnvio(dono.id, `e${n}`));
+    [1, 2, 3].forEach((n) => novoEnvio(antigo.id, `x${n}`));
+    expect(() => novoEnvio(antigo.id, 'x4')).toThrow();
+    const antes = chamadasAoClaude().length;
+
     const { resumo } = await rodar();
+
     expect(resumo.falha).toBeNull();
-    expect(um(`select count(*) from public.material_submissions where status in ('aguardando_revisao', 'em_revisao', 'apto');`)).toBe('0');
+    expect(ids.map((e) => statusDoEnvio('material_submissions', e))).toEqual(Array(5).fill('apto'));
+    expect(chamadasAoClaude()).toHaveLength(antes + 5 + 3);
   });
 
   it('trava do banco: com outro revisor rodando, a rodada sai sem fazer nada e sem chamar o claude', async () => {
@@ -382,7 +410,7 @@ describe('limites de custo e trava', () => {
     }
     const depois = await rodar();
     expect(depois.resumo.falha).toBeNull();
-    expect(statusDoEnvio('material_submissions', e)).toBe('publicado');
+    expect(statusDoEnvio('material_submissions', e)).toBe('apto');
   });
 });
 
@@ -406,7 +434,7 @@ describe('falha do claude e fila vazia', () => {
     psqlLocal(`update public.material_submissions set content_md = replace(content_md, 'MARCA-COTA', 'sem marca') where id = '${e}';`);
     const depois = await rodar();
     expect(depois.resumo.falha).toBeNull();
-    expect(statusDoEnvio('material_submissions', e)).toBe('publicado');
+    expect(statusDoEnvio('material_submissions', e)).toBe('apto');
   });
 
   it('fila vazia no banco de verdade: termina sem chamar o claude', async () => {

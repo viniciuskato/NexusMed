@@ -4,7 +4,10 @@
 // MESMO ciclo da Edge Function `revisar-envios` (`executarCiclo`, com a mesma ponte `bancoDoSupabase`, as
 // mesmas conferências, os mesmos textos de instrução e a mesma leitura do veredito), trocando só a API de
 // lotes pelo `claude -p` (`apiViaClaude`). Como o claude responde na hora, a rodada repete o ciclo: o
-// primeiro pede o veredito de UM envio, o seguinte o coleta, registra e publica, e assim até a fila secar.
+// primeiro pede o veredito de UM envio, o seguinte o coleta e registra, e assim até a fila secar.
+//
+// O revisor só ACONSELHA (P7): o veredito "apto" fica gravado no envio e NADA é publicado nem aplicado aqui;
+// quem publica é o dono, pelo admin. As funções de publicar/aplicar do ciclo ficam desligadas (`soAconselha`).
 import {
   executarCiclo,
   type Banco,
@@ -42,10 +45,7 @@ export interface DepsDaRodada {
 export interface TotaisDaRodada {
   enviados: number;
   resultados: number;
-  publicados: number;
-  atualizados: number;
   reprovadosAntesDaIa: number;
-  publicacoesRecusadas: number;
   conciliados: number;
   liberadas: number;
 }
@@ -75,20 +75,33 @@ export function erroSeguro(erro: string): string {
 function somar(t: TotaisDaRodada, r: ResumoDoCiclo): void {
   t.enviados += r.enviadosAoLote;
   t.resultados += r.resultadosRegistrados;
-  t.publicados += r.publicados;
-  t.atualizados += r.atualizados;
   t.reprovadosAntesDaIa += r.reprovadosAntesDaIa;
-  t.publicacoesRecusadas += r.publicacoesRecusadas;
   t.conciliados += r.lotesConciliados;
   t.liberadas += r.reservasLiberadas;
 }
 
 function houveProgresso(r: ResumoDoCiclo): boolean {
   return (
-    r.enviadosAoLote + r.resultadosRegistrados + r.publicados + r.atualizados + r.reprovadosAntesDaIa +
-      r.publicacoesRecusadas + r.lotesConciliados + r.reservasLiberadas + r.pausasContinuadas >
-    0
+    r.enviadosAoLote + r.resultadosRegistrados + r.reprovadosAntesDaIa + r.lotesConciliados + r.reservasLiberadas + r.pausasContinuadas > 0
   );
+}
+
+/** O banco do ciclo sem as portas de publicação: o ciclo as chama, e aqui elas não achariam nada nem escreveriam nada. */
+export function soAconselha(banco: Banco): Banco {
+  const naoPublica = async (): Promise<never> => {
+    throw new Error('o revisor local só aconselha: quem publica é o dono, pelo admin');
+  };
+  return {
+    ...banco,
+    paraPublicar: async () => [],
+    paraAplicarAtualizacoes: async () => [],
+    paraPublicarQuestoes: async () => [],
+    publicar: naoPublica,
+    aplicarAtualizacao: naoPublica,
+    publicarQuestoes: naoPublica,
+    recusarPublicacao: naoPublica,
+    recusarPublicacaoDeQuestoes: naoPublica,
+  };
 }
 
 export async function executarRodada(deps: DepsDaRodada): Promise<ResumoDaRodada> {
@@ -98,7 +111,7 @@ export async function executarRodada(deps: DepsDaRodada): Promise<ResumoDaRodada
     fila: 'vazia',
     ciclos: 0,
     chamadasAoClaude: 0,
-    totais: { enviados: 0, resultados: 0, publicados: 0, atualizados: 0, reprovadosAntesDaIa: 0, publicacoesRecusadas: 0, conciliados: 0, liberadas: 0 },
+    totais: { enviados: 0, resultados: 0, reprovadosAntesDaIa: 0, conciliados: 0, liberadas: 0 },
     falha: null,
     puladaPelaTravaDoBanco: false,
   };
@@ -130,7 +143,7 @@ export async function executarRodada(deps: DepsDaRodada): Promise<ResumoDaRodada
 
   const banco0 = bancoDoSupabase(clienteDoBanco(deps.exec));
   const banco: Banco = {
-    ...banco0,
+    ...soAconselha(banco0),
     async registrar(r) {
       const ok = await banco0.registrar(r);
       deps.registrar(
@@ -179,7 +192,7 @@ export async function executarRodada(deps: DepsDaRodada): Promise<ResumoDaRodada
       aColetar = r.enviadosAoLote > 0;
       somar(resumo.totais, r);
       deps.registrar(
-        `ciclo ${n}: enviados=${r.enviadosAoLote} registrados=${r.resultadosRegistrados} publicados=${r.publicados} atualizados=${r.atualizados} reprovados_antes_da_ia=${r.reprovadosAntesDaIa} recusadas=${r.publicacoesRecusadas} liberadas=${r.reservasLiberadas} erros=${r.erros.length}`,
+        `ciclo ${n}: enviados=${r.enviadosAoLote} registrados=${r.resultadosRegistrados} reprovados_antes_da_ia=${r.reprovadosAntesDaIa} liberadas=${r.reservasLiberadas} erros=${r.erros.length}`,
       );
       for (const e of r.erros) deps.registrar(`erro: ${erroSeguro(e)}`);
       if (r.pulado) {
@@ -202,7 +215,7 @@ export async function executarRodada(deps: DepsDaRodada): Promise<ResumoDaRodada
 
   const t = resumo.totais;
   deps.registrar(
-    `rodada concluída em ${Math.round((agora() - inicio) / 1000)}s: ciclos=${resumo.ciclos} claude=${resumo.chamadasAoClaude} registrados=${t.resultados} publicados=${t.publicados} atualizados=${t.atualizados} reprovados_antes_da_ia=${t.reprovadosAntesDaIa}`,
+    `rodada concluída em ${Math.round((agora() - inicio) / 1000)}s: ciclos=${resumo.ciclos} claude=${resumo.chamadasAoClaude} registrados=${t.resultados} reprovados_antes_da_ia=${t.reprovadosAntesDaIa}`,
   );
   return resumo;
 }

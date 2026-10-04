@@ -216,6 +216,15 @@ function encerrarArvore(pid: number | undefined, filho: { kill: () => boolean })
 
 export type Perguntar = (p: Pergunta) => Promise<RespostaDoClaude>;
 
+/**
+ * Lembrete que o revisor local acrescenta DEPOIS da mensagem do pedido (fora das fronteiras do material). Na
+ * primeira rodada de verdade, o claude pôs títulos "## (c) Veredito" e "## (d) Bloco..." em volta da linha do
+ * veredito e do bloco (copiando as letras do prompt revisor), e a leitura do veredito, que falha fechada, deu
+ * "erro". O texto de instruções (o do prompt revisor) não muda; o lembrete só repete a ordem de fechamento.
+ */
+export const LEMBRETE_DE_FECHAMENTO =
+  'Lembrete do formato de fechamento (a resposta é lida por um programa): não escreva títulos, rótulos nem letras como "(c)" ou "(d)" em volta do veredito e do bloco de correção. A linha do veredito vem sozinha; depois dela vem direto o bloco de código (ou nada, ou a frase "Nenhum achado muda o material."), sem nenhuma linha de texto no meio.';
+
 export function perguntarAoClaude(o: OpcoesDoClaude, env: NodeJS.ProcessEnv = process.env): Perguntar {
   return (p) =>
     new Promise<RespostaDoClaude>((resolve) => {
@@ -223,11 +232,11 @@ export function perguntarAoClaude(o: OpcoesDoClaude, env: NodeJS.ProcessEnv = pr
       const preparo = prepararChamada(p, o);
       let saida = '';
       let pronto = false;
-      let relogio: NodeJS.Timeout | undefined;
+      const prazo: { id?: NodeJS.Timeout } = {};
       const terminar = (r: RespostaDoClaude) => {
         if (pronto) return;
         pronto = true;
-        clearTimeout(relogio);
+        clearTimeout(prazo.id);
         resolve(r);
       };
       let filho: ReturnType<typeof spawn>;
@@ -242,7 +251,7 @@ export function perguntarAoClaude(o: OpcoesDoClaude, env: NodeJS.ProcessEnv = pr
         resolve({ ok: false, tipo: 'processo', detalhe: `não iniciou: ${primeiraLinhaCurta(e instanceof Error ? e.message : String(e))}` });
         return;
       }
-      relogio = setTimeout(() => {
+      prazo.id = setTimeout(() => {
         encerrarArvore(filho.pid, filho);
         terminar({ ok: false, tipo: 'tempo', detalhe: `sem resposta em ${Math.round(o.timeoutMs / 60_000)} min` });
       }, o.timeoutMs);
@@ -378,7 +387,7 @@ export function apiViaClaude(deps: {
           resultados.set(pedido.custom_id, { type: 'errored', error: 'tempo esgotado repetidas vezes' });
           continue;
         }
-        const r = await deps.perguntar({ sistema, mensagem });
+        const r = await deps.perguntar({ sistema, mensagem: `${mensagem}\n\n${LEMBRETE_DE_FECHAMENTO}` });
         if (!r.ok) {
           if (r.tipo === 'tempo') deps.falhas.registrarTempo(chave);
           ultimaFalha = new FalhaDoClaude(r.tipo, r.detalhe);

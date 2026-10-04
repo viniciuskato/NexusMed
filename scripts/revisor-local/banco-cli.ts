@@ -25,13 +25,14 @@ interface Contrato {
   params: Record<string, TipoSql>;
 }
 
-const IDENTIFICACAO_DO_ENVIO = {
-  p_submission_id: 'uuid',
-  p_review_id: 'uuid',
-  p_content_sha256: 'text',
-} as const;
-
-/** As funções que a Edge Function usa (supabase/functions/revisar-envios/banco.ts), menos `revisao_pausar`: sem lote da API não há `pause_turn`. */
+/**
+ * As funções que o revisor local chama: as da Edge Function (supabase/functions/revisar-envios/banco.ts) que
+ * ACONSELHAM (reservar, revisar, registrar o veredito, liberar, travar). Ficam de fora, de propósito:
+ *   - as que PUBLICAM, APLICAM atualização ou recusam publicação (`revisao_publicar_*`, `revisao_aplicar_atualizacao`,
+ *     `revisao_recusar_publicacao*`, `revisao_envios_*_para_publicar|aplicar`): desde a P7 o revisor local só dá o
+ *     parecer e quem publica é o dono, pelo admin;
+ *   - `revisao_pausar`: sem lote da API não há `pause_turn`.
+ */
 export const RPCS_PERMITIDAS: Record<string, Contrato> = {
   revisao_tentar_travar: { retorno: 'valor', params: { p_seconds: 'int' } },
   revisao_destravar: { retorno: 'vazio', params: { p_token: 'uuid' } },
@@ -63,14 +64,6 @@ export const RPCS_PERMITIDAS: Record<string, Contrato> = {
       p_billable: 'boolean',
     },
   },
-  revisao_envios_para_publicar: { retorno: 'linhas', params: { p_max: 'int' } },
-  revisao_publicar_envio: { retorno: 'valor', params: { ...IDENTIFICACAO_DO_ENVIO, p_material: 'jsonb' } },
-  revisao_recusar_publicacao: { retorno: 'valor', params: { ...IDENTIFICACAO_DO_ENVIO, p_note: 'text' } },
-  revisao_envios_de_atualizacao_para_aplicar: { retorno: 'linhas', params: { p_max: 'int' } },
-  revisao_aplicar_atualizacao: { retorno: 'valor', params: { ...IDENTIFICACAO_DO_ENVIO, p_material: 'jsonb' } },
-  revisao_envios_de_questoes_para_publicar: { retorno: 'linhas', params: { p_max: 'int' } },
-  revisao_publicar_questoes: { retorno: 'valor', params: { ...IDENTIFICACAO_DO_ENVIO, p_questoes: 'jsonb' } },
-  revisao_recusar_publicacao_de_questoes: { retorno: 'valor', params: { ...IDENTIFICACAO_DO_ENVIO, p_note: 'text' } },
 };
 
 /** As únicas tabelas lidas, e as colunas (o catálogo que a conferência do padrão precisa). */
@@ -84,7 +77,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function textoSql(s: string): string {
   // NUL não existe em texto do Postgres; a barra invertida vira E'' para valer com qualquer configuração.
-  const limpo = s.replace(/\u0000/g, '');
+  const limpo = s.split('\u0000').join('');
   const aspas = limpo.replace(/'/g, "''");
   return limpo.includes('\\') ? `E'${aspas.replace(/\\/g, '\\\\')}'` : `'${aspas}'`;
 }
@@ -185,12 +178,13 @@ export function clienteDoBanco(exec: ExecutorSql): ClienteDoBanco {
 }
 
 /**
- * A fila tem algum trabalho? Uma consulta só, de leitura: envio esperando, em revisão ou aprovado
- * (falta publicar), ou revisão em andamento. Fila vazia: a rodada termina sem chamar a IA.
+ * A fila tem algum trabalho? Uma consulta só, de leitura: envio esperando ou em revisão, ou revisão em
+ * andamento. Envio "apto" NÃO conta: o revisor local não o publica (quem publica é o dono, pelo admin).
+ * Fila vazia: a rodada termina sem chamar a IA.
  */
 export const SQL_DA_FILA = `select (
-    (select count(*) from public.material_submissions where status in ('aguardando_revisao', 'em_revisao', 'apto'))
-  + (select count(*) from public.question_submissions where status in ('aguardando_revisao', 'em_revisao', 'apto'))
+    (select count(*) from public.material_submissions where status in ('aguardando_revisao', 'em_revisao'))
+  + (select count(*) from public.question_submissions where status in ('aguardando_revisao', 'em_revisao'))
   + (select count(*) from public.material_reviews where status in ('reservada', 'incerta', 'submetida', 'pausada'))
 )::int as n`;
 
@@ -225,7 +219,31 @@ export interface OpcoesDoExecutor {
 }
 
 /** O executor real: `supabase db query` com o SQL num arquivo temporário (a linha de comando do Windows é curta). */
+/**
+ * Falha de CONEXÃO: o comando nem chegou ao banco, então repetir é seguro (nada foi executado). Qualquer outro
+ * erro, inclusive tempo esgotado depois de enviar o SQL, NÃO é repetido: uma função de escrita poderia ter rodado.
+ */
+export function falhaDeConexao(mensagem: string): boolean {
+  return /failed to connect|connection refused|dial tcp|no such host/i.test(mensagem);
+}
+
+export const TENTATIVAS_DE_CONEXAO = 3;
+
 export function executorViaCli(o: OpcoesDoExecutor): ExecutorSql {
+  const umaVez = executorDeUmaTentativa(o);
+  return async (sql) => {
+    for (let tentativa = 1; ; tentativa += 1) {
+      try {
+        return await umaVez(sql);
+      } catch (e) {
+        if (tentativa >= TENTATIVAS_DE_CONEXAO || !falhaDeConexao(e instanceof Error ? e.message : String(e))) throw e;
+        await new Promise((r) => setTimeout(r, 3000 * tentativa));
+      }
+    }
+  };
+}
+
+function executorDeUmaTentativa(o: OpcoesDoExecutor): ExecutorSql {
   return async (sql) => {
     const pasta = await mkdtemp(path.join(tmpdir(), 'revisor-sql-'));
     const arquivo = path.join(pasta, 'consulta.sql');

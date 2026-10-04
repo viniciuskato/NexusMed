@@ -3,20 +3,20 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { executarCiclo, type ApiDeLotes, type MensagemDaApi } from '../../supabase/functions/revisar-envios/ciclo.ts';
-import { bancoDoSupabase } from '../../supabase/functions/revisar-envios/banco.ts';
+import { bancoDoSupabase, type ClienteDoBanco } from '../../supabase/functions/revisar-envios/banco.ts';
 import { montarConferencias } from '../../supabase/functions/revisar-envios/conferencias.ts';
 import { BASE_DO_REVISOR, BASE_DO_REVISOR_DE_QUESTOES } from '../../supabase/functions/revisar-envios/gerado/textos.ts';
 import * as validacaoGerada from '../../supabase/functions/revisar-envios/gerado/validacao.js';
 import { montarSistema } from '../../supabase/functions/revisar-envios/montagem.ts';
 import type { ModuloDeValidacao } from '../../supabase/functions/revisar-envios/tipos.ts';
-import { SQL_DA_FILA, clienteDoBanco, type ExecutorSql, type Linha } from '../../scripts/revisor-local/banco-cli.ts';
+import { SQL_DA_FILA, sqlDaLeitura, type ExecutorSql } from '../../scripts/revisor-local/banco-cli.ts';
 import { contadorEmArquivo, type Perguntar } from '../../scripts/revisor-local/claude.ts';
-import { executarCli } from '../../scripts/revisor-local/cli.ts';
+import { executarCli, lerOpcoes } from '../../scripts/revisor-local/cli.ts';
 import { ORCAMENTO_DA_RODADA_MS, erroSeguro, executarRodada, type DepsDaRodada } from '../../scripts/revisor-local/rodada.ts';
 import { IDADE_MAXIMA_DA_TRAVA_MS, tentarTravar } from '../../scripts/revisor-local/trava.ts';
 import { materialParaEnvio } from '../e2e/fixtures/materialParaEnvio';
 
-// D-12 — a rodada do revisor local com o banco e o `claude` SIMULADOS. O banco de verdade (local) é
+// D-12/P7 — a rodada do revisor local (que só ACONSELHA) com o banco e o `claude` SIMULADOS. O banco de verdade (local) é
 // exercitado em tests/revisor-local/ (npm run test:revisor-local).
 
 let pasta: string;
@@ -54,7 +54,7 @@ class BancoDeMentira {
 
   readonly exec: ExecutorSql = async (sql) => {
     this.sqls.push(sql);
-    if (sql === SQL_DA_FILA) return [{ n: this.envios.filter((e) => e.estado !== 'publicado' && e.estado !== 'nao_apto').length }];
+    if (sql === SQL_DA_FILA) return [{ n: this.envios.filter((e) => e.estado !== 'publicado' && e.estado !== 'nao_apto' && e.estado !== 'apto').length }];
     const fn = /public\.(revisao_[a-z_]+)\(/.exec(sql)?.[1];
     if (!fn) {
       if (sql.includes('public.disciplines')) return [{ r: { id: this.disc, name: 'Farmacologia' } }];
@@ -119,6 +119,32 @@ class BancoDeMentira {
       default:
         throw new Error(`função não simulada: ${fn}`);
     }
+  };
+}
+
+/**
+ * O cliente da Edge Function (que PUBLICA): sem a lista fechada do revisor local, falando com o mesmo banco de mentira.
+ * Só serve para o teste mostrar a sequência que a Edge Function faria.
+ */
+function clienteDaEdgeFunction(banco: BancoDeMentira): ClienteDoBanco {
+  const LINHAS = /^revisao_(pendentes|reservar_envios|dados_do_envio|envios_.*)$/;
+  const literal = (v: unknown): string => (Array.isArray(v) ? `array[${v.map((x) => `'${String(x)}'`).join(', ')}]` : typeof v === 'number' ? String(v) : typeof v === 'string' ? `'${v}'` : 'null');
+  return {
+    async rpc(fn, args) {
+      const lista = Object.entries(args ?? {})
+        .filter(([, v]) => v === null || ['string', 'number'].includes(typeof v) || (Array.isArray(v) && v.every((x) => typeof x === 'string')))
+        .map(([k, v]) => `${k} => ${literal(v)}`)
+        .join(', ');
+      const linhas = await banco.exec(`select to_jsonb(public.${fn}(${lista})) as r`);
+      return { data: LINHAS.test(fn) ? linhas.map((l) => l.r) : (linhas[0]?.r ?? null), error: null };
+    },
+    from: (tabela) => ({
+      select: (colunas) => ({
+        order: (coluna) => ({
+          range: async (de, ate) => ({ data: (await banco.exec(sqlDaLeitura(tabela, colunas, coluna, de, ate))).map((l) => l.r), error: null }),
+        }),
+      }),
+    }),
   };
 }
 
@@ -198,7 +224,7 @@ describe('claude indisponível ou banco fora', () => {
 });
 
 describe('com envio esperando', () => {
-  it('chama o claude UMA vez, grava o veredito, publica o "apto" e para quando a fila seca', async () => {
+  it('chama o claude UMA vez, grava o veredito "apto" e NÃO publica: o envio fica "apto" e a fila seca', async () => {
     const banco = new BancoDeMentira();
     banco.adicionar('Material de teste', materialParaEnvio({ titulo: 'Material de teste' }));
     const perguntas: Array<{ sistema: string; mensagem: string }> = [];
@@ -210,8 +236,9 @@ describe('com envio esperando', () => {
     const resumo = await executarRodada(deps);
 
     expect(resumo).toMatchObject({ fila: 'com trabalho', ciclos: 2, chamadasAoClaude: 1, falha: null });
-    expect(resumo.totais).toMatchObject({ enviados: 1, resultados: 1, publicados: 1 });
-    expect(banco.envios[0].estado).toBe('publicado');
+    expect(resumo.totais).toMatchObject({ enviados: 1, resultados: 1 });
+    expect(banco.envios[0].estado).toBe('apto');
+    expect(banco.chamadas.filter((f) => /publica|aplicar|recusar|para_publicar/.test(f))).toEqual([]);
     // O claude recebeu o texto de instruções de sempre e o material dentro das fronteiras.
     expect(perguntas[0].sistema).toBe(montarSistema(BASE_DO_REVISOR));
     expect(perguntas[0].mensagem).toMatch(/=== INÍCIO DO MATERIAL [0-9a-f-]{36} ===/);
@@ -255,8 +282,8 @@ describe('com envio esperando', () => {
     };
     const deps = depsBase(banco, perguntar, { agora: () => relogio });
     await executarRodada(deps);
-    // O envio A já estava com o claude: é coletado e publicado (senão o veredito se perderia); o B espera a próxima rodada.
-    expect(banco.envios.map((e) => e.estado)).toEqual(['publicado', 'aguardando']);
+    // O envio A já estava com o claude: é coletado e o veredito gravado (senão o veredito se perderia); o B espera a próxima rodada.
+    expect(banco.envios.map((e) => e.estado)).toEqual(['apto', 'aguardando']);
     expect(deps.linhas.join('\n')).toMatch(/orçamento de tempo/);
   });
 
@@ -280,7 +307,7 @@ describe('com envio esperando', () => {
     };
     const { conferir, lerMaterial, lerQuestoes } = montarConferencias(validacaoGerada as unknown as ModuloDeValidacao);
     const depsEdge = {
-      banco: bancoDoSupabase(clienteDoBanco(bancoEdge.exec)),
+      banco: bancoDoSupabase(clienteDaEdgeFunction(bancoEdge)),
       api,
       conferir,
       lerMaterial,
@@ -300,17 +327,17 @@ describe('com envio esperando', () => {
     await executarRodada(depsBase(bancoLocal, async () => ({ ok: true, mensagem: RESPOSTA_APTO })));
 
     expect(bancoEdge.envios[0].estado).toBe('publicado');
-    expect(bancoLocal.envios[0].estado).toBe('publicado');
-    expect(bancoLocal.chamadas).toEqual(bancoEdge.chamadas);
-    // E a sequência é a esperada, função por função.
+    expect(bancoLocal.envios[0].estado).toBe('apto');
+    // A sequência do revisor local é a da Edge Function, na mesma ordem, SEM as funções de publicar/aplicar (P7: só aconselha).
+    const PUBLICACAO = /publicar|aplicar|para_publicar/;
+    expect(bancoEdge.chamadas.some((f) => PUBLICACAO.test(f))).toBe(true);
+    expect(bancoLocal.chamadas).toEqual(bancoEdge.chamadas.filter((f) => !PUBLICACAO.test(f)));
     expect(bancoLocal.chamadas).toEqual([
-      // disparo 1: trava, reservas velhas, conciliação/coleta (nada pendente), publicação (nada pronto), reserva, tentativa, lote
+      // ciclo 1: trava, reservas velhas, conciliação/coleta (nada pendente), reserva, tentativa, lote
       'revisao_tentar_travar', 'revisao_liberar_reservas_velhas', 'revisao_pendentes', 'revisao_pendentes',
-      'revisao_envios_para_publicar', 'revisao_envios_de_atualizacao_para_aplicar', 'revisao_envios_de_questoes_para_publicar',
       'revisao_pendentes', 'revisao_reservar_envios', 'revisao_marcar_incerta', 'revisao_anexar_lote', 'revisao_destravar',
-      // disparo 2: coleta o resultado, registra o veredito, publica o apto
+      // ciclo 2: coleta o resultado e registra o veredito; a reserva seguinte não acha nada
       'revisao_tentar_travar', 'revisao_liberar_reservas_velhas', 'revisao_pendentes', 'revisao_pendentes', 'revisao_registrar_resultado',
-      'revisao_envios_para_publicar', 'revisao_publicar_envio', 'revisao_envios_de_atualizacao_para_aplicar', 'revisao_envios_de_questoes_para_publicar',
       'revisao_pendentes', 'revisao_reservar_envios', 'revisao_destravar',
     ]);
   });
@@ -360,6 +387,17 @@ describe('uma rodada por vez (trava local)', () => {
       log.mockRestore();
       if (trava.ok) trava.liberar();
     }
+  });
+});
+
+describe('opções', () => {
+  it('a busca e a leitura de página da web vêm ligadas; --sem-web ou REVISOR_WEB=0 desligam', () => {
+    expect(lerOpcoes(['--local'], {}).web).toBe(true);
+    expect(lerOpcoes(['--sem-web'], {}).web).toBe(false);
+    expect(lerOpcoes([], { REVISOR_WEB: '0' }).web).toBe(false);
+    expect(lerOpcoes([], { REVISOR_WEB: '1' }).web).toBe(true);
+    expect(lerOpcoes(['--local'], {}).alvo).toBe('local');
+    expect(lerOpcoes([], {}).alvo).toBe('linked');
   });
 });
 

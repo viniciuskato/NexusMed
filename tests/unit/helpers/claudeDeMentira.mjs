@@ -5,6 +5,8 @@
 // Quem decide a resposta: a variável FAKE_CLAUDE_MODO (apto, nao_apto, cota, falha, dorme, sem_json)
 // ou, se a entrada trouxer uma destas marcas, ela vale mais: MARCA-NAO-APTO, MARCA-COTA, MARCA-DORME.
 import { appendFileSync } from 'node:fs';
+import process from 'node:process';
+import { setTimeout } from 'node:timers';
 
 let entrada = '';
 process.stdin.setEncoding('utf8');

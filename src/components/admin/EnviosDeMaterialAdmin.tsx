@@ -41,9 +41,9 @@ export const EnviosDeMaterialAdmin: React.FC<EnviosDeMaterialAdminProps> = ({ di
           Envios de material e de questões
         </h3>
         <p className="text-[11px] text-stone-500 dark:text-slate-400">
-          Materiais e questões enviados pelos usuários pelo site, do mais novo para o mais antigo. Só leitura:
-          quando o revisor de IA aprova, o servidor publica sozinho (com o selo “revisado por IA”); aqui você
-          acompanha e abre o que foi publicado.
+          Materiais e questões enviados pelo site, do mais novo para o mais antigo. Só leitura: o revisor de IA
+          dá o parecer (o veredito e os achados), a cada 15 minutos, quando o computador do dono está ligado, e
+          quem decide e publica é você. Aqui você acompanha o que foi enviado e abre o que está no ar.
         </p>
       </div>
       <ConnectionNotice status={status} />

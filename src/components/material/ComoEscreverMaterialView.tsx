@@ -241,8 +241,8 @@ export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> =
               {')'}
             </>
           )}
-          . O revisor de IA do próprio NexusMed confere o material: com “APTO PARA ENVIAR”, ele vai ao ar com
-          o selo “revisado por IA”, e qualquer leitor pode reportar um erro.
+          . O revisor de IA do próprio NexusMed confere o material e dá o parecer (“APTO PARA ENVIAR” ou os
+          achados); quem decide e publica é o dono do site.
         </p>
       </header>
 

@@ -167,7 +167,7 @@ describe('44-H2 — "Meus envios": veredito, achados e correção das questões'
     const li = await itemDe('Questões de Espirometria (1 questão)');
     fireEvent.click(within(li).getByRole('button', { name: /Tentar de novo/ }));
     await waitFor(() => expect(repoQuestoes.retry).toHaveBeenCalledWith('q1', 'Questões de Espirometria (1 questão)'));
-    expect(await screen.findByText(/já foi aprovado na revisão\. A publicação será refeita em alguns minutos, sem nova revisão/)).toBeTruthy();
+    expect(await screen.findByText(/já tem parecer favorável do revisor de IA, sem nova revisão\. Quem publica é o dono do site/)).toBeTruthy();
   });
 
   it('"Tentar de novo" sem revisão apto que valha: o envio volta para a fila de revisão', async () => {
@@ -188,7 +188,7 @@ describe('44-H2 — "Meus envios": veredito, achados e correção das questões'
     renderTela({ onAbrirQuestoes: abrir });
     const aprovado = await itemDe('Lote aprovado');
     expect(aprovado.textContent).toContain('Aprovado na revisão');
-    expect(aprovado.textContent).toContain('Elas serão publicadas em alguns minutos');
+    expect(aprovado.textContent).toContain('Quem decide e publica é o dono do site');
     expect(within(aprovado).queryByTestId('abrir-questoes-publicadas')).toBeNull();
 
     const publicado = await itemDe('Lote publicado');

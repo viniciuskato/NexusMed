@@ -372,9 +372,9 @@ select tests.create_user('b.fila@test.local', 'admin', 'active') as v_fila \gset
 insert into public.material_submissions (author_id, title, content_md, target_material_id) values
   (:'v_fila', 'Fila 1', '# 1', :'v_m'), (:'v_fila', 'Fila 2', '# 2', :'v_m'), (:'v_fila', 'Fila 3', '# 3', :'v_m');
 select tests.authenticate_as(:'v_fila');
-select throws_ok(
+select lives_ok(
   format($$ insert into public.material_submissions (title, content_md, target_material_id) values ('Fila 4', '# 4', %L) $$, :'v_m'),
-  'P0001', NULL, 'o quarto envio esperando revisão (de atualização também) é recusado'
+  'P7: o quarto envio esperando (de atualização também) não barra o admin'
 );
 select tests.clear_auth();
 

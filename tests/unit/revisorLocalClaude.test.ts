@@ -9,6 +9,7 @@ import { montarPedidoDeLote, montarSistema } from '../../supabase/functions/revi
 import { lerVeredito, textoFinalDaResposta } from '../../supabase/functions/revisar-envios/veredito.ts';
 import {
   FalhaDoClaude,
+  LEMBRETE_DE_FECHAMENTO,
   LIMITE_DE_TEMPOS_ESGOTADOS,
   LIMITE_DA_LINHA_DE_COMANDO,
   ambienteDoClaude,
@@ -266,7 +267,7 @@ describe('o adaptador (claude no lugar da API de lotes)', () => {
   const COD1 = '11111111-1111-4111-8111-111111111111';
   const COD2 = '22222222-2222-4222-8222-222222222222';
 
-  it('o claude recebe o MESMO sistema e a MESMA mensagem que a API de lotes receberia', async () => {
+  it('o claude recebe o MESMO sistema e a mensagem que a API de lotes receberia, mais o lembrete de fechamento no fim', async () => {
     const vistos: Array<{ sistema: string; mensagem: string }> = [];
     const api = apiViaClaude({
       perguntar: async (p) => {
@@ -279,7 +280,9 @@ describe('o adaptador (claude no lugar da API de lotes)', () => {
     const { id } = await api.criar([p]);
     expect(vistos).toHaveLength(1);
     expect(vistos[0].sistema).toBe(sistema);
-    expect(vistos[0].mensagem).toBe(p.params.messages[0].content);
+    expect(vistos[0].mensagem).toBe(`${p.params.messages[0].content as string}\n\n${LEMBRETE_DE_FECHAMENTO}`);
+    // O lembrete fica fora das fronteiras do material.
+    expect(vistos[0].mensagem.indexOf(LEMBRETE_DE_FECHAMENTO)).toBeGreaterThan(vistos[0].mensagem.indexOf('=== FIM DO MATERIAL'));
     expect(await api.consultar(id)).toEqual({ status: 'ended' });
     const itens: Array<{ custom_id: string; result: { type: string } }> = [];
     for await (const item of api.resultados(id)) itens.push(item);
