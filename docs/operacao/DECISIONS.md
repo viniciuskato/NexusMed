@@ -6,6 +6,15 @@
 > `docs/archive/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-10-03 — O NexusMed é o caderno digital do dono (D-13)
+
+Origem: dono, 03/10/2026: "vamos mudar a lógica do nexusmed. Ao invés de tratar como plataforma de interesse comercial, vamos transformar em algo como meu caderno digital."; "vamos deixar só eu publicar mesmo, mas ainda vamos usar revisor."; "o nexusmed é uma plataforma que pretende ser altamente integrada, com material, questões e flashcards dos erros."; à pergunta "o revisor de IA trava ou aconselha?": "A" (aconselha).
+
+1. **Caderno pessoal.** O NexusMed é o caderno de estudo do dono, com amigos aprovados lendo e estudando. Não é produto comercial: regras que existiam só por isso (como a proibição de imagens) deixam de valer.
+2. **Só o dono publica.** Envio de material e de questões é só do admin; envios antigos de outros usuários ficam guardados.
+3. **O revisor de IA aconselha.** O parecer aparece ao lado do envio; o dono publica com qualquer parecer. O selo "Revisado por IA" só aparece com parecer "apto". Revê a D-11 (itens 1 a 3) nesses pontos e a atestação humana como portão de publicação.
+4. **Integração é o objetivo.** Material, questões e flashcards dos erros se ligam pelo trecho (seção) do material.
+
 ## 2026-10-03 — Publicação sem limite por dia nem horário; revisão dos envios pela equipe (D-12)
 
 Origem: dono, 03/10/2026: "Não estou entendendo essa limitação de duas por dia e a peridiodização que você fez, ela é engessada e sem lógica." (escolheu tirar os dois limites); e "nós não queremos pagar diretamente. Iriamos gastar tokens da conta." (escolheu a revisão dos envios pela equipe, com a cota da conta).
