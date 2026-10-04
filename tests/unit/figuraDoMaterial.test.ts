@@ -100,6 +100,11 @@ describe('destinoDaFigura: só o identificador do próprio site vale', () => {
     `figura:${ID} `.replace(/ $/, 'x'),
     'figura:',
     '',
+    ` figura:${ID}`,
+    `figura:${ID} `,
+    `figura:${ID}\t`,
+    ' figura:PENDENTE',
+    'figura:PENDENTE ',
   ])('recusa "%s"', (destino) => {
     expect(destinoDaFigura(destino).tipo).toBe('invalido');
   });
@@ -180,5 +185,18 @@ describe('envio da imagem: o que serve', () => {
     expect(caminhoDaFigura(ID, 'image/png')).toBe(`${ID}.png`);
     expect(caminhoDaFigura(ID, 'image/jpeg')).toBe(`${ID}.jpg`);
     expect(caminhoDaFigura(ID, 'image/webp')).toBe(`${ID}.webp`);
+  });
+});
+
+describe('o destino é o mesmo texto que o banco procura', () => {
+  it('`![alt]( figura:<id> )` com espaço nos parênteses é destino inválido (o banco só libera a imagem de `(figura:<id>)` exato)', () => {
+    const f = lerFigura([`![a]( figura:${ID} )`, 'Legenda.', 'Fonte: X.']);
+    expect(f?.destino).toEqual({ tipo: 'invalido', bruto: ` figura:${ID} ` });
+    expect(lerFigura([`![a](figura:${ID})`, 'Legenda.', 'Fonte: X.'])?.destino).toEqual({ tipo: 'figura', id: ID });
+  });
+
+  it('o trecho do botão "Enviar imagem" tem exatamente `(figura:<id>)`, como a função do banco procura', () => {
+    const trecho = montarTrechoDaFigura({ id: ID, alt: 'a', legenda: 'L', fonte: 'F' });
+    expect(trecho).toContain(`(figura:${ID})`);
   });
 });

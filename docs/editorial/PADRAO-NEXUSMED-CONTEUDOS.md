@@ -34,11 +34,12 @@ padrão, aproveitando o conteúdo e as referências que ainda valem.
 
 Um material cobre **um assunto com objetivo de aprendizagem próprio** — algo
 que o estudante consegue estudar de uma vez e sair sabendo. Tamanho de
-referência: **8 a 25 minutos de leitura**. Abaixo de uns 8 minutos, o assunto
-cabe como seção ou linha de tabela no material de cima. Acima de uns 25
-minutos com mais de um objetivo, o material deve ser dividido. Um material de
-doença com o esqueleto completo da seção 1.3 costuma ficar perto do teto: o
-que não cabe vira material abaixo, não parágrafo a mais.
+referência: **8 a 60 minutos de leitura**. Abaixo de uns 8 minutos, o assunto
+cabe como seção ou linha de tabela no material de cima. Acima de uns 60
+minutos, ou com mais de um objetivo de aprendizagem, o material deve ser
+dividido. Um material de doença com o esqueleto completo da seção 1.3 costuma
+ficar entre 30 e 60 minutos: o que não cabe vira material abaixo, não
+parágrafo a mais.
 
 Os materiais formam uma **árvore**: cada material pode ter um material
 acima dele (o "pai") e vários abaixo (os "filhos"). O estudante começa pelo
@@ -931,6 +932,7 @@ material ganha a estrutura de um bom caderno. O que muda em relação à v2:
 - **"Aplicando o conceito"** com exemplo hipotético resolvido, **tom direto** e
   **aviso do que é essencial e do que é aprofundamento** (sem afirmar o que
   "cai em prova" sem base);
+- o tempo de leitura vai de 8 a 60 minutos (era 8 a 25): o caderno tem materiais longos;
 - a linha de metadado passa a ser `**Versão do padrão:** 3`.
 
 **Materiais da v2 não precisam ser refeitos para continuar no ar:** o que foi

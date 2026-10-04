@@ -228,13 +228,19 @@ describe('checagem do padrão — estrutura', () => {
     expect(regras(material().replace('### Referências', '### Palavras-chave\n`C3G`\n\n### Referências'))).toEqual(['bloco-descartado']);
   });
 
-  it('tempo fora de 8–25 minutos, ou ausente', () => {
+  it('tempo fora de 8–60 minutos, ou ausente', () => {
     const com = (t: string) => `**Subtítulo:** S\n**Disciplina:** Farmacologia\n**Tema:** Clínica\n${t}**Versão do padrão:** 3`;
-    expect(regras(material({ cabecalho: com('**Tempo estimado de leitura:** 30 minutos\n') }))).toEqual(['tempo-fora-da-faixa']);
+    expect(regras(material({ cabecalho: com('**Tempo estimado de leitura:** 61 minutos\n') }))).toEqual(['tempo-fora-da-faixa']);
     expect(regras(material({ cabecalho: com('**Tempo estimado de leitura:** 5 minutos\n') }))).toEqual(['tempo-fora-da-faixa']);
     expect(regras(material({ cabecalho: com('') }))).toEqual(['tempo-fora-da-faixa']);
-    expect(regras(material({ cabecalho: com('**Tempo estimado de leitura:** 8 minutos\n') }))).toEqual([]);
-    expect(regras(material({ cabecalho: com('**Tempo estimado de leitura:** 25 minutos\n') }))).toEqual([]);
+    expect(regras(material({ cabecalho: com('**Tempo estimado de leitura:** 7 minutos\n') }))).toEqual(['tempo-fora-da-faixa']);
+    for (const ok of [8, 25, 30, 45, 60]) {
+      expect(regras(material({ cabecalho: com(`**Tempo estimado de leitura:** ${ok} minutos\n`) })), String(ok)).toEqual([]);
+    }
+    const [p] = checarMaterialMarkdown(material({ cabecalho: com('**Tempo estimado de leitura:** 90 minutos\n') })).pendencias;
+    expect(p.mensagem).toContain('fora da faixa de 8 a 60');
+    const [ausente] = checarMaterialMarkdown(material({ cabecalho: com('') })).pendencias;
+    expect(ausente.mensagem).toContain('com N entre 8 e 60');
   });
 
   it('sem palavras-chave', () => {
@@ -389,6 +395,14 @@ describe('checagem do padrão — figuras e imagens (P9)', () => {
     expect(resto).toEqual([]);
     expect(p.regra).toBe('figura-fora-do-site');
     expect(p.mensagem).toContain('Enviar imagem');
+  });
+
+  it('espaço dentro dos parênteses do destino: figura-fora-do-site (o banco só libera `(figura:<id>)` exato)', () => {
+    for (const destino of [` figura:${ID}`, `figura:${ID} `, ` figura:${ID} `]) {
+      const [p, ...resto] = checarMaterialMarkdown(material({ corpo: figura([`![a](${destino})`, '**Figura 1.** L.', 'Fonte: X.']) })).pendencias;
+      expect(resto).toEqual([]);
+      expect(p.regra).toBe('figura-fora-do-site');
+    }
   });
 
   it('imagem no meio de um parágrafo, numa lista, numa citação ou nos Pontos-Chave: imagem-fora-do-formato', () => {

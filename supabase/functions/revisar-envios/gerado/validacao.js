@@ -299,11 +299,10 @@ function eLinhaDeFigura(linha) {
   return LINHA_DA_IMAGEM.test(linha.trim());
 }
 function destinoDaFigura(bruto) {
-  const destino = bruto.trim();
-  if (destino === `figura:${FIGURA_PENDENTE}`) return { tipo: "pendente" };
-  const m = destino.match(/^figura:(.+)$/);
+  if (bruto === `figura:${FIGURA_PENDENTE}`) return { tipo: "pendente" };
+  const m = bruto.match(/^figura:(.+)$/);
   if (m && FIGURA_ID.test(m[1])) return { tipo: "figura", id: m[1] };
-  return { tipo: "invalido", bruto: destino };
+  return { tipo: "invalido", bruto };
 }
 function lerFigura(linhas) {
   if (linhas.length === 0) return null;
@@ -800,14 +799,15 @@ var versaoAusente = {
     ];
   }
 };
+var TEMPO_MAXIMO_DE_LEITURA = 60;
 var tempoForaDaFaixa = {
   id: "tempo-fora-da-faixa",
-  descricao: "Tempo de leitura fora de 8–25 minutos",
+  descricao: "Tempo de leitura fora de 8–60 minutos",
   verificar(arq) {
     const minutos = metadados(arq).estimatedReadTimeMinutes;
     const i = linhaDoMetadado(arq, "tempo estimado de leitura");
-    if (typeof minutos === "number" && minutos >= 8 && minutos <= 25) return [];
-    const mensagem = typeof minutos === "number" ? `Tempo de leitura de ${minutos} minutos, fora da faixa de 8 a 25: abaixo, o assunto cabe no material de cima; acima, o material deve ser dividido.` : 'Tempo de leitura ausente ou sem número: escreva "**Tempo estimado de leitura:** N minutos", com N entre 8 e 25.';
+    if (typeof minutos === "number" && minutos >= 8 && minutos <= TEMPO_MAXIMO_DE_LEITURA) return [];
+    const mensagem = typeof minutos === "number" ? `Tempo de leitura de ${minutos} minutos, fora da faixa de 8 a ${TEMPO_MAXIMO_DE_LEITURA}: abaixo, o assunto cabe no material de cima; acima, o material deve ser dividido.` : `Tempo de leitura ausente ou sem número: escreva "**Tempo estimado de leitura:** N minutos", com N entre 8 e ${TEMPO_MAXIMO_DE_LEITURA}.`;
     return [pendencia(arq, "tempo-fora-da-faixa", i === -1 ? fimDoCabecalho(arq) : i, mensagem)];
   }
 };

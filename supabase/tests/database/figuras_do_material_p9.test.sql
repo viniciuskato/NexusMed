@@ -140,7 +140,7 @@ $$;
 -- O papel `authenticated` troca de usuário por estas funções: precisa executá-las (função nova não nasce com EXECUTE).
 grant execute on all functions in schema tests to anon, authenticated;
 
-select plan(36);
+select plan(37);
 
 select tests.clear_auth();
 select tests.create_user('fig.admin@test.local', 'admin', 'active') as v_admin \gset
@@ -174,6 +174,16 @@ select tests.force_publish_material(:'v_pub');
 insert into public.materials (discipline_id, theme_id, title) values (:'v_disc', :'v_theme', 'Rascunho com figura') returning id as v_rasc \gset
 insert into public.material_sections (material_id, sort_order, title, content) values
   (:'v_rasc', 0, 'S', E'Texto.\n\n![Alt](figura:' || :'v_fb' || E')\n**Figura 1.** Legenda.\nFonte: Diretriz, 2024.');
+
+-- Figura citada com espaço dentro dos parênteses: a checagem do padrão e o leitor a tratam como destino inválido, e o
+-- banco também não a conta como citada (a leitura e a liberação da imagem concordam).
+select gen_random_uuid() as v_fe \gset
+insert into public.material_figures (id, storage_path, mime_type, byte_size, sha256, created_by)
+values (:'v_fe', :'v_fe' || '.png', 'image/png', 1000, repeat('e', 64), :'v_admin');
+insert into public.materials (discipline_id, theme_id, title) values (:'v_disc', :'v_theme', 'Material com figura e espaço') returning id as v_esp \gset
+insert into public.material_sections (material_id, sort_order, title, content) values
+  (:'v_esp', 0, 'S', E'![Alt]( figura:' || :'v_fe' || E' )\n**Figura 1.** Legenda.\nFonte: Diretriz, 2024.');
+select tests.force_publish_material(:'v_esp');
 
 -- 1. O bucket -----------------------------------------------------------------------------------------------------
 
@@ -300,6 +310,11 @@ select tests.clear_auth();
 select is(app.figure_is_published(:'v_fc'), false, 'a figura que nenhum material cita não é "publicada"');
 select is(app.figure_is_published(:'v_fa'), true, 'a figura citada por material publicado é "publicada"');
 select is(has_function_privilege('anon', 'app.figure_is_published(uuid)', 'EXECUTE'), false, 'anon não executa app.figure_is_published');
+select is(
+  app.figure_is_published(:'v_fe'),
+  false,
+  'figura citada com espaço dentro dos parênteses não conta como citada (só `(figura:<id>)` exato, como a checagem exige)'
+);
 
 -- 4. Imutável -----------------------------------------------------------------------------------------------------
 

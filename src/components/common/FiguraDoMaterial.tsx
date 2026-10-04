@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ImageOff } from 'lucide-react';
 import { urlDaFigura } from '../../repositories/FigurasRepository';
 import type { FiguraLida } from '../../utils/figuraDoMaterial';
@@ -19,7 +19,6 @@ interface FiguraDoMaterialProps {
 export const FiguraDoMaterial: React.FC<FiguraDoMaterialProps> = ({ figura, renderInline }) => {
   const id = figura.destino.tipo === 'figura' ? figura.destino.id : null;
   const [estado, setEstado] = useState<Estado>(id ? { tipo: 'carregando' } : { tipo: 'indisponivel' });
-  const imagem = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
     if (!id) {
@@ -36,22 +35,23 @@ export const FiguraDoMaterial: React.FC<FiguraDoMaterialProps> = ({ figura, rend
     };
   }, [id]);
 
-  // A imagem que não carrega (URL vencida, arquivo ausente) vira "indisponível". O ouvinte fica aqui, e não no
-  // atributo `onError` do <img>, porque a imagem não é um elemento interativo (jsx-a11y).
-  const temImagem = estado.tipo === 'ok';
-  useEffect(() => {
-    const el = imagem.current;
-    if (!temImagem || !el) return;
+  // A imagem que não carrega (URL vencida, arquivo ausente) vira "indisponível". O ouvinte é ligado no instante em que o
+  // <img> entra na tela (ref de função, no commit), e não num efeito depois dele nem no atributo `onError` (a imagem não
+  // é um elemento interativo para o jsx-a11y): assim o erro nunca se perde, qualquer que seja a ordem dos efeitos. Uma
+  // imagem que já falhou antes de o ouvinte existir também é pega.
+  const aoMostrarImagem = useCallback((el: HTMLImageElement | null) => {
+    if (!el) return;
     const falhou = () => setEstado({ tipo: 'indisponivel' });
     el.addEventListener('error', falhou);
+    if (el.complete && el.naturalWidth === 0 && el.getAttribute('src')) falhou();
     return () => el.removeEventListener('error', falhou);
-  }, [temImagem]);
+  }, []);
 
   return (
     <figure className="my-6" data-testid="figura-do-material">
       {estado.tipo === 'ok' ? (
         <img
-          ref={imagem}
+          ref={aoMostrarImagem}
           src={estado.url}
           alt={figura.alt}
           loading="lazy"

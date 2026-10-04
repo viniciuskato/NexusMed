@@ -93,6 +93,7 @@ describe('SafeMarkdown — figura do material', () => {
     ['identificador malformado', 'figura:123'],
     ['identificador em maiúsculas', `figura:${ID.toUpperCase()}`],
     ['figura ainda pendente', 'figura:PENDENTE'],
+    ['espaço dentro dos parênteses', ` figura:${ID} `],
   ])('%s: nunca vira <img> e nunca consulta o Storage', async (_nome, destino) => {
     const { container } = render(<SafeMarkdown content={bloco(destino)} />);
     await waitFor(() => expect(screen.getByTestId('figura-indisponivel')).toBeTruthy());

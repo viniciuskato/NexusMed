@@ -568,17 +568,20 @@ const versaoAusente: RegraDoPadrao = {
   },
 };
 
+/** Teto do tempo de leitura declarado: o caderno pessoal tem materiais longos (v3: 8 a 60 minutos; o piso continua 8). */
+export const TEMPO_MAXIMO_DE_LEITURA = 60;
+
 const tempoForaDaFaixa: RegraDoPadrao = {
   id: 'tempo-fora-da-faixa',
-  descricao: 'Tempo de leitura fora de 8–25 minutos',
+  descricao: 'Tempo de leitura fora de 8–60 minutos',
   verificar(arq) {
     const minutos = metadados(arq).estimatedReadTimeMinutes;
     const i = linhaDoMetadado(arq, 'tempo estimado de leitura');
-    if (typeof minutos === 'number' && minutos >= 8 && minutos <= 25) return [];
+    if (typeof minutos === 'number' && minutos >= 8 && minutos <= TEMPO_MAXIMO_DE_LEITURA) return [];
     const mensagem =
       typeof minutos === 'number'
-        ? `Tempo de leitura de ${minutos} minutos, fora da faixa de 8 a 25: abaixo, o assunto cabe no material de cima; acima, o material deve ser dividido.`
-        : 'Tempo de leitura ausente ou sem número: escreva "**Tempo estimado de leitura:** N minutos", com N entre 8 e 25.';
+        ? `Tempo de leitura de ${minutos} minutos, fora da faixa de 8 a ${TEMPO_MAXIMO_DE_LEITURA}: abaixo, o assunto cabe no material de cima; acima, o material deve ser dividido.`
+        : `Tempo de leitura ausente ou sem número: escreva "**Tempo estimado de leitura:** N minutos", com N entre 8 e ${TEMPO_MAXIMO_DE_LEITURA}.`;
     return [pendencia(arq, 'tempo-fora-da-faixa', i === -1 ? fimDoCabecalho(arq) : i, mensagem)];
   },
 };

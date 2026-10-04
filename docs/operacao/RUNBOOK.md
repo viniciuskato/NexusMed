@@ -250,7 +250,14 @@ obrigatório antes prende o PR para sempre.
 - Atualiza sozinho (P9): **antes** dessa conferência, se a pasta está na `main` e sem
   arquivo rastreado alterado, o programa roda `git pull --ff-only origin main` (só avanço
   rápido: nunca cria merge nem reescreve nada). Por isso você não precisa mais rodar
-  `git pull` em `C:\Users\vinic\dev\NexusMed` depois de cada merge. Se o pull falhar
+  `git pull` em `C:\Users\vinic\dev\NexusMed` depois de cada merge. **Quando o pull move a
+  `main`, essa rodada encerra** (o programa já carregou o código antigo): registra no log
+  "a main foi atualizada pelo GitHub (antes → depois)", sai com código 0 sem tocar o banco
+  nem o claude, e a rodada seguinte, 15 minutos depois, já carrega o código novo. Se o
+  `package-lock.json` mudou no pull, a rodada roda `npm ci` antes de encerrar; se o `npm ci`
+  falhar, sai com código 1 e deixa o marcador `.git\revisor-npm-ci-pendente`: nenhuma
+  rodada roda até o `npm ci` passar (rode `npm.cmd ci` na pasta, ou a próxima rodada tenta
+  de novo). Se o pull falhar
   (sem rede, commit local fora do GitHub, histórico que não avança em linha reta), nada é
   alterado e a conferência decide pelo estado que ficou, como antes. Pasta em branch de
   trabalho ou com arquivo rastreado editado não é tocada: não deixe a pasta do agendamento

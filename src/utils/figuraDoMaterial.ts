@@ -49,12 +49,16 @@ export function eLinhaDeFigura(linha: string): boolean {
   return LINHA_DA_IMAGEM.test(linha.trim());
 }
 
+/**
+ * O destino é lido SEM aparar espaço: `figura:<id>` exato. É o mesmo texto que o banco procura (`(figura:<id>)`, função
+ * `app.figure_is_published`) para saber se um material publicado cita a figura; com espaço dentro dos parênteses o
+ * leitor mostraria a figura, mas a imagem não seria liberada ao aluno. Por isso o espaço é destino inválido.
+ */
 export function destinoDaFigura(bruto: string): DestinoDaFigura {
-  const destino = bruto.trim();
-  if (destino === `figura:${FIGURA_PENDENTE}`) return { tipo: 'pendente' };
-  const m = destino.match(/^figura:(.+)$/);
+  if (bruto === `figura:${FIGURA_PENDENTE}`) return { tipo: 'pendente' };
+  const m = bruto.match(/^figura:(.+)$/);
   if (m && FIGURA_ID.test(m[1])) return { tipo: 'figura', id: m[1] };
-  return { tipo: 'invalido', bruto: destino };
+  return { tipo: 'invalido', bruto };
 }
 
 /**

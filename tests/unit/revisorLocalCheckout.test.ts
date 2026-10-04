@@ -105,7 +105,19 @@ describe('conferirCheckout', () => {
     };
     expect((await conferirCheckout('x', falso)).ok).toBe(true);
     // Primeiro olha a branch e o estado, depois atualiza, e só então roda a guarda de sempre.
-    expect(chamadas.map((c) => c[0])).toEqual(['rev-parse', 'status', 'pull', 'fetch', 'rev-parse', 'rev-parse', 'rev-parse', 'status']);
+    expect(chamadas.map((c) => c[0])).toEqual([
+      'rev-parse', // onde fica .git (marcador de npm ci pendente)
+      'rev-parse', // HEAD antes
+      'rev-parse', // branch
+      'status',
+      'pull',
+      'rev-parse', // HEAD depois
+      'fetch',
+      'rev-parse',
+      'rev-parse',
+      'rev-parse',
+      'status',
+    ]);
     expect(chamadas.find((c) => c[0] === 'pull')).toEqual(['pull', '--ff-only', '--quiet', 'origin', 'main']);
     // Nenhum outro comando que escreva (nada de checkout, reset, merge, rebase, stash, clean).
     const escrevem = chamadas.map((c) => c[0]).filter((c) => ['checkout', 'switch', 'reset', 'merge', 'rebase', 'stash', 'clean', 'restore', 'commit', 'push'].includes(c));
@@ -123,22 +135,76 @@ describe('atualizarCheckout (P9)', () => {
     return git(outro, 'rev-parse', 'HEAD');
   }
 
-  it('main atrasada e limpa: o pull a atualiza e a guarda deixa rodar, com o commit novo', async () => {
+  const semInstalar = async () => {
+    throw new Error('o npm ci não devia rodar');
+  };
+
+  it('main atrasada e limpa: o pull a atualiza e ESTA rodada encerra (o código antigo já está carregado); a seguinte roda com o commit novo', async () => {
     const { checkout, outro } = cenario();
+    const antes = git(checkout, 'rev-parse', 'HEAD');
     const novo = empurrarCommitNovo(outro);
-    expect(git(checkout, 'rev-parse', 'HEAD')).not.toBe(novo);
-    const r = await conferirCheckout(checkout);
-    expect(r).toEqual({ ok: true, commit: novo });
+    expect(antes).not.toBe(novo);
+    const primeira = await conferirCheckout(checkout, gitReal, semInstalar);
+    expect(primeira).toMatchObject({ ok: false, normal: true, motivo: expect.stringContaining(`${antes.slice(0, 8)} → ${novo.slice(0, 8)}`) });
+    expect((primeira as { motivo: string }).motivo).toMatch(/encerrada sem tocar o banco nem o claude/);
     expect(git(checkout, 'rev-parse', 'HEAD')).toBe(novo);
     expect(git(checkout, 'status', '--porcelain')).toBe('');
+    expect(await conferirCheckout(checkout, gitReal, semInstalar)).toEqual({ ok: true, commit: novo });
   });
 
   it('arquivo novo (não rastreado) não impede o pull, e continua lá', async () => {
     const { checkout, outro } = cenario();
     writeFileSync(path.join(checkout, 'rascunho.txt'), 'meu rascunho\n');
     const novo = empurrarCommitNovo(outro);
-    expect(await conferirCheckout(checkout)).toEqual({ ok: true, commit: novo });
+    expect(await conferirCheckout(checkout, gitReal, semInstalar)).toMatchObject({ ok: false, normal: true });
+    expect(git(checkout, 'rev-parse', 'HEAD')).toBe(novo);
     expect(existsSync(path.join(checkout, 'rascunho.txt'))).toBe(true);
+    expect(await conferirCheckout(checkout, gitReal, semInstalar)).toEqual({ ok: true, commit: novo });
+  });
+
+  it('o pull que avança o HEAD mexendo no package-lock.json: roda `npm ci` na pasta antes de encerrar, e a rodada seguinte roda', async () => {
+    const { checkout, outro } = cenario();
+    const novo = empurrarCommitNovo(outro, 'package-lock.json');
+    const chamadas: string[] = [];
+    const instalar = async (pasta: string) => {
+      chamadas.push(pasta);
+      return true;
+    };
+    const r = await conferirCheckout(checkout, gitReal, instalar);
+    expect(r).toMatchObject({ ok: false, normal: true, motivo: expect.stringMatching(/package-lock\.json mudou e o `npm ci` foi feito/) });
+    expect(chamadas).toEqual([checkout]);
+    expect(await conferirCheckout(checkout, gitReal, instalar)).toEqual({ ok: true, commit: novo });
+    expect(chamadas).toHaveLength(1);
+  });
+
+  it('`npm ci` que falha: a rodada encerra com erro e NENHUMA rodada roda até o `npm ci` passar (marcador dentro de .git)', async () => {
+    const { checkout, outro } = cenario();
+    const novo = empurrarCommitNovo(outro, 'package-lock.json');
+    let funciona = false;
+    const chamadas: string[] = [];
+    const instalar = async (pasta: string) => {
+      chamadas.push(pasta);
+      return funciona;
+    };
+    const primeira = await conferirCheckout(checkout, gitReal, instalar);
+    expect(primeira).toMatchObject({ ok: false, motivo: expect.stringMatching(/`npm ci` FALHOU/) });
+    expect((primeira as { normal?: boolean }).normal).toBeUndefined();
+    expect(existsSync(path.join(checkout, '.git', 'revisor-npm-ci-pendente'))).toBe(true);
+    // Main já em dia, mas o npm ci pendente barra a rodada (e tenta de novo).
+    const segunda = await conferirCheckout(checkout, gitReal, instalar);
+    expect(segunda).toMatchObject({ ok: false, motivo: expect.stringMatching(/`npm ci` falhou de novo/) });
+    expect(chamadas).toHaveLength(2);
+    // Passou: o marcador some e a rodada roda.
+    funciona = true;
+    expect(await conferirCheckout(checkout, gitReal, instalar)).toEqual({ ok: true, commit: novo });
+    expect(existsSync(path.join(checkout, '.git', 'revisor-npm-ci-pendente'))).toBe(false);
+    expect(chamadas).toHaveLength(3);
+  });
+
+  it('pull que avança o HEAD sem mexer no lockfile não roda `npm ci`', async () => {
+    const { checkout, outro } = cenario();
+    empurrarCommitNovo(outro, 'outro-arquivo.txt');
+    await expect(conferirCheckout(checkout, gitReal, semInstalar)).resolves.toMatchObject({ ok: false, normal: true });
   });
 
   it('em branch de trabalho: não puxa nada, nem na main nem na branch', async () => {
@@ -198,6 +264,37 @@ describe('o programa inteiro com a guarda', () => {
       const saida = logs.join('\n');
       expect(saida).toMatch(/rodada não feita, o banco não foi tocado: o checkout não está na branch main/);
       expect(saida).not.toMatch(/rodada iniciada|fila vazia|falha/);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it('main que o pull acabou de atualizar: a rodada em curso encerra com código 0, registra a atualização e não toca o banco nem o claude', async () => {
+    const { checkout, outro } = cenario();
+    writeFileSync(path.join(outro, 'b.txt'), 'dois\n');
+    git(outro, 'add', 'b.txt');
+    git(outro, 'commit', '--quiet', '-m', 'dois');
+    git(outro, 'push', '--quiet', 'origin', 'HEAD:main');
+    const novo = git(outro, 'rev-parse', 'HEAD');
+    const dados = path.join(pasta, `dados-${n}`);
+    const logs: string[] = [];
+    const log = vi.spyOn(console, 'log').mockImplementation((l: string) => void logs.push(l));
+    try {
+      // Se a rodada passasse da guarda, o registro teria "rodada iniciada" (o supabase.exe abaixo não existe).
+      const codigo = await executarCli(
+        ['--local', '--dados', dados, '--supabase', path.join(pasta, 'nao-existe.exe'), '--claude', path.join(pasta, 'nao-existe-claude.exe')],
+        {},
+        { raiz: checkout },
+      );
+      expect(codigo).toBe(0);
+      const saida = logs.join('\n');
+      expect(saida).toMatch(/rodada não feita, o banco não foi tocado: a main foi atualizada pelo GitHub/);
+      expect(saida).not.toMatch(/rodada iniciada|fila vazia|falha/);
+      expect(git(checkout, 'rev-parse', 'HEAD')).toBe(novo);
+      // A rodada seguinte, já com o código novo, passa da guarda.
+      logs.length = 0;
+      await executarCli(['--local', '--dados', dados, '--supabase', path.join(pasta, 'nao-existe.exe')], {}, { raiz: checkout });
+      expect(logs.join('\n')).toMatch(/rodada iniciada/);
     } finally {
       log.mockRestore();
     }
