@@ -182,6 +182,9 @@ function queueKey(userId: string): string {
   return `synapse_${userId}_sync_queue_v1`;
 }
 
+/** Chave do localStorage onde a fila deste usuário mora (a limpeza do logout apaga por ela). */
+export const syncQueueStorageKey = queueKey;
+
 function loadQueue(userId: string): SyncOp[] {
   try {
     const raw = localStorage.getItem(queueKey(userId));

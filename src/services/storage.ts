@@ -16,7 +16,7 @@ import {
   LastReadingSession,
   FlashcardSRS,
 } from '../types';
-import { getOps } from './syncQueue';
+import { getOps, syncQueueStorageKey } from './syncQueue';
 import {
   INITIAL_DISCIPLINES,
   INITIAL_THEMES,
@@ -115,19 +115,25 @@ export const StorageService = {
   /**
    * Chamado no logout. Remove os caches globais de conteúdo (podem conter
    * gabarito/rascunho gravados por uma sessão de admin) e a cópia local dos
-   * dados pessoais que o Supabase já guarda — para que a próxima pessoa no
-   * mesmo navegador não os veja pelo devtools. Nunca remove o que só existe
-   * localmente (destaques, última leitura, plano, tema). Se a fila de
-   * sincronização ainda tiver operações pendentes, nada pessoal é removido:
-   * apagar agora perderia progresso não enviado.
+   * dados pessoais que o Supabase já guarda — respostas, anotações, favoritos,
+   * simulados (inclusive o rascunho do que estava em andamento) e a fila de
+   * sincronização — para que a próxima pessoa no mesmo navegador não os veja
+   * pelo devtools. Nunca remove o que só existe localmente (destaques, última
+   * leitura, plano, tema).
+   *
+   * Operação ainda não confirmada pelo servidor (`pending`, `syncing` ou
+   * `failed`; o histórico `synced` da fila não conta) é progresso que só existe
+   * neste aparelho: sem `discardUnsynced`, nada pessoal é removido, porque
+   * apagar agora perderia o que o estudante fez. Quem decide apagar mesmo assim
+   * (depois de avisado) passa `discardUnsynced: true`.
    * Retorna true se os dados pessoais foram removidos.
    */
-  clearLocalDataOnLogout(uid: string | null): boolean {
+  clearLocalDataOnLogout(uid: string | null, options: { discardUnsynced?: boolean } = {}): boolean {
     for (const key of [STORAGE_KEYS.DISCIPLINES, STORAGE_KEYS.THEMES, STORAGE_KEYS.COMPENDIUMS, STORAGE_KEYS.QUESTIONS]) {
       localStorage.removeItem(key);
     }
     if (!uid) return true;
-    if (getOps(uid).length > 0) {
+    if (!options.discardUnsynced && getOps(uid).some((op) => op.state !== 'synced')) {
       console.warn('[storage] logout com operações de sincronização pendentes — dados locais do usuário mantidos.');
       return false;
     }
@@ -145,6 +151,13 @@ export const StorageService = {
     ];
     for (const baseKey of serverBacked) {
       localStorage.removeItem(`synapse_${uid}_${baseKey.replace(/^synapse_/, '')}`);
+    }
+    localStorage.removeItem(syncQueueStorageKey(uid));
+    // Rascunho das respostas de um simulado em andamento (SimuladoSession).
+    const draftPrefix = `synapse_${uid}_simulado_draft_`;
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(draftPrefix)) localStorage.removeItem(key);
     }
     return true;
   },

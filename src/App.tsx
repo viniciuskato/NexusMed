@@ -67,6 +67,8 @@ import { LoginView } from './components/auth/LoginView';
 import { EmailVerificationScreen } from './components/auth/EmailVerificationScreen';
 import { MigrateDataModal } from './components/auth/MigrateDataModal';
 import { AwaitingApprovalView } from './components/auth/AwaitingApprovalView';
+import { SetNewPasswordView } from './components/auth/SetNewPasswordView';
+import { ProfileRefreshNotice } from './components/auth/ProfileRefreshNotice';
 import { BlockedAccountView } from './components/auth/BlockedAccountView';
 import { FeedbackModal } from './components/feedback/FeedbackModal';
 
@@ -140,7 +142,7 @@ function viewFromHash(): string {
 }
 
 function AuthenticatedApp() {
-  const { user, profile, loading, isEmailVerified } = useAuth();
+  const { user, profile, loading, isEmailVerified, passwordRecovery } = useAuth();
 
   // Navigation State
   const [activeView, setActiveView] = useState<string>('today');
@@ -501,6 +503,12 @@ function AuthenticatedApp() {
     return <LoginView />;
   }
 
+  // Abriu o link do e-mail de "Esqueci a senha" (45-F): define a senha nova antes de qualquer
+  // outra tela. Não libera nada — depois dela, o gate de e-mail e de status vale como sempre.
+  if (passwordRecovery) {
+    return <SetNewPasswordView />;
+  }
+
   // Bloqueio de acesso enquanto o e-mail não estiver verificado
   const hasVerifiedEmail = Boolean(user.email_confirmed_at) || isEmailVerified;
   if (!hasVerifiedEmail) {
@@ -799,6 +807,7 @@ function AuthenticatedApp() {
           }`}
         >
 
+          <ProfileRefreshNotice className="mb-4" />
           <ConnectionNotice status={dataStatus} className="mb-4" />
 
           {/* View Router */}

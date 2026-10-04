@@ -26,12 +26,6 @@ async function login(page: Page, user: CreatedTestUser) {
   await expect(page.locator('#btn-user-profile-menu')).toBeVisible({ timeout: 15_000 });
 }
 
-async function logout(page: Page) {
-  await page.locator('#btn-user-profile-menu').click();
-  await page.locator('#btn-logout').click();
-  await expect(page.locator('#auth-email-input')).toBeVisible({ timeout: 15_000 });
-}
-
 async function openFirstQuestion(page: Page) {
   await page.locator('#dock-nav-resources').click();
   await page.locator('#dock-resources-questions').click();
@@ -135,7 +129,12 @@ test.describe('45-E — sincronização que não perde nem reordena', () => {
     expect(countBookmarks(user.id)).toBe(0);
 
     expired = false;
-    await logout(page);
+    // 45-F: sair com o que não subiu avisa e pergunta; aqui, mantém no aparelho para reenviar ao entrar de novo.
+    await page.locator('#btn-user-profile-menu').click();
+    await page.locator('#btn-logout').click();
+    await expect(page.getByRole('dialog', { name: 'Ainda há coisa por enviar' })).toBeVisible();
+    await page.getByRole('button', { name: 'Sair e manter no aparelho' }).click();
+    await expect(page.locator('#auth-email-input')).toBeVisible({ timeout: 15_000 });
     await login(page, user);
 
     await expect.poll(() => countBookmarks(user.id), { timeout: 20_000 }).toBe(1);
