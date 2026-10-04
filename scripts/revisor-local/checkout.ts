@@ -3,6 +3,15 @@
 // `main`, com o mesmo commit de `origin/main` (depois de um `git fetch`) e sem mudança em arquivo rastreado.
 // Branch de trabalho, commit local que não está no GitHub, atraso em relação ao GitHub ou arquivo editado à mão
 // não rodam: a rodada registra o motivo e sai sem tocar o banco nem o claude. Arquivo novo (não rastreado) não conta.
+//
+// P9: antes da guarda, o programa traz a `main` para o que o GitHub tem (`git pull --ff-only`), mas só se a pasta
+// está na `main` e sem mudança em arquivo rastreado (nada do que alguém estava fazendo é tocado) e só em avanço
+// rápido (nunca cria merge nem reescreve). Se o pull falhar, tudo continua como antes: a guarda decide pelo estado
+// que ficou. Assim o dono não precisa lembrar de atualizar a pasta depois de cada merge.
+//
+// `GIT_OPTIONAL_LOCKS=0` em todo comando git: o `git status` tenta regravar o índice só para "adiantar" a próxima
+// leitura, e com o VS Code aberto na mesma pasta esse bloqueio opcional pode disputar o índice com o git dele. Sem
+// ele, a leitura não escreve nada nem disputa o bloqueio (o `pull` continua pegando os bloqueios de que precisa).
 import { execFile } from 'node:child_process';
 
 export interface ResultadoDoGit {
@@ -22,7 +31,12 @@ export const gitReal: RodarGit = (pasta, args) =>
     execFile(
       'git',
       ['-C', pasta, ...args],
-      { timeout: TEMPO_DO_GIT_MS, windowsHide: true, encoding: 'utf8', env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } },
+      {
+        timeout: TEMPO_DO_GIT_MS,
+        windowsHide: true,
+        encoding: 'utf8',
+        env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_OPTIONAL_LOCKS: '0' },
+      },
       (erro, stdout) => {
         const codigo = erro ? (typeof (erro as { code?: unknown }).code === 'number' ? (erro as { code: number }).code : 1) : 0;
         resolve({ codigo, saida: String(stdout ?? '').trim() });
@@ -30,7 +44,21 @@ export const gitReal: RodarGit = (pasta, args) =>
     );
   });
 
+/**
+ * P9: traz a `main` do checkout para a do GitHub, se a pasta está na `main` e sem mudança em arquivo rastreado.
+ * Só avanço rápido (`--ff-only`). Nunca lança e não devolve nada: pull que falha deixa a pasta como estava, e a guarda
+ * que vem depois decide com o estado real.
+ */
+export async function atualizarCheckout(pasta: string, git: RodarGit = gitReal): Promise<void> {
+  const branch = await git(pasta, ['rev-parse', '--abbrev-ref', 'HEAD']);
+  if (branch.codigo !== 0 || branch.saida !== 'main') return;
+  const status = await git(pasta, ['status', '--porcelain', '--untracked-files=no']);
+  if (status.codigo !== 0 || status.saida !== '') return;
+  await git(pasta, ['pull', '--ff-only', '--quiet', 'origin', 'main']);
+}
+
 export async function conferirCheckout(pasta: string, git: RodarGit = gitReal): Promise<ResultadoDaGuarda> {
+  await atualizarCheckout(pasta, git);
   const fetch = await git(pasta, ['fetch', '--quiet', 'origin', '+refs/heads/main:refs/remotes/origin/main']);
   if (fetch.codigo !== 0) return { ok: false, motivo: 'checkout fora do GitHub: `git fetch` falhou (sem rede, sem acesso ou não é um repositório git)' };
 

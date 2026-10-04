@@ -289,6 +289,61 @@ function parseCompendiumMarkdownText(text, disciplines, themes, existingCompendi
   return buildCompendiumImportResult(data, disciplines, themes, existingCompendiums);
 }
 
+// src/utils/figuraDoMaterial.ts
+var FIGURA_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+var FIGURA_PENDENTE = "PENDENTE";
+var LINHA_DA_IMAGEM = /^!\[([^\]]*)\]\((.*)\)\s*$/;
+var ROTULO_DA_FONTE = /^(?:\*\*)?Fonte:(?:\*\*)?\s*(.*)$/i;
+var ROTULO_DO_MOSTRAR = /^(?:\*\*)?Mostrar:(?:\*\*)?\s*(.*)$/i;
+function eLinhaDeFigura(linha) {
+  return LINHA_DA_IMAGEM.test(linha.trim());
+}
+function destinoDaFigura(bruto) {
+  const destino = bruto.trim();
+  if (destino === `figura:${FIGURA_PENDENTE}`) return { tipo: "pendente" };
+  const m = destino.match(/^figura:(.+)$/);
+  if (m && FIGURA_ID.test(m[1])) return { tipo: "figura", id: m[1] };
+  return { tipo: "invalido", bruto: destino };
+}
+function lerFigura(linhas) {
+  if (linhas.length === 0) return null;
+  const abertura = linhas[0].trim().match(LINHA_DA_IMAGEM);
+  if (!abertura) return null;
+  const legendaLinhas = [];
+  let fonte = "";
+  let mostrar = "";
+  let temFonte = false;
+  let lidas = 1;
+  for (let k = 1; k < linhas.length; k++) {
+    const linha = linhas[k].trim();
+    if (linha === "") break;
+    const rotuloMostrar = linha.match(ROTULO_DO_MOSTRAR);
+    if (temFonte && !rotuloMostrar) break;
+    if (rotuloMostrar) {
+      mostrar = rotuloMostrar[1].trim();
+      lidas = k + 1;
+      break;
+    }
+    const rotuloFonte = linha.match(ROTULO_DA_FONTE);
+    if (rotuloFonte) {
+      fonte = rotuloFonte[1].trim();
+      temFonte = true;
+    } else {
+      legendaLinhas.push(linha);
+    }
+    lidas = k + 1;
+  }
+  return {
+    alt: abertura[1].trim(),
+    destino: destinoDaFigura(abertura[2]),
+    legenda: legendaLinhas.join(" ").trim(),
+    fonte,
+    mostrar,
+    linhas: lidas
+  };
+}
+var LIMITE_DA_IMAGEM_BYTES = 10 * 1024 * 1024;
+
 // src/utils/markdownBlocks.ts
 function normalizeBlockBoundaries(content) {
   const lines = content.split(/\r\n|\n/);
@@ -296,13 +351,18 @@ function normalizeBlockBoundaries(content) {
   const isTableRowLine = (l) => /^\|.*\|\s*$/.test(l.trim());
   const isListMarkerLine = (l) => /^\s*([-*•]|\d+\.)\s+\S/.test(l);
   const isBlockquoteLine = (l) => /^>/.test(l.trim());
+  const isFigureLine = (l) => eLinhaDeFigura(l);
+  const isFigureSourceLine = (l) => /^(\*\*)?Fonte:/i.test(l.trim());
+  const isFigureShowLine = (l) => /^(\*\*)?Mostrar:/i.test(l.trim());
   const out = [];
   let inList = false;
+  let inFigure = false;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const isBlank = line.trim() === "";
     if (isBlank) {
       inList = false;
+      inFigure = false;
       out.push(line);
       continue;
     }
@@ -314,13 +374,21 @@ function normalizeBlockBoundaries(content) {
     const startsTable = isTableRowLine(line) && !prevIsTableRow && !prevIsBlank;
     const startsList = isListMarkerLine(line) && !inList && !prevIsBlank;
     const startsBlockquote = isBlockquoteLine(line) && !prevIsBlockquote && !prevIsBlank;
-    if (startsHeading || startsTable || startsList || startsBlockquote) out.push("");
+    const startsFigure = isFigureLine(line) && !prevIsBlank;
+    if (startsHeading || startsTable || startsList || startsBlockquote || startsFigure) out.push("");
+    if (isFigureLine(line)) inFigure = true;
     if (isHeadingLine(line) || isTableRowLine(line)) inList = false;
     if (isListMarkerLine(line)) inList = true;
     out.push(line);
     const next = lines[i + 1];
     if (isHeadingLine(line) && next !== void 0 && next.trim() !== "" && !isHeadingLine(next)) {
       out.push("");
+    }
+    if (inFigure && next !== void 0 && next.trim() !== "") {
+      if (isFigureShowLine(line) || isFigureSourceLine(line) && !isFigureShowLine(next)) {
+        out.push("");
+        inFigure = false;
+      }
     }
     if (isTableRowLine(line) && next !== void 0 && next.trim() !== "" && !isTableRowLine(next)) {
       out.push("");
@@ -704,18 +772,31 @@ var itemObrigatorioAusente = {
     return out;
   }
 };
+var VERSAO_ATUAL_DO_PADRAO = 3;
 var versaoAusente = {
   id: "versao-do-padrao-ausente",
-  descricao: "Linha de versão do padrão ausente ou diferente de 2",
+  descricao: `Linha de versão do padrão ausente ou diferente de ${VERSAO_ATUAL_DO_PADRAO}`,
   verificar(arq) {
     const i = linhaDoMetadado(arq, "versao do padrao");
     if (i === -1) {
-      return [pendencia(arq, "versao-do-padrao-ausente", fimDoCabecalho(arq), 'Falta a linha "**Versão do padrão:** 2" nos metadados, logo abaixo do título.')];
+      return [
+        pendencia(
+          arq,
+          "versao-do-padrao-ausente",
+          fimDoCabecalho(arq),
+          `Falta a linha "**Versão do padrão:** ${VERSAO_ATUAL_DO_PADRAO}" nos metadados, logo abaixo do título.`
+        )
+      ];
     }
     const valor = arq.linhas[i].trim().replace(/^\*\*[^*:]+:\*\*\s*/, "");
-    if (valor === "2") return [];
+    if (valor === String(VERSAO_ATUAL_DO_PADRAO)) return [];
     return [
-      pendencia(arq, "versao-do-padrao-ausente", i, `Versão do padrão "${trecho(valor, 20)}": o valor é sempre 2. Escreva "**Versão do padrão:** 2".`)
+      pendencia(
+        arq,
+        "versao-do-padrao-ausente",
+        i,
+        `Versão do padrão "${trecho(valor, 20)}": o valor é sempre ${VERSAO_ATUAL_DO_PADRAO}. Escreva "**Versão do padrão:** ${VERSAO_ATUAL_DO_PADRAO}".`
+      )
     ];
   }
 };
@@ -839,6 +920,151 @@ var remissao = {
     return out;
   }
 };
+function* figurasDoConteudo(arq) {
+  for (const secao of arq.secoes) {
+    const linhas = secao.conteudo;
+    for (let k = 0; k < linhas.length; k++) {
+      if (!eLinhaDeFigura(linhas[k].linha)) continue;
+      const resto = [];
+      for (let j = k; j < linhas.length && (j === k || linhas[j].linha.trim() !== ""); j++) resto.push(linhas[j].linha);
+      yield { i: linhas[k].i, linhas: resto };
+    }
+  }
+}
+var figuraIncompleta = {
+  id: "figura-incompleta",
+  descricao: "Figura sem legenda, sem fonte ou sem texto alternativo",
+  verificar(arq) {
+    const out = [];
+    for (const { i, linhas } of figurasDoConteudo(arq)) {
+      const figura = lerFigura(linhas);
+      if (!figura) continue;
+      const faltas = [
+        figura.alt === "" ? "o texto alternativo, entre os colchetes da primeira linha" : null,
+        figura.legenda === "" ? "a legenda (**Figura N.** frase que diz o que a figura mostra)" : null,
+        figura.fonte === "" ? 'a linha "Fonte: autor ou entidade, título, ano"' : null
+      ].filter((f) => f !== null);
+      if (faltas.length > 0) {
+        out.push(pendencia(arq, "figura-incompleta", i, `Figura incompleta: falta ${faltas.join("; falta ")}. Toda figura leva texto alternativo, legenda e fonte.`));
+      }
+    }
+    return out;
+  }
+};
+var figuraPendente = {
+  id: "figura-pendente",
+  descricao: "Figura marcada como pendente (a imagem ainda não foi enviada)",
+  verificar(arq) {
+    const out = [];
+    for (const { i, linhas } of figurasDoConteudo(arq)) {
+      const figura = lerFigura(linhas);
+      if (!figura) continue;
+      if (figura.destino.tipo === "pendente") {
+        out.push(
+          pendencia(
+            arq,
+            "figura-pendente",
+            i,
+            'Figura pendente: a imagem ainda não foi enviada. Envie a imagem pelo botão "Enviar imagem" e troque este bloco pelo trecho que ele devolve (ou troque "figura:PENDENTE" pelo identificador e apague a linha "Mostrar:").'
+          )
+        );
+      } else if (figura.mostrar !== "") {
+        out.push(pendencia(arq, "figura-pendente", i, 'A linha "Mostrar:" é só uma instrução para quem insere a imagem: apague-a do bloco da figura.'));
+      }
+    }
+    return out;
+  }
+};
+var figuraForaDoSite = {
+  id: "figura-fora-do-site",
+  descricao: "Figura que não aponta para uma imagem enviada ao site",
+  verificar(arq) {
+    const out = [];
+    for (const { i, linhas } of figurasDoConteudo(arq)) {
+      const figura = lerFigura(linhas);
+      if (!figura || figura.destino.tipo !== "invalido") continue;
+      out.push(
+        pendencia(
+          arq,
+          "figura-fora-do-site",
+          i,
+          `A imagem aponta para "${trecho(figura.destino.bruto, 50)}", que não é uma imagem enviada ao site: o leitor não a mostra. Envie a imagem pelo botão "Enviar imagem" e use o destino "figura:<identificador>" que ele devolve (endereço de outro site, caminho de arquivo e "data:" não valem).`
+        )
+      );
+    }
+    return out;
+  }
+};
+var IMAGEM_MARKDOWN = /!\[[^\]]*\]\(/;
+var imagemForaDoFormato = {
+  id: "imagem-fora-do-formato",
+  descricao: "Imagem escrita fora do bloco de figura",
+  verificar(arq) {
+    const out = [];
+    const inicios = /* @__PURE__ */ new Set();
+    for (const { i } of figurasDoConteudo(arq)) inicios.add(i);
+    for (const { i, linha } of linhasDasSecoes(arq)) {
+      if (!IMAGEM_MARKDOWN.test(linha) || inicios.has(i)) continue;
+      out.push(
+        pendencia(
+          arq,
+          "imagem-fora-do-formato",
+          i,
+          'Imagem fora do formato de figura: ela só aparece num bloco próprio, com a imagem sozinha na primeira linha, a legenda e a linha "Fonte:" logo abaixo, e linha em branco antes e depois.'
+        )
+      );
+    }
+    return out;
+  }
+};
+var ETIQUETA_HTML = /<\/?(?:img|script|style|iframe|object|embed|svg|a|div|span|br|hr|p|b|i|u|em|strong|sup|sub|font|center|table|thead|tbody|tr|td|th|ul|ol|li|h[1-6]|link|meta|form|input|button|video|audio|source|details|summary)(?:\s+[a-z][\w:-]*\s*=[^<>]*)?\s*\/?>/i;
+var htmlNoTexto = {
+  id: "html-no-texto",
+  descricao: "HTML cru no texto",
+  verificar(arq) {
+    const out = [];
+    for (const { i, linha } of linhasDasSecoes(arq)) {
+      const m = linha.match(ETIQUETA_HTML);
+      if (!m) continue;
+      out.push(pendencia(arq, "html-no-texto", i, `HTML no texto ("${trecho(m[0], 40)}"): o leitor não o interpreta. Use só o Markdown do padrão.`));
+    }
+    return out;
+  }
+};
+var ROTULO_DA_ATUALIZACAO = /^\*\*Atualiza[cç][aã]o:?\*\*/i;
+var DATA_OU_VERSAO = /\b(?:19|20)\d{2}\b|\bvers[aã]o\s*\d/i;
+var atualizacaoSemData = {
+  id: "atualizacao-sem-data",
+  descricao: "Bloco Atualização sem ano ou versão",
+  verificar(arq) {
+    const out = [];
+    for (const secao of arq.secoes) {
+      const linhas = secao.conteudo;
+      let k = 0;
+      while (k < linhas.length) {
+        if (!linhas[k].linha.trim().startsWith(">")) {
+          k++;
+          continue;
+        }
+        let fim = k + 1;
+        while (fim < linhas.length && linhas[fim].linha.trim().startsWith(">") && !ROTULO_DA_ATUALIZACAO.test(blockquoteLabelText(linhas[fim].linha))) fim++;
+        const texto = linhas.slice(k, fim).map((l) => blockquoteLabelText(l.linha)).join(" ");
+        if (ROTULO_DA_ATUALIZACAO.test(texto) && !DATA_OU_VERSAO.test(texto)) {
+          out.push(
+            pendencia(
+              arq,
+              "atualizacao-sem-data",
+              linhas[k].i,
+              'Bloco Atualização sem data: diga o que mudou e desde quando, com o ano ou a versão no próprio bloco ("a partir de 2023", "na versão 2024"). Sem data, não é atualização.'
+            )
+          );
+        }
+        k = fim;
+      }
+    }
+    return out;
+  }
+};
 function eBibliografia(b) {
   const semNumero = b.headerText.replace(SECTION_NUMBER_PREFIX, "").replace(/^\d+[.)]\s*/, "");
   return /^referencias?\b/.test(normalize(semNumero));
@@ -884,7 +1110,13 @@ var REGRAS_DO_PADRAO = [
   listaAninhada,
   blocoRepetido,
   remissao,
-  semPalavrasChave
+  semPalavrasChave,
+  figuraIncompleta,
+  figuraPendente,
+  figuraForaDoSite,
+  imagemForaDoFormato,
+  htmlNoTexto,
+  atualizacaoSemData
 ];
 function checarMaterialMarkdown(texto) {
   const importacao = parseCompendiumMarkdownText(texto, [], [], []);

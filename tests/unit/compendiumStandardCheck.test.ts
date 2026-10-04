@@ -10,6 +10,7 @@ import {
   type RegraDoPadraoId,
 } from '../../src/utils/compendiumStandardCheck';
 import { parseCompendiumMarkdownText } from '../../src/utils/compendiumMarkdownImport';
+import { montarTrechoDaFigura } from '../../src/utils/figuraDoMaterial';
 
 // Unidade 44-C1: cada regra mecânica do padrão tem um caso que passa e um que
 // falha; o exemplo da seção 1.7 do padrão sai "Conforme".
@@ -27,7 +28,7 @@ function exemploDoPadrao(): string {
 function material(opcoes: { titulo?: string; cabecalho?: string; corpo?: string; extra?: string; refs?: number } = {}): string {
   const {
     titulo = 'Cefalosporinas de terceira geração',
-    cabecalho = '**Subtítulo:** Espectro e uso\n**Disciplina:** Farmacologia\n**Tema:** Clínica\n**Tempo estimado de leitura:** 12 minutos\n**Versão do padrão:** 2',
+    cabecalho = '**Subtítulo:** Espectro e uso\n**Disciplina:** Farmacologia\n**Tema:** Clínica\n**Tempo estimado de leitura:** 12 minutos\n**Versão do padrão:** 3',
     corpo = 'Texto com citação [1](#ref-1) e outra [2](#ref-2).',
     extra = '',
     refs = 2,
@@ -41,8 +42,25 @@ function regras(texto: string): RegraDoPadraoId[] {
 }
 
 describe('checagem do padrão — base', () => {
-  it('o exemplo da seção 1.7 do padrão sai Conforme', () => {
+  it('o exemplo da seção 1.7 do padrão só tem a pendência da figura pendente (a IA marca o lugar; a imagem é da pessoa)', () => {
     const r = checarMaterialMarkdown(exemploDoPadrao());
+    expect(r.errosDeImportacao).toEqual([]);
+    expect(r.pendencias.map((p) => p.regra)).toEqual(['figura-pendente']);
+    expect(situacaoDaChecagem(r)).toBe('pendencias');
+  });
+
+  it('o exemplo da seção 1.7, com o bloco pendente trocado pelo trecho que o botão "Enviar imagem" devolve, sai Conforme', () => {
+    const exemplo = exemploDoPadrao();
+    const pendente = exemplo.match(/!\[[^\]]*\]\(figura:PENDENTE\)\n(?:.+\n)*?Mostrar:.*/);
+    expect(pendente).not.toBeNull();
+    const trecho = montarTrechoDaFigura({
+      id: '0b9f1a0e-5c2d-4e8a-9a41-3d6b7c8e9f10',
+      alt: 'Descrição da imagem',
+      legenda: 'Legenda da figura.',
+      fonte: 'Autor, título, 2024.',
+      numero: 1,
+    });
+    const r = checarMaterialMarkdown(exemplo.replace(pendente![0], trecho));
     expect(r.pendencias).toEqual([]);
     expect(r.errosDeImportacao).toEqual([]);
     expect(situacaoDaChecagem(r)).toBe('conforme');
@@ -56,7 +74,7 @@ describe('checagem do padrão — base', () => {
   it('a lista de regras cobre todos os ids, sem repetição', () => {
     const ids = REGRAS_DO_PADRAO.map((r) => r.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toHaveLength(17);
+    expect(ids).toHaveLength(23);
   });
 
   it('cada pendência traz seção, linha e o que corrigir', () => {
@@ -177,9 +195,9 @@ describe('checagem do padrão — escrita', () => {
 
 describe('checagem do padrão — estrutura', () => {
   it('texto entre os metadados e a primeira seção', () => {
-    const cabecalho = '**Disciplina:** Farmacologia\n**Tema:** Clínica\n**Tempo estimado de leitura:** 12 minutos\n**Versão do padrão:** 2\n\nIntrodução solta.';
+    const cabecalho = '**Disciplina:** Farmacologia\n**Tema:** Clínica\n**Tempo estimado de leitura:** 12 minutos\n**Versão do padrão:** 3\n\nIntrodução solta.';
     expect(regras(material({ cabecalho }))).toContain('texto-fora-de-secao');
-    const rotuloDesconhecido = '**Disciplina:** Farmacologia\n**Tema:** Clínica\n**Nível:** Subclasse\n**Tempo estimado de leitura:** 12 minutos\n**Versão do padrão:** 2';
+    const rotuloDesconhecido = '**Disciplina:** Farmacologia\n**Tema:** Clínica\n**Nível:** Subclasse\n**Tempo estimado de leitura:** 12 minutos\n**Versão do padrão:** 3';
     expect(regras(material({ cabecalho: rotuloDesconhecido }))).toContain('texto-fora-de-secao');
   });
 
@@ -197,7 +215,7 @@ describe('checagem do padrão — estrutura', () => {
   it('linha de versão do padrão ausente', () => {
     const cabecalho = '**Subtítulo:** S\n**Disciplina:** Farmacologia\n**Tema:** Clínica\n**Tempo estimado de leitura:** 12 minutos';
     expect(regras(material({ cabecalho }))).toEqual(['versao-do-padrao-ausente']);
-    for (const v of ['1', '', 'v2']) {
+    for (const v of ['1', '2', '', 'v3']) {
       expect(regras(material({ cabecalho: `${cabecalho}\n**Versão do padrão:** ${v}` }))).toEqual(['versao-do-padrao-ausente']);
     }
   });
@@ -210,7 +228,7 @@ describe('checagem do padrão — estrutura', () => {
   });
 
   it('tempo fora de 8–25 minutos, ou ausente', () => {
-    const com = (t: string) => `**Subtítulo:** S\n**Disciplina:** Farmacologia\n**Tema:** Clínica\n${t}**Versão do padrão:** 2`;
+    const com = (t: string) => `**Subtítulo:** S\n**Disciplina:** Farmacologia\n**Tema:** Clínica\n${t}**Versão do padrão:** 3`;
     expect(regras(material({ cabecalho: com('**Tempo estimado de leitura:** 30 minutos\n') }))).toEqual(['tempo-fora-da-faixa']);
     expect(regras(material({ cabecalho: com('**Tempo estimado de leitura:** 5 minutos\n') }))).toEqual(['tempo-fora-da-faixa']);
     expect(regras(material({ cabecalho: com('') }))).toEqual(['tempo-fora-da-faixa']);
@@ -304,5 +322,137 @@ describe('checagem do padrão — achados da segunda revisão do #85', () => {
 
   it('"<=>" de equilíbrio não é comparador', () => {
     expect(regras(material({ corpo: 'CO2 + H2O <=> H2CO3 [1](#ref-1)[2](#ref-2).' }))).toEqual([]);
+  });
+});
+
+// P9 — figuras (padrão v3): toda figura tem texto alternativo, legenda e fonte e aponta para uma imagem do próprio
+// site; imagem fora do bloco de figura e HTML cru são pendências.
+describe('checagem do padrão — figuras e imagens (P9)', () => {
+  const ID = '0b9f1a0e-5c2d-4e8a-9a41-3d6b7c8e9f10';
+  const figura = (linhas: string[]) => `Frase que abre a figura [1](#ref-1).\n\n${linhas.join('\n')}\n\nTexto depois [2](#ref-2).`;
+  const CONFORME = [`![Curva fluxo-volume](figura:${ID})`, '**Figura 1.** Curva fluxo-volume normal e obstrutiva.', 'Fonte: Diretriz GOLD, 2024.'];
+
+  it('figura completa, do próprio site, passa sem pendência', () => {
+    expect(regras(material({ corpo: figura(CONFORME) }))).toEqual([]);
+  });
+
+  it('a citação na linha da fonte conta como citação da referência', () => {
+    const corpo = `Frase [1](#ref-1).\n\n![a](figura:${ID})\n**Figura 1.** Legenda.\nFonte: [2](#ref-2)`;
+    expect(regras(material({ corpo }))).toEqual([]);
+  });
+
+  it('sem legenda, sem fonte ou sem texto alternativo: figura-incompleta, com o que falta', () => {
+    const semLegenda = checarMaterialMarkdown(material({ corpo: figura([`![a](figura:${ID})`, 'Fonte: X, 2024.']) })).pendencias;
+    expect(semLegenda.map((p) => p.regra)).toEqual(['figura-incompleta']);
+    expect(semLegenda[0].mensagem).toContain('falta a legenda');
+    const semFonte = checarMaterialMarkdown(material({ corpo: figura([`![a](figura:${ID})`, '**Figura 1.** Legenda.']) })).pendencias;
+    expect(semFonte.map((p) => p.regra)).toEqual(['figura-incompleta']);
+    expect(semFonte[0].mensagem).toContain('falta a linha "Fonte');
+    const semAlt = checarMaterialMarkdown(material({ corpo: figura([`![](figura:${ID})`, '**Figura 1.** Legenda.', 'Fonte: X.']) })).pendencias;
+    expect(semAlt.map((p) => p.regra)).toEqual(['figura-incompleta']);
+    expect(semAlt[0].mensagem).toContain('texto alternativo');
+    const soImagem = checarMaterialMarkdown(material({ corpo: figura([`![a](figura:${ID})`]) })).pendencias;
+    expect(soImagem[0].mensagem).toMatch(/falta a legenda.*falta a linha "Fonte/);
+  });
+
+  it('a pendência aponta a linha da figura no arquivo', () => {
+    const texto = material({ corpo: figura([`![a](figura:${ID})`, 'Fonte: X.']) });
+    const [p] = checarMaterialMarkdown(texto).pendencias;
+    expect(texto.split('\n')[p.linha - 1]).toContain(`figura:${ID}`);
+    expect(p.secao).toBe('Espectro');
+  });
+
+  it('figura pendente (a IA marcou o lugar): pendência até a imagem ser enviada', () => {
+    const pendente = [
+      '![Fluxograma de tratamento](figura:PENDENTE)',
+      '**Figura 2.** Escolha do tratamento inicial.',
+      'Fonte: sugerida — GOLD 2024.',
+      'Mostrar: fluxograma com os grupos A, B e E.',
+    ];
+    const pend = checarMaterialMarkdown(material({ corpo: figura(pendente) })).pendencias;
+    expect(pend.map((p) => p.regra)).toEqual(['figura-pendente']);
+    expect(pend[0].mensagem).toContain('Enviar imagem');
+    // Identificador trocado, mas a linha "Mostrar:" ficou: também é pendência.
+    const resto = [`![a](figura:${ID})`, '**Figura 2.** Legenda.', 'Fonte: X.', 'Mostrar: o esquema.'];
+    expect(regras(material({ corpo: figura(resto) }))).toEqual(['figura-pendente']);
+  });
+
+  it.each([
+    ['endereço externo', 'https://exemplo.com/a.png'],
+    ['caminho de arquivo', '/imagens/a.png'],
+    ['javascript:', 'javascript:alert(1)'],
+    ['data:', 'data:image/png;base64,AAAA'],
+    ['identificador malformado', 'figura:123'],
+  ])('imagem que não é do site (%s): figura-fora-do-site', (_nome, destino) => {
+    const [p, ...resto] = checarMaterialMarkdown(material({ corpo: figura([`![a](${destino})`, '**Figura 1.** L.', 'Fonte: X.']) })).pendencias;
+    expect(resto).toEqual([]);
+    expect(p.regra).toBe('figura-fora-do-site');
+    expect(p.mensagem).toContain('Enviar imagem');
+  });
+
+  it('imagem no meio de um parágrafo, numa lista, numa citação ou nos Pontos-Chave: imagem-fora-do-formato', () => {
+    const casos = [
+      `Texto com ![a](figura:${ID}) no meio [1](#ref-1)[2](#ref-2).`,
+      `- item com ![a](figura:${ID}) [1](#ref-1)[2](#ref-2)`,
+      `> ![a](figura:${ID}) [1](#ref-1)[2](#ref-2)`,
+      `Texto [1](#ref-1)[2](#ref-2).\n\n**Pontos-Chave:**\n- Veja ![a](figura:${ID})`,
+      `Texto [1](#ref-1)[2](#ref-2).\n\n> 💡 **Pérola Clínica:** ![a](figura:${ID})`,
+      `Texto [1](#ref-1)[2](#ref-2).\n\n![a](https://exemplo.com/a.png) com texto depois`,
+    ];
+    for (const corpo of casos) {
+      expect(regras(material({ corpo })), corpo).toContain('imagem-fora-do-formato');
+    }
+  });
+
+  it('HTML cru no texto: html-no-texto; sinais de menor e maiúsculas de fórmula não são HTML', () => {
+    for (const corpo of [
+      'Veja <img src="x.png"> [1](#ref-1)[2](#ref-2).',
+      'Texto <script>alert(1)</script> [1](#ref-1)[2](#ref-2).',
+      'Texto <b>negrito</b> [1](#ref-1)[2](#ref-2).',
+      'Quebra<br/>de linha [1](#ref-1)[2](#ref-2).',
+    ]) {
+      expect(regras(material({ corpo })), corpo).toEqual(['html-no-texto']);
+    }
+    expect(regras(material({ corpo: 'Significativo se p<0,05 e tamanho <5 mm; grupo A<B e C>D [1](#ref-1)[2](#ref-2).' }))).toEqual([]);
+  });
+
+  it('materiais sem figura continuam sem pendência de figura', () => {
+    expect(regras(material())).toEqual([]);
+  });
+});
+
+// P9 — bloco Atualização: o que mudou e desde quando.
+describe('checagem do padrão — bloco Atualização (P9)', () => {
+  const com = (bloco: string) => material({ corpo: `Texto [1](#ref-1).\n\n${bloco}\n\nOutro texto [2](#ref-2).` });
+
+  it('com ano ou versão no bloco, passa', () => {
+    expect(regras(com('> **Atualização:** a partir de 2023 o grupo E passou a existir [1](#ref-1).'))).toEqual([]);
+    expect(regras(com('> **Atualização:** na versão 2.1 da diretriz o corte mudou.'))).toEqual([]);
+    expect(regras(com('> **Atualização**: desde 1998 a conduta é outra.'))).toEqual([]);
+  });
+
+  it('sem ano nem versão, é pendência na linha do bloco', () => {
+    const texto = com('> **Atualização:** a diretriz mudou o corte [1](#ref-1).');
+    const [p, ...resto] = checarMaterialMarkdown(texto).pendencias;
+    expect(resto).toEqual([]);
+    expect(p.regra).toBe('atualizacao-sem-data');
+    expect(texto.split('\n')[p.linha - 1]).toContain('**Atualização:**');
+    expect(p.mensagem).toMatch(/desde quando/);
+  });
+
+  it('bloco de várias linhas e rótulo sem acento ou em minúsculas', () => {
+    expect(regras(com('> **Atualização:** a diretriz mudou\n> o corte e o exame.'))).toEqual(['atualizacao-sem-data']);
+    expect(regras(com('> **Atualizacao:** mudou o corte.'))).toEqual(['atualizacao-sem-data']);
+    expect(regras(com('> **Atualização:** mudou\n> a partir de 2024.'))).toEqual([]);
+  });
+
+  it('o ano de outro bloco não vale para este; cada Atualização é conferida', () => {
+    expect(regras(com('> **Atualização:** mudou em 2023.\n> **Atualização:** mudou de novo.'))).toEqual(['atualizacao-sem-data']);
+  });
+
+  it('as outras caixas com função não exigem data', () => {
+    for (const rotulo of ['Cuidado', 'Raciocínio', 'Não confundir', 'Aprofundar', 'Essencial']) {
+      expect(regras(com(`> **${rotulo}:** texto sem ano.`)), rotulo).toEqual([]);
+    }
   });
 });

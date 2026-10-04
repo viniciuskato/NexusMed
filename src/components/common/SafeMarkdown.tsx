@@ -1,5 +1,7 @@
 import React from 'react';
 import { extractTableCitations, splitReaderBlocks, TABLE_CITATION_PATTERN } from '../../utils/markdownBlocks';
+import { lerBlocoDeFigura } from '../../utils/figuraDoMaterial';
+import { FiguraDoMaterial } from './FiguraDoMaterial';
 
 const ORIGEM_DE_TESTE = 'https://app.nexusmed.invalid';
 
@@ -318,8 +320,57 @@ function FormulaDisplay({ formula }: { formula: string }) {
 }
 
 /**
+ * Caixas com função (padrão de conteúdos v3): `> **Cuidado:** ...`, `> **Raciocínio:** ...`,
+ * `> **Não confundir:** ...`, `> **Atualização:** ...`, `> **Aprofundar:** ...` e `> **Essencial:** ...`. Cada uma
+ * tem o rótulo escrito como título da caixa e uma cor própria; o texto passa por `parseInline`.
+ */
+const CAIXAS_DE_FUNCAO: ReadonlyArray<{
+  padrao: RegExp;
+  rotulo: string;
+  caixa: string;
+  titulo: string;
+}> = [
+  {
+    padrao: /^\s*\*\*Cuidado:?\*\*:?\s*/i,
+    rotulo: 'Cuidado',
+    caixa: 'border-amber-500 bg-amber-50 dark:bg-amber-950/30',
+    titulo: 'text-amber-800 dark:text-amber-300',
+  },
+  {
+    padrao: /^\s*\*\*Racioc[ií]nio(?: cl[ií]nico)?:?\*\*:?\s*/i,
+    rotulo: 'Raciocínio',
+    caixa: 'border-teal-500 bg-teal-50 dark:bg-teal-950/30',
+    titulo: 'text-teal-800 dark:text-teal-300',
+  },
+  {
+    padrao: /^\s*\*\*N[aã]o confundir:?\*\*:?\s*/i,
+    rotulo: 'Não confundir',
+    caixa: 'border-violet-500 bg-violet-50 dark:bg-violet-950/30',
+    titulo: 'text-violet-800 dark:text-violet-300',
+  },
+  {
+    padrao: /^\s*\*\*Atualiza[cç][aã]o:?\*\*:?\s*/i,
+    rotulo: 'Atualização',
+    caixa: 'border-sky-500 bg-sky-50 dark:bg-sky-950/30',
+    titulo: 'text-sky-800 dark:text-sky-300',
+  },
+  {
+    padrao: /^\s*\*\*(?:Para )?aprofundar:?\*\*:?\s*/i,
+    rotulo: 'Aprofundar',
+    caixa: 'border-slate-400 bg-slate-50 dark:bg-slate-900/60',
+    titulo: 'text-slate-700 dark:text-slate-300',
+  },
+  {
+    padrao: /^\s*\*\*Essencial:?\*\*:?\s*/i,
+    rotulo: 'Essencial',
+    caixa: 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30',
+    titulo: 'text-emerald-800 dark:text-emerald-300',
+  },
+];
+
+/**
  * Safe markdown block parser.
- * Renders paragraphs, headings, bullet lists, ordered lists, tables, and blockquotes.
+ * Renders paragraphs, headings, bullet lists, ordered lists, tables, blockquotes e figuras.
  */
 export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({ content, className = '' }) => {
   if (!content) return null;
@@ -332,6 +383,13 @@ export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({ content, className =
       {blocks.map((block, bIdx) => {
         const trimmed = block.trim();
         if (!trimmed) return null;
+
+        // Figura (P9): `![alt](figura:<id>)`, legenda e `Fonte:`. Só imagem do Storage do próprio site, pelo
+        // identificador; qualquer outro destino vira o bloco sem imagem (nunca um `<img>`).
+        if (trimmed.startsWith('![')) {
+          const figura = lerBlocoDeFigura(trimmed);
+          if (figura) return <FiguraDoMaterial key={bIdx} figura={figura} renderInline={parseInline} />;
+        }
 
         // Table detection
         if (trimmed.startsWith('|')) {
@@ -448,6 +506,22 @@ export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({ content, className =
             .split('\n')
             .map((l) => l.replace(/^>\s?/, ''))
             .join(' ');
+
+          const caixaDeFuncao = CAIXAS_DE_FUNCAO.find((c) => c.padrao.test(quoteLines));
+          if (caixaDeFuncao) {
+            return (
+              <div
+                key={bIdx}
+                data-caixa={caixaDeFuncao.rotulo}
+                className={`my-3 rounded-r-xl border-l-4 px-4 py-3 text-sm leading-relaxed text-slate-800 dark:text-slate-200 ${caixaDeFuncao.caixa}`}
+              >
+                <div className={`mb-1 text-xs font-bold uppercase tracking-wider ${caixaDeFuncao.titulo}`}>
+                  {caixaDeFuncao.rotulo}
+                </div>
+                {parseInline(quoteLines.replace(caixaDeFuncao.padrao, ''))}
+              </div>
+            );
+          }
 
           const isGoldRule =
             /^\s*\[!(NOTE|TIP)\]/i.test(quoteLines) ||

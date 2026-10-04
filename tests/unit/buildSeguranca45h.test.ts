@@ -2,7 +2,7 @@
 // projeto do app; script antigo com service_role fora do repositório).
 import { existsSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
-import { assertSupabaseEnv, connectSrc, supabaseOrigin } from '../../vite.seguranca';
+import { assertSupabaseEnv, connectSrc, imgSrc, supabaseOrigin } from '../../vite.seguranca';
 
 const envMock = vi.hoisted(() => ({ valor: {} as Record<string, string> }));
 vi.mock('vite', async (importOriginal) => ({
@@ -80,6 +80,27 @@ describe('AUD-32.2: CSP só libera o projeto Supabase do app', () => {
     const csp = cfg.plugins.find((p) => p?.name === 'content-security-policy');
     const html = csp!.transformIndexHtml!('<meta charset="UTF-8" />');
     expect(html).toContain(`connect-src 'self' https://api.crossref.org ${PROJETO} wss://abcdefghijklmnop.supabase.co;`);
+    expect(html).not.toContain('*.supabase.co');
+  });
+});
+
+describe('P9: img-src leva a origem do Supabase para as figuras dos materiais', () => {
+  it('Supabase local (http) entra por extenso; o remoto também, sem curinga', () => {
+    expect(imgSrc('http://127.0.0.1:54321')).toEqual(["'self'", 'data:', 'blob:', 'https:', 'http://127.0.0.1:54321']);
+    expect(imgSrc(PROJETO)).toContain(PROJETO);
+    expect(imgSrc(PROJETO).join(' ')).not.toContain('*');
+  });
+
+  it('sem URL do projeto, só as fontes de sempre', () => {
+    expect(imgSrc(undefined)).toEqual(["'self'", 'data:', 'blob:', 'https:']);
+  });
+
+  it('a meta de CSP do build libera a imagem do Supabase local e continua sem curinga', async () => {
+    const { default: config } = await import('../../vite.config');
+    envMock.valor = { VITE_SUPABASE_URL: 'http://127.0.0.1:54321', VITE_SUPABASE_ANON_KEY: 'k' };
+    const cfg = (config as (e: object) => { plugins: { name?: string; transformIndexHtml?: (h: string) => string }[] })({ mode: 'production', command: 'build' });
+    const html = cfg.plugins.find((p) => p?.name === 'content-security-policy')!.transformIndexHtml!('<meta charset="UTF-8" />');
+    expect(html).toContain("img-src 'self' data: blob: https: http://127.0.0.1:54321;");
     expect(html).not.toContain('*.supabase.co');
   });
 });

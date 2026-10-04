@@ -16,6 +16,7 @@ import {
   type MarkdownFileBlock,
 } from './compendiumMarkdownImport';
 import { extractTableCitations, splitReaderBlocks } from './markdownBlocks';
+import { eLinhaDeFigura, lerFigura } from './figuraDoMaterial';
 
 // ============================================================================
 // Checagem do padrão de conteúdos sobre o arquivo `.md` (unidade 44-C1).
@@ -56,7 +57,13 @@ export type RegraDoPadraoId =
   | 'tempo-fora-da-faixa'
   | 'sem-palavras-chave'
   | 'titulo-numerado'
-  | 'remissao-a-outro-material';
+  | 'remissao-a-outro-material'
+  | 'figura-incompleta'
+  | 'figura-pendente'
+  | 'figura-fora-do-site'
+  | 'imagem-fora-do-formato'
+  | 'html-no-texto'
+  | 'atualizacao-sem-data';
 
 export interface PendenciaDoPadrao {
   regra: RegraDoPadraoId;
@@ -530,18 +537,33 @@ const itemObrigatorioAusente: RegraDoPadrao = {
   },
 };
 
+/** Versão do padrão contra a qual o material é escrito (3 desde 03/10/2026: figuras e a estrutura do caderno). */
+export const VERSAO_ATUAL_DO_PADRAO = 3;
+
 const versaoAusente: RegraDoPadrao = {
   id: 'versao-do-padrao-ausente',
-  descricao: 'Linha de versão do padrão ausente ou diferente de 2',
+  descricao: `Linha de versão do padrão ausente ou diferente de ${VERSAO_ATUAL_DO_PADRAO}`,
   verificar(arq) {
     const i = linhaDoMetadado(arq, 'versao do padrao');
     if (i === -1) {
-      return [pendencia(arq, 'versao-do-padrao-ausente', fimDoCabecalho(arq), 'Falta a linha "**Versão do padrão:** 2" nos metadados, logo abaixo do título.')];
+      return [
+        pendencia(
+          arq,
+          'versao-do-padrao-ausente',
+          fimDoCabecalho(arq),
+          `Falta a linha "**Versão do padrão:** ${VERSAO_ATUAL_DO_PADRAO}" nos metadados, logo abaixo do título.`
+        ),
+      ];
     }
     const valor = arq.linhas[i].trim().replace(/^\*\*[^*:]+:\*\*\s*/, '');
-    if (valor === '2') return [];
+    if (valor === String(VERSAO_ATUAL_DO_PADRAO)) return [];
     return [
-      pendencia(arq, 'versao-do-padrao-ausente', i, `Versão do padrão "${trecho(valor, 20)}": o valor é sempre 2. Escreva "**Versão do padrão:** 2".`),
+      pendencia(
+        arq,
+        'versao-do-padrao-ausente',
+        i,
+        `Versão do padrão "${trecho(valor, 20)}": o valor é sempre ${VERSAO_ATUAL_DO_PADRAO}. Escreva "**Versão do padrão:** ${VERSAO_ATUAL_DO_PADRAO}".`
+      ),
     ];
   },
 };
@@ -656,6 +678,174 @@ const remissao: RegraDoPadrao = {
   },
 };
 
+// --- Figuras e imagens (P9) -------------------------------------------------------------------------------------
+
+/** Começo de bloco de figura no texto que a importação guarda como conteúdo da seção. */
+function* figurasDoConteudo(arq: ArquivoDeMaterial): Generator<{ i: number; linhas: string[] }> {
+  for (const secao of arq.secoes) {
+    const linhas = secao.conteudo;
+    for (let k = 0; k < linhas.length; k++) {
+      if (!eLinhaDeFigura(linhas[k].linha)) continue;
+      const resto: string[] = [];
+      for (let j = k; j < linhas.length && (j === k || linhas[j].linha.trim() !== ''); j++) resto.push(linhas[j].linha);
+      yield { i: linhas[k].i, linhas: resto };
+    }
+  }
+}
+
+const figuraIncompleta: RegraDoPadrao = {
+  id: 'figura-incompleta',
+  descricao: 'Figura sem legenda, sem fonte ou sem texto alternativo',
+  verificar(arq) {
+    const out: PendenciaDoPadrao[] = [];
+    for (const { i, linhas } of figurasDoConteudo(arq)) {
+      const figura = lerFigura(linhas);
+      if (!figura) continue;
+      const faltas = [
+        figura.alt === '' ? 'o texto alternativo, entre os colchetes da primeira linha' : null,
+        figura.legenda === '' ? 'a legenda (**Figura N.** frase que diz o que a figura mostra)' : null,
+        figura.fonte === '' ? 'a linha "Fonte: autor ou entidade, título, ano"' : null,
+      ].filter((f): f is string => f !== null);
+      if (faltas.length > 0) {
+        out.push(pendencia(arq, 'figura-incompleta', i, `Figura incompleta: falta ${faltas.join('; falta ')}. Toda figura leva texto alternativo, legenda e fonte.`));
+      }
+    }
+    return out;
+  },
+};
+
+const figuraPendente: RegraDoPadrao = {
+  id: 'figura-pendente',
+  descricao: 'Figura marcada como pendente (a imagem ainda não foi enviada)',
+  verificar(arq) {
+    const out: PendenciaDoPadrao[] = [];
+    for (const { i, linhas } of figurasDoConteudo(arq)) {
+      const figura = lerFigura(linhas);
+      if (!figura) continue;
+      if (figura.destino.tipo === 'pendente') {
+        out.push(
+          pendencia(
+            arq,
+            'figura-pendente',
+            i,
+            'Figura pendente: a imagem ainda não foi enviada. Envie a imagem pelo botão "Enviar imagem" e troque este bloco pelo trecho que ele devolve (ou troque "figura:PENDENTE" pelo identificador e apague a linha "Mostrar:").'
+          )
+        );
+      } else if (figura.mostrar !== '') {
+        out.push(pendencia(arq, 'figura-pendente', i, 'A linha "Mostrar:" é só uma instrução para quem insere a imagem: apague-a do bloco da figura.'));
+      }
+    }
+    return out;
+  },
+};
+
+const figuraForaDoSite: RegraDoPadrao = {
+  id: 'figura-fora-do-site',
+  descricao: 'Figura que não aponta para uma imagem enviada ao site',
+  verificar(arq) {
+    const out: PendenciaDoPadrao[] = [];
+    for (const { i, linhas } of figurasDoConteudo(arq)) {
+      const figura = lerFigura(linhas);
+      if (!figura || figura.destino.tipo !== 'invalido') continue;
+      out.push(
+        pendencia(
+          arq,
+          'figura-fora-do-site',
+          i,
+          `A imagem aponta para "${trecho(figura.destino.bruto, 50)}", que não é uma imagem enviada ao site: o leitor não a mostra. Envie a imagem pelo botão "Enviar imagem" e use o destino "figura:<identificador>" que ele devolve (endereço de outro site, caminho de arquivo e "data:" não valem).`
+        )
+      );
+    }
+    return out;
+  },
+};
+
+// Imagem Markdown (`![...](...)`) em qualquer lugar de uma seção que não seja a primeira linha de um bloco de figura
+// (no meio de um parágrafo, numa lista, numa citação, nos Pontos-Chave, na Pérola ou no Alerta): o leitor só mostra
+// figura em bloco próprio.
+const IMAGEM_MARKDOWN = /!\[[^\]]*\]\(/;
+
+const imagemForaDoFormato: RegraDoPadrao = {
+  id: 'imagem-fora-do-formato',
+  descricao: 'Imagem escrita fora do bloco de figura',
+  verificar(arq) {
+    const out: PendenciaDoPadrao[] = [];
+    const inicios = new Set<number>();
+    for (const { i } of figurasDoConteudo(arq)) inicios.add(i);
+    for (const { i, linha } of linhasDasSecoes(arq)) {
+      if (!IMAGEM_MARKDOWN.test(linha) || inicios.has(i)) continue;
+      out.push(
+        pendencia(
+          arq,
+          'imagem-fora-do-formato',
+          i,
+          'Imagem fora do formato de figura: ela só aparece num bloco próprio, com a imagem sozinha na primeira linha, a legenda e a linha "Fonte:" logo abaixo, e linha em branco antes e depois.'
+        )
+      );
+    }
+    return out;
+  },
+};
+
+// Etiquetas HTML conhecidas, de abertura ou de fechamento, só com atributo no formato nome=valor. Só a lista conhecida conta:
+// "p<0,05", "<5 mm" e "A<B e C>D" não são HTML.
+const ETIQUETA_HTML =
+  /<\/?(?:img|script|style|iframe|object|embed|svg|a|div|span|br|hr|p|b|i|u|em|strong|sup|sub|font|center|table|thead|tbody|tr|td|th|ul|ol|li|h[1-6]|link|meta|form|input|button|video|audio|source|details|summary)(?:\s+[a-z][\w:-]*\s*=[^<>]*)?\s*\/?>/i;
+
+const htmlNoTexto: RegraDoPadrao = {
+  id: 'html-no-texto',
+  descricao: 'HTML cru no texto',
+  verificar(arq) {
+    const out: PendenciaDoPadrao[] = [];
+    for (const { i, linha } of linhasDasSecoes(arq)) {
+      const m = linha.match(ETIQUETA_HTML);
+      if (!m) continue;
+      out.push(pendencia(arq, 'html-no-texto', i, `HTML no texto ("${trecho(m[0], 40)}"): o leitor não o interpreta. Use só o Markdown do padrão.`));
+    }
+    return out;
+  },
+};
+
+// --- Bloco Atualização (P9) --------------------------------------------------------------------------------------
+
+// "Atualização" diz o que mudou E desde quando: o ano ou a versão tem de estar no texto do bloco.
+const ROTULO_DA_ATUALIZACAO = /^\*\*Atualiza[cç][aã]o:?\*\*/i;
+const DATA_OU_VERSAO = /\b(?:19|20)\d{2}\b|\bvers[aã]o\s*\d/i;
+
+const atualizacaoSemData: RegraDoPadrao = {
+  id: 'atualizacao-sem-data',
+  descricao: 'Bloco Atualização sem ano ou versão',
+  verificar(arq) {
+    const out: PendenciaDoPadrao[] = [];
+    for (const secao of arq.secoes) {
+      const linhas = secao.conteudo;
+      let k = 0;
+      while (k < linhas.length) {
+        if (!linhas[k].linha.trim().startsWith('>')) {
+          k++;
+          continue;
+        }
+        // Linhas `> ` seguidas são um bloco só; uma nova linha com rótulo de função abre outro.
+        let fim = k + 1;
+        while (fim < linhas.length && linhas[fim].linha.trim().startsWith('>') && !ROTULO_DA_ATUALIZACAO.test(blockquoteLabelText(linhas[fim].linha))) fim++;
+        const texto = linhas.slice(k, fim).map((l) => blockquoteLabelText(l.linha)).join(' ');
+        if (ROTULO_DA_ATUALIZACAO.test(texto) && !DATA_OU_VERSAO.test(texto)) {
+          out.push(
+            pendencia(
+              arq,
+              'atualizacao-sem-data',
+              linhas[k].i,
+              'Bloco Atualização sem data: diga o que mudou e desde quando, com o ano ou a versão no próprio bloco ("a partir de 2023", "na versão 2024"). Sem data, não é atualização.'
+            )
+          );
+        }
+        k = fim;
+      }
+    }
+    return out;
+  },
+};
+
 /** Título que é mesmo o de uma bibliografia ("Referências", "Referências Bibliográficas"). */
 function eBibliografia(b: MarkdownFileBlock): boolean {
   // Numeração antes do título ("Seção 9 — ", "7. ") não muda o que o bloco é.
@@ -710,6 +900,12 @@ export const REGRAS_DO_PADRAO: readonly RegraDoPadrao[] = [
   blocoRepetido,
   remissao,
   semPalavrasChave,
+  figuraIncompleta,
+  figuraPendente,
+  figuraForaDoSite,
+  imagemForaDoFormato,
+  htmlNoTexto,
+  atualizacaoSemData,
 ];
 
 // --- Entrada ----------------------------------------------------------------
