@@ -185,8 +185,9 @@ export async function executarRodada(deps: DepsDaRodada): Promise<ResumoDaRodada
         }
         if (!(await filaTemTrabalho(deps.exec))) break;
       }
-      // Sem tempo, o ciclo só coleta e publica: não reserva envio novo.
-      depsDoCiclo.maxPorLote = semTempo ? 0 : 1;
+      // Sem tempo, ou passado o teto de ciclos (só o ciclo que coleta o que já foi enviado roda além dele), o
+      // ciclo só coleta e registra: não reserva envio novo.
+      depsDoCiclo.maxPorLote = semTempo || n > maxCiclos ? 0 : 1;
       const r = await executarCiclo(depsDoCiclo);
       resumo.ciclos = n;
       aColetar = r.enviadosAoLote > 0;

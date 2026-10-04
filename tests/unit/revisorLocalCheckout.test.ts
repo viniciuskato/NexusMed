@@ -1,0 +1,141 @@
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { conferirCheckout, type RodarGit } from '../../scripts/revisor-local/checkout.ts';
+import { executarCli } from '../../scripts/revisor-local/cli.ts';
+
+// P8 — o revisor local só roda se o checkout é a main do GitHub (git de verdade, repositórios temporários; nada de rede).
+
+// O git de verdade, no Windows, passa fácil de 5 s quando a máquina está ocupada (os outros testes rodam juntos).
+vi.setConfig({ testTimeout: 60_000 });
+
+let pasta: string;
+beforeAll(() => {
+  pasta = mkdtempSync(path.join(tmpdir(), 'revisor-checkout-'));
+});
+afterAll(() => {
+  rmSync(pasta, { recursive: true, force: true });
+});
+
+const git = (cwd: string, ...args: string[]) =>
+  execFileSync('git', ['-c', 'user.name=teste', '-c', 'user.email=teste@exemplo.invalid', '-c', 'commit.gpgsign=false', ...args], {
+    cwd,
+    encoding: 'utf8',
+  }).trim();
+
+let n = 0;
+/** Um "GitHub" (repositório vazio de verdade), um checkout e um segundo clone para empurrar commits à origem. */
+function cenario() {
+  n += 1;
+  const origem = path.join(pasta, `origem-${n}.git`);
+  git(pasta, 'init', '--bare', '-b', 'main', origem);
+  const checkout = path.join(pasta, `checkout-${n}`);
+  const outro = path.join(pasta, `outro-${n}`);
+  git(pasta, 'clone', '--quiet', origem, checkout);
+  writeFileSync(path.join(checkout, 'a.txt'), 'um\n');
+  git(checkout, 'add', 'a.txt');
+  git(checkout, 'commit', '--quiet', '-m', 'um');
+  git(checkout, 'push', '--quiet', 'origin', 'HEAD:main');
+  git(pasta, 'clone', '--quiet', origem, outro);
+  return { origem, checkout, outro };
+}
+
+describe('conferirCheckout', () => {
+  it('na main, igual à origin/main e sem mudança: roda', async () => {
+    const { checkout } = cenario();
+    const r = await conferirCheckout(checkout);
+    expect(r).toEqual({ ok: true, commit: git(checkout, 'rev-parse', 'HEAD') });
+  });
+
+  it('arquivo novo (não rastreado) não impede; arquivo rastreado editado impede', async () => {
+    const { checkout } = cenario();
+    writeFileSync(path.join(checkout, 'novo.txt'), 'x');
+    expect((await conferirCheckout(checkout)).ok).toBe(true);
+    writeFileSync(path.join(checkout, 'a.txt'), 'editado à mão\n');
+    const r = await conferirCheckout(checkout);
+    expect(r).toMatchObject({ ok: false, motivo: expect.stringMatching(/1 arquivo\(s\) rastreado\(s\) com mudança/) });
+  });
+
+  it('em outra branch (de trabalho): não roda, mesmo igual à main', async () => {
+    const { checkout } = cenario();
+    git(checkout, 'switch', '--quiet', '-c', 'feat/qualquer');
+    expect(await conferirCheckout(checkout)).toMatchObject({ ok: false, motivo: expect.stringMatching(/não está na branch main \(está em "feat\/qualquer"\)/) });
+  });
+
+  it('atrasado em relação ao GitHub (alguém empurrou um commit novo): o fetch revela e não roda', async () => {
+    const { checkout, outro } = cenario();
+    writeFileSync(path.join(outro, 'b.txt'), 'dois\n');
+    git(outro, 'add', 'b.txt');
+    git(outro, 'commit', '--quiet', '-m', 'dois');
+    git(outro, 'push', '--quiet', 'origin', 'HEAD:main');
+    // Sem o fetch da guarda, origin/main local ainda seria o commit velho.
+    expect(git(checkout, 'rev-parse', 'HEAD')).toBe(git(checkout, 'rev-parse', 'refs/remotes/origin/main'));
+    expect(await conferirCheckout(checkout)).toMatchObject({ ok: false, motivo: expect.stringMatching(/não é a origin\/main/) });
+  });
+
+  it('com commit local que não está no GitHub: não roda', async () => {
+    const { checkout } = cenario();
+    writeFileSync(path.join(checkout, 'a.txt'), 'local\n');
+    git(checkout, 'commit', '--quiet', '-am', 'só aqui');
+    expect(await conferirCheckout(checkout)).toMatchObject({ ok: false, motivo: expect.stringMatching(/não é a origin\/main/) });
+  });
+
+  it('fetch que falha (origem sumiu) ou pasta que não é repositório: não roda', async () => {
+    const { checkout, origem } = cenario();
+    rmSync(origem, { recursive: true, force: true });
+    expect(await conferirCheckout(checkout)).toMatchObject({ ok: false, motivo: expect.stringMatching(/git fetch. falhou/) });
+    // Uma pasta que não é repositório também falha no fetch.
+    expect((await conferirCheckout(pasta)).ok).toBe(false);
+  });
+
+  it('só usa fetch, rev-parse e status: nenhum comando que escreva no checkout', async () => {
+    const chamadas: string[][] = [];
+    const falso: RodarGit = async (_pasta, args) => {
+      chamadas.push(args);
+      if (args[0] === 'rev-parse' && args[1] === '--abbrev-ref') return { codigo: 0, saida: 'main' };
+      if (args[0] === 'rev-parse') return { codigo: 0, saida: 'a'.repeat(40) };
+      return { codigo: 0, saida: '' };
+    };
+    expect((await conferirCheckout('x', falso)).ok).toBe(true);
+    expect(chamadas.map((c) => c[0])).toEqual(['fetch', 'rev-parse', 'rev-parse', 'rev-parse', 'status']);
+  });
+});
+
+describe('o programa inteiro com a guarda', () => {
+  it('checkout fora da main: registra o motivo, sai com 1 e não chega a tocar o banco nem o claude', async () => {
+    const { checkout } = cenario();
+    git(checkout, 'switch', '--quiet', '-c', 'feat/p8');
+    const dados = path.join(pasta, `dados-${n}`);
+    const logs: string[] = [];
+    const log = vi.spyOn(console, 'log').mockImplementation((l: string) => void logs.push(l));
+    try {
+      // `--supabase` e `--claude` não existem: se a rodada passasse da guarda, o registro teria "rodada iniciada".
+      const codigo = await executarCli(
+        ['--local', '--dados', dados, '--supabase', path.join(pasta, 'nao-existe.exe'), '--claude', path.join(pasta, 'nao-existe-claude.exe')],
+        {},
+        { raiz: checkout },
+      );
+      expect(codigo).toBe(1);
+      const saida = logs.join('\n');
+      expect(saida).toMatch(/rodada não feita, o banco não foi tocado: o checkout não está na branch main/);
+      expect(saida).not.toMatch(/rodada iniciada|fila vazia|falha/);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it('checkout na main em dia: a guarda deixa passar (a rodada começa)', async () => {
+    const { checkout } = cenario();
+    const dados = path.join(pasta, `dados-${n}`);
+    const logs: string[] = [];
+    const log = vi.spyOn(console, 'log').mockImplementation((l: string) => void logs.push(l));
+    try {
+      await executarCli(['--local', '--dados', dados, '--supabase', path.join(pasta, 'nao-existe.exe')], {}, { raiz: checkout });
+      expect(logs.join('\n')).toMatch(/rodada iniciada/);
+    } finally {
+      log.mockRestore();
+    }
+  });
+});

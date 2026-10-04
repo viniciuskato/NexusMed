@@ -205,6 +205,18 @@ obrigatório antes prende o PR para sempre.
 > atualização.** Quem decide e publica é o dono, pelo painel de administração.
 > O parecer aparece em "Meus envios" e na lista de envios do admin.
 >
+> **Publicar com um clique (P8):** na aba **Envios** da Área Editorial, cada envio
+> de material ou de questões tem o botão **Publicar** (e o envio de atualização,
+> **Aplicar atualização**). Ele funciona com qualquer parecer e com o envio ainda
+> aguardando a revisão: o parecer aparece ao lado do botão e, se não for "apto", a
+> tela pede confirmação antes. O conteúdo vai ao ar como se o servidor o tivesse
+> publicado (seções, referências, lugar na árvore, ids de seção preservados na
+> atualização), mas o selo "Revisado por IA" só existe quando o parecer do texto
+> atual é "apto". Recusa (título repetido, material acima fora do ar...) e falha não
+> mudam o envio nem criam nada. Envio "em revisão" (o revisor está lendo agora)
+> espera o parecer. Só admin ativo executa (funções `admin_publicar_envio`,
+> `admin_publicar_questoes`, `admin_aplicar_atualizacao`, migration `20261003120900`).
+>
 > Ele roda **no notebook do dono**, não no servidor: o Agendador de Tarefas do
 > Windows chama o programa a cada 15 minutos. O programa olha a fila no
 > Supabase de produção; se não há envio esperando, termina sem chamar a IA (custo
@@ -230,6 +242,18 @@ obrigatório antes prende o PR para sempre.
   você já tem; nenhum segredo novo, nada de chave em arquivo). Ele só chama as
   funções de revisão (reservar, registrar o veredito, liberar, travar), lê o
   catálogo e a fila, e **não chama nenhuma função de publicar nem de aplicar**.
+- Só roda com o checkout em dia (P8): antes de qualquer coisa o programa faz
+  `git fetch` e confere que a pasta do repositório está na branch `main`, no mesmo
+  commit de `origin/main` e sem arquivo rastreado alterado (arquivo novo não conta).
+  Se não estiver, registra o motivo no log, sai com código 1 (o `Last Result` da tarefa
+  mostra) e **não toca o banco nem o claude**. Por isso, depois de cada merge, rode
+  `git pull --ff-only` em `C:\Users\vinic\dev\NexusMed`; e não deixe a pasta do
+  agendamento numa branch de trabalho (um worktree separado serve para isso).
+- Se o prompt de sistema não couber na linha de comando do Windows, ele vai ao
+  `claude` por `--system-prompt-file` (arquivo temporário, apagado ao fim) e nunca é
+  misturado ao texto do envio; se não der para gravar o arquivo, a rodada falha sem
+  chamar o claude. Uma rodada faz no máximo 60 ciclos: passado o teto, o ciclo só
+  coleta o que já foi enviado ao claude e não reserva envio novo.
 - Limites de custo (`review_settings`): o teto do mês e o teto por pessoa por dia
   continuam valendo para quem **não** é admin; o **admin não é barrado** por eles
   nem pelo limite de 3 envios esperando (migration `20261003120800`). A revisão

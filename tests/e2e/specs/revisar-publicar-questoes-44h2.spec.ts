@@ -190,12 +190,13 @@ test.describe('Questões: revisão por IA e publicação pelo veredito (44-H2)',
     await linha.getByRole('button', { name: 'Marcar como resolvido' }).click();
     await expect(linha).toContainText('Resolvido');
 
-    // 6. E a aba de envios do admin lista o lote (tipo questões), só leitura.
+    // 6. E a aba de envios do admin lista o lote (tipo questões).
     await paginaAdmin.locator('#admin-tab-envios').click();
     const lote = paginaAdmin.locator('#admin-envios-lista li[data-tipo="questoes"]', { hasText: nome });
     await expect(lote).toContainText('Publicado');
     await expect(lote).toContainText('por h2-autor');
-    await expect(paginaAdmin.locator('#admin-envios-lista button')).toHaveCount(0);
+    // P8: o admin publica daqui; o lote já publicado não tem botão de publicar.
+    await expect(lote.getByTestId('publicar-envio')).toHaveCount(0);
   });
 
   test('revisão "não apto": nada é publicado, o autor vê os achados, corrige e o texto corrigido volta à revisão e é publicado', async ({ page }) => {
