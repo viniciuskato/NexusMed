@@ -185,6 +185,8 @@ export const CORPUS_NAO_SEGURO: Array<{ motivo: string; texto: string }> = [
   { motivo: 'lista com marcador diferente de "- "', texto: '* um item\n* outro item' },
   { motivo: 'lista com recuo no marcador', texto: '- um\n  - sub-item recuado' },
   { motivo: 'lista numerada fora de sequência', texto: '1. um\n3. três' },
+  { motivo: 'item de lista vazio (o leitor mostra o marcador como texto)', texto: '- a\n- \n- b' },
+  { motivo: 'item de lista numerada vazio', texto: '1. a\n2. \n3. b' },
   { motivo: 'falta linha em branco antes da lista', texto: 'Frase de abertura.\n- item colado na frase' },
   { motivo: 'espaços a mais depois do #', texto: '####  Subtítulo com dois espaços' },
   { motivo: 'tabela com linha de texto no meio', texto: '| A | B |\nlinha solta\n| 1 | 2 |' },

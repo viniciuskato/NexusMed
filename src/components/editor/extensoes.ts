@@ -3,10 +3,11 @@
 // função e o bloco protegido (tabela, fórmula, figura: mostra o resultado e guarda o texto original). Nada de sublinhado,
 // riscado, bloco de código, linha horizontal ou quebra forçada: não existem no leitor, então não existem aqui.
 
-import { Mark, Node, mergeAttributes } from '@tiptap/core';
+import { Extension, Mark, Node, mergeAttributes } from '@tiptap/core';
 import type { Command, Extensions } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { findWrapping } from '@tiptap/pm/transform';
 import { hrefParaExibir, ROTULOS_DAS_CAIXAS } from '../../utils/editorVisualMarkdown';
 import { BlocoProtegidoView } from './BlocoProtegidoView';
@@ -57,7 +58,13 @@ const Expoente = Mark.create({
   inclusive: false,
   excludes: 'code link',
   addAttributes() {
-    return { parenteses: { default: true, rendered: false } };
+    return {
+      parenteses: {
+        default: true,
+        parseHTML: (el) => el.getAttribute('data-parenteses') !== 'false',
+        renderHTML: (attrs) => ({ 'data-parenteses': String(attrs.parenteses) }),
+      },
+    };
   },
   parseHTML: () => [{ tag: 'sup' }],
   renderHTML: ({ HTMLAttributes }) => ['sup', mergeAttributes({ class: 'ev-expoente' }, HTMLAttributes), 0],
@@ -74,10 +81,17 @@ const QuebraSuave = Node.create({
   atom: true,
   selectable: false,
   addAttributes() {
-    return { raw: { default: '\n', rendered: false } };
+    // Todo atributo do esquema sobrevive a renderHTML → parseHTML (copiar e colar dentro do editor não muda bytes).
+    return {
+      raw: {
+        default: '\n',
+        parseHTML: (el) => el.getAttribute('data-raw') ?? '\n',
+        renderHTML: (attrs) => ({ 'data-raw': String(attrs.raw) }),
+      },
+    };
   },
   parseHTML: () => [{ tag: 'span[data-quebra-suave]' }],
-  renderHTML: () => ['span', { 'data-quebra-suave': '', class: 'ev-quebra' }, ' '],
+  renderHTML: ({ HTMLAttributes }) => ['span', mergeAttributes({ 'data-quebra-suave': '', class: 'ev-quebra' }, HTMLAttributes), ' '],
 });
 
 /** Citação comum (`> texto`): um parágrafo só, como o leitor a lê. */
@@ -129,12 +143,40 @@ const BlocoProtegido = Node.create({
   selectable: true,
   draggable: false,
   addAttributes() {
-    return { raw: { default: '', rendered: false } };
+    return {
+      raw: {
+        default: '',
+        parseHTML: (el) => el.getAttribute('data-raw') ?? '',
+        renderHTML: (attrs) => ({ 'data-raw': String(attrs.raw) }),
+      },
+    };
   },
   parseHTML: () => [{ tag: 'div[data-bloco-protegido]' }],
-  renderHTML: ({ node }) => ['div', { 'data-bloco-protegido': '', 'data-raw': String(node.attrs.raw) }],
+  renderHTML: ({ HTMLAttributes }) => ['div', mergeAttributes({ 'data-bloco-protegido': '' }, HTMLAttributes)],
   addNodeView() {
     return ReactNodeViewRenderer(BlocoProtegidoView);
+  },
+});
+
+/**
+ * O leitor numera a lista de 1 em diante, qualquer que seja o número digitado. Digitar "5. " no editor cria uma lista
+ * que começa em 5; aqui ela volta a começar em 1, para o que se vê ser o que o texto guarda.
+ */
+const ListaNumeradaDesde1 = Extension.create({
+  name: 'listaNumeradaDesde1',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('listaNumeradaDesde1'),
+        appendTransaction: (_transacoes, _antes, depois) => {
+          const tr = depois.tr;
+          depois.doc.descendants((no, pos) => {
+            if (no.type.name === 'orderedList' && (no.attrs.start ?? 1) !== 1) tr.setNodeMarkup(pos, undefined, { ...no.attrs, start: 1 });
+          });
+          return tr.docChanged ? tr : null;
+        },
+      }),
+    ];
   },
 });
 
@@ -162,6 +204,7 @@ export function criarExtensoes(): Extensions {
     ItemDeLista,
     Caixa,
     BlocoProtegido,
+    ListaNumeradaDesde1,
   ];
 }
 

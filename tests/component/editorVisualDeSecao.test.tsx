@@ -2,6 +2,7 @@ import React from 'react';
 import { describe, it, expect, afterEach, beforeAll, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { Editor } from '@tiptap/core';
+import { DOMParser as PmDOMParser, DOMSerializer } from '@tiptap/pm/model';
 
 vi.mock('../../src/repositories/FigurasRepository', () => ({ urlDaFigura: vi.fn().mockResolvedValue(null) }));
 
@@ -18,6 +19,8 @@ beforeAll(() => {
   Range.prototype.getBoundingClientRect = () => retangulo as DOMRect;
   Range.prototype.getClientRects = () => ({ length: 0, item: () => null, [Symbol.iterator]: function* () {} }) as unknown as DOMRectList;
   document.elementFromPoint = () => null;
+  // `view.pasteHTML` cria um ClipboardEvent, que o jsdom não tem.
+  (globalThis as Record<string, unknown>).ClipboardEvent ??= class extends Event {};
 });
 
 afterEach(() => cleanup());
@@ -292,5 +295,66 @@ describe('editor visual — o texto passa pelo editor de verdade e volta idênti
     const { editor, ultimo } = abrir(base);
     act(() => void editor.commands.insertContentAt(1, '>>'));
     expect(ultimo()).toBe(`>>${base}`);
+  });
+});
+
+describe('editor visual — copiar, recortar e colar não mudam nenhum byte', () => {
+  const TABELA = '| A | B |\n|---|---|\n| 1 | 2 |';
+
+  it('recortar e colar um bloco protegido devolve o texto original igual', async () => {
+    const original = `Antes.\n\n${TABELA}\n\nDepois.`;
+    const { editor, ultimo } = abrir(original);
+    await screen.findByTestId('bloco-protegido');
+    let posicao = -1;
+    editor.state.doc.descendants((no, pos) => {
+      if (no.type.name === 'blocoProtegido') posicao = pos;
+    });
+    act(() => void editor.commands.setNodeSelection(posicao));
+    const { dom } = editor.view.serializeForClipboard(editor.state.selection.content());
+    act(() => void editor.commands.deleteSelection());
+    expect(ultimo()).toBe('Antes.\n\nDepois.');
+    act(() => void editor.view.pasteHTML(dom.innerHTML));
+    expect(ultimo()).toBe(original);
+  });
+
+  it('copiar e colar texto com quebra de linha, expoente e caixa de várias linhas devolve os mesmos bytes', () => {
+    const original = 'a\n  b x^2 e y^(a b)\n\n> **Cuidado:** um\n> dois';
+    const { editor, ultimo } = abrir(original);
+    act(() => void editor.commands.selectAll());
+    const { dom } = editor.view.serializeForClipboard(editor.state.selection.content());
+    act(() => void editor.commands.setContent('<p></p>', { emitUpdate: true }));
+    act(() => void editor.view.pasteHTML(dom.innerHTML));
+    expect(ultimo()).toBe(original);
+  });
+
+  it('todo atributo do esquema sobrevive a renderHTML → parseHTML: os textos do corpus voltam iguais por HTML', () => {
+    const falhas: string[] = [];
+    for (const { construcao, texto } of CORPUS_SEGURO.flatMap((g) => g.textos.map((t) => ({ construcao: g.construcao, texto: t }))).filter((c) => c.texto !== '')) {
+      const { editor } = abrir(texto);
+      const esquema = editor.schema;
+      const recipiente = document.createElement('div');
+      recipiente.appendChild(DOMSerializer.fromSchema(esquema).serializeFragment(editor.state.doc.content));
+      const volta = PmDOMParser.fromSchema(esquema).parse(recipiente);
+      const resultado = docParaTexto(volta.toJSON() as NoVisual);
+      if (resultado !== texto) falhas.push(`${construcao}: ${JSON.stringify(texto)} → ${JSON.stringify(resultado)}`);
+      cleanup();
+    }
+    expect(falhas).toEqual([]);
+  });
+});
+
+describe('editor visual — lista numerada sempre começa em 1, como no leitor', () => {
+  it('digitar "5. " cria a lista começando em 1, e o texto e o editor concordam', () => {
+    const { editor, ultimo, onChange } = abrir('');
+    selecionar(editor, 1);
+    act(() => void editor.commands.insertContent('5.'));
+    const pos = editor.state.selection.from;
+    act(() => void editor.view.someProp('handleTextInput', (f) => f(editor.view, pos, pos, ' ', () => editor.state.tr)));
+    act(() => void editor.commands.insertContent('item'));
+    const lista = (editor.getJSON().content ?? [])[0];
+    expect(lista.type).toBe('orderedList');
+    expect(lista.attrs?.start).toBe(1);
+    expect(ultimo()).toBe('1. item');
+    expect(onChange.mock.calls[onChange.mock.calls.length - 1][1]).toEqual({ fiel: true });
   });
 });

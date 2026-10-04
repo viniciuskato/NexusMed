@@ -225,6 +225,8 @@ function lerLista(linhas: string[], numerada: boolean): NoVisual {
       if (!linha.startsWith(prefixo) || (linha.length > prefixo.length && /\s/.test(linha[prefixo.length]))) {
         recusar(numerada ? 'lista numerada fora do formato "1. 2. 3."' : 'lista com marcador diferente de "- "');
       }
+      // Item vazio: o leitor apara a linha ("- " vira "-") e mostra o próprio marcador como texto do item.
+      if (linha.length === prefixo.length) recusar('item de lista vazio');
       itens.push(linha.slice(prefixo.length));
     } else {
       // Linha de continuação (sem marcador): fica no item anterior, como o leitor faz.
@@ -468,6 +470,8 @@ function simplificar(no: NoVisual): unknown {
   if (no.type === 'heading') return { t: no.type, level: no.attrs?.level, c: filhos };
   if (no.type === 'caixa') return { t: no.type, rotulo: no.attrs?.rotulo, c: filhos };
   if (no.type === 'blocoProtegido') return { t: no.type, raw: no.attrs?.raw };
+  // A lista numerada do leitor sempre começa em 1: outro começo no editor não é o que o texto guarda.
+  if (no.type === 'orderedList') return { t: no.type, start: no.attrs?.start ?? 1, c: filhos };
   return { t: no.type, c: filhos };
 }
 
