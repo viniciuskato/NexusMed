@@ -7,15 +7,19 @@ import { flush, getSummary } from '../services/syncQueue';
 import { getSupabaseAuthErrorMessage } from '../utils/supabaseAuthErrors';
 import { UnsyncedLogoutDialog } from '../components/auth/UnsyncedLogoutDialog';
 
-// 45-F (AUD-01): o link do e-mail de "Esqueci a senha" volta para o site com
-// `#access_token=...&type=recovery`. O Supabase tira isso da URL e avisa com o
-// evento PASSWORD_RECOVERY, mas o aviso pode sair antes de o React assinar —
-// por isso a URL é lida aqui, na carga do módulo, antes de o cliente limpá-la.
+// 45-F (AUD-01): o link do e-mail de "Esqueci a senha" (fluxo implicit) volta
+// para o site com `#access_token=...&type=recovery`. O Supabase tira isso da
+// URL e avisa com o evento PASSWORD_RECOVERY, mas o aviso pode sair antes de o
+// React assinar — por isso o hash é lido aqui, na carga do módulo, antes de o
+// cliente limpá-lo. Só o hash com `access_token` e `type=recovery` liga o modo
+// (P12a): `?type=recovery&code=...` não basta, porque sem sessão de recuperação
+// não há senha nova a definir; no fluxo com `code`, quem liga é o evento
+// PASSWORD_RECOVERY, depois de o cliente trocar o código pela sessão.
 const OPENED_FROM_RECOVERY_LINK = (() => {
   try {
     if (typeof window === 'undefined') return false;
-    const raw = `${window.location.hash}&${window.location.search}`;
-    return /(^|[#?&])type=recovery(&|$)/.test(raw) && /(^|[#?&])(access_token|token_hash|code)=/.test(raw);
+    const hash = window.location.hash;
+    return /(^|[#&])type=recovery(&|$)/.test(hash) && /(^|[#&])access_token=/.test(hash);
   } catch {
     return false;
   }
@@ -63,7 +67,7 @@ interface AuthContextType {
 
 type ProfileResult =
   | { ok: true; profile: UserProfile }
-  | { ok: false; transient: boolean; fallbackProfile: UserProfile };
+  | { ok: false; transient: boolean; status?: number; fallbackProfile: UserProfile };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -84,6 +88,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // momentânea (fail-closed para todo o resto).
   const latestUserRef = useRef<User | null>(null);
   const activeProfileUidRef = useRef<string | null>(null);
+  // Renovação da sessão (P12a) em andamento: o evento TOKEN_REFRESHED que ela
+  // mesma provoca não pode disparar outra renovação.
+  const renewingSessionRef = useRef(false);
 
   // Busca o perfil em public.profiles (criado pelo trigger handle_new_user no signup)
   const fetchProfile = useCallback(async (supaUser: User): Promise<ProfileResult> => {
@@ -95,7 +102,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       displayName: supaUser.user_metadata?.display_name || 'Estudante NexusMed',
       photoURL: supaUser.user_metadata?.avatar_url || null,
       role: 'student',
-      plan: 'free',
       status: 'pending',
     };
 
@@ -108,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error || !data) {
         console.warn('Não foi possível carregar o perfil em public.profiles:', error);
-        return { ok: false, transient: isTransientProfileError(status), fallbackProfile };
+        return { ok: false, transient: isTransientProfileError(status), status, fallbackProfile };
       }
 
       return {
@@ -118,9 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: data.email,
           displayName: data.display_name || 'Estudante NexusMed',
           photoURL: data.avatar_url,
-          // plan ainda não existe em public.profiles (fora do escopo desta etapa) — mantido 'free'.
           role: data.role === 'admin' ? 'admin' : 'student',
-          plan: 'free',
           status: data.status === 'active' || data.status === 'blocked' ? data.status : 'pending',
           createdAt: data.created_at,
         },
@@ -137,7 +141,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         latestUserRef.current = supaUser;
         setUser(supaUser);
         setIsEmailVerified(Boolean(supaUser.email_confirmed_at));
-        const result = await fetchProfile(supaUser);
+        let result = await fetchProfile(supaUser);
+        // 401 na leitura do perfil de quem já era ativo (P12a): o token pode
+        // ter vencido sem a renovação automática ter rodado. Renova a sessão e
+        // lê de novo antes de tratar como "aguardando aprovação"; se o 401
+        // continuar, segue o caminho de sempre (fail-closed).
+        if (
+          !result.ok &&
+          result.status === 401 &&
+          activeProfileUidRef.current === supaUser.id &&
+          !renewingSessionRef.current
+        ) {
+          renewingSessionRef.current = true;
+          try {
+            const { error: refreshError } = await supabase.auth.refreshSession();
+            if (!refreshError) result = await fetchProfile(supaUser);
+          } catch (err) {
+            console.warn('Não foi possível renovar a sessão para reler o perfil:', err);
+          } finally {
+            renewingSessionRef.current = false;
+          }
+        }
         // Saiu, ou trocou de conta, enquanto o perfil era lido: esta resposta não vale mais.
         if (latestUserRef.current?.id !== supaUser.id) return;
 
@@ -231,7 +255,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         displayName: 'Dr. Estudante NexusMed',
         photoURL: null,
         role: 'student',
-        plan: 'free',
         status: 'active',
         createdAt: new Date().toISOString(),
       };
@@ -290,7 +313,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             displayName: 'Dr. Estudante NexusMed',
             photoURL: null,
             role: 'student',
-            plan: 'free',
             status: 'active',
             createdAt: new Date().toISOString(),
           };
@@ -357,7 +379,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       displayName: 'Dr. Estudante NexusMed',
       photoURL: null,
       role: 'admin',
-      plan: 'premium',
       status: 'active',
       createdAt: new Date().toISOString(),
     };
@@ -437,7 +458,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         displayName: cleanEmail.split('@')[0] || 'Estudante NexusMed',
         photoURL: null,
         role: 'admin',
-        plan: 'premium',
         status: 'active',
         createdAt: new Date().toISOString(),
       };
@@ -487,7 +507,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         displayName: name.trim() || 'Estudante NexusMed',
         photoURL: null,
         role: 'admin',
-        plan: 'premium',
         status: 'active',
         createdAt: new Date().toISOString(),
       };

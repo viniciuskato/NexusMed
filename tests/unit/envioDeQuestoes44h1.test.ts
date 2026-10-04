@@ -264,6 +264,21 @@ describe('P10 — o importador lê a seção do material', () => {
   it('seção vazia depois do ">" é ignorada como "sem seção"', () => {
     expect(leitura('A >').materialLinks).toEqual([{ title: 'A', sectionTitle: null }]);
   });
+
+  it('P12a: título de material com " > " — o ÚLTIMO " > " (com espaços) é o separador da seção', () => {
+    expect(leitura('Eletrólitos > ácido-base > Sódio').materialLinks).toEqual([
+      { title: 'Eletrólitos > ácido-base', sectionTitle: 'Sódio' },
+    ]);
+    expect(leitura('A > B > C > D; DPOC').materialLinks).toEqual([
+      { title: 'A > B > C', sectionTitle: 'D' },
+      { title: 'DPOC', sectionTitle: null },
+    ]);
+  });
+
+  it('P12a: ">" sem espaços dos dois lados não separa nada (é parte do título)', () => {
+    expect(leitura('A>B').materialLinks).toEqual([{ title: 'A>B', sectionTitle: null }]);
+    expect(leitura('A>B > Seção').materialLinks).toEqual([{ title: 'A>B', sectionTitle: 'Seção' }]);
+  });
 });
 
 describe('P10 — a checagem do envio confere a seção contra o material publicado', () => {
@@ -308,6 +323,17 @@ describe('P10 — a checagem do envio confere a seção contra o material public
       [],
     );
     expect(semLista.pendencias).toEqual([]);
+  });
+
+  it('P12a: material com " > " no título é achado pelo título inteiro, e a seção, pelo último " > "', () => {
+    const publicados = [{ id: 'm9', title: 'Eletrólitos > ácido-base', sections: [{ id: 's9', title: 'Sódio' }] }];
+    const avaliar = (materiais: string) =>
+      avaliarLote(lerLoteDeQuestoes(questao(1, { materiais }), DISCIPLINAS, TEMAS), publicados, []).pendencias.map((p) => p.mensagem);
+    expect(avaliar('Eletrólitos > ácido-base > Sódio')).toEqual([]);
+    const inexistente = avaliar('Eletrólitos > ácido-base > Potássio');
+    expect(inexistente).toHaveLength(1);
+    expect(inexistente[0]).toContain('“Potássio”');
+    expect(inexistente[0]).toContain('“Eletrólitos > ácido-base”');
   });
 
   it('o servidor recebe o título e a seção de cada ligação (material_links) além dos títulos', () => {

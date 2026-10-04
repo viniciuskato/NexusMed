@@ -140,8 +140,6 @@ const ui = vi.hoisted(() => ({}) as Record<string, unknown>);
 vi.mock('../../src/services/storage', () => ({
   StorageService: {
     getTheme: () => 'light',
-    getUserPlan: () => 'free',
-    setUserPlan: vi.fn(),
     getLastReadingSession: () => ({
       compendiumId: 'mat-1',
       sectionId: 'sec-2',

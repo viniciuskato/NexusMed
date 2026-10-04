@@ -367,11 +367,24 @@ describe('44-H1 — prompt revisor de questões', () => {
     expect(p).toContain('"NÃO APTO — 1 achado grave" (quando há um só)');
     expect(p).toContain('"NÃO APTO — N achados graves" (em que N é o número de achados graves, sempre 2 ou mais)');
     expect(p).toContain('nenhuma outra linha da resposta começa com "APTO" ou com "NÃO APTO"');
-    const veredito = p.indexOf('(c) Veredito: uma linha só, a última antes do bloco de correção');
-    const bloco = p.indexOf('(d) UM único bloco de código');
+    const veredito = p.indexOf('Terceira parte, o veredito: uma linha só, a última antes do bloco de correção');
+    const bloco = p.indexOf('Quarta parte, a correção: UM único bloco de código');
     expect(veredito).toBeGreaterThan(-1);
     expect(bloco).toBeGreaterThan(veredito);
     expect(p.indexOf('REGRA DO VEREDITO')).toBeLessThan(p.indexOf('COMO TERMINAR A RESPOSTA'));
+  });
+
+  it('P12a: as letras "(a)" a "(d)" que levavam o modelo a escrever títulos saíram, como no prompt de material', () => {
+    expect(p).not.toMatch(/^\s*\([a-d]\)/m);
+    expect(p).not.toContain('(c) Veredito');
+    expect(p).not.toContain('(d) UM');
+    expect(p).toContain('não escreva título, letra, número, rótulo nem frase de introdução antes de nenhuma das quatro partes');
+    expect(p).toContain('elas não aparecem na resposta');
+    expect(p).toContain('Entre a linha do veredito e o bloco de correção (ou a frase "Nenhum achado muda o material.") não vai nenhum título, comentário ou texto');
+    // As quatro partes, na ordem: alto risco, o que não conferiu, veredito, correção.
+    const ordem = ['Primeira parte, o alto risco', 'Segunda parte, o que você não conseguiu conferir', 'Terceira parte, o veredito', 'Quarta parte, a correção'].map((t) => p.indexOf(t));
+    expect(ordem.every((i) => i > -1)).toBe(true);
+    expect([...ordem].sort((a, b) => a - b)).toEqual(ordem);
   });
 
   it('o bloco de correção do prompt começa exatamente como o revisor automático espera (o mesmo do prompt de material)', () => {

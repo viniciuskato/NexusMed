@@ -7,7 +7,6 @@ import {
   Flashcard,
   QuestionAnswerRecord,
   SimuladoSessionData,
-  UserPlan,
   UserStats,
   ErrorLogItem,
   ThemeMode,
@@ -51,6 +50,7 @@ export const STORAGE_KEYS = {
   NOTES: 'synapse_notes_v1',
   NOTES_BASE_VERSION: 'synapse_notes_base_version_v1',
   SIMULADOS: 'synapse_simulados_v1',
+  // Legado: o plano saiu do app; a chave fica só para a limpeza apagar o que sobrou no navegador.
   USER_PLAN: 'synapse_user_plan_v1',
   ERROR_LOG: 'synapse_error_log_v1',
   HIGHLIGHTS: 'synapse_compendium_highlights_v1',
@@ -501,37 +501,6 @@ export const StorageService = {
       list.unshift(session);
     }
     setItem(getUserKey(STORAGE_KEYS.SIMULADOS), list);
-  },
-
-  // --- User Profile & Plan (Isolado por UID) ---
-  getUserProfile(): {
-    id: string;
-    name: string;
-    email: string;
-    cycle: 'clinico';
-    plan: UserPlan;
-    streakDays: number;
-    avatarUrl?: string;
-  } {
-    const plan = this.getUserPlan();
-    return {
-      id: currentUserId || 'user-med-1',
-      name: 'Estudante NexusMed',
-      email: '',
-      cycle: 'clinico',
-      plan,
-      streakDays: 4,
-    };
-  },
-  updatePlan(plan: UserPlan) {
-    this.setUserPlan(plan);
-    return this.getUserProfile();
-  },
-  getUserPlan(): UserPlan {
-    return getItem<UserPlan>(getUserKey(STORAGE_KEYS.USER_PLAN), 'free');
-  },
-  setUserPlan(plan: UserPlan): void {
-    setItem(getUserKey(STORAGE_KEYS.USER_PLAN), plan);
   },
 
   // --- Theme Mode (Isolado por UID) ---

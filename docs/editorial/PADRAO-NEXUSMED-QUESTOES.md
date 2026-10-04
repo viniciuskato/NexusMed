@@ -126,7 +126,11 @@ explicitamente se o import resolve ou não.
   ("Sem material" na lista). **Desde a P10 o arquivo também pode ligar cada
   questão ao material e à SEÇÃO**: `**Materiais cobertos:** Título do material >
   Título da seção; Outro material` (títulos exatos; sem o `> Seção`, o material
-  inteiro). No Admin, o que o arquivo cita vale para aquela questão, no lugar dos
+  inteiro). O separador é o **último** ` > ` (com um espaço de cada lado) do item:
+  um material cujo título tem ` > ` só pode ser citado junto de uma seção
+  (`Eletrólitos > ácido-base > Sódio` é o material `Eletrólitos > ácido-base`, seção
+  `Sódio`), e um `>` colado (`A>B`) é parte do título; sem seção, deixe o campo
+  de fora e escolha o material no envio. No Admin, o que o arquivo cita vale para aquela questão, no lugar dos
   materiais do lote; material ou seção que não se acha (ou que se repete) deixa a
   linha **Bloqueada** com a frase do motivo. No envio pelo site e na publicação pelo
   revisor ou pelo admin, seção inexistente recusa o lote inteiro, nunca vira palpite.

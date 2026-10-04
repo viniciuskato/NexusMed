@@ -30,7 +30,6 @@ const { Header } = await import('../../src/components/Header');
 function renderHeader(onSelectView = vi.fn(), activeView = 'dashboard') {
   render(
     <Header
-      currentPlan={'free' as never}
       onOpenSearch={vi.fn()}
       stats={{ streakDays: 0 } as never}
       dueCardsCount={0}
