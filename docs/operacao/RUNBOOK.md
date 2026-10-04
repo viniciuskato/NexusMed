@@ -242,13 +242,28 @@ obrigatório antes prende o PR para sempre.
   você já tem; nenhum segredo novo, nada de chave em arquivo). Ele só chama as
   funções de revisão (reservar, registrar o veredito, liberar, travar), lê o
   catálogo e a fila, e **não chama nenhuma função de publicar nem de aplicar**.
-- Só roda com o checkout em dia (P8): antes de qualquer coisa o programa faz
-  `git fetch` e confere que a pasta do repositório está na branch `main`, no mesmo
-  commit de `origin/main` e sem arquivo rastreado alterado (arquivo novo não conta).
-  Se não estiver, registra o motivo no log, sai com código 1 (o `Last Result` da tarefa
-  mostra) e **não toca o banco nem o claude**. Por isso, depois de cada merge, rode
-  `git pull --ff-only` em `C:\Users\vinic\dev\NexusMed`; e não deixe a pasta do
-  agendamento numa branch de trabalho (um worktree separado serve para isso).
+- Só roda com o checkout em dia (P8): antes de qualquer coisa o programa confere que a
+  pasta do repositório está na branch `main`, no mesmo commit de `origin/main` (depois de
+  um `git fetch`) e sem arquivo rastreado alterado (arquivo novo não conta). Se não
+  estiver, registra o motivo no log, sai com código 1 (o `Last Result` da tarefa mostra) e
+  **não toca o banco nem o claude**.
+- Atualiza sozinho (P9): **antes** dessa conferência, se a pasta está na `main` e sem
+  arquivo rastreado alterado, o programa roda `git pull --ff-only origin main` (só avanço
+  rápido: nunca cria merge nem reescreve nada). Por isso você não precisa mais rodar
+  `git pull` em `C:\Users\vinic\dev\NexusMed` depois de cada merge. **Quando o pull move a
+  `main`, essa rodada encerra** (o programa já carregou o código antigo): registra no log
+  "a main foi atualizada pelo GitHub (antes → depois)", sai com código 0 sem tocar o banco
+  nem o claude, e a rodada seguinte, 15 minutos depois, já carrega o código novo. Se o
+  `package-lock.json` mudou no pull, a rodada roda `npm ci` antes de encerrar; se o `npm ci`
+  falhar, sai com código 1 e deixa o marcador `.git\revisor-npm-ci-pendente`: nenhuma
+  rodada roda até o `npm ci` passar (rode `npm.cmd ci` na pasta, ou a próxima rodada tenta
+  de novo). Se o pull falhar
+  (sem rede, commit local fora do GitHub, histórico que não avança em linha reta), nada é
+  alterado e a conferência decide pelo estado que ficou, como antes. Pasta em branch de
+  trabalho ou com arquivo rastreado editado não é tocada: não deixe a pasta do agendamento
+  numa branch de trabalho (um worktree separado serve para isso). Todo comando git do
+  programa roda com `GIT_OPTIONAL_LOCKS=0`, para a leitura do estado não disputar o
+  índice com o git do VS Code aberto na mesma pasta.
 - Se o prompt de sistema não couber na linha de comando do Windows, ele vai ao
   `claude` por `--system-prompt-file` (arquivo temporário, apagado ao fim) e nunca é
   misturado ao texto do envio; se não der para gravar o arquivo, a rodada falha sem

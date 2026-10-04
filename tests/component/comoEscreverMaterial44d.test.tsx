@@ -65,9 +65,14 @@ describe('44-D — página "Como escrever um material"', () => {
     expect(
       codigos.some((c) => c.startsWith('# Título completo do material') && c.includes('| Coluna A | Coluna B |')),
     ).toBe(true);
-    // Se o modelo tivesse sido interpretado, "Título da primeira seção" seria um título.
-    expect(screen.queryByRole('heading', { name: 'Título da primeira seção' })).toBeNull();
-    expect(screen.queryByRole('table')).toBeNull();
+    // Se o modelo tivesse sido interpretado, "Um subtítulo dentro da seção" seria um título e a tabela dele, uma tabela.
+    expect(screen.queryByRole('heading', { name: 'Um subtítulo dentro da seção' })).toBeNull();
+    expect(screen.queryByRole('columnheader', { name: 'Coluna A' })).toBeNull();
+    expect(container.querySelector('#como-escrever-padrao-texto pre table')).toBeNull();
+    // P9: o modelo traz a figura pendente, que no texto da página seria uma figura; aqui é literal.
+    expect(codigos.some((c) => c.includes('![Descrição da imagem, para quem não a vê](figura:PENDENTE)'))).toBe(true);
+    expect(container.querySelector('#como-escrever-padrao-texto figure')).toBeNull();
+    expect(container.querySelector('#como-escrever-padrao-texto img')).toBeNull();
   });
 
   it('lista as Disciplinas e os Temas do catálogo com os nomes exatos', () => {
