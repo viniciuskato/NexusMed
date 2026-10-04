@@ -101,6 +101,27 @@ export interface QuestionImportOption {
   isCorrect: boolean;
 }
 
+/**
+ * Separa "Título do material > Título da seção". O separador é o ÚLTIMO " > " (com espaços dos dois lados):
+ * num material chamado "Eletrólitos > ácido-base", "Eletrólitos > ácido-base > Sódio" é o material
+ * "Eletrólitos > ácido-base" e a seção "Sódio". Por isso, um título com " > " só pode ser escrito junto
+ * de uma seção (sem ela, o fim do título seria lido como a seção). Sem " > ", o item todo é o título
+ * (um ">" colado, "A>B", é parte do título); um " >" no fim, sem nada depois, é "sem seção".
+ */
+export function separarMaterialESecao(item: string): { title: string; sectionTitle: string | null } {
+  const texto = item.trim();
+  let corte = -1;
+  let largura = 0;
+  for (const m of texto.matchAll(/\s>\s/g)) {
+    corte = m.index ?? -1;
+    largura = m[0].length;
+  }
+  if (corte === -1) {
+    return { title: texto.replace(/\s>$/, '').trim(), sectionTitle: null };
+  }
+  return { title: texto.slice(0, corte).trim(), sectionTitle: texto.slice(corte + largura).trim() || null };
+}
+
 /** P10: um material que a questão cobre e, opcionalmente, a seção dele (`Material > Seção`). */
 export interface QuestionImportMaterialLink {
   title: string;
@@ -400,9 +421,7 @@ function parseQuestionBlock(
   const materialLinks: QuestionImportMaterialLink[] = [];
   const secaoRepetida = new Set<string>();
   for (const item of (values['materiais cobertos'] ?? values['material coberto'] ?? '').split(/[;\n]/)) {
-    const corte = item.indexOf('>');
-    const title = (corte === -1 ? item : item.slice(0, corte)).trim();
-    const sectionTitle = corte === -1 ? null : item.slice(corte + 1).trim() || null;
+    const { title, sectionTitle } = separarMaterialESecao(item);
     if (!title) continue;
     const existente = materialLinks.find((l) => l.title === title);
     if (!existente) {

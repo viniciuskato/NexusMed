@@ -41,7 +41,7 @@ import { fetchAllRows, fetchAllRowsByIds } from './supabasePaging';
 //   lacuna conhecida, não um bug de mapeamento):
 //     editorialStatus (domínio 'completo'/'em_atualizacao'/'em_revisao' não
 //       bate com materials.status 'draft'/'published'/'archived')
-//     dependencies, diagramSvgKey (por seção), isPremiumOnly
+//     dependencies, diagramSvgKey (por seção)
 //   material_references.url também não é populado a partir do frontend
 //   (Compendium.references é só string[] de texto de citação).
 // ============================================================================

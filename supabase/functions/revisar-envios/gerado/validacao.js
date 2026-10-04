@@ -1266,6 +1266,19 @@ function normalizeLabel(s) {
 function isNonEmptyString2(v) {
   return typeof v === "string" && v.trim().length > 0;
 }
+function separarMaterialESecao(item) {
+  const texto = item.trim();
+  let corte = -1;
+  let largura = 0;
+  for (const m of texto.matchAll(/\s>\s/g)) {
+    corte = m.index ?? -1;
+    largura = m[0].length;
+  }
+  if (corte === -1) {
+    return { title: texto.replace(/\s>$/, "").trim(), sectionTitle: null };
+  }
+  return { title: texto.slice(0, corte).trim(), sectionTitle: texto.slice(corte + largura).trim() || null };
+}
 function resolveByName2(name, list) {
   const norm = name.trim().toLowerCase();
   if (!norm) return void 0;
@@ -1445,9 +1458,7 @@ function parseQuestionBlock(block, index, disciplines, themes) {
   const materialLinks = [];
   const secaoRepetida = /* @__PURE__ */ new Set();
   for (const item of (values["materiais cobertos"] ?? values["material coberto"] ?? "").split(/[;\n]/)) {
-    const corte = item.indexOf(">");
-    const title = (corte === -1 ? item : item.slice(0, corte)).trim();
-    const sectionTitle = corte === -1 ? null : item.slice(corte + 1).trim() || null;
+    const { title, sectionTitle } = separarMaterialESecao(item);
     if (!title) continue;
     const existente = materialLinks.find((l) => l.title === title);
     if (!existente) {
