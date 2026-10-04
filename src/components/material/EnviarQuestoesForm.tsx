@@ -97,7 +97,16 @@ export const EnviarQuestoesForm: React.FC<EnviarQuestoesFormProps> = ({
   );
 
   const publicados = useMemo(
-    () => compendiums.filter((c) => c.publicationStatus === 'published').map((c) => ({ id: c.id, title: c.title, disciplineId: c.disciplineId })),
+    () =>
+      compendiums
+        .filter((c) => c.publicationStatus === 'published')
+        .map((c) => ({
+          id: c.id,
+          title: c.title,
+          disciplineId: c.disciplineId,
+          // P10: o arquivo pode ligar a questão a uma seção ("Material > Seção"); a tela confere o título.
+          sections: (c.sections ?? []).map((sec) => ({ id: sec.id, title: sec.title })),
+        })),
     [compendiums],
   );
   const gruposDeMateriais = useMemo(() => {

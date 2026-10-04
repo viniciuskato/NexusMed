@@ -300,27 +300,33 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   };
 
   const handleCreateFlashcardFromSection = async (sec: CompendiumSection) => {
-    await flashcardsRepository.saveFlashcard({
-      id: crypto.randomUUID(),
-      disciplineId: compendium.disciplineId,
-      themeId: compendium.themeId,
-      compendiumRefId: compendium.id,
-      front: `[${discipline?.name || 'Medicina'}] ${sec.title}`,
-      back: sec.keyTakeaways.join('\n• '),
-      mechanismHighlight: sec.clinicalPearl || sec.keyTakeaways[0] || '',
-      tags: [discipline?.name || 'Geral', theme?.name || 'Teoria', 'Conteúdo'],
-      difficulty: 'medio',
-      isCustom: true,
-      srs: {
-        intervalDays: 1,
-        repetitionCount: 1,
-        easeFactor: 2.5,
-        nextDueDate: new Date().toISOString(),
-        state: 'new',
-        reviewHistory: [],
-      },
-    });
-    showToast('Flashcard criado para o seu SRS');
+    // P10: o card guarda a seção (a revisão abre o material nela) e é um por seção: pedir de novo não cria outro.
+    try {
+      const { created } = await flashcardsRepository.createFlashcardFromSection({
+        id: crypto.randomUUID(),
+        disciplineId: compendium.disciplineId,
+        themeId: compendium.themeId,
+        compendiumRefId: compendium.id,
+        compendiumSectionId: sec.id,
+        front: `[${discipline?.name || 'Medicina'}] ${sec.title}`,
+        back: sec.keyTakeaways.join('\n• '),
+        mechanismHighlight: sec.clinicalPearl || sec.keyTakeaways[0] || '',
+        tags: [discipline?.name || 'Geral', theme?.name || 'Teoria', 'Conteúdo'],
+        difficulty: 'medio',
+        isCustom: true,
+        srs: {
+          intervalDays: 1,
+          repetitionCount: 1,
+          easeFactor: 2.5,
+          nextDueDate: new Date().toISOString(),
+          state: 'new',
+          reviewHistory: [],
+        },
+      });
+      showToast(created ? 'Flashcard criado para o seu SRS' : 'Esta seção já tem flashcard no seu SRS');
+    } catch {
+      showToast('Não foi possível criar o flashcard agora. Tente de novo.');
+    }
   };
 
   const scrollToSection = (secId: string) => {
