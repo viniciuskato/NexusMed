@@ -225,6 +225,11 @@ export interface Flashcard {
   disciplineId: string;
   themeId: string;
   compendiumRefId?: string;
+  /**
+   * P10: seção do material de onde o card veio (card de seção do leitor, ou card do erro de uma questão
+   * ligada a uma seção). A revisão abre o material nela. A questão de origem é `questionOriginId`.
+   */
+  compendiumSectionId?: string;
   questionOriginId?: string;
   derivedFromQuestionId?: string;
   front: string;

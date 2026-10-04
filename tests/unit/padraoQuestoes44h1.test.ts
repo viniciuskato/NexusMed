@@ -177,8 +177,8 @@ describe('44-H1 — o formato do padrão é o que o importador de questões acei
           .replace('Nome exato da Disciplina', 'Pneumologia')
           .replace('Nome exato do Tema', 'Espirometria')
           .replace('Nome real da banca ou instituição', 'ENARE')
-          .replace('Título exato de um material; Título exato de outro material', 'Material A; Material B')
-          .replace('Título exato de um material', 'Material A')
+          .replace('Título exato de um material > Título exato da seção; Título exato de outro material', 'Material A > Seção A1; Material B')
+          .replace('Título exato de um material > Título exato da seção', 'Material A > Seção A1')
           .replace('## Questão 1', `## Questão ${i + 1}`)
           .replace('## Questão 2', `## Questão ${i + 1}`),
       )
@@ -196,13 +196,25 @@ describe('44-H1 — o formato do padrão é o que o importador de questões acei
     }
     expect(resultado.rows[0]).toMatchObject({ institution: 'ENARE', year: 2024, difficulty: 'medio' });
     expect(resultado.rows[0].materialTitles).toEqual(['Material A', 'Material B']);
+    expect(resultado.rows[0].materialLinks).toEqual([
+      { title: 'Material A', sectionTitle: 'Seção A1' },
+      { title: 'Material B', sectionTitle: null },
+    ]);
     expect(resultado.rows[1]).toMatchObject({ institution: 'NexusMed (questão autoral)', year: 0 });
     expect(resultado.rows[1].materialTitles).toEqual(['Material A']);
+    expect(resultado.rows[1].materialLinks).toEqual([{ title: 'Material A', sectionTitle: 'Seção A1' }]);
 
     const leitura = lerLoteDeQuestoes(preenchido, [disciplina], [tema]);
-    const avaliacao = avaliarLote(leitura, [{ id: 'm1', title: 'Material A' }, { id: 'm2', title: 'Material B' }], []);
+    const publicados = [
+      { id: 'm1', title: 'Material A', sections: [{ id: 's1', title: 'Seção A1' }] },
+      { id: 'm2', title: 'Material B', sections: [] },
+    ];
+    const avaliacao = avaliarLote(leitura, publicados, []);
     expect(avaliacao.pendencias).toEqual([]);
     expect(avaliacao.aceito).toBe(true);
+    // A seção que o modelo traz é conferida contra o material: uma seção que não existe vira pendência.
+    const semASecao = avaliarLote(leitura, [{ id: 'm1', title: 'Material A', sections: [{ id: 's9', title: 'Outra seção' }] }, publicados[1]], []);
+    expect(semASecao.pendencias.map((p) => p.mensagem).join(' ')).toContain('A seção “Seção A1” não existe no material “Material A”');
   });
 
   it('o padrão não manda escrever o campo Ciclo (o valor padrão vale) e não usa valor com sublinhado', () => {
@@ -237,6 +249,9 @@ describe('44-H1 — conteúdo mínimo do padrão (regras do dono do produto)', (
       '**Nunca invente**',
       '**Ligação com o material**',
       'o título exato de cada material do NexusMed',
+      'escreva depois do título o sinal `>` e o título exato da seção',
+      'nunca invente uma seção',
+      'Seção que não existe no material, ou que se repete nele, faz o lote ser recusado',
     ]) {
       expect(PADRAO_DE_QUESTOES, trecho).toContain(trecho);
     }
@@ -251,7 +266,10 @@ describe('44-H1 — prompt de criação de questões', () => {
       'Disciplina e o Tema',
       'nomes exatos do catálogo',
       'banca real ou autoral',
-      'título exato de cada um',
+      'título exato de cada um e, para cada questão, o título exato da seção do material',
+      'Se a pessoa não disse a seção de uma questão, pergunte qual é a seção',
+      'Título do material > Título da seção',
+      'Nunca invente nem adivinhe uma seção',
       'Se faltar um dado, pergunte',
       'só material disponível on-line; nenhum livro-texto',
       'Nunca invente referência',

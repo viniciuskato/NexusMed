@@ -269,7 +269,12 @@ function questionsWithQueuedAttempt(ops: SyncOp[]): Set<string> {
 // Operações que criam, substituem ou apagam o card. Revisão e SRS não entram:
 // levam só o id e dependem de o card já existir no servidor (45-E, revisão do
 // 1af8cf3 — contá-las fazia um card que só existe no aparelho nunca subir).
-const CARD_WRITES = new Set(['flashcard_upsert', 'flashcard_create_from_question', 'flashcard_delete']);
+const CARD_WRITES = new Set([
+  'flashcard_upsert',
+  'flashcard_create_from_question',
+  'flashcard_create_from_section',
+  'flashcard_delete',
+]);
 const CARD_DEPENDENTS = new Set(['flashcard_review', 'flashcard_srs_upsert']);
 
 function cardIdOf(op: SyncOp): string | null {

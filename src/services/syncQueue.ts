@@ -157,6 +157,7 @@ const TARGETS: Record<string, { group: string; supersedes: boolean; key: (p: Pay
   simulado_save: { group: 'simulado', supersedes: false, key: (p) => [(p.session as Payload | undefined)?.id] },
   flashcard_upsert: { group: 'flashcard', supersedes: false, key: (p) => [(p.flashcard as Payload | undefined)?.id] },
   flashcard_create_from_question: { group: 'flashcard', supersedes: false, key: (p) => [(p.flashcard as Payload | undefined)?.id] },
+  flashcard_create_from_section: { group: 'flashcard', supersedes: false, key: (p) => [(p.flashcard as Payload | undefined)?.id] },
   flashcard_delete: { group: 'flashcard', supersedes: false, key: (p) => [p.id] },
   flashcard_srs_upsert: { group: 'flashcard', supersedes: false, key: (p) => [p.flashcardId] },
 };

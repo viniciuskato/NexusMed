@@ -54,21 +54,21 @@ select is(
 );
 select has_function(
   'public', 'create_flashcard_from_question',
-  array['uuid','uuid','uuid','uuid','uuid','text','text','text','text[]','text','boolean'],
+  array['uuid','uuid','uuid','uuid','uuid','text','text','text','text[]','text','boolean','uuid'],
   'RPC atômica de criação de flashcard existe'
 );
 select is(
-  has_function_privilege('anon', 'public.create_flashcard_from_question(uuid,uuid,uuid,uuid,uuid,text,text,text,text[],text,boolean)', 'execute'),
+  has_function_privilege('anon', 'public.create_flashcard_from_question(uuid,uuid,uuid,uuid,uuid,text,text,text,text[],text,boolean,uuid)', 'execute'),
   false,
   'anon não executa criação de flashcard'
 );
 select is(
-  has_function_privilege('public', 'public.create_flashcard_from_question(uuid,uuid,uuid,uuid,uuid,text,text,text,text[],text,boolean)', 'execute'),
+  has_function_privilege('public', 'public.create_flashcard_from_question(uuid,uuid,uuid,uuid,uuid,text,text,text,text[],text,boolean,uuid)', 'execute'),
   false,
   'PUBLIC não executa criação de flashcard'
 );
 select is(
-  has_function_privilege('authenticated', 'public.create_flashcard_from_question(uuid,uuid,uuid,uuid,uuid,text,text,text,text[],text,boolean)', 'execute'),
+  has_function_privilege('authenticated', 'public.create_flashcard_from_question(uuid,uuid,uuid,uuid,uuid,text,text,text,text[],text,boolean,uuid)', 'execute'),
   true,
   'authenticated pode executar criação de flashcard'
 );

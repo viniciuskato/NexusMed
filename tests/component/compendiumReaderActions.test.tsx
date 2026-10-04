@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import type { Compendium, Discipline, Theme } from '../../src/types';
 
 vi.mock('../../src/hooks/useScrollMemory', () => ({
@@ -35,6 +35,7 @@ vi.mock('../../src/repositories/NotesRepository', () => ({
 vi.mock('../../src/repositories/FlashcardsRepository', () => ({
   flashcardsRepository: {
     saveFlashcard: vi.fn().mockResolvedValue(undefined),
+    createFlashcardFromSection: vi.fn().mockResolvedValue({ card: {}, created: true }),
   },
 }));
 
@@ -46,6 +47,7 @@ vi.mock('../../src/repositories/ReadingProgressRepository', () => ({
 }));
 
 const { CompendiumReader } = await import('../../src/components/compendium/CompendiumReader');
+const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
 
 const discipline: Discipline = {
   id: 'disc-nefro',
@@ -137,5 +139,53 @@ describe('CompendiumReader — ações de cada tópico', () => {
     const generateFlashcard = within(sectionWithCallouts).getByRole('button', { name: 'Gerar flashcard' });
 
     expect(consensus.compareDocumentPosition(generateFlashcard) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+  });
+});
+
+// P10: o card de seção guarda a seção (a revisão abre o material nela) e é um por seção.
+describe('CompendiumReader — Gerar flashcard guarda a seção e não duplica (P10)', () => {
+  function renderLeitor() {
+    return render(
+      <CompendiumReader
+        compendium={compendium}
+        compendiums={[compendium]}
+        onOpenCompendium={vi.fn()}
+        disciplines={[discipline]}
+        themes={[theme]}
+        onBack={vi.fn()}
+        onOpenQuestionsForTheme={vi.fn()}
+        onOpenQuestionsForMaterial={vi.fn()}
+        onOpenFlashcardsForTheme={vi.fn()}
+      />
+    );
+  }
+
+  it('o card sai com o material e a seção da seção em que se clicou', async () => {
+    const { container } = renderLeitor();
+    const secao = container.querySelector<HTMLElement>('#sec-content-only')!;
+
+    fireEvent.click(within(secao).getByRole('button', { name: 'Gerar flashcard' }));
+
+    expect(await screen.findByText('Flashcard criado para o seu SRS')).toBeTruthy();
+    expect(flashcardsRepository.createFlashcardFromSection).toHaveBeenCalledTimes(1);
+    expect(flashcardsRepository.createFlashcardFromSection).toHaveBeenCalledWith(
+      expect.objectContaining({
+        compendiumRefId: 'comp-function-renal',
+        compendiumSectionId: 'sec-content-only',
+        front: '[Nefrologia] Segundo tópico',
+      }),
+    );
+    expect(flashcardsRepository.saveFlashcard).not.toHaveBeenCalled();
+  });
+
+  it('a seção que já tem card: avisa, em vez de dizer que criou outro', async () => {
+    vi.mocked(flashcardsRepository.createFlashcardFromSection).mockResolvedValueOnce({ card: {} as never, created: false });
+    const { container } = renderLeitor();
+    const secao = container.querySelector<HTMLElement>('#sec-with-callouts')!;
+
+    fireEvent.click(within(secao).getByRole('button', { name: 'Gerar flashcard' }));
+
+    expect(await screen.findByText('Esta seção já tem flashcard no seu SRS')).toBeTruthy();
+    expect(screen.queryByText('Flashcard criado para o seu SRS')).toBeNull();
   });
 });

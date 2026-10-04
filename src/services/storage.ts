@@ -267,6 +267,7 @@ export const StorageService = {
       disciplineId: question.disciplineId,
       themeId: question.themeId,
       compendiumRefId: question.compendiumRefId,
+      compendiumSectionId: question.compendiumSectionId || undefined,
       questionOriginId: question.id,
       front: template.front,
       back: template.back,
@@ -279,6 +280,20 @@ export const StorageService = {
 
     this.saveFlashcard(newCard);
     return newCard;
+  },
+
+  /**
+   * P10: card de uma seção do material. Um por seção: se o aparelho já tem um card (que não vem de erro) para a
+   * mesma seção, devolve esse, sem criar outro. O servidor faz o mesmo entre aparelhos (RPC
+   * `create_flashcard_from_section`).
+   */
+  createFlashcardFromSection(card: Flashcard): { card: Flashcard; created: boolean } {
+    const existing = this.getFlashcards().find(
+      (c) => !c.questionOriginId && !!card.compendiumSectionId && c.compendiumSectionId === card.compendiumSectionId
+    );
+    if (existing) return { card: existing, created: false };
+    this.saveFlashcard(card);
+    return { card, created: true };
   },
 
   reviewFlashcard(cardId: string, rating: 1 | 2 | 3 | 4): Flashcard | null {

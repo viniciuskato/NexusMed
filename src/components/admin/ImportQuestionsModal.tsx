@@ -8,6 +8,7 @@ import { getErrorMessage } from '../../utils/errorMessage';
 import {
   parseQuestionsMarkdownText,
   buildQuestionFromImportRow,
+  resolverLigacoesDoArquivo,
   QuestionImportPreview,
 } from '../../utils/questionsImport';
 
@@ -35,6 +36,8 @@ interface RowState {
   preview: QuestionImportPreview;
   overrideDisciplineId: string | null;
   overrideThemeId: string | null;
+  /** P10: ligações que o arquivo cita ("Material > Seção"), já resolvidas; ausente = vale o material do lote. */
+  fileLinks?: QuestionMaterialLink[];
 }
 
 type WizardState =
@@ -78,11 +81,19 @@ export const ImportQuestionsModal: React.FC<ImportQuestionsModalProps> = ({
     setState({
       step: 'preview',
       fileName: file.name,
-      rows: result.rows.map((preview) => ({
-        preview,
-        overrideDisciplineId: preview.disciplineId,
-        overrideThemeId: preview.themeId,
-      })),
+      rows: result.rows.map((preview) => {
+        // P10: a questão que cita material (e seção) no arquivo se liga a eles; o que não se acha bloqueia a linha.
+        if (preview.materialLinks.length === 0) {
+          return { preview, overrideDisciplineId: preview.disciplineId, overrideThemeId: preview.themeId };
+        }
+        const { links, erros } = resolverLigacoesDoArquivo(preview.materialLinks, compendiums);
+        return {
+          preview: { ...preview, blockingErrors: [...preview.blockingErrors, ...erros] },
+          overrideDisciplineId: preview.disciplineId,
+          overrideThemeId: preview.themeId,
+          fileLinks: links,
+        };
+      }),
     });
   };
 
@@ -104,13 +115,14 @@ export const ImportQuestionsModal: React.FC<ImportQuestionsModalProps> = ({
     for (const row of rows) {
       if (!isRowReady(row)) continue;
       try {
+        const links = row.fileLinks ?? lotLinks;
         const question = {
           ...buildQuestionFromImportRow(row.preview, row.overrideDisciplineId, row.overrideThemeId),
-          materialLinks: lotLinks,
+          materialLinks: links,
           // "O" material da questão (cartão, caderno de erros, flashcard):
           // o primeiro do lote, como em setQuestionMaterialLinks.
-          compendiumRefId: lotLinks[0]?.materialId ?? '',
-          compendiumSectionId: lotLinks[0]?.sectionId,
+          compendiumRefId: links[0]?.materialId ?? '',
+          compendiumSectionId: links[0]?.sectionId,
         };
         await questionsRepository.importQuestionDraft(question);
         successCount++;
@@ -337,7 +349,7 @@ export const ImportQuestionsModal: React.FC<ImportQuestionsModalProps> = ({
               <QuestionMaterialLinksEditor
                 htmlId="import-questions-lot-materials"
                 label="Materiais cobrados por este lote"
-                helperText="Valem para todas as questões do arquivo. Ajuste por questão depois, pelo botão Vínculo na lista de questões. Sem material escolhido, as questões entram sem vínculo."
+                helperText="Valem para as questões do arquivo que não citam material em “Materiais cobertos” (as que citam, com ou sem seção, ficam com o que o arquivo diz). Ajuste por questão depois, pelo botão Vínculo na lista de questões. Sem material escolhido, as questões entram sem vínculo."
                 compendiums={compendiums}
                 value={lotLinks}
                 onChange={setLotLinks}

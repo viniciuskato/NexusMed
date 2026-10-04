@@ -1442,11 +1442,26 @@ function parseQuestionBlock(block, index, disciplines, themes) {
   if (!generalCommentary) missingFields.push("Comentário Geral vazio — usando texto padrão.");
   const highYieldSummary = values["perola high-yield (resumo para fixacao rapida)"]?.trim() || values["perola high-yield"]?.trim() || values.perola?.trim() || "";
   if (!highYieldSummary) missingFields.push("Pérola High-Yield vazia — usando texto padrão.");
-  const materialTitles = [
-    ...new Set(
-      (values["materiais cobertos"] ?? values["material coberto"] ?? "").split(/[;\n]/).map((t) => t.trim()).filter(Boolean)
-    )
-  ];
+  const materialLinks = [];
+  const secaoRepetida = /* @__PURE__ */ new Set();
+  for (const item of (values["materiais cobertos"] ?? values["material coberto"] ?? "").split(/[;\n]/)) {
+    const corte = item.indexOf(">");
+    const title = (corte === -1 ? item : item.slice(0, corte)).trim();
+    const sectionTitle = corte === -1 ? null : item.slice(corte + 1).trim() || null;
+    if (!title) continue;
+    const existente = materialLinks.find((l) => l.title === title);
+    if (!existente) {
+      materialLinks.push({ title, sectionTitle });
+    } else if (!existente.sectionTitle) {
+      existente.sectionTitle = sectionTitle;
+    } else if (sectionTitle && normalizeLabel(sectionTitle) !== normalizeLabel(existente.sectionTitle) && !secaoRepetida.has(title)) {
+      secaoRepetida.add(title);
+      blockingErrors.push(
+        `O material "${title}" aparece com mais de uma seção em "Materiais cobertos" — a questão se liga a uma seção só: deixe uma.`
+      );
+    }
+  }
+  const materialTitles = materialLinks.map((l) => l.title);
   if (tags.length === 0) missingFields.push("Tags não informadas — usando padrão (Admin, CMS, Custom).");
   return {
     index,
@@ -1465,6 +1480,7 @@ function parseQuestionBlock(block, index, disciplines, themes) {
     highYieldSummary: highYieldSummary || DEFAULT_HIGH_YIELD_SUMMARY,
     tags: tags.length > 0 ? tags : DEFAULT_TAGS,
     materialTitles,
+    materialLinks,
     missingFields,
     blockingErrors
   };
@@ -1557,9 +1573,22 @@ function avaliarLote(leitura, publicados, materiaisEscolhidos) {
     if (publicados !== null && linha.materialTitles.length === 0 && materiaisEscolhidos.length === 0) {
       add("Sem material: escreva “Materiais cobertos” na questão ou escolha o material abaixo.");
     }
-    for (const titulo of publicados === null ? [] : linha.materialTitles) {
-      if (!achaMaterial(titulo, publicados ?? [])) {
-        add(`O material “${titulo}” não é o título exato de um material publicado.`);
+    for (const ligacao of publicados === null ? [] : linha.materialLinks) {
+      const material = achaMaterial(ligacao.title, publicados ?? []);
+      if (!material) {
+        add(`O material “${ligacao.title}” não é o título exato de um material publicado.`);
+      } else if (ligacao.sectionTitle && material.sections) {
+        const alvo = normalizar(ligacao.sectionTitle);
+        const achadas = material.sections.filter((sec) => normalizar(sec.title) === alvo).length;
+        if (achadas === 0) {
+          add(
+            `A seção “${ligacao.sectionTitle}” não existe no material “${material.title}”. Escreva o título exato de uma seção dele, ou tire o “>” e a seção para ligar ao material inteiro.`
+          );
+        } else if (achadas > 1) {
+          add(
+            `O material “${material.title}” tem mais de uma seção chamada “${ligacao.sectionTitle}”: o NexusMed não sabe qual é. Tire o “>” e a seção para ligar ao material inteiro.`
+          );
+        }
       }
     }
   }
@@ -1601,6 +1630,7 @@ function lerQuestoesParaPublicar(texto, disciplines, themes) {
       high_yield_summary: l.highYieldSummary,
       tags: l.tags,
       material_titles: l.materialTitles,
+      material_links: l.materialLinks.map((m) => ({ title: m.title, section_title: m.sectionTitle })),
       options: l.options.map((o) => ({
         letter: o.letter,
         text: o.text,
