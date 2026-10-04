@@ -1,6 +1,12 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient';
 import { fetchAllRows } from './supabasePaging';
-import { revisaoQueValeParaOTexto, type MaterialReviewView } from './MaterialSubmissionsRepository';
+import {
+  revisaoQueValeParaOTexto,
+  type MaterialReviewView,
+  type ResultadoDaPublicacaoDoAdmin,
+  type TextoDoEnvio,
+} from './MaterialSubmissionsRepository';
+import type { QuestaoParaPublicar } from '../utils/envioDeQuestoes';
 
 // 44-H1: envios de questões. Acesso direto ao Supabase — sem o padrão "Resilient"
 // (AGENTS.md, risco 8): envio não é gravado local nem entra em fila; ou o
@@ -53,6 +59,10 @@ export interface QuestionSubmissionsRepository {
   replaceText(id: string, input: NewQuestionSubmission): Promise<QuestionSubmission>;
   /** Manda o mesmo texto de novo (envio "erro"): com revisão "apto" do texto e dos materiais atuais, só a publicação é refeita. */
   retry(id: string, title: string): Promise<QuestionSubmission>;
+  /** P8 (só admin): o texto do envio e o hash dele, para publicar. */
+  textoParaPublicar(id: string): Promise<TextoDoEnvio>;
+  /** P8 (só admin): cria as questões do lote e as publica, com qualquer parecer do revisor. */
+  publicarComoAdmin(id: string, contentSha256: string, questoes: QuestaoParaPublicar[]): Promise<ResultadoDaPublicacaoDoAdmin>;
 }
 
 interface AuthorRow {
@@ -203,6 +213,23 @@ class SupabaseQuestionSubmissionsRepository implements QuestionSubmissionsReposi
     if (error) throw error;
     return fromRow(data as Row);
   }
+
+  async textoParaPublicar(id: string): Promise<TextoDoEnvio> {
+    const { data, error } = await supabase.from('question_submissions').select('content_md, content_sha256').eq('id', id).single();
+    if (error) throw error;
+    const linha = data as { content_md: string; content_sha256: string };
+    return { contentMd: linha.content_md, contentSha256: linha.content_sha256 };
+  }
+
+  async publicarComoAdmin(id: string, contentSha256: string, questoes: QuestaoParaPublicar[]): Promise<ResultadoDaPublicacaoDoAdmin> {
+    const { data, error } = await supabase.rpc('admin_publicar_questoes', {
+      p_submission_id: id,
+      p_content_sha256: contentSha256,
+      p_questoes: questoes,
+    });
+    if (error) throw error;
+    return data as ResultadoDaPublicacaoDoAdmin;
+  }
 }
 
 // Sem Supabase configurado (modo local de demonstração) não há onde guardar o
@@ -221,6 +248,12 @@ class UnavailableQuestionSubmissionsRepository implements QuestionSubmissionsRep
     throw new Error('Envio de questões indisponível sem o servidor.');
   }
   async retry(): Promise<QuestionSubmission> {
+    throw new Error('Envio de questões indisponível sem o servidor.');
+  }
+  async textoParaPublicar(): Promise<TextoDoEnvio> {
+    throw new Error('Envio de questões indisponível sem o servidor.');
+  }
+  async publicarComoAdmin(): Promise<ResultadoDaPublicacaoDoAdmin> {
     throw new Error('Envio de questões indisponível sem o servidor.');
   }
 }

@@ -593,8 +593,8 @@ describe('44-F — o que barra o envio na tela (título e avisos da importação
   });
 });
 
-describe('44-E — Área Editorial: envios de todos, só leitura', () => {
-  it('admin vê os envios de várias pessoas, com quem enviou, e nenhum botão de ação', async () => {
+describe('44-E — Área Editorial: envios de todos', () => {
+  it('admin vê os envios de várias pessoas, com quem enviou, e só o botão Publicar como ação (P8)', async () => {
     repo.listAll.mockResolvedValue([
       envio({ id: '1', title: 'Envio da Ana', author: { id: 'u1', name: 'Ana', email: 'ana@x.test' } }),
       envio({ id: '2', title: 'Envio do Beto', status: 'nao_apto', author: { id: 'u2', name: '', email: 'beto@x.test' } }),
@@ -629,7 +629,10 @@ describe('44-E — Área Editorial: envios de todos, só leitura', () => {
     expect(lista.textContent).toContain('por Carla');
     const itemDeQuestoes = lista.querySelector('li[data-tipo="questoes"]') as HTMLElement;
     expect(itemDeQuestoes.textContent).toContain('Lote da Carla');
-    expect(within(document.querySelector('#admin-envios-de-material') as HTMLElement).queryAllByRole('button')).toHaveLength(0);
+    // P8: o admin publica daqui; fora o botão "Publicar" de cada envio ainda não publicado, nenhum outro botão.
+    const botoes = within(document.querySelector('#admin-envios-de-material') as HTMLElement).queryAllByRole('button');
+    expect(botoes.filter((b) => b.getAttribute('data-testid') !== 'publicar-envio')).toHaveLength(0);
+    expect(botoes.filter((b) => b.getAttribute('data-testid') === 'publicar-envio')).toHaveLength(3);
     expect(repo.listAll).toHaveBeenCalledTimes(1);
     expect(repoQuestoes.listAll).toHaveBeenCalledTimes(1);
   });

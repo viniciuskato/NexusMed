@@ -287,6 +287,19 @@ describe('com envio esperando', () => {
     expect(deps.linhas.join('\n')).toMatch(/orçamento de tempo/);
   });
 
+  it('MAX_CICLOS_POR_RODADA é um teto de verdade: passado o teto, o ciclo só coleta o que já foi enviado e não reserva envio novo', async () => {
+    const banco = new BancoDeMentira();
+    for (const t of ['A', 'B', 'C']) banco.adicionar(t, materialParaEnvio({ titulo: t }));
+    const perguntar = vi.fn<Perguntar>(async () => ({ ok: true, mensagem: RESPOSTA_APTO }));
+    const deps = depsBase(banco, perguntar, { maxCiclos: 2 });
+    const resumo = await executarRodada(deps);
+    // Ciclo 1 envia A; ciclo 2 coleta A e envia B; o ciclo 3 (além do teto, só para coletar B) não reserva o C.
+    expect(perguntar).toHaveBeenCalledTimes(2);
+    expect(resumo.ciclos).toBe(3);
+    expect(banco.envios.map((e) => e.estado)).toEqual(['apto', 'apto', 'aguardando']);
+    expect(resumo.falha).toBeNull();
+  });
+
   it('a mesma sequência de funções da Edge Function, na mesma ordem (disparo que envia + disparo que coleta e publica)', async () => {
     // Edge Function: o ciclo com a API de lotes simulada, em dois disparos.
     const bancoEdge = new BancoDeMentira();

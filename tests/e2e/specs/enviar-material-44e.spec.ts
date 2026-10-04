@@ -135,8 +135,8 @@ test.describe('Enviar material (44-E)', () => {
     const listaAdmin = paginaAdmin.locator('#admin-envios-lista');
     await expect(listaAdmin).toContainText(tituloA);
     await expect(listaAdmin).toContainText(tituloB);
-    // Só leitura: nenhum botão dentro da lista.
-    await expect(listaAdmin.locator('button')).toHaveCount(0);
+    // P8: o admin publica daqui; fora o botão "Publicar" (do envio ainda não publicado), nenhum outro botão na lista.
+    await expect(listaAdmin.locator('button:not([data-testid="publicar-envio"])')).toHaveCount(0);
   });
 
   test('com 3 envios esperando revisão, a tela avisa e não deixa enviar outro', async ({ page }) => {
