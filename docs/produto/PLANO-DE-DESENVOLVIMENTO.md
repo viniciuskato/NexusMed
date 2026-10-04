@@ -1081,8 +1081,7 @@ computador compartilhado de hospital.
 risco 9). A URL de retorno do e-mail precisa ser liberada no painel do
 Supabase (P-1).
 **Depende de.** P-1, só para testar a senha nova em produção.
-**Estado.** Pronta. D-7: não se encaminha como unidade; cada item que passar
-pela fronteira vira issue (seção 5).
+**Estado.** Concluída — PR #112.
 
 ---
 
