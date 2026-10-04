@@ -1,0 +1,356 @@
+/* Editor visual de seção (ED-1). Só entra no pedaço do editor (importado por EditorVisualDeSecao.tsx), não no CSS inicial.
+   Imita o leitor: mesmas cores das caixas, citação com barra, citação de referência como [N] pequeno. Nomes com prefixo
+   "ev-" para não colidir com utilidades do Tailwind (AGENTS.md, risco 1). */
+
+.ev-editor {
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 0.75rem;
+  background: var(--bg-surface, #fff);
+  color: var(--text-primary, #0f172a);
+}
+
+/* --- barra --- */
+.ev-barra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border-subtle, #e2e8f0);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg-surface, #fff);
+  border-radius: 0.75rem 0.75rem 0 0;
+}
+.ev-grupo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.ev-botao {
+  min-height: 2.25rem;
+  min-width: 2.25rem;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 0.5rem;
+  background: var(--bg-surface-secondary, #f1f5f9);
+  color: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.ev-botao:hover:not(:disabled) {
+  border-color: var(--ac, #0d9488);
+}
+.ev-botao[aria-pressed='true'] {
+  background: var(--ac-light, #f0fdfa);
+  border-color: var(--ac, #0d9488);
+  color: var(--ac-hover, #0f766e);
+  font-weight: 600;
+}
+.ev-botao:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ev-botao:focus-visible,
+.ev-painel input:focus-visible,
+.ev-protegido__texto textarea:focus-visible {
+  outline: 2px solid var(--ac, #0d9488);
+  outline-offset: 2px;
+}
+.ev-painel {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+.ev-painel input {
+  min-height: 2.25rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 0.5rem;
+  background: var(--bg-surface, #fff);
+  color: inherit;
+  min-width: 12rem;
+}
+.ev-painel p {
+  flex-basis: 100%;
+  margin: 0;
+  color: #b91c1c;
+}
+
+/* --- texto --- */
+.ev-conteudo {
+  padding: 1rem 1.25rem 1.25rem;
+  min-height: 12rem;
+  outline: none;
+  line-height: 1.7;
+  font-size: 1rem;
+}
+.ev-conteudo > * + * {
+  margin-top: 1rem;
+}
+.ev-conteudo h1,
+.ev-conteudo h2,
+.ev-conteudo h3,
+.ev-conteudo h4 {
+  font-weight: 700;
+  line-height: 1.3;
+}
+.ev-conteudo h1 {
+  font-size: 1.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border-subtle, #e2e8f0);
+}
+.ev-conteudo h2 {
+  font-size: 1.25rem;
+}
+.ev-conteudo h3 {
+  font-size: 1.125rem;
+}
+.ev-conteudo h4 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.ev-conteudo ul,
+.ev-conteudo ol {
+  padding-left: 1.5rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.ev-conteudo ul {
+  list-style: disc;
+}
+.ev-conteudo ol {
+  list-style: decimal;
+}
+.ev-conteudo li + li {
+  margin-top: 0.375rem;
+}
+.ev-conteudo strong {
+  font-weight: 600;
+}
+.ev-codigo {
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  background: var(--bg-surface-secondary, #f1f5f9);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.8125rem;
+  color: #115e59;
+}
+.ev-link {
+  color: #0f766e;
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: text;
+}
+.ev-citacao {
+  position: relative;
+  top: -0.5em;
+  margin: 0 1px;
+  font-size: 0.68em;
+  line-height: 1;
+  color: #0d9488;
+  cursor: text;
+}
+.ev-citacao::before {
+  content: '[';
+}
+.ev-citacao::after {
+  content: ']';
+}
+.ev-expoente {
+  font-size: 0.72em;
+  font-weight: 500;
+}
+.ev-quebra {
+  white-space: pre-wrap;
+}
+.ev-citacao-bloco {
+  padding-left: 1rem;
+  border-left: 2px solid #0d9488;
+  font-style: italic;
+  font-size: 0.875rem;
+  color: #475569;
+}
+
+/* --- caixas com função: mesmas cores do leitor --- */
+.ev-caixa {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid #94a3b8;
+  border-radius: 0 0.75rem 0.75rem 0;
+  background: #f8fafc;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.ev-caixa::before {
+  content: attr(data-caixa);
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #334155;
+  user-select: none;
+}
+.ev-caixa[data-caixa='Cuidado'] {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+.ev-caixa[data-caixa='Cuidado']::before {
+  color: #92400e;
+}
+.ev-caixa[data-caixa='Raciocínio'] {
+  border-color: #14b8a6;
+  background: #f0fdfa;
+}
+.ev-caixa[data-caixa='Raciocínio']::before {
+  color: #115e59;
+}
+.ev-caixa[data-caixa='Não confundir'] {
+  border-color: #8b5cf6;
+  background: #f5f3ff;
+}
+.ev-caixa[data-caixa='Não confundir']::before {
+  color: #5b21b6;
+}
+.ev-caixa[data-caixa='Atualização'] {
+  border-color: #0ea5e9;
+  background: #f0f9ff;
+}
+.ev-caixa[data-caixa='Atualização']::before {
+  color: #075985;
+}
+.ev-caixa[data-caixa='Essencial'] {
+  border-color: #10b981;
+  background: #ecfdf5;
+}
+.ev-caixa[data-caixa='Essencial']::before {
+  color: #065f46;
+}
+
+/* --- bloco protegido (tabela, fórmula, figura) --- */
+.ev-protegido {
+  margin: 0.75rem 0;
+  border: 1px dashed var(--border-color, #cbd5e1);
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+}
+.ev-protegido--selecionado {
+  border-color: var(--ac, #0d9488);
+}
+.ev-protegido__cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-tertiary, #64748b);
+}
+.ev-protegido__tipo {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.ev-protegido__botao {
+  min-height: 2rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 0.5rem;
+  background: var(--bg-surface-secondary, #f1f5f9);
+  color: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.ev-protegido__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+}
+.ev-protegido__texto textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 0.5rem;
+  background: var(--bg-surface, #fff);
+  color: inherit;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.8125rem;
+}
+.ev-protegido__dica {
+  margin: 0;
+  color: var(--text-tertiary, #64748b);
+  font-size: 0.75rem;
+}
+
+.ev-aviso {
+  margin: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #f59e0b;
+  border-radius: 0.5rem;
+  background: #fffbeb;
+  color: #78350f;
+  font-size: 0.8125rem;
+}
+
+/* --- tema escuro (a classe .dark fica no <html>, como no resto do app) --- */
+.dark .ev-caixa {
+  background: rgb(30 41 59 / 0.6);
+}
+.dark .ev-caixa::before {
+  color: #cbd5e1;
+}
+.dark .ev-caixa[data-caixa='Cuidado'] {
+  background: rgb(69 26 3 / 0.3);
+}
+.dark .ev-caixa[data-caixa='Cuidado']::before {
+  color: #fcd34d;
+}
+.dark .ev-caixa[data-caixa='Raciocínio'] {
+  background: rgb(4 47 46 / 0.3);
+}
+.dark .ev-caixa[data-caixa='Raciocínio']::before {
+  color: #5eead4;
+}
+.dark .ev-caixa[data-caixa='Não confundir'] {
+  background: rgb(46 16 101 / 0.3);
+}
+.dark .ev-caixa[data-caixa='Não confundir']::before {
+  color: #c4b5fd;
+}
+.dark .ev-caixa[data-caixa='Atualização'] {
+  background: rgb(8 47 73 / 0.3);
+}
+.dark .ev-caixa[data-caixa='Atualização']::before {
+  color: #7dd3fc;
+}
+.dark .ev-caixa[data-caixa='Essencial'] {
+  background: rgb(2 44 34 / 0.3);
+}
+.dark .ev-caixa[data-caixa='Essencial']::before {
+  color: #6ee7b7;
+}
+.dark .ev-codigo {
+  color: #5eead4;
+  background: #1e293b;
+  border-color: #334155;
+}
+.dark .ev-citacao-bloco {
+  color: #cbd5e1;
+}
+.dark .ev-link {
+  color: #2dd4bf;
+}
+.dark .ev-aviso {
+  background: rgb(69 26 3 / 0.4);
+  color: #fde68a;
+}
+.dark .ev-painel p {
+  color: #fca5a5;
+}

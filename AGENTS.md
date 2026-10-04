@@ -245,6 +245,20 @@ seção "Armadilhas já descobertas".
     por `create_flashcard_from_section`, nunca por `upsert` direto. O revisor
     local agendado roda do checkout principal: não trocar de branch lá.
 
+21. **Editor visual de seção (ED-1, 04/10/2026): só grava o Markdown de
+    hoje, e texto não seguro não abre no editor visual.** A conversão texto ⇄
+    editor vive em `src/utils/editorVisualMarkdown.ts` (sem biblioteca nem
+    React; a guarda `textoEhSeguroParaEditorVisual` roda sem baixar o editor) e
+    o editor (TipTap) em `src/components/editor/`, aberto só por
+    `EditorVisualCarregavel` (import dinâmico; nada fora da pasta importa
+    `@tiptap/*`, conferido em `tests/unit/editorVisualPacote.test.ts`). "Seguro"
+    é ida e volta byte a byte idêntica; o que não é (HTML, caixa antiga,
+    lista com `*`, linha em branco faltando) fica no editor de texto. A
+    conversão repete as regras do `SafeMarkdown`: mudou o leitor, mude os dois
+    (`tests/component/editorVisualLeitor.test.tsx` compara) e o padrão (item
+    19). `onChange` devolve `fiel`; `false` (ex.: negrito e itálico no trecho
+    inteiro, que o leitor lê torto) não deve ser salvo.
+
 ## Convenções de trabalho
 
 - **Toda mudança entra em `main` por Pull Request com CI verde** (desde

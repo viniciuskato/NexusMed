@@ -33,6 +33,10 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
+    "@tiptap/core": "^3.31.4",
+    "@tiptap/pm": "^3.31.4",
+    "@tiptap/react": "^3.31.4",
+    "@tiptap/starter-kit": "^3.31.4",
     "canvas-confetti": "^1.9.4",
     "lucide-react": "^1.49.0",
     "react": "^19.0.1",
