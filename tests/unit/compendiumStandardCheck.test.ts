@@ -50,7 +50,8 @@ describe('checagem do padrão — base', () => {
   });
 
   it('o exemplo da seção 1.7, com o bloco pendente trocado pelo trecho que o botão "Enviar imagem" devolve, sai Conforme', () => {
-    const exemplo = exemploDoPadrao();
+    // O arquivo do padrão pode estar com fim de linha do Windows na pasta de trabalho.
+    const exemplo = exemploDoPadrao().replace(/\r\n/g, '\n');
     const pendente = exemplo.match(/!\[[^\]]*\]\(figura:PENDENTE\)\n(?:.+\n)*?Mostrar:.*/);
     expect(pendente).not.toBeNull();
     const trecho = montarTrechoDaFigura({
