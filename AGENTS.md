@@ -16,12 +16,12 @@ portão de publicação, vale a D-13.
 
 ## Leia primeiro, nesta ordem
 
-**Modelo D-7 (desde 28/09/2026): conteúdo é o produto.** Três sessões: a
+**Papéis da D-7 (desde 28/09/2026), ainda em vigor.** Três sessões: a
 **diretoria** (a única janela do dono; revisa, mantém a fila de defeitos e é
 a mesa editorial), a **sessão de defeitos** (a única que escreve código de
-produto; conserta, não constrói) e a **sessão de materiais** (o Gemini, fora
-do repositório). O congelamento de funcionalidade nova da D-7 não vale mais
-(D-10, 29/09, e D-13, 03/10). Papéis: [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md),
+produto) e a **sessão de materiais** (o Gemini, fora
+do repositório). O congelamento de funcionalidade nova da D-7 caiu com a D-10
+(29/09). Papéis: [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md),
 "Modelo D-7"; decisão: `DECISIONS.md`, D-7. Desde a D-8 (28/09), numa janela só: a diretoria é o agente `dev-senior`, a
 sessão de defeitos é o subagente `dev-junior` e a revisão é do subagente
 `dev-revisor` (`DECISIONS.md`, D-8). Desde a D-9 (29/09), com o "aprovado"
@@ -38,9 +38,9 @@ faltar um fato — leitura desnecessária custa tokens em toda sessão. A lista
 completa é da diretoria, que lê também o `MODELO-DIRETORIA.md`.
 
 1. [`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](docs/produto/PLANO-DE-DESENVOLVIMENTO.md)
-   — plano canônico: o que existe, o que está congelado e por quê (desde a
-   D-7, código só por defeito ou pedido da produção), e em que estado está
-   cada unidade.
+   — plano canônico: o que existe, o que está planejado e por quê (desde a
+   D-10 e a D-13, as unidades andam quando o dono as pede), e em que estado
+   está cada unidade.
 2. [`docs/operacao/PROJECT_STATE.md`](docs/operacao/PROJECT_STATE.md) —
    estado presente verificável, ambientes, baseline, riscos abertos.
 3. [`docs/operacao/DECISIONS.md`](docs/operacao/DECISIONS.md) — decisões
@@ -233,7 +233,7 @@ seção "Armadilhas já descobertas".
     v2 desde 2026-09-23):
     mudança editorial sobe a versão e ganha entrada na seção 2.7; depois da
     unidade 44-C1, regra mecânica nova vem com a checagem correspondente
-    (sob a D-7, essa checagem é pedido da produção; até lá, a revisão
+    (essa checagem entra como unidade do plano, D-10; até lá, a revisão
     confere à mão). Desde 24/09 (D-5) quem escreve é o Gemini, fora do
     repositório: o padrão é a interface entre ele e o sistema. Figuras (v3):
     bloco `figura:<uuid>` (imagem + legenda + `Fonte:`), arquivo no bucket
@@ -266,8 +266,9 @@ seção "Armadilhas já descobertas".
 - **Modelo D-7 (28/09): diretoria, sessão de defeitos e sessão de
   materiais** — substitui as trilhas (23/09) e revê a D-6 acima no que fala
   de trilhas, de PRs esperando, da meta e de "processo congelado até 09/10"
-  (09/10 passa a ser a revisão da D-7). O código vem da fila de defeitos;
-  todo PR é revisado por quem não o escreveu, antes do merge; a diretoria
+  (09/10 passa a ser a revisão da D-7). O código vem da fila de defeitos e,
+  desde a D-10 (29/09) e a D-13 (03/10), das unidades do plano que o dono
+  pede; todo PR é revisado por quem não o escreveu, antes do merge; a diretoria
   mescla o que está num plano que o dono aprovou (D-9). Modelo:
   [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md).
 - **Testar contra Supabase LOCAL** antes de considerar qualquer mudança
@@ -288,8 +289,7 @@ probabilidade de recorrência deve gerar registro em
 `docs/operacao/standards/` ou `RUNBOOK.md`; somente um resumo curto e um
 link entram aqui quando todo agente precisar conhecê-los.
 
-O que existe, o que está congelado e por quê (desde a D-7, código só por
-defeito ou pedido da produção) vive no plano canônico
+O que existe, o que está planejado e em que estado vive no plano canônico
 (`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`); estado dos ambientes,
 decisões e fila operacional, em `PROJECT_STATE.md`, `DECISIONS.md` e
 `TASKS.md`, conforme `SESSION_PROTOCOL.md`. `docs/archive/diretoria/registro.md` é
@@ -310,12 +310,13 @@ e consultar [`docs/archive/diretoria/registro.md`](docs/archive/diretoria/regist
 para o histórico. Preserve os identificadores já emitidos ao continuar
 esse histórico.
 
-**Desde 2026-09-28 (D-7) o código vem da fila de defeitos** — issues com o
-rótulo `bug` e a gravidade (`grave` ou `menor`) — e, com o "sim" do dono, de
-um pedido da produção (`pedido-da-producao`), não das unidades do plano
-canônico:
-[`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](docs/produto/PLANO-DE-DESENVOLVIMENTO.md).
-O plano continua dizendo o que existe, o que está congelado e por quê, com a
-fronteira defeito × evolução na seção 5; quem o atualiza é a diretoria, em
-lote. `docs/archive/diretoria/prompts/` e `registro.md` são histórico — nada
+**O código vem de duas portas.** Da fila de defeitos — issues com o rótulo
+`bug` e a gravidade (`grave` ou `menor`), com a fronteira defeito × evolução
+em `DECISIONS.md`, D-7 item 3 — e das unidades do plano canônico
+([`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](docs/produto/PLANO-DE-DESENVOLVIMENTO.md)),
+que voltaram pela D-10 (29/09) e andam quando o dono as pede (D-13,
+03/10). O congelamento de funcionalidade e o "pedido da produção" como única
+porta da D-7 (28/09) ficaram só como histórico, em `DECISIONS.md`. O plano diz
+o que existe, o que está planejado e em que estado; quem o atualiza é a
+diretoria, em lote. `docs/archive/diretoria/prompts/` e `registro.md` são histórico — nada
 novo entra lá.
