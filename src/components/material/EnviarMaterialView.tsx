@@ -266,7 +266,7 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
       // Texto com revisão "apto" válida: o banco o devolve a "apto" e só a publicação é refeita.
       setAvisoDaLista(
         atualizado.status === 'apto'
-          ? `“${envio.title}” já foi aprovado na revisão. A publicação será refeita em alguns minutos, sem nova revisão.`
+          ? `“${envio.title}” já tem parecer favorável do revisor de IA, sem nova revisão. Quem publica é o dono do site.`
           : `“${envio.title}” voltou para a fila de revisão.`,
       );
       await recarregarEnvios();
@@ -598,7 +598,7 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
             className="p-3 rounded-xl border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 dark:border-emerald-800 text-sm text-emerald-900 dark:text-emerald-200"
           >
             {enviadoJaAprovado
-              ? `Material “${enviadoComo}” enviado. O texto é o mesmo que já foi aprovado na revisão: ele será publicado em alguns minutos.`
+              ? `Material “${enviadoComo}” enviado. O texto é o mesmo que já teve parecer favorável do revisor de IA, sem nova revisão. Quem publica é o dono do site.`
               : `Material “${enviadoComo}” enviado. Ele aparece em “Meus envios”, aguardando revisão.`}
           </p>
         )}

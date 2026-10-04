@@ -126,7 +126,7 @@ begin
 end;
 $$;
 
-select plan(63);
+select plan(64);
 
 select tests.clear_auth();
 select tests.create_user('sub.admin@test.local', 'admin', 'active') as v_admin \gset
@@ -408,13 +408,13 @@ insert into public.material_submissions (author_id, title, discipline_id, theme_
 values (:'v_lim', 'Não apto do lim', :'v_disc', :'v_theme', '# n', 'nao_apto') returning id as v_lim_nao \gset
 
 select tests.authenticate_as(:'v_lim');
-select throws_ok(
+select lives_ok(
   format($$ insert into public.material_submissions (title, discipline_id, theme_id, content_md) values ('Quarto', %L, %L, '# q') $$, :'v_disc', :'v_theme'),
-  'P0001', NULL, '4º envio esperando revisão é recusado (2 aguardando + 1 em revisão já contam)'
+  'P7: o admin não tem limite de envios esperando: o 4º é aceito'
 );
-select throws_ok(
+select lives_ok(
   format($$ update public.material_submissions set content_md = '# de novo' where id = %L $$, :'v_lim_nao'),
-  'P0001', NULL, 'reenviar um "não apto" também respeita o limite'
+  'P7: reenviar um "não apto" também não é barrado para o admin'
 );
 select tests.clear_auth();
 
@@ -428,11 +428,20 @@ select lives_ok(
             select 'Espera ' || g, %L, %L, '# e' from generate_series(1, 3) g $$, :'v_disc', :'v_theme'),
   'quem tem só envios fora da fila envia 3 de uma vez'
 );
-select throws_ok(
+select lives_ok(
   format($$ insert into public.material_submissions (title, discipline_id, theme_id, content_md) values ('Quarto do ok3', %L, %L, '# q') $$, :'v_disc', :'v_theme'),
-  'P0001', NULL, 'o 4º é recusado'
+  'P7: o 4º do admin também é aceito'
 );
 select tests.clear_auth();
+
+-- P7: o limite de 3 esperando continua valendo para quem não é admin (envios antigos de outras pessoas).
+select tests.create_user('sub.legado@test.local', 'student', 'active') as v_leg \gset
+insert into public.material_submissions (author_id, title, discipline_id, theme_id, content_md, status)
+select :'v_leg', 'Espera legado ' || g, :'v_disc', :'v_theme', '# e', 'aguardando_revisao' from generate_series(1, 3) g;
+select throws_ok(
+  format($$ insert into public.material_submissions (author_id, title, discipline_id, theme_id, content_md) values (%L, 'Quarto legado', %L, %L, '# q') $$, :'v_leg', :'v_disc', :'v_theme'),
+  'P0001', NULL, 'P7: quem não é admin continua limitado a 3 esperando'
+);
 
 -- O servidor devolve um envio da fila ao fim da revisão: libera vaga.
 update public.material_submissions set status = 'apto'

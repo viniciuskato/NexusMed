@@ -105,8 +105,8 @@ describe('44-D — página "Como escrever um material"', () => {
     expect(fluxo).not.toMatch(/em breve/i);
     expect(fluxo).toMatch(/revisor de IA do próprio NexusMed confere/i);
     expect(fluxo).toContain('“APTO PARA ENVIAR”');
-    expect(fluxo).toMatch(/selo “revisado\s+por IA”/);
-    expect(fluxo).toMatch(/qualquer leitor pode reportar um erro/i);
+    expect(fluxo).toMatch(/dá o parecer/);
+    expect(fluxo).toMatch(/quem decide e publica é o dono do site/i);
     // Decisão do dono: a página não fala em atestação.
     expect(fluxo).not.toMatch(/atesta/i);
     expect(document.body.textContent ?? '').not.toMatch(/revisa e atesta/i);

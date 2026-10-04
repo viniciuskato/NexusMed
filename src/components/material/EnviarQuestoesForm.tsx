@@ -200,7 +200,7 @@ export const EnviarQuestoesForm: React.FC<EnviarQuestoesFormProps> = ({
       <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
         Cole ou carregue o arquivo .md com as suas questões, escrito no padrão de questões do NexusMed. O envio só é
         liberado quando o arquivo passa pela importação sem nenhuma pendência. Depois do envio, uma revisão automática
-        (feita por IA) confere o lote; com o “apto”, as questões são publicadas sozinhas, ligadas aos materiais. Se
+        (feita por IA) confere o lote e dá o parecer; quem decide e publica é o dono do site. Se
         houver problemas, você vê os achados em “Meus envios” e envia de novo.
         {onAbrirComoEscreverQuestoes && (
           <>
@@ -416,7 +416,7 @@ export const EnviarQuestoesForm: React.FC<EnviarQuestoesFormProps> = ({
           className="p-3 rounded-xl border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 dark:border-emerald-800 text-sm text-emerald-900 dark:text-emerald-200"
         >
           {enviadoJaAprovado
-            ? `Lote “${enviadoComo}” enviado. O texto é o mesmo que já foi aprovado na revisão: as questões serão publicadas em alguns minutos.`
+            ? `Lote “${enviadoComo}” enviado. O texto é o mesmo que já teve parecer favorável do revisor de IA, sem nova revisão. Quem publica é o dono do site.`
             : `Lote “${enviadoComo}” enviado. Ele aparece em “Meus envios”, aguardando revisão.`}
         </p>
       )}

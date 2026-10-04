@@ -176,7 +176,7 @@ const Dialogo: React.FC<AtualizarMaterialProps & { onClose: () => void }> = ({ c
         <div className="p-4 space-y-4 overflow-y-auto">
           <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
             Escolha o arquivo .md com o material já corrigido (de preferência, o que você exportou daqui). A atualização
-            não muda nada na hora: ela passa pela revisão de IA e, só se for aprovada, troca o conteúdo que está no ar.
+            não muda nada na hora: ela passa pela revisão de IA, que dá o parecer; o conteúdo que está no ar só muda quando o dono do site decidir.
             Posição na árvore, progresso de leitura e questões continuam.
           </p>
 
@@ -236,7 +236,7 @@ const Dialogo: React.FC<AtualizarMaterialProps & { onClose: () => void }> = ({ c
               <div id="atualizar-previa" className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-3">
                 <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
-                  <span>Arquivo aceito. Veja o que vai mudar se a revisão aprovar:</span>
+                  <span>Arquivo aceito. Veja o que mudaria se a atualização for aplicada:</span>
                 </p>
                 <Lista titulo="Campos do material" itens={previa.campos.map((c) => `${c.campo}: “${c.de || '—'}” → “${c.para || '—'}”`)} />
                 <Lista titulo="Seções novas" itens={previa.secoes.novas} />
@@ -266,7 +266,7 @@ const Dialogo: React.FC<AtualizarMaterialProps & { onClose: () => void }> = ({ c
             )}
             {enviado && (
               <p id="atualizar-sucesso" className="p-3 rounded-xl border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 dark:border-emerald-800 text-sm text-emerald-900 dark:text-emerald-200">
-                Atualização enviada para revisão. O material continua como está até a revisão aprovar; acompanhe em “Meus envios”.
+                Atualização enviada para revisão. O material continua como está: o revisor dá o parecer e o conteúdo só muda quando o dono do site decidir; acompanhe em “Meus envios”.
               </p>
             )}
           </div>

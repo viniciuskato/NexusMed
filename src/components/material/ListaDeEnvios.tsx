@@ -143,7 +143,7 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
         // 44-B: na atualização, "publicado" é "o conteúdo no ar foi trocado" (ou já era igual).
         const estado =
           alvoDoEnvio && item.status === 'apto'
-            ? { ...base, explicacao: 'A revisão aprovou a atualização. O conteúdo que está no ar será trocado em alguns minutos.' }
+            ? { ...base, explicacao: 'O revisor de IA deu parecer favorável à atualização. Ela não é aplicada sozinha: o conteúdo que está no ar só muda quando o dono do site decidir.' }
             : alvoDoEnvio && item.status === 'publicado'
               ? { ...base, explicacao: 'O material que está no ar já tem o conteúdo desta atualização, com o selo de revisado por IA.' }
               : alvoDoEnvio && item.status === 'nao_apto'

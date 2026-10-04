@@ -112,8 +112,8 @@ describe('44-H1 — página "Como escrever questões"', () => {
     expect(fluxo).toMatch(/depois envie o arquivo pelo site/i);
     expect(fluxo).toMatch(/sem pendência/i);
     expect(fluxo).toMatch(/revisão automática/i);
-    expect(fluxo).toMatch(/com o “apto”, as questões são publicadas ligadas aos materiais/i);
-    expect(fluxo).toMatch(/Revisado por IA — ainda não lido por uma pessoa/);
+    expect(fluxo).toMatch(/dá o parecer; quem decide e publica é o dono do site/i);
+    expect(fluxo).not.toMatch(/são publicadas ligadas aos materiais/i);
     expect(fluxo).not.toMatch(/atesta/i);
   });
 

@@ -377,6 +377,7 @@ P-2; quando o dono resolver a P-2, a diretoria pergunta a ele se ela entra
 como prevenção de perda de dado ou só por pedido da produção.
 
 Caderno pessoal (03/10): P6 — admin publica sem 'apto' (revisor aconselha), envio só admin, verso do card do erro — PR #107
+Caderno pessoal: P7 — revisor local aconselha (D-12) — PR #108
 
 O Supabase local continua um só para todas as worktrees: banco de teste,
 pgTAP e E2E com a trava de `EXECUTOR_PROTOCOL.md`. Migration com data

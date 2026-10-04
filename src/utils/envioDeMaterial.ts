@@ -39,7 +39,7 @@ export const ESTADOS_DO_ENVIO: readonly EstadoDoEnvio[] = [
 export const ESTADO_EM_PALAVRAS: Record<EstadoDoEnvio, { rotulo: string; explicacao: string }> = {
   aguardando_revisao: { rotulo: 'Aguardando revisão', explicacao: 'Recebemos o material. Ele está na fila para ser revisado.' },
   em_revisao: { rotulo: 'Em revisão', explicacao: 'O material está sendo revisado agora.' },
-  apto: { rotulo: 'Aprovado na revisão', explicacao: 'A revisão aprovou o material. Ele será publicado em alguns minutos.' },
+  apto: { rotulo: 'Aprovado na revisão', explicacao: 'O revisor de IA deu parecer favorável ao material. Quem decide e publica é o dono do site.' },
   nao_apto: { rotulo: 'Precisa de correção', explicacao: 'A revisão encontrou o que corrigir. Corrija o material e envie de novo.' },
   publicado: { rotulo: 'Publicado', explicacao: 'O material já está no ar para os estudantes, com o selo de revisado por IA.' },
   erro: { rotulo: 'A revisão não foi concluída', explicacao: 'Algo falhou do nosso lado. Seu material não foi rejeitado.' },
@@ -49,7 +49,7 @@ export const ESTADO_EM_PALAVRAS: Record<EstadoDoEnvio, { rotulo: string; explica
 export const ESTADO_EM_PALAVRAS_DE_QUESTOES: Record<EstadoDoEnvio, { rotulo: string; explicacao: string }> = {
   aguardando_revisao: { rotulo: 'Aguardando revisão', explicacao: 'Recebemos o lote de questões. Ele está na fila para ser revisado.' },
   em_revisao: { rotulo: 'Em revisão', explicacao: 'As questões estão sendo revisadas agora.' },
-  apto: { rotulo: 'Aprovado na revisão', explicacao: 'A revisão aprovou as questões. Elas serão publicadas em alguns minutos.' },
+  apto: { rotulo: 'Aprovado na revisão', explicacao: 'O revisor de IA deu parecer favorável às questões. Quem decide e publica é o dono do site.' },
   nao_apto: { rotulo: 'Precisa de correção', explicacao: 'A revisão encontrou o que corrigir. Corrija as questões e envie de novo.' },
   publicado: { rotulo: 'Publicado', explicacao: 'As questões já estão no ar para os estudantes, com a marca de revisado por IA.' },
   erro: { rotulo: 'A revisão não foi concluída', explicacao: 'Algo falhou do nosso lado. Suas questões não foram rejeitadas.' },
