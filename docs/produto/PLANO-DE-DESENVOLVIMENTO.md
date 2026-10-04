@@ -380,6 +380,7 @@ Caderno pessoal (03/10): P6 — admin publica sem 'apto' (revisor aconselha), en
 Caderno pessoal: P7 — revisor local aconselha (D-12) — PR #108
 Caderno pessoal: P8 — Publicar envio pelo admin; ajustes do revisor local — PR #109
 Caderno pessoal: P9 — padrão v3, prompt novo e figuras — PR #110
+Caderno pessoal: P10 — erro → trecho → card do trecho — PR #111
 
 O Supabase local continua um só para todas as worktrees: banco de teste,
 pgTAP e E2E com a trava de `EXECUTOR_PROTOCOL.md`. Migration com data
