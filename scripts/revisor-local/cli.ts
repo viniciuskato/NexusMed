@@ -14,6 +14,7 @@
 //
 // Só roda se o checkout estiver na `main` e igual à `origin/main` do GitHub (P8, `checkout.ts`): código que não
 // está na main nunca escreve no banco. Fora disso a rodada registra o motivo e sai com código 1, sem tocar o banco.
+// P9: se a guarda atualizou a main (pull), a rodada em curso encerra (código novo só na próxima) e sai com código 0.
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
@@ -75,7 +76,8 @@ export async function executarCli(argv: string[], env: NodeJS.ProcessEnv = proce
     const guarda = await (deps.conferirCheckout ?? conferirCheckout)(deps.raiz ?? RAIZ_DO_REPOSITORIO);
     if (!guarda.ok) {
       registrar(`rodada não feita, o banco não foi tocado: ${guarda.motivo}`);
-      return 1;
+      // Main que acabou de ser atualizada não é erro: a próxima rodada já roda com o código novo.
+      return guarda.normal ? 0 : 1;
     }
     const resumo: ResumoDaRodada = await executarRodada({
       exec: executorViaCli({ alvo: o.alvo, supabase: o.supabase, projeto: o.projeto }),

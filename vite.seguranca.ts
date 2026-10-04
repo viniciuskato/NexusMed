@@ -81,3 +81,14 @@ export function connectSrc(supabaseUrl: string | undefined): string[] {
   if (origin) connect.push(origin, origin.replace(/^http/, 'ws'));
   return connect;
 }
+
+/**
+ * P9: img-src. As figuras dos materiais vêm do Storage do projeto Supabase por URL assinada; no Supabase local
+ * (http://127.0.0.1) o `https:` não cobre, então a origem do projeto entra por extenso. Nunca `*.supabase.co`.
+ */
+export function imgSrc(supabaseUrl: string | undefined): string[] {
+  const img = ["'self'", 'data:', 'blob:', 'https:'];
+  const origin = supabaseOrigin(supabaseUrl);
+  if (origin) img.push(origin);
+  return img;
+}

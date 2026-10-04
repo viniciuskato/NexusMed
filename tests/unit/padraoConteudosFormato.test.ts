@@ -50,15 +50,32 @@ describe('padrão de conteúdos — o exemplo da seção 1.7 passa pelo importad
     expect(result.preview.themeId).toBe('tema');
     expect(result.preview.estimatedReadTimeMinutes).toBe(18);
 
-    expect(result.sections.map((s) => s.title)).toEqual(['Título da primeira seção', 'Título da segunda seção']);
+    expect(result.sections.map((s) => s.title)).toEqual(['Introdução', 'Revisão rápida', 'Autoavaliação']);
     expect(result.tags).toEqual(['palavra-chave 1', 'sigla', 'sinônimo', 'nome comercial']);
     expect(result.references).toHaveLength(2);
 
-    const [primeira] = result.sections;
-    expect(primeira.mechanismTag).toBe('Mecanismo de ação');
+    const [primeira, segunda] = result.sections;
+    expect(primeira.mechanismTag).toBe('Visão geral');
     expect(primeira.keyTakeaways).toHaveLength(2);
     expect(primeira.clinicalPearl).toBeTruthy();
     expect(primeira.warningAlert).toBeTruthy();
+    expect(segunda.mechanismTag).toBe('Revisão');
+    expect(segunda.keyTakeaways).toHaveLength(1);
+    // P9: os blocos com função, a tabela numerada e a figura (pendente) chegam inteiros ao texto da seção, que é o que o
+    // leitor exibe; Pontos-Chave, Pérola e Alerta saíram para os campos deles.
+    for (const trecho of [
+      '> **Essencial:**',
+      '> **Cuidado:**',
+      '> **Atualização:**',
+      '**Tabela 1.**',
+      '![Descrição da imagem, para quem não a vê](figura:PENDENTE)',
+      '**Figura 1.** Legenda da figura, em uma frase.',
+      'Mostrar: o que a figura deve conter',
+    ]) {
+      expect(primeira.content, trecho).toContain(trecho);
+    }
+    expect(primeira.content).not.toContain('Pontos-Chave');
+    expect(primeira.content).not.toContain('Pérola');
     // Nada do bloco de palavras-chave vaza para o corpo de uma seção.
     expect(result.sections.every((s) => !s.content.includes('`sigla`'))).toBe(true);
   });

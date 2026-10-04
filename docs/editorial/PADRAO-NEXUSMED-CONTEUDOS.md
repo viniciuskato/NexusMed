@@ -1,27 +1,30 @@
 # Como produzir material para o NexusMed
 
-**Versão 2 do padrão — 23/09/2026**
+**Versão 3 do padrão — 03/10/2026**
 
-O NexusMed é uma plataforma de estudo para medicina. O estudante escolhe um
+O NexusMed é um caderno digital de estudo para medicina. A pessoa escolhe um
 assunto, lê o material, aprofunda até onde achar necessário, testa o que leu
 com questões, e o que errar vira flashcard revisado pela própria plataforma
-nos dias certos. O material é a base de tudo isso.
+nos dias certos. O material é a base de tudo isso — e, como num bom caderno de
+estudo, pode ter figuras, tabelas, casos clínicos e uma revisão rápida no fim.
 
 Este documento é completo em si mesmo: tudo o que é preciso para produzir um
 material está aqui, sem depender de nenhum outro arquivo. Ele tem duas partes:
 
 - **Parte 1 — Para quem escreve o material.** Pode ser uma pessoa ou uma
-  inteligência artificial. Cobre o que escrever, com que profundidade, como
-  citar e o formato exato do arquivo.
-- **Parte 2 — Para quem opera a plataforma.** Importar o arquivo, posicionar
-  o material, revisar, atestar e publicar.
+  inteligência artificial. Cobre o que escrever, em que estrutura, com que
+  profundidade, como citar, como marcar as figuras e o formato exato do
+  arquivo.
+- **Parte 2 — Para quem opera a plataforma.** Enviar as imagens, importar o
+  arquivo, posicionar o material, revisar, atestar e publicar.
 
 **Se você é uma IA recebendo este documento:** sua tarefa é a Parte 1 —
 entregar **um arquivo `.md` por material**, no formato da seção 1.7. A Parte 2
 é feita por uma pessoa dentro da plataforma; leia só para entender o contexto
-e **não** produza nada dela. Se receber junto o texto de um material antigo,
-sua tarefa é reescrevê-lo neste padrão, aproveitando o conteúdo e as
-referências que ainda valem.
+e **não** produza nada dela. Você não gera imagens: onde uma figura ajuda,
+marque o lugar dela como a seção 1.7 manda, e a pessoa coloca a imagem. Se
+receber junto o texto de um material antigo, sua tarefa é reescrevê-lo neste
+padrão, aproveitando o conteúdo e as referências que ainda valem.
 
 ---
 
@@ -31,9 +34,12 @@ referências que ainda valem.
 
 Um material cobre **um assunto com objetivo de aprendizagem próprio** — algo
 que o estudante consegue estudar de uma vez e sair sabendo. Tamanho de
-referência: **8 a 25 minutos de leitura**. Abaixo de uns 8 minutos, o assunto
-cabe como seção ou linha de tabela no material de cima. Acima de uns 25
-minutos com mais de um objetivo, o material deve ser dividido.
+referência: **8 a 60 minutos de leitura**. Abaixo de uns 8 minutos, o assunto
+cabe como seção ou linha de tabela no material de cima. Acima de uns 60
+minutos, ou com mais de um objetivo de aprendizagem, o material deve ser
+dividido. Um material de doença com o esqueleto completo da seção 1.3 costuma
+ficar entre 30 e 60 minutos: o que não cabe vira material abaixo, não
+parágrafo a mais.
 
 Os materiais formam uma **árvore**: cada material pode ter um material
 acima dele (o "pai") e vários abaixo (os "filhos"). O estudante começa pelo
@@ -75,6 +81,9 @@ pergunte antes de escrever — não invente.**
 4. **Nível** do material (ver 1.3).
 5. **Tempo-alvo** de leitura.
 6. **Fontes** disponíveis — diretrizes, livros-texto, revisões, artigos.
+7. **Figuras** que a pessoa já sabe que quer (um fluxograma, uma curva, um
+   exame de imagem), se houver. Sem indicação, decida onde uma figura ajuda
+   de verdade (seção 1.7) — nunca por enfeite.
 
 ## 1.3 O que escrever em cada nível
 
@@ -101,7 +110,125 @@ uma frase e siga — **não reconte a classe inteira**.
 
 **Condição clínica** (doença, síndrome) — etiologia, mecanismo e
 manifestação, diagnóstico e conduta, distinguidos entre si. Fármacos que já
-têm material próprio são nomeados, não reexplicados.
+têm material próprio são nomeados, não reexplicados. A ordem das seções segue
+o esqueleto abaixo.
+
+### 1.3.1 Esqueleto de uma condição clínica
+
+Toda seção abaixo é um `###` do arquivo, com a Tag de Mecanismo sugerida. A
+ordem é fixa; o conteúdo se adapta.
+
+```text
+Introdução                       Tag: Visão geral
+Epidemiologia                    Tag: Epidemiologia
+Fisiopatologia                   Tag: Fisiopatologia
+Fatores de risco                 Tag: Fatores de risco
+Quadro clínico                   Tag: Quadro clínico
+Diagnóstico e exames             Tag: Diagnóstico
+Avaliação e classificação        Tag: Classificação
+Tratamento não farmacológico     Tag: Conduta
+Tratamento cirúrgico             Tag: Conduta
+Tratamento farmacológico         Tag: Conduta
+Como escolher o tratamento       Tag: Conduta
+Complicações e exacerbação       Tag: Complicações
+Casos clínicos guiados           Tag: Casos
+Revisão rápida                   Tag: Revisão
+Autoavaliação                    Tag: Revisão
+Considerações finais             Tag: Fechamento
+```
+
+O que cada seção responde:
+
+- **Introdução** — o que é a condição e por que importa; os **objetivos de
+  aprendizagem** ("Ao final deste material você deve ser capaz de...", de três a
+  cinco itens, cada um verificável); e o **aviso do que é essencial e do que é
+  aprofundamento** (seção 1.4). Pode abrir com uma **pergunta motivadora**: um
+  caso curto, sem resposta, que o material vai responder ao longo do texto.
+- **Epidemiologia** — frequência, quem adoece, peso para o sistema de saúde,
+  com o dado brasileiro quando existir.
+- **Fisiopatologia** — o porquê: causa → processo → achado. É a seção que a
+  saturação da seção 1.4 mais cobra.
+- **Fatores de risco** — o que aumenta a chance, com a força da associação
+  quando a fonte a traz.
+- **Quadro clínico** — sintomas e sinais, o que é típico e o que é atípico, e o
+  que diferencia de condições parecidas.
+- **Diagnóstico e exames** — o critério diagnóstico, o exame que o define e os
+  que o complementam; para cada exame, o que ele responde. Condições
+  precursoras ou formas de apresentação especiais entram aqui.
+- **Avaliação e classificação** — como medir a gravidade e o risco (escores,
+  estágios, grupos), e **para que a classificação serve**: o que ela muda na
+  conduta.
+- **Tratamento não farmacológico, cirúrgico e farmacológico** — um por seção,
+  cada um com o objetivo, a indicação, a conduta e os cuidados. Fármaco que tem
+  material próprio é nomeado, não reexplicado. Omita a seção que não existe
+  para a condição (sem cirurgia, sem seção de cirurgia).
+- **Como escolher o tratamento** — o raciocínio de decisão, em duas etapas
+  quando couber: o **tratamento inicial** (por onde começar, segundo a
+  classificação) e o **de manutenção** (o que fazer quando o inicial não basta;
+  quando ajustar; quando trocar). É aqui que entra o **fluxograma de decisão**,
+  como figura (seção 1.7), acompanhado do mesmo caminho descrito em palavras.
+- **Complicações e exacerbação** — o que pode dar errado, como reconhecer e a
+  conduta aguda.
+- **Casos clínicos guiados, Revisão rápida e Autoavaliação** — o fecho de todo
+  material (seção 1.3.3).
+- **Considerações finais** — três a cinco frases: o fio que liga as seções e o
+  que o estudante precisa levar.
+
+### 1.3.2 Material que não é doença
+
+O esqueleto acima é de condição clínica. Os outros assuntos têm esqueleto
+próprio, na mesma lógica (do porquê para o como, da definição para a conduta):
+
+- **Exame ou procedimento:** introdução; indicações e contraindicações;
+  preparo e execução; parâmetros e interpretação; classificação dos achados;
+  limitações e erros comuns.
+- **Conceito de ciência básica ou de fisiologia:** introdução; definições;
+  mecanismo; integração com outros sistemas; relevância clínica.
+- **Fármaco, classe ou subclasse:** os pontos de cada nível acima, mais a
+  conduta de escolha entre os irmãos.
+- **Escore, fórmula ou classificação:** o que mede; como se calcula;
+  interpretação por faixa; limitações.
+
+Omita o que não se aplica, funda seções curtas e **não escreva "não se aplica"**.
+O que não pode faltar em nenhum esqueleto: o porquê antes do como, a
+distinção entre o essencial e o aprofundamento, a Revisão rápida e a
+Autoavaliação.
+
+### 1.3.3 O fecho de todo material
+
+**Casos clínicos guiados** (obrigatório em condição clínica; opcional nos
+outros assuntos). Seção `### Casos clínicos guiados`, com um `####` por caso
+("Caso 1 — título curto"). Os casos são **hipotéticos e sem dado real de
+pessoa**: idade, sexo e achados são inventados para o exercício, e isso fica
+dito na primeira linha da seção. Cada caso, um parágrafo por item, com o rótulo
+em negrito:
+
+- **Apresentação:** o quadro, com os achados que importam;
+- **Pergunta de raciocínio:** o que o estudante deve decidir primeiro;
+- **Pistas:** quais achados apontam o caminho;
+- **Hipótese principal:** a resposta, com a citação do critério que a sustenta;
+- **Diferenciais:** o que mais caberia e por que cai;
+- **Conduta:** o princípio de conduta, com citação e grau de evidência.
+
+**Revisão rápida** (obrigatória). Seção `### Revisão rápida`, que só junta o que
+as seções anteriores já explicaram — nada de assunto novo. Tem, nesta ordem, os
+subtítulos `####`:
+
+- **Fluxograma de abordagem** — a figura de decisão do material (seção 1.7),
+  quando a condição tem um caminho de decisão; sem decisão, omita;
+- **Tabela-mestra** — uma tabela que reúne as entidades do material lado a lado
+  (por exemplo, cada tipo, o achado que o define e a conduta);
+- **Pares para não confundir** — uma tabela de duas colunas: o par de conceitos
+  parecidos e o critério que os separa;
+- **Mensagens essenciais** — o bloco `**Pontos-Chave:**` da seção, de 8 a 20
+  frases curtas, cada uma legível sozinha.
+
+**Autoavaliação** (obrigatória). Seção `### Autoavaliação`, com dois subtítulos
+`####`: **Perguntas**, uma lista numerada de 8 a 15 perguntas de recordação e
+raciocínio, de resposta curta e sem alternativas; e **Respostas comentadas**,
+uma lista numerada, na mesma ordem, em que cada resposta tem uma ou duas frases
+e a citação de onde sai. Questões de múltipla escolha têm padrão próprio e não
+entram aqui.
 
 ## 1.4 Padrão de profundidade
 
@@ -145,11 +272,62 @@ ressalva, sem transição. Prefira um parágrafo por ideia, com o termo em
 **negrito** no início. Tabela não substitui prosa: tabela compara; prosa
 explica o raciocínio.
 
+### Tom
+
+Escreva como quem explica a um colega que quer entender, não como um tratado:
+direto, em frases curtas, falando com a pessoa ("note que...", "repare que...",
+"antes de decidir, pergunte-se..."). Faça a pergunta que o estudante faria e
+responda. Sem gíria, sem diminutivo e sem tom professoral. O rigor da fonte não
+muda: o tom é de conversa, o conteúdo é de diretriz.
+
+### O essencial e o aprofundamento
+
+Todo material separa o que o estudante **precisa dominar** do que é **para ir
+além**, e diz isso na Introdução: um parágrafo curto com o que é essencial (o
+que a Revisão rápida vai cobrar) e o que é aprofundamento (marcado no texto com
+o bloco **Aprofundar**). **Só afirme que algo "cai em prova" se a pessoa que
+encomendou ou a fonte disse isso**; sem essa base, diga "é essencial" ou "é
+aprofundamento", nunca "cai" nem "não cai". Quando a prova e o plantão
+divergem, use o **Consenso de Prova** (abaixo).
+
+### Aplicando o conceito
+
+Sempre que o material ensina a **interpretar números** (um exame, um escore, uma
+dose ajustada, uma classificação), feche a seção com um subtítulo `#### Aplicando
+o conceito`: um exemplo resolvido, com valores concretos, passo a passo — o
+dado, a regra aplicada, a conclusão. O paciente e os valores do exemplo são
+**hipotéticos** e a primeira linha do exemplo o diz ("Exemplo hipotético:");
+**todo corte, fórmula e conduta usados nele vêm de fonte citada**. O exemplo
+nunca cria um número novo de dose ou de corte.
+
+### Blocos com função
+
+Além do texto corrido, o material usa blocos que dizem **para que serve** o
+trecho. Cada bloco é um parágrafo numa citação `> `, com o rótulo em negrito
+exatamente como na tabela, uma linha em branco antes e depois, e **no máximo
+dois ou três por seção** — bloco demais deixa de destacar.
+
+| Rótulo | Para que serve |
+|---|---|
+| `**Essencial:**` | o que o estudante precisa dominar naquele ponto |
+| `**Raciocínio:**` | a ligação explícita entre um achado e a hipótese ou a conduta |
+| `**Cuidado:**` | uma simplificação didática, uma controvérsia ou uma ambiguidade que merece atenção |
+| `**Não confundir:**` | um par de conceitos parecidos que costumam ser trocados, e o que os separa |
+| `**Atualização:**` | o que mudou na diretriz ou na prática, **e desde quando** (o ano, ou a versão, no texto do bloco) |
+| `**Aprofundar:**` | um detalhe opcional, para quem quer ir além do essencial |
+| `**Diretriz:**` | recomendação oficial, com o grau de evidência |
+| `**Mecanismo:**` | um mecanismo que merece ficar isolado do texto corrido |
+| `**Consenso de Prova:**` | quando o que as provas cobram difere da prática de plantão |
+
+O **Atualização** nunca amplia o que é essencial: ele informa a mudança. Sem
+data ou versão, não é atualização.
+
 ### Controvérsia e limite do modelo
 
 Quando a literatura diverge de verdade, apresente as posições — nunca escolha
 uma como se fosse consenso. Quando um modelo explicativo tem limite conhecido,
-registre o limite; o lugar natural é o **Alerta de Armadilha** da seção.
+registre o limite; o lugar natural é o **Alerta de Armadilha** da seção ou um
+bloco **Cuidado**.
 
 ### Convenções médicas obrigatórias
 
@@ -204,17 +382,9 @@ real — deixar vazio por pressa é lacuna.
   confundir dois conceitos parecidos, aplicar uma regra fora do contexto.
 
 No máximo **um** bloco de Pontos-Chave, **uma** Pérola e **um** Alerta por
-seção — se houver dois, a plataforma guarda só um e o outro se perde.
-
-Além desses três, há caixas de destaque opcionais, para usar com
-parcimônia dentro do texto da seção:
-
-- `> **Diretriz:** texto` — recomendação oficial de diretriz, com grau de
-  evidência.
-- `> **Mecanismo:** texto` — um mecanismo que merece ficar isolado do texto
-  corrido.
-- `> **Consenso de Prova:** texto` — quando o que as provas cobram difere
-  da prática de plantão.
+seção — se houver dois, a plataforma guarda só um e o outro se perde. Os
+blocos com função da tabela acima não têm esse limite de um por seção (só o
+de dois ou três, de bom senso).
 
 ## 1.5 Citações
 
@@ -235,11 +405,37 @@ parcimônia dentro do texto da seção:
   terminada pela citação e seguida de uma linha em branco. A plataforma
   transforma essa citação na legenda "Fonte: [N]" da tabela. Não repita a
   mesma citação em todas as células.
+- **Numere as tabelas** na ordem em que aparecem, começando a frase de
+  abertura por `**Tabela N.**` (em negrito) e o título da tabela, por exemplo:
+  `**Tabela 2.** Classificação da obstrução pelo VEF1 após o broncodilatador
+  [3](#ref-3).` O mesmo vale para as figuras (seção 1.7), numeradas à parte
+  (`**Figura N.**`).
+- **Toda figura leva legenda e fonte** (seção 1.7). A fonte de uma figura é a
+  referência de onde ela vem — uma citação `[N](#ref-N)` ou "autor, título,
+  ano" —; figura que você descreve e a pessoa vai desenhar ou buscar traz a
+  **fonte sugerida**, e quem coloca a imagem confirma a fonte real.
 - **Toda referência da lista precisa ser citada pelo menos uma vez** no
-  texto.
+  texto (a citação na linha "Fonte:" de uma figura conta).
 - Se o texto veio de uma ferramenta que numera fontes pela ordem interna
   dela, renumere cada citação para a posição certa na lista final antes de
   entregar.
+
+### Referências em camadas
+
+A lista de referências é uma só, numerada, mas **ordenada em três camadas**, e
+cada referência diz a sua no colchete final:
+
+- **Ponto de entrada** — a fonte que o estudante abre primeiro: a diretriz, o
+  consenso ou a revisão que cobre o tema inteiro;
+- **Aprofundamento** — artigos, revisões e textos para quem quer ir além de um
+  ponto específico;
+- **Consulta especializada** — o documento técnico de um tema estreito: uma
+  bula, um protocolo, uma classificação, um escore.
+
+Cada referência termina com **`[Camada — tipo de evidência]`**, por exemplo
+`[Ponto de entrada — Diretriz de prática clínica]`. Liste primeiro as de ponto
+de entrada, depois as de aprofundamento, depois as de consulta especializada. A
+numeração das citações no texto é a posição na lista final.
 
 ## 1.6 Palavras-chave
 
@@ -266,20 +462,37 @@ Entregue **um arquivo `.md` por material**, exatamente nesta estrutura:
 **Tema:** Nome exato do tema no catálogo
 **Autor:** Nome de quem assina
 **Tempo estimado de leitura:** 18 minutos
-**Versão do padrão:** 2
+**Versão do padrão:** 3
 
-### Título da primeira seção
-**Tag de Mecanismo:** Mecanismo de ação
+### Introdução
+**Tag de Mecanismo:** Visão geral
 
 Texto da seção em Markdown, com citação [1](#ref-1) em toda afirmação de peso clínico. Cada parágrafo fica numa linha só.
 
+Ao final deste material você deve ser capaz de reconhecer o quadro, escolher o exame e justificar a conduta [1](#ref-1).
+
+> **Essencial:** o que o estudante precisa dominar neste ponto.
+
 #### Um subtítulo dentro da seção
 
-Mais texto. Frase que introduz a tabela abaixo [2](#ref-2).
+Mais texto. Frase que abre a tabela abaixo, com o número e a citação.
+
+**Tabela 1.** Título da tabela, em uma frase [2](#ref-2).
 
 | Coluna A | Coluna B |
 |---|---|
 | valor | valor |
+
+Texto que apresenta a figura abaixo [2](#ref-2).
+
+![Descrição da imagem, para quem não a vê](figura:PENDENTE)
+**Figura 1.** Legenda da figura, em uma frase.
+Fonte: fonte sugerida, com autor ou entidade, título e ano.
+Mostrar: o que a figura deve conter — elementos, eixos e rótulos.
+
+> **Cuidado:** uma simplificação, controvérsia ou ambiguidade que merece atenção.
+
+> **Atualização:** o que mudou e desde quando, por exemplo a partir de 2023 [1](#ref-1).
 
 **Pontos-Chave:**
 - Primeira frase-síntese, que faz sentido lida sozinha.
@@ -289,17 +502,39 @@ Mais texto. Frase que introduz a tabela abaixo [2](#ref-2).
 
 > ⚠️ **Alerta de Armadilha:** o erro de raciocínio comum nesta seção.
 
-### Título da segunda seção
-**Tag de Mecanismo:** Farmacocinética
+### Revisão rápida
+**Tag de Mecanismo:** Revisão
 
-Texto da segunda seção [1](#ref-1).
+#### Pares para não confundir
+
+Frase que abre a tabela de pares [2](#ref-2).
+
+**Tabela 2.** Pares que costumam ser trocados [2](#ref-2).
+
+| Par | O que separa |
+|---|---|
+| A × B | o critério que distingue |
+
+**Pontos-Chave:**
+- Mensagem essencial, legível sozinha.
+
+### Autoavaliação
+**Tag de Mecanismo:** Revisão
+
+#### Perguntas
+
+1. Pergunta de recordação ou de raciocínio, de resposta curta?
+
+#### Respostas comentadas
+
+1. Resposta em uma ou duas frases [1](#ref-1).
 
 ### Palavras-chave
 `palavra-chave 1` `sigla` `sinônimo` `nome comercial`
 
 ### Referências Bibliográficas
-1. Referência completa da primeira fonte. [Diretriz de prática clínica — nome da entidade]
-2. Referência completa da segunda fonte. [Livro-texto]
+1. Referência completa da primeira fonte. [Ponto de entrada — Diretriz de prática clínica]
+2. Referência completa da segunda fonte. [Aprofundamento — Revisão sistemática]
 ````
 
 **Regras do formato — a importação segue estas regras à risca:**
@@ -308,7 +543,7 @@ Texto da segunda seção [1](#ref-1).
 2. **Os metadados vêm logo abaixo do título**, um por linha, no formato
    `**Rótulo:** valor`, com os rótulos exatamente como no modelo. O tempo de
    leitura é um número seguido de "minutos". Autor é opcional: sem autor,
-   omita a linha inteira. **Versão do padrão** é sempre `2` — a versão deste
+   omita a linha inteira. **Versão do padrão** é sempre `3` — a versão deste
    documento; ela diz, no futuro, contra qual padrão o material foi escrito.
    O título não leva numeração ("Antimicrobianos I", "Módulo 2"): a ordem
    entre materiais é dada pela plataforma.
@@ -318,9 +553,11 @@ Texto da segunda seção [1](#ref-1).
    subtítulo é sempre `####`** — nunca `###`, `##` ou `#`. Um `###` no meio
    do texto parte a seção em duas.
 5. **Tag de Mecanismo** é o rótulo curto exibido acima da seção no leitor
-   (uma a três palavras). Exemplos: `Visão geral`, `Mecanismo de ação`,
-   `Farmacocinética`, `Espectro de ação`, `Resistência`, `Indicações`,
-   `Segurança`, `Fisiopatologia`, `Diagnóstico`, `Conduta`, `Prognóstico`,
+   (uma a três palavras). Exemplos: `Visão geral`, `Epidemiologia`,
+   `Mecanismo de ação`, `Farmacocinética`, `Espectro de ação`, `Resistência`,
+   `Indicações`, `Segurança`, `Fisiopatologia`, `Fatores de risco`,
+   `Quadro clínico`, `Diagnóstico`, `Classificação`, `Conduta`,
+   `Complicações`, `Casos`, `Revisão`, `Fechamento`, `Prognóstico`,
    `Prevenção`, `Comparação`. Opcional, mas recomendado. Uma por seção, na
    linha logo abaixo do título da seção.
 6. **Pontos-Chave:** a linha `**Pontos-Chave:**` sozinha, seguida de itens
@@ -332,21 +569,60 @@ Texto da segunda seção [1](#ref-1).
    (o nome antigo, `### Tags`, também é aceito), com cada palavra-chave entre
    crases (`` ` ``). Qualquer outro nome vira uma seção de conteúdo.
 9. **O bloco de referências se chama `### Referências Bibliográficas`**, com
-   uma referência por item numerado (`1.`, `2.`...). Cada referência termina
-   com o tipo de evidência entre colchetes. A numeração é a que as citações
-   `[N](#ref-N)` usam.
+   uma referência por item numerado (`1.`, `2.`...), ordenadas por camada
+   (seção 1.5). Cada referência termina com a camada e o tipo de evidência
+   entre colchetes, `[Camada — tipo de evidência]`. A numeração é a que as
+   citações `[N](#ref-N)` usam.
 10. **Não inclua** blocos de "pré-requisitos", "conexões", "veja também",
     "estude antes" ou posição na árvore: nada disso é lido da importação.
+11. **Blocos com função** (seção 1.4): cada um é um parágrafo numa citação
+    `> `, com o rótulo em negrito escrito exatamente como na tabela da seção
+    1.4 (`**Essencial:**`, `**Raciocínio:**`, `**Cuidado:**`, `**Não confundir:**`,
+    `**Atualização:**`, `**Aprofundar:**`). O bloco **Atualização** traz o ano ou
+    a versão da mudança no próprio texto.
+12. **Tabelas:** a frase de abertura citada, seguida da linha `**Tabela N.**`
+    com o título, ou as duas na mesma frase, sempre logo acima da tabela e
+    terminando na citação (seção 1.5).
+13. **Figuras** — veja abaixo. A figura é o **único** lugar onde uma imagem
+    pode aparecer.
+
+**Figuras: como marcar onde entra cada uma.** Você não gera nem busca
+imagem. Onde uma figura ajuda de verdade — um fluxograma de decisão, uma curva,
+um esquema de mecanismo, um exame de imagem típico, uma tabela que fica
+melhor desenhada —, escreva um **bloco de figura pendente**, de quatro linhas
+seguidas, sem linha em branco entre elas, com linha em branco antes e depois do
+bloco:
+
+1. `![texto alternativo](figura:PENDENTE)` — o texto alternativo descreve a
+   imagem em uma frase, para quem não a vê;
+2. `**Figura N.** legenda` — a legenda diz o que a figura mostra e por que ela
+   está ali; N numera as figuras do material na ordem em que aparecem;
+3. `Fonte: ...` — a **fonte sugerida** da figura: a referência da lista de onde
+   ela vem (`Fonte: [3](#ref-3)`), ou autor, título e ano. Nunca invente: sem
+   fonte, escreva `Fonte: LACUNA_DOCUMENTAL`;
+4. `Mostrar: ...` — o que a figura deve conter: os elementos, os eixos, os
+   rótulos, os valores que precisam aparecer.
+
+O texto da seção também apresenta a figura e diz o que observar nela; o que a
+figura mostra precisa estar dito em palavras, para o material valer sem a
+imagem (para um fluxograma, descreva o caminho de decisão em frases ou numa
+lista numerada). Use `PENDENTE` exatamente assim, em maiúsculas: depois, a
+pessoa que opera a plataforma envia a imagem, e o bloco passa a trazer, no
+lugar de `PENDENTE`, um identificador gerado pelo site e sem a linha `Mostrar:`.
+**Você nunca escreve esse identificador, nem endereço de imagem de outro site,
+nem caminho de arquivo, nem `data:`: só `figura:PENDENTE`.** Imagem escrita de
+outra forma, ou no meio de um parágrafo, não é mostrada.
 
 **O que o leitor da plataforma exibe — e o que não exibe:**
 
 - Exibe: parágrafos, `**negrito**`, `*itálico*`, subtítulos `####`, listas
   com `- `, listas numeradas, tabelas, citações `[N](#ref-N)`, links
-  `https://...`, caixas de destaque com `> ` e fórmulas (regra abaixo).
+  `https://...`, caixas de destaque com `> `, blocos com função, figuras com
+  legenda e fonte e fórmulas (regra abaixo).
 - **Escreva cada parágrafo numa linha só**, sem quebrar linha no meio.
 - **Deixe uma linha em branco antes e depois** de todo subtítulo, lista,
-  tabela e caixa `> `. Depois de uma lista isso é obrigatório: um parágrafo
-  colado no último item vira parte dele.
+  tabela, figura e caixa `> `. Depois de uma lista isso é obrigatório: um
+  parágrafo colado no último item vira parte dele.
 - **Não use lista dentro de lista.** Não há recuo de nível: reescreva como
   itens do mesmo nível ou como frases dentro do item.
 - **Fórmula:** sozinha numa linha própria, com `=`, sem ponto final; o
@@ -359,17 +635,19 @@ Texto da segunda seção [1](#ref-1).
   tela. Escreva em texto e Unicode: `≥`, `≤`, `≈`, `×`, `÷`, `±`, `→`, `µg`,
   `mL/min/1,73 m²`; intervalos com traço-en sem espaço (`60–89`).
 - **Não use `<=` nem `>=`**: use `≤` e `≥`.
-- **Não use imagens nem HTML.**
+- **Não use HTML.** Imagem só no bloco de figura (acima).
 
 ## 1.8 O que não fazer
 
 - Não invente Disciplina, Tema, referência, dose, corte numérico ou grau de
   evidência. Sem fonte, use `LACUNA_DOCUMENTAL`.
+- Não invente imagem, identificador de figura nem fonte de figura.
 - Não reconte o que o material de cima já explica.
 - Não cubra no mesmo material um assunto que tem material próprio abaixo —
   nomeie e deixe o aprofundamento para ele.
 - Não escreva introdução solta antes da primeira seção.
 - Não use formatação fora da lista da seção 1.7.
+- Não afirme que algo "cai em prova" sem que a pessoa ou a fonte o diga.
 - **Não cite outros materiais como navegação**: nada de "veja o material
   X", "no próximo módulo", "como vimos na aula anterior", "nas páginas
   seguintes". Mencionar um assunto é normal ("a meningite bacteriana exige
@@ -396,17 +674,39 @@ Conteúdo, por seção:
 - [ ] Nenhuma remissão a outro material ou página ("veja o material",
   "próximo módulo")? Título sem numeração?
 
-Citações e formato, no arquivo inteiro:
+Estrutura e tom:
+- [ ] As seções seguem o esqueleto da seção 1.3 (ou o do assunto), adaptado,
+  sem "não se aplica"?
+- [ ] A Introdução traz os objetivos e separa o essencial do aprofundamento,
+  sem dizer que algo "cai em prova" sem base?
+- [ ] Há "Aplicando o conceito" onde o material ensina a interpretar números,
+  com exemplo hipotético e fontes para cada corte?
+- [ ] Casos clínicos guiados (condição clínica) hipotéticos, sem dado de pessoa
+  real, com hipótese, diferenciais e conduta citada?
+- [ ] Revisão rápida com tabela-mestra, pares para não confundir e mensagens
+  essenciais (e fluxograma, quando há decisão)? Autoavaliação com perguntas e
+  respostas comentadas?
+- [ ] Blocos com função com o rótulo exato, no máximo dois ou três por seção, e
+  toda Atualização com ano ou versão?
+- [ ] Tom direto, falando com a pessoa, sem gíria?
+
+Citações, figuras e formato, no arquivo inteiro:
 - [ ] Toda citação no formato `[N](#ref-N)`, com N certo? Nenhum `[N]` solto?
-- [ ] Toda referência citada pelo menos uma vez? Toda tabela com frase de
-  abertura citada?
+- [ ] Toda referência citada pelo menos uma vez? Toda tabela numerada, com
+  frase de abertura citada?
+- [ ] Referências ordenadas em ponto de entrada, aprofundamento e consulta
+  especializada, cada uma com `[Camada — tipo de evidência]`?
+- [ ] Toda figura com `figura:PENDENTE`, texto alternativo, legenda numerada,
+  `Fonte:` e `Mostrar:`, em bloco próprio? O que a figura mostra está dito em
+  palavras no texto?
 - [ ] Dentro das seções, só `####` como subtítulo? Nenhum texto antes da
   primeira seção?
 - [ ] `### Palavras-chave` com sinônimos, siglas e nomes comerciais?
-- [ ] Linha `**Versão do padrão:** 2` nos metadados?
-- [ ] Nada de LaTeX, `<=`, `>=`, imagem, HTML ou lista dentro de lista?
+- [ ] Linha `**Versão do padrão:** 3` nos metadados?
+- [ ] Nada de LaTeX, `<=`, `>=`, HTML, imagem fora do bloco de figura ou lista
+  dentro de lista?
 - [ ] Cada parágrafo numa linha só? Linha em branco antes e depois de
-  subtítulos, listas, tabelas e caixas `> `?
+  subtítulos, listas, tabelas, figuras e caixas `> `?
 - [ ] No máximo um bloco de Pontos-Chave, uma Pérola e um Alerta por seção?
 
 ---
@@ -417,10 +717,11 @@ Esta parte é feita por uma pessoa, na Área Editorial da plataforma.
 
 ## 2.1 Fluxo completo
 
-1. **Importar** o arquivo, já escolhendo onde o material fica na árvore.
-2. **Revisar e atestar** — obrigatório; sem isso a plataforma não publica.
-3. **Publicar**, de cima para baixo na árvore.
-4. **Produzir as questões** do material e ligá-las a ele.
+1. **Enviar as imagens** das figuras, se o material tiver (seção 2.2).
+2. **Importar** o arquivo, já escolhendo onde o material fica na árvore.
+3. **Revisar e atestar** — obrigatório; sem isso a plataforma não publica.
+4. **Publicar**, de cima para baixo na árvore.
+5. **Produzir as questões** do material e ligá-las a ele.
 
 Importe **de cima para baixo** (a classe antes da subclasse, a subclasse antes
 do fármaco): o pai precisa existir para ser escolhido.
@@ -450,10 +751,32 @@ cópia.
 computador envelhecem: depois de importado, o material pode ser corrigido na
 plataforma. Para mudar um material, parta sempre do que está publicado nela.
 
-## 2.2 Importar o material
+## 2.2 Enviar as imagens e importar o material
 
-Área Editorial → **Importar material** → escolha o arquivo `.md`. A tela
-mostra, em ordem:
+**Imagens.** A IA não gera imagem: ela marca cada figura com um bloco
+`figura:PENDENTE`, a legenda, a fonte sugerida e a linha `Mostrar:` (seção 1.7).
+Para cada figura:
+
+1. Consiga a imagem (um arquivo PNG, JPEG ou WebP de até 10 MB): uma figura da
+   diretriz que você pode citar, um esquema seu, uma captura. **A fonte da
+   imagem tem de estar na legenda do bloco**, e a imagem é usada com a
+   responsabilidade de quem a coloca.
+2. Área Editorial → **Enviar material** → **Enviar imagem**. Escolha o arquivo e
+   preencha o **texto alternativo** (descreve a imagem em uma frase), a
+   **legenda** e a **fonte**; o número da figura é opcional. A tela envia a
+   imagem e mostra o **trecho pronto para colar**: o bloco de figura, já com o
+   identificador da imagem.
+3. No arquivo `.md`, **troque o bloco pendente inteiro** (as quatro linhas) pelo
+   trecho. Se preferir, copie só o identificador e troque `PENDENTE` por ele —
+   nesse caso apague também a linha `Mostrar:`.
+
+Enquanto houver `figura:PENDENTE` no arquivo, a checagem do padrão aponta a
+figura e o envio não passa. A imagem enviada **não pode ser trocada**: para usar
+outra, envie uma nova e troque o identificador no texto. Quem vê a imagem é só
+quem tem conta aprovada; ela aparece depois que o material é publicado.
+
+**Importar.** Área Editorial → **Importar material** → escolha o arquivo `.md`.
+A tela mostra, em ordem:
 
 1. **Prévia** — título, disciplina, tema, número de seções e de referências,
    palavras-chave e campos faltando. Se a disciplina ou o tema do arquivo não
@@ -513,7 +836,8 @@ Na lista de conteúdos, botão **Revisão**:
 
 **O que invalida a atestação:** mudar o conteúdo depois de atestado —
 título, subtítulo, disciplina, tema, autor, tempo de leitura, palavras-chave,
-qualquer coisa nas seções (inclusive Pontos-Chave, Pérola e Alerta) ou nas
+qualquer coisa nas seções (inclusive Pontos-Chave, Pérola e Alerta, os blocos
+com função e as figuras: trocar, tirar ou pôr uma figura é mudar o texto) ou nas
 referências (inclusive vincular uma referência a uma fonte curada). Aí é
 preciso criar uma revisão nova e atestar de novo — por isso, faça esses
 ajustes antes de atestar.
@@ -582,18 +906,42 @@ Nem toda mudança exige refazer material:
 - **Editorial** (profundidade, o que cabe em cada nível, dividir um material)
   é a única que pede reescrita.
 
-**v2 — 23/09/2026.** O que muda em relação aos materiais anteriores:
-- o material tem um lugar na árvore e segue as regras do seu nível (1.3):
-  não repete o material de cima nem invade o de baixo;
-- um material por objetivo, entre 8 e 25 minutos — material que cobre uma
-  classe inteira com todas as subclasses precisa ser dividido;
-- a Disciplina é a casa do material (fármaco em Farmacologia);
-- o texto não remete a outros materiais, e o título não tem numeração;
-- palavras-chave com sinônimos, siglas e nomes comerciais;
-- a linha `**Versão do padrão:** 2`.
+**v3 — 03/10/2026.** O NexusMed passa a ser um caderno digital de estudo, e o
+material ganha a estrutura de um bom caderno. O que muda em relação à v2:
+- **imagens e figuras são permitidas**, sempre com texto alternativo, legenda
+  numerada e fonte. A IA não gera imagem: ela marca o lugar com
+  `figura:PENDENTE` e a linha `Mostrar:`, e a pessoa envia a imagem pelo botão
+  **Enviar imagem** (seção 2.2). Imagem escrita de qualquer outra forma e HTML
+  cru passam a ser apontados pela checagem do padrão; a figura pendente também,
+  até a imagem ser enviada;
+- **esqueleto fixo para a condição clínica** (introdução, epidemiologia,
+  fisiopatologia, fatores de risco, quadro clínico, diagnóstico e exames,
+  avaliação e classificação, tratamento não farmacológico, cirúrgico e
+  farmacológico, como escolher o tratamento, complicações e exacerbação,
+  considerações finais), adaptável aos outros assuntos (seção 1.3);
+- **fecho de todo material:** casos clínicos guiados, revisão rápida (fluxograma,
+  tabela-mestra, pares para não confundir, mensagens essenciais) e
+  autoavaliação (seção 1.3.3);
+- **blocos com função:** Essencial, Raciocínio, Cuidado, Não confundir,
+  Atualização (com o ano ou a versão da mudança — a checagem confere) e
+  Aprofundar (seção 1.4);
+- **tabelas e figuras numeradas**, com legenda e fonte; **fluxogramas de
+  decisão** como figura, também descritos em palavras;
+- **referências em três camadas** (ponto de entrada, aprofundamento, consulta
+  especializada), no colchete final de cada referência;
+- **"Aplicando o conceito"** com exemplo hipotético resolvido, **tom direto** e
+  **aviso do que é essencial e do que é aprofundamento** (sem afirmar o que
+  "cai em prova" sem base);
+- o tempo de leitura vai de 8 a 60 minutos (era 8 a 25): o caderno tem materiais longos;
+- a linha de metadado passa a ser `**Versão do padrão:** 3`.
+
+**Materiais da v2 não precisam ser refeitos para continuar no ar:** o que foi
+publicado segue como está. Para reenviar um material antigo (por exemplo, para
+atualizá-lo), a linha de versão passa a `3` e, para ganhar a estrutura nova, o
+conteúdo pede reescrita editorial.
 
 **Como atualizar um material antigo hoje:** peça à IA que reescreva o
-material para a v2, entregando junto este documento e o texto atual do
+material para a v3, entregando junto este documento e o texto atual do
 material. Para dividir um material grande, peça um arquivo para cada parte,
 seguindo a árvore; importe as partes novas como filhos e coloque a parte que
 fica no material original (Editar, substituindo o texto das seções). A

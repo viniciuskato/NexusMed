@@ -28,6 +28,7 @@ import {
 import { parentCandidates } from '../../utils/materialNavigation';
 import { ListaDeEnvios, type EnvioDaLista } from './ListaDeEnvios';
 import { EnviarQuestoesForm } from './EnviarQuestoesForm';
+import { EnviarImagemDoMaterial } from './EnviarImagemDoMaterial';
 
 // ============================================================================
 // "Enviar material" (44-E)
@@ -352,6 +353,8 @@ export const EnviarMaterialView: React.FC<EnviarMaterialViewProps> = ({
           onAbrirComoEscreverQuestoes={onAbrirComoEscreverQuestoes}
         />
       )}
+
+      {modo === 'material' && envioDeMaterialDisponivel && <EnviarImagemDoMaterial />}
 
       {modo === 'material' && (
       <section aria-labelledby="enviar-material-form-titulo" className="space-y-4">

@@ -108,13 +108,24 @@ describe('como o claude é chamado', () => {
     expect(args.join(' ')).not.toMatch(/Bash|Edit|Write|Read|dangerously/);
   });
 
-  it('o prompt revisor de verdade cabe na linha de comando do Windows, com folga conhecida', () => {
+  it('o prompt revisor de verdade (com o padrão v3, bem mais longo) passa do limite da linha de comando do Windows e vai por --system-prompt-file, nunca truncado nem misturado à mensagem', () => {
     const sistema = montarSistema(BASE_DO_REVISOR);
-    const preparo = prepararChamada({ sistema, mensagem: 'x' }, { exe: 'C:/x/claude.exe', plataforma: 'win32' });
+    // P9: o padrão v3 trouxe a estrutura, as figuras e os blocos com função; o texto passou de 30 mil caracteres.
+    expect(sistema.length).toBeGreaterThan(LIMITE_DA_LINHA_DE_COMANDO);
+    // Sem arquivo para ele, a chamada falha fechada: o prompt nunca vai cortado.
+    const semArquivo = prepararChamada({ sistema, mensagem: 'x' }, { exe: 'C:/x/claude.exe', plataforma: 'win32' });
+    expect(semArquivo).toEqual({ ok: false, motivo: 'o prompt de sistema não cabe na linha de comando e não há arquivo para ele' });
+    // Com o arquivo (que `perguntarAoClaude` cria e apaga), o prompt inteiro vai nele e só a mensagem vai pela entrada.
+    const preparo = prepararChamada({ sistema, mensagem: 'x' }, { exe: 'C:/x/claude.exe', plataforma: 'win32', arquivoDoSistema: 'C:/tmp/sistema.txt' });
     if (!preparo.ok) throw new Error('esperava uma chamada pronta');
-    const { args, sistemaEmArquivo } = preparo;
-    expect(sistemaEmArquivo).toBeNull();
-    expect(tamanhoDaLinhaDeComando('C:/x/claude.exe', args)).toBeLessThanOrEqual(LIMITE_DA_LINHA_DE_COMANDO);
+    expect(preparo.sistemaEmArquivo).toEqual({ caminho: 'C:/tmp/sistema.txt', conteudo: sistema });
+    expect(preparo.entrada).toBe('x');
+    expect(preparo.args).not.toContain('--system-prompt');
+    expect(preparo.args[preparo.args.indexOf('--system-prompt-file') + 1]).toBe('C:/tmp/sistema.txt');
+    expect(tamanhoDaLinhaDeComando('C:/x/claude.exe', preparo.args)).toBeLessThanOrEqual(LIMITE_DA_LINHA_DE_COMANDO);
+    // Fora do Windows o limite é outro: continua como argumento, inteiro.
+    const linux = prepararChamada({ sistema, mensagem: 'x' }, { exe: 'claude', plataforma: 'linux' });
+    expect(linux.ok && linux.sistemaEmArquivo === null && linux.args.includes(sistema)).toBe(true);
   });
 
   it('prompt grande demais para a linha de comando do Windows vai por --system-prompt-file, nunca misturado à mensagem', () => {

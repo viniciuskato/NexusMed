@@ -81,7 +81,12 @@ async function colar(texto: string) {
   fireEvent.change(area, { target: { value: texto } });
 }
 
-const botaoEnviar = () => screen.getByRole('button', { name: /^Enviar/ }) as HTMLButtonElement;
+// P9: a tela também tem o botão "Enviar imagem"; o do envio do material é o `#btn-enviar-material`.
+const botaoEnviar = () => {
+  const botao = document.getElementById('btn-enviar-material');
+  if (!botao) throw new Error('botão "Enviar" do material não encontrado');
+  return botao as HTMLButtonElement;
+};
 
 beforeEach(() => {
   repo.listMine.mockReset().mockResolvedValue([]);

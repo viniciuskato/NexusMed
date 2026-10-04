@@ -1,5 +1,6 @@
 import type { Compendium, Discipline, Theme } from '../types';
 import { ALERT_LABEL, PEARL_LABEL, TAKEAWAYS_LABEL } from './compendiumMarkdownImport';
+import { VERSAO_ATUAL_DO_PADRAO } from './compendiumStandardCheck';
 
 // ============================================================================
 // Exportar um material como arquivo `.md` do padrão (44-B)
@@ -17,7 +18,7 @@ import { ALERT_LABEL, PEARL_LABEL, TAKEAWAYS_LABEL } from './compendiumMarkdownI
 // ============================================================================
 
 /** A versão do padrão de conteúdos que a linha de metadados declara. */
-export const VERSAO_DO_PADRAO = 2;
+export const VERSAO_DO_PADRAO = VERSAO_ATUAL_DO_PADRAO;
 
 export interface MaterialExportado {
   texto: string;
