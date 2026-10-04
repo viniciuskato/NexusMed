@@ -2,7 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig, loadEnv, type Plugin} from 'vite';
-import {assertSupabaseEnv, connectSrc} from './vite.seguranca';
+import {assertSupabaseEnv, connectSrc, imgSrc} from './vite.seguranca';
 
 // Content-Security-Policy injetada só no build (o dev server do Vite usa
 // script inline para o HMR). Como meta tag, vale também no `vite preview`
@@ -22,7 +22,7 @@ function contentSecurityPolicy(supabaseUrl: string | undefined): Plugin {
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https:",
+    `img-src ${imgSrc(supabaseUrl).join(' ')}`,
     `connect-src ${connect.join(' ')}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",

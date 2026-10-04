@@ -123,7 +123,18 @@ explicitamente se o import resolve ou não.
   material pela disciplina: no import, os materiais escolhidos em
   **"Materiais cobrados por este lote"** (busca e clique) valem para todas
   as questões do arquivo; sem escolha, a questão nasce **sem vínculo**
-  ("Sem material" na lista). Ajuste questão por questão pelo botão
+  ("Sem material" na lista). **Desde a P10 o arquivo também pode ligar cada
+  questão ao material e à SEÇÃO**: `**Materiais cobertos:** Título do material >
+  Título da seção; Outro material` (títulos exatos; sem o `> Seção`, o material
+  inteiro). O separador é o **último** ` > ` (com um espaço de cada lado) do item:
+  um material cujo título tem ` > ` só pode ser citado junto de uma seção
+  (`Eletrólitos > ácido-base > Sódio` é o material `Eletrólitos > ácido-base`, seção
+  `Sódio`), e um `>` colado (`A>B`) é parte do título; sem seção, deixe o campo
+  de fora e escolha o material no envio. No Admin, o que o arquivo cita vale para aquela questão, no lugar dos
+  materiais do lote; material ou seção que não se acha (ou que se repete) deixa a
+  linha **Bloqueada** com a frase do motivo. No envio pelo site e na publicação pelo
+  revisor ou pelo admin, seção inexistente recusa o lote inteiro, nunca vira palpite.
+  Ajuste questão por questão pelo botão
   **"Vínculo"** na listagem — ele só mexe nos materiais cobrados, nunca em
   enunciado, alternativas, gabarito ou status, e funciona também em questão
   publicada (o vínculo não entra no conteúdo atestado).
@@ -184,6 +195,8 @@ mesma linha ou nas linhas seguintes, como preferir):
 **Ano:** 2025
 **Ciclo:** internato_residencia (opcional — padrão internato_residencia; aceita basico/clinico/internato_residencia)
 **Dificuldade:** medio (opcional — padrão medio; aceita facil/medio/dificil)
+
+**Materiais cobertos:** Título do Material > Título da Seção (opcional; P10 — sem o "> Seção", a questão se liga ao material inteiro)
 
 **Enunciado Clínico (Caso / Vinheta):** (opcional)
 Texto da vinheta...
@@ -353,8 +366,11 @@ Revisão + Publicar.
 Igual ao Passo 4 de conteúdo: responder uma questão errada já cadastra
 ela no Caderno de Erros e gera o flashcard correspondente
 automaticamente, via a mesma chamada que registra a resposta
-(`submit_question_attempt`) — nenhuma ação manual sua, e nada neste
-passo precisa de documentação própria.
+(`submit_question_attempt`) — nenhuma ação manual sua. Desde a P10, se a
+questão está ligada a uma **seção** do material, o caderno de erros mostra o
+trecho dessa seção ao lado do erro (com "Abrir no material"), o flashcard do
+erro guarda a seção e, ao revisar o card, "Ver no material" abre o material
+nela.
 
 ---
 

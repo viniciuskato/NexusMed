@@ -1,5 +1,3 @@
-export type UserPlan = 'free' | 'premium';
-
 export type UserRole = 'student' | 'admin';
 
 export interface UserProfile {
@@ -8,7 +6,6 @@ export interface UserProfile {
   displayName: string | null;
   photoURL: string | null;
   role: UserRole;
-  plan: UserPlan;
   status?: 'active' | 'pending' | 'blocked';
   createdAt?: string;
   lastLoginAt?: string;
@@ -148,7 +145,6 @@ export interface Compendium {
    * (doi/pmid/url) — nunca inventada.
    */
   referenceSources?: { id?: string; linked: boolean; sourceId?: string; citationText?: string; url?: string; verificacao?: string }[];
-  isPremiumOnly?: boolean;
 }
 
 export interface QuestionOption {
@@ -204,7 +200,6 @@ export interface Question {
     back: string;
     mechanismNote: string;
   };
-  isPremiumOnly?: boolean;
 }
 
 export interface FlashcardSRS {
@@ -225,6 +220,11 @@ export interface Flashcard {
   disciplineId: string;
   themeId: string;
   compendiumRefId?: string;
+  /**
+   * P10: seção do material de onde o card veio (card de seção do leitor, ou card do erro de uma questão
+   * ligada a uma seção). A revisão abre o material nela. A questão de origem é `questionOriginId`.
+   */
+  compendiumSectionId?: string;
   questionOriginId?: string;
   derivedFromQuestionId?: string;
   front: string;

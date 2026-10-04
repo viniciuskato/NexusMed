@@ -1,5 +1,6 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient';
 import { fetchAllRows } from './supabasePaging';
+import type { MaterialParaPublicar } from '../utils/envioDeMaterial';
 
 // 44-E: envios de material. Acesso direto ao Supabase — sem o padrão
 // "Resilient" (AGENTS.md, risco 8): envio não é gravado local nem entra em
@@ -74,6 +75,25 @@ export interface SituacaoDaRevisao {
   mesEsgotado: boolean;
 }
 
+/** P8: o texto do envio e o hash dele, lidos juntos na hora de publicar (o banco recusa se o texto mudou no meio). */
+export interface TextoDoEnvio {
+  contentMd: string;
+  contentSha256: string;
+}
+
+/**
+ * P8: a resposta das funções que o admin chama para publicar um envio (`admin_publicar_envio`,
+ * `admin_aplicar_atualizacao`, `admin_publicar_questoes`): publicado | aplicado | sem_mudanca | ja_publicado |
+ * recusado (com `motivo`) | falhou | texto_mudou | texto_invalido | fora_de_estado (com `estado`).
+ */
+export interface ResultadoDaPublicacaoDoAdmin {
+  resultado: string;
+  motivo?: string;
+  estado?: string;
+  material_id?: string;
+  question_ids?: string[];
+}
+
 export interface MaterialSubmissionsRepository {
   /** Envios da própria pessoa, do mais novo para o mais antigo. */
   listMine(): Promise<MaterialSubmission[]>;
@@ -91,6 +111,12 @@ export interface MaterialSubmissionsRepository {
   /** Manda o mesmo texto de novo para revisão (envio "erro"). */
   retry(id: string, title: string): Promise<MaterialSubmission>;
   situacaoDaRevisao(): Promise<SituacaoDaRevisao | null>;
+  /** P8 (só admin): o texto do envio e o hash dele, para publicar. */
+  textoParaPublicar(id: string): Promise<TextoDoEnvio>;
+  /** P8 (só admin): cria o material do envio e o publica, com qualquer parecer do revisor. */
+  publicarComoAdmin(id: string, contentSha256: string, material: MaterialParaPublicar): Promise<ResultadoDaPublicacaoDoAdmin>;
+  /** P8 (só admin): troca o conteúdo do material publicado pelo do envio de atualização, com qualquer parecer do revisor. */
+  aplicarAtualizacaoComoAdmin(id: string, contentSha256: string, material: MaterialParaPublicar): Promise<ResultadoDaPublicacaoDoAdmin>;
 }
 
 interface AuthorRow {
@@ -316,6 +342,33 @@ class SupabaseMaterialSubmissionsRepository implements MaterialSubmissionsReposi
     if (!s) return null;
     return { usadasHoje: s.usadas_hoje ?? 0, limitePorDia: s.limite_por_dia ?? 0, mesEsgotado: Boolean(s.mes_esgotado) };
   }
+
+  async textoParaPublicar(id: string): Promise<TextoDoEnvio> {
+    const { data, error } = await supabase.from('material_submissions').select('content_md, content_sha256').eq('id', id).single();
+    if (error) throw error;
+    const linha = data as { content_md: string; content_sha256: string };
+    return { contentMd: linha.content_md, contentSha256: linha.content_sha256 };
+  }
+
+  async publicarComoAdmin(id: string, contentSha256: string, material: MaterialParaPublicar): Promise<ResultadoDaPublicacaoDoAdmin> {
+    const { data, error } = await supabase.rpc('admin_publicar_envio', {
+      p_submission_id: id,
+      p_content_sha256: contentSha256,
+      p_material: material,
+    });
+    if (error) throw error;
+    return data as ResultadoDaPublicacaoDoAdmin;
+  }
+
+  async aplicarAtualizacaoComoAdmin(id: string, contentSha256: string, material: MaterialParaPublicar): Promise<ResultadoDaPublicacaoDoAdmin> {
+    const { data, error } = await supabase.rpc('admin_aplicar_atualizacao', {
+      p_submission_id: id,
+      p_content_sha256: contentSha256,
+      p_material: material,
+    });
+    if (error) throw error;
+    return data as ResultadoDaPublicacaoDoAdmin;
+  }
 }
 
 // Sem Supabase configurado (modo local de demonstração) não há onde guardar o
@@ -347,6 +400,15 @@ class UnavailableMaterialSubmissionsRepository implements MaterialSubmissionsRep
   }
   async situacaoDaRevisao(): Promise<SituacaoDaRevisao | null> {
     return null;
+  }
+  async textoParaPublicar(): Promise<TextoDoEnvio> {
+    throw new Error('Envio de material indisponível sem o servidor.');
+  }
+  async publicarComoAdmin(): Promise<ResultadoDaPublicacaoDoAdmin> {
+    throw new Error('Envio de material indisponível sem o servidor.');
+  }
+  async aplicarAtualizacaoComoAdmin(): Promise<ResultadoDaPublicacaoDoAdmin> {
+    throw new Error('Envio de material indisponível sem o servidor.');
   }
 }
 

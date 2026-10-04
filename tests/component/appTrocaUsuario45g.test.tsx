@@ -116,8 +116,6 @@ const legacySummaryByUser: Record<string, { hasLegacyData: boolean }> = {
 vi.mock('../../src/services/storage', () => ({
   StorageService: {
     getTheme: () => 'light',
-    getUserPlan: () => 'free',
-    setUserPlan: vi.fn(),
     getLastReadingSession: () => lastReadingSessionByUser[authState.user?.id ?? ''] ?? null,
     saveLastReadingSession: vi.fn(),
     checkLegacyDataSummary: (uid: string) =>

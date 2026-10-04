@@ -11,11 +11,16 @@
 //   --claude <exe>        caminho do claude.exe (ou variável REVISOR_CLAUDE; senão, acha sozinho)
 //   --dados <pasta>       onde ficam o registro, a trava e o contador (padrão: %LOCALAPPDATA%\NexusMedRevisor)
 //   --timeout-min <n>     tempo máximo de cada revisão do claude (padrão 12)
+//
+// Só roda se o checkout estiver na `main` e igual à `origin/main` do GitHub (P8, `checkout.ts`): código que não
+// está na main nunca escreve no banco. Fora disso a rodada registra o motivo e sai com código 1, sem tocar o banco.
+// P9: se a guarda atualizou a main (pull), a rodada em curso encerra (código novo só na próxima) e sai com código 0.
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { executorViaCli, type Alvo } from './banco-cli.ts';
+import { conferirCheckout, type ResultadoDaGuarda } from './checkout.ts';
 import { contadorEmArquivo, localizarClaude, perguntarAoClaude } from './claude.ts';
 import { registroEmArquivo } from './log.ts';
 import { executarRodada, type ResumoDaRodada } from './rodada.ts';
@@ -52,7 +57,13 @@ export function lerOpcoes(argv: string[], env: NodeJS.ProcessEnv = process.env):
   };
 }
 
-export async function executarCli(argv: string[], env: NodeJS.ProcessEnv = process.env): Promise<number> {
+/** Só os testes trocam: a pasta do repositório que a guarda confere e a própria guarda. */
+export interface DepsDaCli {
+  raiz?: string;
+  conferirCheckout?: (pasta: string) => Promise<ResultadoDaGuarda>;
+}
+
+export async function executarCli(argv: string[], env: NodeJS.ProcessEnv = process.env, deps: DepsDaCli = {}): Promise<number> {
   const o = lerOpcoes(argv, env);
   const registrar = registroEmArquivo(path.join(o.dados, 'revisor.log'));
 
@@ -62,6 +73,12 @@ export async function executarCli(argv: string[], env: NodeJS.ProcessEnv = proce
     return 0;
   }
   try {
+    const guarda = await (deps.conferirCheckout ?? conferirCheckout)(deps.raiz ?? RAIZ_DO_REPOSITORIO);
+    if (!guarda.ok) {
+      registrar(`rodada não feita, o banco não foi tocado: ${guarda.motivo}`);
+      // Main que acabou de ser atualizada não é erro: a próxima rodada já roda com o código novo.
+      return guarda.normal ? 0 : 1;
+    }
     const resumo: ResumoDaRodada = await executarRodada({
       exec: executorViaCli({ alvo: o.alvo, supabase: o.supabase, projeto: o.projeto }),
       perguntar: perguntarAoClaude(

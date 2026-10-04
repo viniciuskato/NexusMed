@@ -2,7 +2,11 @@ import { Flashcard, FlashcardSRS, Question, QuestionReviewResult } from '../type
 import { StorageService, getStorageUser } from '../services/storage';
 import { SupabaseFlashcardsRepository } from './SupabaseFlashcardsRepository';
 import { enqueue, enqueueAndTry } from '../services/syncQueue';
-import { FlashcardCreateFromQuestionOpPayload, FlashcardReviewOpPayload } from '../services/syncHandlers';
+import {
+  FlashcardCreateFromQuestionOpPayload,
+  FlashcardCreateFromSectionOpPayload,
+  FlashcardReviewOpPayload,
+} from '../services/syncHandlers';
 
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { questionsRepository } from './QuestionsRepository';
@@ -43,6 +47,11 @@ export interface FlashcardsRepository {
    * não vêm na questão carregada, e saem da revisão pós-resposta (`review`, ou buscada aqui quando falta).
    */
   createFlashcardFromQuestion(question: Question, review?: QuestionReviewResult): Promise<Flashcard>;
+  /**
+   * P10: cria o card de uma seção do material (o do leitor). Um por usuário e seção: se já existe um (neste
+   * aparelho ou, ao sincronizar, no servidor), devolve esse com `created: false` e não cria outro.
+   */
+  createFlashcardFromSection(card: Flashcard): Promise<{ card: Flashcard; created: boolean }>;
   reviewFlashcard(card: Flashcard, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null>;
 }
 
@@ -67,6 +76,9 @@ class LocalStorageFlashcardsRepository implements FlashcardsRepository {
   }
   async createFlashcardFromQuestion(question: Question, review?: QuestionReviewResult): Promise<Flashcard> {
     return StorageService.createFlashcardFromQuestion(question, review);
+  }
+  async createFlashcardFromSection(card: Flashcard): Promise<{ card: Flashcard; created: boolean }> {
+    return StorageService.createFlashcardFromSection(card);
   }
   async reviewFlashcard(card: Flashcard, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null> {
     return StorageService.reviewFlashcard(card.id, rating);
@@ -148,6 +160,20 @@ class ResilientFlashcardsRepository implements FlashcardsRepository {
       enqueue(userId, 'flashcard_create_from_question', payload, localRes.id);
     }
     return localRes;
+  }
+
+  async createFlashcardFromSection(card: Flashcard): Promise<{ card: Flashcard; created: boolean }> {
+    // Local primeiro (um card por seção no aparelho); depois a fila, que cria no servidor pela RPC atômica:
+    // se o servidor já tem o card da seção (outro aparelho, outra aba), converge para ele, sem duplicar.
+    const local = await this.local.createFlashcardFromSection(card);
+    if (!local.created) return local;
+    const userId = getStorageUser();
+    if (isSupabaseConfigured && userId) {
+      const payload: FlashcardCreateFromSectionOpPayload = { flashcard: local.card };
+      const canonical = (await enqueueAndTry(userId, 'flashcard_create_from_section', payload, local.card.id)) as Flashcard | null;
+      if (canonical && canonical.id !== local.card.id) return { card: canonical, created: false };
+    }
+    return local;
   }
 
   async reviewFlashcard(card: Flashcard, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null> {

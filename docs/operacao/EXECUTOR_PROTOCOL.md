@@ -63,7 +63,7 @@ publicados, ou uma regra de segurança escrita (riscos numerados do
 `AGENTS.md` — risco novo, só depois do "sim" do dono —, regras de segurança
 dos protocolos). Princípio do plano, "a plataforma vai ganhar" do padrão e
 decisão cujo mecanismo está numa unidade congelada não valem. Evolução
-(seção 5 do plano) não é defeito: tela ou fluxo novo, "funciona, mas
+(`DECISIONS.md`, D-7 item 3) não é defeito: tela ou fluxo novo, "funciona, mas
 ficaria melhor", refatoração, desempenho sem sintoma medido, dependência
 major sem falha, teste que falta sem defeito.
 

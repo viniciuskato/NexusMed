@@ -6,8 +6,8 @@
 // gravada em disco. Todo acesso ao banco é do programa, nunca do modelo.
 import { execFile, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import type { ApiDeLotes, MensagemDaApi, ResultadoDoLote } from '../../supabase/functions/revisar-envios/ciclo.ts';
 import { ESFORCO, type PedidoDeLote } from '../../supabase/functions/revisar-envios/montagem.ts';
@@ -70,6 +70,8 @@ export interface OpcoesDoClaude {
   argsIniciais?: string[];
   /** Só os testes trocam (a regra do limite da linha de comando é do Windows). */
   plataforma?: string;
+  /** Onde gravar, por um instante, o prompt de sistema que não cabe na linha de comando (padrão: a pasta temporária do sistema). */
+  pastaTemporaria?: string;
 }
 
 export interface Pergunta {
@@ -90,14 +92,27 @@ export function tamanhoDaLinhaDeComando(exe: string, args: string[]): number {
   return quota(exe) + args.reduce((soma, a) => soma + quota(a), 0);
 }
 
-export interface PreparoDaChamada {
-  args: string[];
-  /** O que vai à entrada padrão: a mensagem do pedido (e, se o prompt de sistema não cabe na linha de comando, ele antes). */
-  entrada: string;
-  sistemaNaEntrada: boolean;
-}
+export type PreparoDaChamada =
+  | {
+      ok: true;
+      args: string[];
+      /** O que vai à entrada padrão: só a mensagem do pedido (o material). As instruções nunca vão aqui. */
+      entrada: string;
+      /** Prompt de sistema grande demais para a linha de comando: quem chama o grava em `caminho` antes de rodar e o apaga depois. */
+      sistemaEmArquivo: { caminho: string; conteudo: string } | null;
+    }
+  | { ok: false; motivo: string };
 
-export function prepararChamada(p: Pergunta, o: Pick<OpcoesDoClaude, 'exe' | 'web' | 'argsIniciais' | 'plataforma'>): PreparoDaChamada {
+/**
+ * Prompt de sistema pelo argumento `--system-prompt` quando cabe na linha de comando; senão, por `--system-prompt-file`
+ * (a `claude` 2.1.288 o aceita: o `--help` o cita, "--system-prompt[-file]", e ele recusa arquivo que não existe). Nunca
+ * junta as instruções ao texto da mensagem, que traz o material do envio: se não houver como passar o arquivo
+ * (`arquivoDoSistema` ausente), a chamada FALHA FECHADA e o claude não é executado.
+ */
+export function prepararChamada(
+  p: Pergunta,
+  o: Pick<OpcoesDoClaude, 'exe' | 'web' | 'argsIniciais' | 'plataforma'> & { arquivoDoSistema?: string },
+): PreparoDaChamada {
   const base = [
     ...(o.argsIniciais ?? []),
     '-p',
@@ -114,13 +129,16 @@ export function prepararChamada(p: Pergunta, o: Pick<OpcoesDoClaude, 'exe' | 'we
   const ferramentas = o.web ? ['--tools', 'WebSearch,WebFetch', '--allowedTools', 'WebSearch,WebFetch'] : ['--tools', ''];
   const comSistema = [...base, ...ferramentas, '--system-prompt', p.sistema];
   if ((o.plataforma ?? process.platform) !== 'win32' || tamanhoDaLinhaDeComando(o.exe, comSistema) <= LIMITE_DA_LINHA_DE_COMANDO) {
-    return { args: comSistema, entrada: p.mensagem, sistemaNaEntrada: false };
+    return { ok: true, args: comSistema, entrada: p.mensagem, sistemaEmArquivo: null };
   }
-  // Não cabe na linha de comando do Windows: as instruções vão na frente da mensagem, pela entrada padrão.
+  if (!o.arquivoDoSistema) {
+    return { ok: false, motivo: 'o prompt de sistema não cabe na linha de comando e não há arquivo para ele' };
+  }
   return {
-    args: [...base, ...ferramentas],
-    entrada: `${p.sistema}\n\n${p.mensagem}`,
-    sistemaNaEntrada: true,
+    ok: true,
+    args: [...base, ...ferramentas, '--system-prompt-file', o.arquivoDoSistema],
+    entrada: p.mensagem,
+    sistemaEmArquivo: { caminho: o.arquivoDoSistema, conteudo: p.sistema },
   };
 }
 
@@ -229,7 +247,31 @@ export function perguntarAoClaude(o: OpcoesDoClaude, env: NodeJS.ProcessEnv = pr
   return (p) =>
     new Promise<RespostaDoClaude>((resolve) => {
       mkdirSync(o.pastaNeutra, { recursive: true });
-      const preparo = prepararChamada(p, o);
+      // Pasta própria e temporária para o prompt de sistema, só se ele não couber na linha de comando (fora da pasta neutra).
+      let pastaDoSistema: string | null = null;
+      const limparSistema = () => {
+        if (pastaDoSistema) rmSync(pastaDoSistema, { recursive: true, force: true });
+      };
+      let preparo = prepararChamada(p, o);
+      if (!preparo.ok) {
+        try {
+          pastaDoSistema = mkdtempSync(path.join(o.pastaTemporaria ?? tmpdir(), 'revisor-sistema-'));
+          preparo = prepararChamada(p, { ...o, arquivoDoSistema: path.join(pastaDoSistema, 'sistema.txt') });
+          if (preparo.ok && preparo.sistemaEmArquivo) {
+            writeFileSync(preparo.sistemaEmArquivo.caminho, preparo.sistemaEmArquivo.conteudo, { encoding: 'utf8', mode: 0o600 });
+          }
+        } catch (e) {
+          limparSistema();
+          resolve({ ok: false, tipo: 'processo', detalhe: `prompt de sistema sem arquivo: ${primeiraLinhaCurta(e instanceof Error ? e.message : String(e))}` });
+          return;
+        }
+      }
+      if (!preparo.ok) {
+        limparSistema();
+        resolve({ ok: false, tipo: 'processo', detalhe: preparo.motivo });
+        return;
+      }
+      const chamada = preparo;
       let saida = '';
       let pronto = false;
       const prazo: { id?: NodeJS.Timeout } = {};
@@ -237,17 +279,19 @@ export function perguntarAoClaude(o: OpcoesDoClaude, env: NodeJS.ProcessEnv = pr
         if (pronto) return;
         pronto = true;
         clearTimeout(prazo.id);
+        limparSistema();
         resolve(r);
       };
       let filho: ReturnType<typeof spawn>;
       try {
-        filho = spawn(o.exe, preparo.args, {
+        filho = spawn(o.exe, chamada.args, {
           cwd: o.pastaNeutra,
           env: ambienteDoClaude(env),
           windowsHide: true,
           stdio: ['pipe', 'pipe', 'pipe'],
         });
       } catch (e) {
+        limparSistema();
         resolve({ ok: false, tipo: 'processo', detalhe: `não iniciou: ${primeiraLinhaCurta(e instanceof Error ? e.message : String(e))}` });
         return;
       }
@@ -264,7 +308,7 @@ export function perguntarAoClaude(o: OpcoesDoClaude, env: NodeJS.ProcessEnv = pr
       filho.on('error', (e) => terminar({ ok: false, tipo: 'processo', detalhe: `não iniciou: ${primeiraLinhaCurta(e.message)}` }));
       filho.on('close', (codigo) => terminar(lerSaidaDoClaude(saida, codigo)));
       filho.stdin?.on('error', () => undefined);
-      filho.stdin?.end(preparo.entrada, 'utf8');
+      filho.stdin?.end(chamada.entrada, 'utf8');
     });
 }
 

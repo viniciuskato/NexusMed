@@ -5,6 +5,7 @@ import {
   comentarioTemFonteOnLine,
   ehAutoralExata,
   lerLoteDeQuestoes,
+  lerQuestoesParaPublicar,
   mencionaAutoral,
   motivosDaRecusaDoLote,
   nomeSugeridoDoLote,
@@ -224,5 +225,125 @@ describe('44-H1 — estados e mensagens do envio de questões', () => {
     expect(mensagemDeErroDoEnvio({ code: 'P0001', message: 'os materiais escolhidos precisam estar publicados' })).toBe(
       'Um dos materiais escolhidos não está mais publicado. Escolha outro.',
     );
+  });
+});
+
+// P10 — a questão se liga à SEÇÃO do material: "Título do material > Título da seção".
+describe('P10 — o importador lê a seção do material', () => {
+  const leitura = (materiais: string | null) => {
+    const r = parseQuestionsMarkdownText(questao(1, { materiais }), DISCIPLINAS, TEMAS);
+    if (!r.ok) throw new Error('importador recusou');
+    return r.rows[0];
+  };
+
+  it('"Material > Seção" vira o material e a seção; sem ">" a seção fica ausente (arquivo antigo)', () => {
+    const l = leitura('Espirometria: como interpretar > Padrão obstrutivo; DPOC');
+    expect(l.materialLinks).toEqual([
+      { title: 'Espirometria: como interpretar', sectionTitle: 'Padrão obstrutivo' },
+      { title: 'DPOC', sectionTitle: null },
+    ]);
+    expect(l.materialTitles).toEqual(['Espirometria: como interpretar', 'DPOC']);
+    expect(l.blockingErrors).toEqual([]);
+  });
+
+  it('arquivo antigo (só títulos) continua igual: materialLinks sem seção e materialTitles intactos', () => {
+    const l = leitura('A ;  B; A');
+    expect(l.materialTitles).toEqual(['A', 'B']);
+    expect(l.materialLinks).toEqual([
+      { title: 'A', sectionTitle: null },
+      { title: 'B', sectionTitle: null },
+    ]);
+  });
+
+  it('o mesmo material com duas seções diferentes é erro claro; repetir igual não é', () => {
+    expect(leitura('A > Uma; A > Outra').blockingErrors.join(' ')).toContain('mais de uma seção');
+    expect(leitura('A > Uma; A > Uma').blockingErrors).toEqual([]);
+    expect(leitura('A; A > Uma').materialLinks).toEqual([{ title: 'A', sectionTitle: 'Uma' }]);
+  });
+
+  it('seção vazia depois do ">" é ignorada como "sem seção"', () => {
+    expect(leitura('A >').materialLinks).toEqual([{ title: 'A', sectionTitle: null }]);
+  });
+
+  it('P12a: título de material com " > " — o ÚLTIMO " > " (com espaços) é o separador da seção', () => {
+    expect(leitura('Eletrólitos > ácido-base > Sódio').materialLinks).toEqual([
+      { title: 'Eletrólitos > ácido-base', sectionTitle: 'Sódio' },
+    ]);
+    expect(leitura('A > B > C > D; DPOC').materialLinks).toEqual([
+      { title: 'A > B > C', sectionTitle: 'D' },
+      { title: 'DPOC', sectionTitle: null },
+    ]);
+  });
+
+  it('P12a: ">" sem espaços dos dois lados não separa nada (é parte do título)', () => {
+    expect(leitura('A>B').materialLinks).toEqual([{ title: 'A>B', sectionTitle: null }]);
+    expect(leitura('A>B > Seção').materialLinks).toEqual([{ title: 'A>B', sectionTitle: 'Seção' }]);
+  });
+});
+
+describe('P10 — a checagem do envio confere a seção contra o material publicado', () => {
+  const PUBLICADOS_COM_SECOES = [
+    {
+      id: 'm1',
+      title: 'Espirometria: como interpretar',
+      sections: [
+        { id: 's1', title: 'Padrão obstrutivo' },
+        { id: 's2', title: 'Padrão restritivo' },
+        { id: 's3', title: 'Repetida' },
+        { id: 's4', title: 'repetida' },
+      ],
+    },
+    { id: 'm2', title: 'DPOC', sections: [] },
+  ];
+  const pend = (materiais: string) =>
+    avaliarLote(lerLoteDeQuestoes(questao(1, { materiais }), DISCIPLINAS, TEMAS), PUBLICADOS_COM_SECOES, []).pendencias.map((p) => p.mensagem);
+
+  it('seção que existe no material: sem pendência (ignora acento, caixa e espaços repetidos)', () => {
+    expect(pend('Espirometria: como interpretar > Padrão obstrutivo')).toEqual([]);
+    expect(pend('Espirometria: como interpretar >  padrao   OBSTRUTIVO')).toEqual([]);
+  });
+
+  it('seção inexistente: pendência clara com o material e a seção', () => {
+    const m = pend('Espirometria: como interpretar > Padrão misto');
+    expect(m).toHaveLength(1);
+    expect(m[0]).toContain('“Padrão misto”');
+    expect(m[0]).toContain('“Espirometria: como interpretar”');
+    expect(m[0]).toContain('não existe');
+  });
+
+  it('seção com título repetido no material: pendência de ambiguidade', () => {
+    expect(pend('Espirometria: como interpretar > Repetida').join(' ')).toContain('mais de uma seção');
+  });
+
+  it('material sem seção pedida continua valendo; material sem a lista de seções não confere a seção', () => {
+    expect(pend('DPOC')).toEqual([]);
+    const semLista = avaliarLote(
+      lerLoteDeQuestoes(questao(1, { materiais: 'DPOC > Qualquer' }), DISCIPLINAS, TEMAS),
+      [{ id: 'm2', title: 'DPOC' }],
+      [],
+    );
+    expect(semLista.pendencias).toEqual([]);
+  });
+
+  it('P12a: material com " > " no título é achado pelo título inteiro, e a seção, pelo último " > "', () => {
+    const publicados = [{ id: 'm9', title: 'Eletrólitos > ácido-base', sections: [{ id: 's9', title: 'Sódio' }] }];
+    const avaliar = (materiais: string) =>
+      avaliarLote(lerLoteDeQuestoes(questao(1, { materiais }), DISCIPLINAS, TEMAS), publicados, []).pendencias.map((p) => p.mensagem);
+    expect(avaliar('Eletrólitos > ácido-base > Sódio')).toEqual([]);
+    const inexistente = avaliar('Eletrólitos > ácido-base > Potássio');
+    expect(inexistente).toHaveLength(1);
+    expect(inexistente[0]).toContain('“Potássio”');
+    expect(inexistente[0]).toContain('“Eletrólitos > ácido-base”');
+  });
+
+  it('o servidor recebe o título e a seção de cada ligação (material_links) além dos títulos', () => {
+    const r = lerQuestoesParaPublicar(questao(1, { materiais: 'DPOC > Uma; Outro' }), DISCIPLINAS, TEMAS);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.questoes[0].material_titles).toEqual(['DPOC', 'Outro']);
+    expect(r.questoes[0].material_links).toEqual([
+      { title: 'DPOC', section_title: 'Uma' },
+      { title: 'Outro', section_title: null },
+    ]);
   });
 });

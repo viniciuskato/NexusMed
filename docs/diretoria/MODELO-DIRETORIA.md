@@ -136,7 +136,7 @@ mesmo código duas vezes; o que uma entendia se perdia na passagem; e o
 trabalho de um modelo mais barato voltava para ser refeito.
 
 - **Trilha** — sessão de vida longa, com o modelo mais capaz disponível,
-  dona de uma área do código (a seção 5 do plano diz quais e em que ordem).
+  dona de uma área do código (a divisão por trilhas é anterior à D-7: `DECISIONS.md`, D-6 e D-7).
   Desenha e implementa, uma unidade por PR; o contexto de uma unidade serve
   à próxima. Quando uma escolha muda o que o usuário vê ou contradiz uma
   decisão registrada, pergunta ao dono na própria sessão, sem passar por uma

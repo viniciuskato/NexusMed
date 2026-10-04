@@ -88,6 +88,24 @@ describe('44-H1 — página "Como escrever questões"', () => {
     expect(within(lista).getByText('Sem materiais')).toBeTruthy();
   });
 
+  it('P10: cada material mostra os títulos exatos das suas seções, para ligar a questão ao trecho ("Material > Seção")', () => {
+    const comSecoes = [
+      {
+        ...material('m1', 'd-farma', 'Penicilinas', 'published'),
+        sections: [
+          { id: 's1', title: 'Espectro de ação', content: 'x', keyTakeaways: [] },
+          { id: 's2', title: 'Resistência', content: 'y', keyTakeaways: [] },
+        ],
+      },
+    ] as unknown as Compendium[];
+    const { container } = render(<ComoEscreverQuestoesView disciplines={disciplinas} themes={temas} compendiums={comSecoes} />);
+    const lista = container.querySelector('#como-escrever-questoes-materiais-lista') as HTMLElement;
+    expect(within(lista).getByText('Seções (2)')).toBeTruthy();
+    const secoes = Array.from(lista.querySelectorAll('details details li')).map((li) => li.textContent);
+    expect(secoes).toEqual(['Espectro de ação', 'Resistência']);
+    expect(container.textContent).toContain('o sinal “>” e o título exato da seção');
+  });
+
   it('lista os títulos exatos dos materiais PUBLICADOS por Disciplina (rascunho não aparece; disciplina sem material some)', () => {
     const { container } = renderPagina();
     const lista = container.querySelector('#como-escrever-questoes-materiais-lista') as HTMLElement;

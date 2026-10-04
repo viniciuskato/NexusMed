@@ -4,7 +4,7 @@
 //
 // Quem decide a resposta: a variável FAKE_CLAUDE_MODO (apto, nao_apto, cota, falha, dorme, sem_json)
 // ou, se a entrada trouxer uma destas marcas, ela vale mais: MARCA-NAO-APTO, MARCA-COTA, MARCA-DORME.
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import process from 'node:process';
 import { setTimeout } from 'node:timers';
 
@@ -15,11 +15,21 @@ process.stdin.on('data', (parte) => {
 });
 process.stdin.on('end', () => {
   const registro = process.env.FAKE_CLAUDE_REGISTRO;
+  // Se o prompt de sistema veio por arquivo, lê o arquivo AGORA (no momento em que o claude de verdade o leria).
+  const args = process.argv.slice(2);
+  const i = args.indexOf('--system-prompt-file');
+  let sistemaDoArquivo = null;
+  if (i >= 0 && existsSync(args[i + 1])) {
+    const texto = readFileSync(args[i + 1], 'utf8');
+    sistemaDoArquivo = { tamanho: texto.length, comecaCom: texto.slice(0, 10) };
+  }
   if (registro) {
     appendFileSync(
       registro,
       `${JSON.stringify({
-        args: process.argv.slice(2),
+        args,
+        sistemaDoArquivo,
+        entradaTemInstrucoes: entrada.includes('INSTRUCOES'),
         tamanhoDaEntrada: entrada.length,
         entradaTemFronteira: /=== IN[ÍI]CIO DO (MATERIAL|LOTE DE QUESTÕES) /.test(entrada),
         temChaveDaApi: Boolean(process.env.ANTHROPIC_API_KEY),

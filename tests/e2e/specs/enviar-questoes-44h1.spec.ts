@@ -203,7 +203,7 @@ test.describe('Como escrever e enviar questões (44-H1)', () => {
     await expect(paginaB.locator('body')).not.toContainText(tituloA);
 
     // O admin de verdade (44-H2): abre a aba de envios da Área Editorial e vê os lotes dos dois, marcados como
-    // envio de questões, sem nenhum botão de ação.
+    // envio de questões, e só o botão "Publicar" como ação (P8).
     const contextoAdmin = await browser.newContext();
     cleanup.push(() => contextoAdmin.close());
     const paginaAdmin = await contextoAdmin.newPage();
@@ -213,7 +213,7 @@ test.describe('Como escrever e enviar questões (44-H1)', () => {
     await expect(listaAdmin).toContainText(tituloA);
     await expect(listaAdmin).toContainText(tituloB);
     await expect(listaAdmin.locator('li[data-tipo="questoes"]')).toHaveCount(2);
-    await expect(listaAdmin.locator('button')).toHaveCount(0);
+    await expect(listaAdmin.locator('button:not([data-testid="publicar-envio"])')).toHaveCount(0);
   });
 
   test('lote no limite: 3 esperando revisão (fila única de material e questões), o envio fica travado com a explicação', async ({ page }) => {

@@ -2471,6 +2471,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
         <EnviosDeMaterialAdmin
           disciplines={disciplines}
           themes={themes}
+          onConteudoPublicado={() => void onRefreshData()}
           onAbrirMaterial={async (materialId) => {
             // O servidor publicou fora desta sessão: a lista carregada ainda não tem o material.
             if (!compendiums.some((c) => c.id === materialId)) await onRefreshData();

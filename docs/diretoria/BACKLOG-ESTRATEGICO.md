@@ -46,7 +46,7 @@ e ficam como histórico (mesma lógica de preservação já usada em
 > 2026-09-23: nenhum achado aberto foi corrigido desde a 3ª rodada.
 >
 > **Desde a D-7 (28/09):** item daqui só vira issue se passar pela fronteira
-> defeito × evolução (seção 5 do plano), ou vira pedido da produção com o
+> defeito × evolução (`DECISIONS.md`, D-7 item 3), ou vira pedido da produção com o
 > "sim" do dono; a diretoria não puxa item por conta própria, e o estado
 > aqui é atualizado por ela, em lote, no PR do "semana".
 
