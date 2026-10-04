@@ -206,14 +206,14 @@ $$;
 -- 45-H: função nova não nasce executável por PUBLIC; os helpers rodam como service_role/authenticated.
 grant execute on all functions in schema tests to public;
 
-select plan(191);
+select plan(197);
 
 select tests.clear_auth();
 select tests.create_user('h2.admin@test.local', 'admin', 'active') as v_admin \gset
-select tests.create_user('h2.autor@test.local', 'student', 'active') as v_autor \gset
+select tests.create_user('h2.autor@test.local', 'admin', 'active') as v_autor \gset
 select tests.create_user('h2.aluno@test.local', 'student', 'active') as v_aluno \gset
 select tests.create_user('h2.pend@test.local', 'student', 'pending') as v_pend \gset
-select tests.create_user('h2.dia@test.local', 'student', 'active') as v_dia \gset
+select tests.create_user('h2.dia@test.local', 'admin', 'active') as v_dia \gset
 select substr(gen_random_uuid()::text, 1, 8) as v_sfx \gset
 
 insert into public.disciplines (name, code, cycle) values ('Disciplina 44H2', 'H2-' || :'v_sfx', 'clinico') returning id as v_disc \gset
@@ -278,7 +278,7 @@ select ok(
 -- ---------------------------------------------------------------------------
 -- 2. Revisão: os dois tipos na mesma reserva, com os mesmos limites
 -- ---------------------------------------------------------------------------
-select tests.create_user('h2.rev@test.local', 'student', 'active') as v_rev \gset
+select tests.create_user('h2.rev@test.local', 'admin', 'active') as v_rev \gset
 insert into public.question_submissions (author_id, title, content_md, material_ids)
 values (:'v_rev', 'Lote para revisar', '## Questão 1', array[:'v_m2']::uuid[]) returning id as v_qs1 \gset
 insert into public.material_submissions (author_id, title, discipline_id, theme_id, content_md)
@@ -349,7 +349,7 @@ select is(app.revisao_apto_do_envio_de_questoes(:'v_qs2'::uuid), null::uuid, 'e 
 -- "Não apto" e "erro" (falha fechada).
 insert into public.question_submissions (author_id, title, content_md) values (:'v_rev', 'Lote não apto', '## Questão 1') returning id as v_qs3 \gset
 -- A fila é de 3 por pessoa (material e questões somados): o quarto envio é de outra pessoa.
-select tests.create_user('h2.rev2@test.local', 'student', 'active') as v_rev2 \gset
+select tests.create_user('h2.rev2@test.local', 'admin', 'active') as v_rev2 \gset
 insert into public.question_submissions (author_id, title, content_md) values (:'v_rev2', 'Lote erro', '## Questão 1') returning id as v_qs4 \gset
 select tests.authenticate_as_service();
 select count(*) from public.revisao_reservar_envios(1000) where submission_id in (:'v_qs3', :'v_qs4') \gset
@@ -416,6 +416,24 @@ select app.reviews_used_this_month() as v_usado_mes \gset
 update public.review_settings set monthly_review_cap = :v_usado_mes;
 select tests.authenticate_as_service();
 select is((select count(*)::int from public.revisao_reservar_envios(1000) where submission_id = :'v_qmes'), 0, 'com o teto mensal atingido, o envio de questões espera');
+select tests.clear_auth();
+update public.review_settings set monthly_review_cap = 100000;
+
+-- P7: o admin (o dono, que é quem envia) não é barrado pelos tetos do dia e do mês; os demais continuam.
+select tests.create_user('h2.dono@test.local', 'admin', 'active') as v_dono \gset
+update public.review_settings set daily_review_cap_per_user = 1;
+insert into public.question_submissions (author_id, title, content_md) values (:'v_dono', 'Lote do dono 1', '## Questão 1') returning id as v_qd1 \gset
+insert into public.material_submissions (author_id, title, discipline_id, theme_id, content_md)
+values (:'v_dono', 'Material do dono', :'v_disc', :'v_theme', '# m') returning id as v_md1 \gset
+select tests.authenticate_as_service();
+select is((select count(*)::int from public.revisao_reservar_envios(1000) where submission_id in (:'v_qd1', :'v_md1')), 2, 'P7: com o teto diário de 1, o admin não é barrado: os dois envios dele são reservados para revisão');
+select tests.clear_auth();
+update public.review_settings set daily_review_cap_per_user = 50;
+insert into public.question_submissions (author_id, title, content_md) values (:'v_dono', 'Lote do dono mês', '## Questão 1') returning id as v_qd2 \gset
+select app.reviews_used_this_month() as v_usado_mes2 \gset
+update public.review_settings set monthly_review_cap = :v_usado_mes2;
+select tests.authenticate_as_service();
+select is((select count(*)::int from public.revisao_reservar_envios(1000) where submission_id = :'v_qd2'), 1, 'P7: com o teto mensal atingido, o envio do admin ainda é revisado');
 select tests.clear_auth();
 update public.review_settings set monthly_review_cap = 100000;
 
@@ -668,7 +686,7 @@ select is(app.envio_de_questoes_tem_revisao_apto_do_autor(:'v_e_r4'::uuid, array
 select tests.clear_auth();
 
 -- Materiais escolhidos: sem NULL e sem repetição, no banco (uma pessoa sem envios esperando: a fila não atrapalha).
-select tests.create_user('h2.autor4@test.local', 'student', 'active') as v_autor4 \gset
+select tests.create_user('h2.autor4@test.local', 'admin', 'active') as v_autor4 \gset
 select tests.authenticate_as(:'v_autor4');
 select throws_ok(
   format($$ insert into public.question_submissions (title, content_md, material_ids) values ('Repetido', '## Questão 1', array[%L, %L]::uuid[]) $$, :'v_m1', :'v_m1'),
@@ -683,7 +701,7 @@ select tests.clear_auth();
 -- ---------------------------------------------------------------------------
 -- 4b. A revisão vale para o texto E para o LUGAR (o conjunto de materiais), como na 44-G3
 -- ---------------------------------------------------------------------------
-select tests.create_user('h2.autor3@test.local', 'student', 'active') as v_autor3 \gset
+select tests.create_user('h2.autor3@test.local', 'admin', 'active') as v_autor3 \gset
 
 -- A revisão guarda os materiais que a IA recebeu, gravados pelo banco na reserva.
 insert into public.question_submissions (author_id, title, content_md, material_ids)
@@ -745,7 +763,7 @@ select is(app.revisao_apto_do_envio_de_questoes(:'v_e_s1'::uuid), tests.review_o
 -- 44-H3: só vale a revisão MAIS RECENTE do texto, em qualquer conjunto de materiais. (T,{M1}) apto → a
 -- publicação falha ("erro") → o autor muda para {M2} → a IA julga o MESMO texto "não apto" com {M2} → o autor
 -- volta a {M1}: a revisão antiga de "apto" NÃO volta a valer (o texto foi julgado não apto depois).
-select tests.create_user('h3.autor@test.local', 'student', 'active') as v_autor5 \gset
+select tests.create_user('h3.autor@test.local', 'admin', 'active') as v_autor5 \gset
 select tests.envio_de_questoes_revisado(:'v_autor5', 'Sonda recente ' || :'v_sfx', array[:'v_m1']::uuid[], 'apto', 'erro') as v_e_r1 \gset
 select tests.review_of_questoes(:'v_e_r1') as v_r_r1 \gset
 select tests.authenticate_as(:'v_autor5');
@@ -776,7 +794,7 @@ select is(app.revisao_apto_do_envio_de_questoes(:'v_e_r1'::uuid), null::uuid, 'c
 select is((select verdict from public.material_reviews where id = app.revisao_valida_do_envio_de_questoes(:'v_e_r1'::uuid)), 'nao_apto', 'e a que vale é mesmo a "não apto"');
 
 -- 44-H3: o texto aprovado com JSON malformado não quebra a conferência: vai a "não apto" com recado e sai da fila.
-select tests.create_user('h3.json@test.local', 'student', 'active') as v_autor6 \gset
+select tests.create_user('h3.json@test.local', 'admin', 'active') as v_autor6 \gset
 select tests.envio_de_questoes_revisado(:'v_autor6', 'Json options texto ' || :'v_sfx', array[:'v_m1']::uuid[]) as v_j1 \gset
 select tests.envio_de_questoes_revisado(:'v_autor6', 'Json options objeto ' || :'v_sfx', array[:'v_m1']::uuid[]) as v_j2 \gset
 select tests.envio_de_questoes_revisado(:'v_autor6', 'Json item escalar ' || :'v_sfx', array[:'v_m1']::uuid[]) as v_j3 \gset
@@ -836,13 +854,18 @@ select tests.authenticate_as(:'v_aluno');
 select throws_ok(format($$ select public.publish_question(%L) $$, :'v_rasc'), NULL, 'apenas administradores ativos podem publicar questões', 'estudante não publica questão');
 select tests.clear_auth();
 select tests.authenticate_as(:'v_admin');
-select throws_like(format($$ select public.publish_question(%L) $$, :'v_rasc'), '%revisor de IA%Enviar material%', 'admin não publica rascunho sem revisão, e a mensagem diz o que fazer');
+-- P6 (03/10): o revisor só aconselha. O admin publica a questão completa sem nenhuma revisão, e o
+-- selo "Revisado por IA" só aparece onde há revisão "apto" do conteúdo atual.
+select lives_ok(format($$ select public.publish_question(%L) $$, :'v_rasc'), 'P6: o admin publica rascunho sem nenhuma revisão (o revisor só aconselha)');
 select tests.clear_auth();
-select tests.atestar_questao(:'v_rasc'::uuid);
+select is((select status from public.questions where id = :'v_rasc'), 'published', 'e a questão vai ao ar');
+select tests.authenticate_as(:'v_aluno');
+select is((select count(*)::int from public.selos_de_questoes(array[:'v_rasc']::uuid[]) where question_id = :'v_rasc'), 0, 'sem revisão de IA "apto", o estudante não vê o selo');
+select tests.clear_auth();
 select tests.authenticate_as(:'v_admin');
-select throws_like(format($$ select public.publish_question(%L) $$, :'v_rasc'), '%revisor de IA%', 'atestação humana sem revisão de IA não libera a publicação');
+select lives_ok(format($$ update public.questions set status = 'draft' where id = %L $$, :'v_rasc'), 'o admin despublica sem precisar de revisão');
 select tests.clear_auth();
-select is((select status from public.questions where id = :'v_rasc'), 'draft', 'a questão continua rascunho');
+select is((select status from public.questions where id = :'v_rasc'), 'draft', 'e a questão volta a rascunho');
 
 -- Revisão apto vinculada a ESTE conteúdo: libera.
 select tests.envio_de_questoes_revisado(:'v_autor', 'Envio da questão do admin ' || :'v_sfx', array[]::uuid[], 'apto', 'publicado') as v_e_rasc \gset
@@ -862,9 +885,9 @@ select :'v_edit', s.id, tests.review_of_questoes(s.id), 'apto', now(), 'm', s.co
   from public.question_submissions s where s.id = :'v_e_edit';
 update public.questions set question_stem = 'Enunciado reescrito depois da revisão' where id = :'v_edit';
 select tests.authenticate_as(:'v_admin');
-select throws_like(format($$ select public.publish_question(%L) $$, :'v_edit'), '%revisor de IA%', 'questão alterada depois da revisão: a revisão não vale mais');
+select lives_ok(format($$ select public.publish_question(%L) $$, :'v_edit'), 'P6: questão alterada depois da revisão: o admin publica mesmo assim');
 select tests.clear_auth();
-select ok(not app.questao_tem_revisao_apto(:'v_edit'::uuid), 'a função de conferência também diz que não');
+select ok(not app.questao_tem_revisao_apto(:'v_edit'::uuid), 'mas a revisão não vale mais para esse conteúdo');
 
 -- Proveniência ligada a revisão que não é "apto": não vale.
 select tests.nova_questao(:'v_disc', :'v_theme', 'Rascunho revisão ruim ' || :'v_sfx') as v_ruim \gset
@@ -884,22 +907,23 @@ update public.questions set status = 'published' where id = :'v_leg';
 insert into public.question_publicada_antes_44h2 (question_id, snapshot_hash) values (:'v_leg', app.question_snapshot_hash(:'v_leg'::uuid));
 select tests.authenticate_as(:'v_admin');
 select lives_ok(format($$ update public.questions set status = 'draft' where id = %L $$, :'v_leg'), 'o admin despublica a questão antiga');
-select throws_like(format($$ select public.publish_question(%L) $$, :'v_leg'), '%já esteve no ar%', 'questão antiga sem atestação do conteúdo atual: a regra antiga a barra, com mensagem leiga');
+select lives_ok(format($$ select public.publish_question(%L) $$, :'v_leg'), 'P6: questão antiga volta ao ar sem atestação nem revisão (a regra antiga acabou)');
+select lives_ok(format($$ update public.questions set status = 'draft' where id = %L $$, :'v_leg'), 'e o admin a despublica de novo para reescrevê-la');
 select tests.clear_auth();
--- O admin reescreve o enunciado e as alternativas, atesta a própria revisão e tenta republicar sem revisor de IA.
+-- O admin reescreve o enunciado e as alternativas, atesta a própria revisão e republica sem revisor de IA.
 update public.questions set question_stem = 'Questão NOVA escrita pelo admin ' || :'v_sfx' where id = :'v_leg';
 update public.question_options set option_text = 'Alternativa totalmente nova' where question_id = :'v_leg' and letter = 'A';
 select tests.atestar_questao(:'v_leg'::uuid);
 select tests.authenticate_as(:'v_admin');
-select throws_like(
+select lives_ok(
   format($$ select public.publish_question(%L) $$, :'v_leg'),
-  '%mudou depois de ir ao ar%revisor de IA%',
-  'questão antiga reescrita e atestada pelo admin: não republica sem revisor de IA'
+  'P6: questão antiga reescrita pelo admin republica sem revisor de IA'
 );
-select tests.clear_auth();
-select is((select status from public.questions where id = :'v_leg'), 'draft', 'e continua rascunho');
+select is((select status from public.questions where id = :'v_leg'), 'published', 'e vai ao ar');
 select is((select count(*)::int from public.question_ai_provenance where question_id = :'v_leg'), 0, 'sem proveniência de IA');
--- Voltar ao conteúdo original (mesmo hash de antes) devolve a exceção.
+select lives_ok(format($$ update public.questions set status = 'draft' where id = %L $$, :'v_leg'), 'o admin a despublica de novo para voltar ao texto original');
+select tests.clear_auth();
+-- Voltar ao conteúdo original (mesmo hash de antes): o hash guardado do conteúdo antigo bate de novo.
 update public.questions set question_stem = 'Questão antiga ' || :'v_sfx' where id = :'v_leg';
 update public.question_options set option_text = 'Opção A' where question_id = :'v_leg' and letter = 'A';
 select tests.atestar_questao(:'v_leg'::uuid);
@@ -960,7 +984,7 @@ select results_eq(
   'o autor é quem reportou, o estado nasce "aberto", e o alvo é a questão'
 );
 select throws_ok(
-  format($$ insert into public.material_error_reports (question_id, description) values (%L, 'erro numa questão em rascunho') $$, :'v_edit'),
+  format($$ insert into public.material_error_reports (question_id, description) values (%L, 'erro numa questão em rascunho') $$, :'v_ruim'),
   '42501', NULL, 'reporte de questão não publicada é recusado'
 );
 select throws_ok(

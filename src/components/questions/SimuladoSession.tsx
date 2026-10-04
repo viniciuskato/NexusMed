@@ -144,7 +144,7 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
     setReviewResults((previous) => ({ ...previous, [question.id]: review }));
     if (!review.isCorrect) {
       // A correção já foi confirmada; só agora o erro pode gerar SRS.
-      void flashcardsRepository.createFlashcardFromQuestion(question);
+      void flashcardsRepository.createFlashcardFromQuestion(question, review);
     }
   }, []);
 

@@ -3,6 +3,8 @@
 // (`compendiumStandardCheck.ts`) a usa para saber o que o leitor vai ver —
 // uma fonte só, para as duas não divergirem.
 
+import { eLinhaDeFigura } from './figuraDoMaterial';
+
 /**
  * O parser de blocos do leitor (`SafeMarkdown`) (e o split por `\n\n+`) só reconhece heading/
  * tabela/lista/blockquote quando o bloco INTEIRO começa com
@@ -44,14 +46,20 @@ export function normalizeBlockBoundaries(content: string): string {
   const isTableRowLine = (l: string) => /^\|.*\|\s*$/.test(l.trim());
   const isListMarkerLine = (l: string) => /^\s*([-*•]|\d+\.)\s+\S/.test(l);
   const isBlockquoteLine = (l: string) => /^>/.test(l.trim());
+  // P9: figura (`![alt](figura:...)`, legenda e `Fonte:`) é um bloco de linhas sem linha em branco no meio.
+  const isFigureLine = (l: string) => eLinhaDeFigura(l);
+  const isFigureSourceLine = (l: string) => /^(\*\*)?Fonte:/i.test(l.trim());
+  const isFigureShowLine = (l: string) => /^(\*\*)?Mostrar:/i.test(l.trim());
 
   const out: string[] = [];
   let inList = false;
+  let inFigure = false;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const isBlank = line.trim() === '';
     if (isBlank) {
       inList = false;
+      inFigure = false;
       out.push(line);
       continue;
     }
@@ -65,7 +73,9 @@ export function normalizeBlockBoundaries(content: string): string {
     const startsTable = isTableRowLine(line) && !prevIsTableRow && !prevIsBlank;
     const startsList = isListMarkerLine(line) && !inList && !prevIsBlank;
     const startsBlockquote = isBlockquoteLine(line) && !prevIsBlockquote && !prevIsBlank;
-    if (startsHeading || startsTable || startsList || startsBlockquote) out.push('');
+    const startsFigure = isFigureLine(line) && !prevIsBlank;
+    if (startsHeading || startsTable || startsList || startsBlockquote || startsFigure) out.push('');
+    if (isFigureLine(line)) inFigure = true;
 
     if (isHeadingLine(line) || isTableRowLine(line)) inList = false;
     if (isListMarkerLine(line)) inList = true;
@@ -77,6 +87,14 @@ export function normalizeBlockBoundaries(content: string): string {
     const next = lines[i + 1];
     if (isHeadingLine(line) && next !== undefined && next.trim() !== '' && !isHeadingLine(next)) {
       out.push('');
+    }
+    // Figura: o bloco acaba na linha `Fonte:` (ou no `Mostrar:` que a segue); o texto colado depois dela é outro
+    // bloco, não parte da legenda.
+    if (inFigure && next !== undefined && next.trim() !== '') {
+      if (isFigureShowLine(line) || (isFigureSourceLine(line) && !isFigureShowLine(next))) {
+        out.push('');
+        inFigure = false;
+      }
     }
     // Linha em branco depois do fim de um bloco de tabela, antes de texto
     // comum (a linha atual É tabela, a próxima NÃO é nem está em branco).

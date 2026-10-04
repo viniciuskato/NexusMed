@@ -1,8 +1,9 @@
 import { sourceUrl } from '../utils/bibliographicSources';
-import { Flashcard, FlashcardSRS, Question } from '../types';
+import { Flashcard, FlashcardSRS, Question, QuestionReviewResult } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { calculateNextSRS, createInitialSRS } from '../services/srsAlgorithm';
 import { FlashcardsRepository } from './FlashcardsRepository';
+import { textoDoFlashcardDoErro } from '../utils/flashcardDoErro';
 import { fetchAllRows, fetchAllRowsByIds } from './supabasePaging';
 
 // ============================================================================
@@ -18,6 +19,7 @@ import { fetchAllRows, fetchAllRowsByIds } from './supabasePaging';
 // Flashcard <-> flashcards (+ flashcard_srs_state + flashcard_reviews)
 //   id <-> id | disciplineId <-> discipline_id | themeId <-> theme_id
 //   compendiumRefId <-> material_id | questionOriginId <-> question_origin_id
+//   compendiumSectionId <-> material_section_id (P10; a questão de origem continua em question_origin_id)
 //   front <-> front | back <-> back
 //   mechanismHighlight <-> mechanism_highlight | tags <-> tags
 //   difficulty <-> difficulty | isCustom <-> is_custom
@@ -63,6 +65,7 @@ interface FlashcardRow {
   discipline_id: string;
   theme_id: string;
   material_id: string | null;
+  material_section_id: string | null;
   question_origin_id: string | null;
   front: string;
   back: string;
@@ -126,6 +129,7 @@ function rowToFlashcard(
     disciplineId: row.discipline_id,
     themeId: row.theme_id,
     compendiumRefId: row.material_id ?? undefined,
+    compendiumSectionId: row.material_section_id ?? undefined,
     questionOriginId: row.question_origin_id ?? undefined,
     front: row.front,
     back: row.back,
@@ -228,6 +232,7 @@ export class SupabaseFlashcardsRepository implements FlashcardsRepository {
       discipline_id: flashcard.disciplineId,
       theme_id: flashcard.themeId,
       material_id: flashcard.compendiumRefId || null,
+      material_section_id: flashcard.compendiumSectionId || null,
       question_origin_id: flashcard.questionOriginId || null,
       front: flashcard.front,
       back: flashcard.back,
@@ -271,18 +276,15 @@ export class SupabaseFlashcardsRepository implements FlashcardsRepository {
     if (error) throw error;
   }
 
-  async createFlashcardFromQuestion(question: Question): Promise<Flashcard> {
-    const template = question.flashcardTemplate || {
-      front: `[${question.institution} ${question.year}] ${question.questionStem.slice(0, 180)}...`,
-      back: `Resposta Correta:\n${question.options.find((o) => o.isCorrect)?.text || ''}\n\nExplicação:\n${question.highYieldSummary}`,
-      mechanismNote: question.highYieldSummary,
-    };
+  async createFlashcardFromQuestion(question: Question, review?: QuestionReviewResult): Promise<Flashcard> {
+    const template = textoDoFlashcardDoErro(question, review);
 
     const newCard: Flashcard = {
       id: crypto.randomUUID(),
       disciplineId: question.disciplineId,
       themeId: question.themeId,
       compendiumRefId: question.compendiumRefId,
+      compendiumSectionId: question.compendiumSectionId || undefined,
       questionOriginId: question.id,
       front: template.front,
       back: template.back,
@@ -310,10 +312,37 @@ export class SupabaseFlashcardsRepository implements FlashcardsRepository {
       p_tags: card.tags ?? [],
       p_difficulty: card.difficulty,
       p_is_custom: card.isCustom ?? true,
+      p_material_section_id: card.compendiumSectionId || null,
     });
     if (error) throw error;
-    const cardRow = row as FlashcardRow;
+    return this.readCanonicalCard(row as FlashcardRow);
+  }
 
+  async createFlashcardFromSection(card: Flashcard): Promise<{ card: Flashcard; created: boolean }> {
+    const canonical = await this.createFlashcardFromSectionAtomic(card);
+    return { card: canonical, created: canonical.id === card.id };
+  }
+
+  /** P10: card de seção do leitor, atômico e idempotente no servidor (um por usuário e seção). */
+  async createFlashcardFromSectionAtomic(card: Flashcard): Promise<Flashcard> {
+    const { data: row, error } = await supabase.rpc('create_flashcard_from_section', {
+      p_id: card.id,
+      p_discipline_id: card.disciplineId,
+      p_theme_id: card.themeId,
+      p_material_id: card.compendiumRefId || null,
+      p_material_section_id: card.compendiumSectionId || null,
+      p_front: card.front,
+      p_back: card.back,
+      p_mechanism_highlight: card.mechanismHighlight || null,
+      p_tags: card.tags ?? [],
+      p_difficulty: card.difficulty,
+      p_is_custom: card.isCustom ?? true,
+    });
+    if (error) throw error;
+    return this.readCanonicalCard(row as FlashcardRow);
+  }
+
+  private async readCanonicalCard(cardRow: FlashcardRow): Promise<Flashcard> {
     const { data: srsRow, error: srsError } = await supabase
       .from('flashcard_srs_state')
       .select('*')

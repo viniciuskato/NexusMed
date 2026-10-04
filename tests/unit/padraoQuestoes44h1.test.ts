@@ -177,8 +177,8 @@ describe('44-H1 — o formato do padrão é o que o importador de questões acei
           .replace('Nome exato da Disciplina', 'Pneumologia')
           .replace('Nome exato do Tema', 'Espirometria')
           .replace('Nome real da banca ou instituição', 'ENARE')
-          .replace('Título exato de um material; Título exato de outro material', 'Material A; Material B')
-          .replace('Título exato de um material', 'Material A')
+          .replace('Título exato de um material > Título exato da seção; Título exato de outro material', 'Material A > Seção A1; Material B')
+          .replace('Título exato de um material > Título exato da seção', 'Material A > Seção A1')
           .replace('## Questão 1', `## Questão ${i + 1}`)
           .replace('## Questão 2', `## Questão ${i + 1}`),
       )
@@ -196,13 +196,25 @@ describe('44-H1 — o formato do padrão é o que o importador de questões acei
     }
     expect(resultado.rows[0]).toMatchObject({ institution: 'ENARE', year: 2024, difficulty: 'medio' });
     expect(resultado.rows[0].materialTitles).toEqual(['Material A', 'Material B']);
+    expect(resultado.rows[0].materialLinks).toEqual([
+      { title: 'Material A', sectionTitle: 'Seção A1' },
+      { title: 'Material B', sectionTitle: null },
+    ]);
     expect(resultado.rows[1]).toMatchObject({ institution: 'NexusMed (questão autoral)', year: 0 });
     expect(resultado.rows[1].materialTitles).toEqual(['Material A']);
+    expect(resultado.rows[1].materialLinks).toEqual([{ title: 'Material A', sectionTitle: 'Seção A1' }]);
 
     const leitura = lerLoteDeQuestoes(preenchido, [disciplina], [tema]);
-    const avaliacao = avaliarLote(leitura, [{ id: 'm1', title: 'Material A' }, { id: 'm2', title: 'Material B' }], []);
+    const publicados = [
+      { id: 'm1', title: 'Material A', sections: [{ id: 's1', title: 'Seção A1' }] },
+      { id: 'm2', title: 'Material B', sections: [] },
+    ];
+    const avaliacao = avaliarLote(leitura, publicados, []);
     expect(avaliacao.pendencias).toEqual([]);
     expect(avaliacao.aceito).toBe(true);
+    // A seção que o modelo traz é conferida contra o material: uma seção que não existe vira pendência.
+    const semASecao = avaliarLote(leitura, [{ id: 'm1', title: 'Material A', sections: [{ id: 's9', title: 'Outra seção' }] }, publicados[1]], []);
+    expect(semASecao.pendencias.map((p) => p.mensagem).join(' ')).toContain('A seção “Seção A1” não existe no material “Material A”');
   });
 
   it('o padrão não manda escrever o campo Ciclo (o valor padrão vale) e não usa valor com sublinhado', () => {
@@ -237,6 +249,9 @@ describe('44-H1 — conteúdo mínimo do padrão (regras do dono do produto)', (
       '**Nunca invente**',
       '**Ligação com o material**',
       'o título exato de cada material do NexusMed',
+      'escreva depois do título o sinal `>` e o título exato da seção',
+      'nunca invente uma seção',
+      'Seção que não existe no material, ou que se repete nele, faz o lote ser recusado',
     ]) {
       expect(PADRAO_DE_QUESTOES, trecho).toContain(trecho);
     }
@@ -251,7 +266,10 @@ describe('44-H1 — prompt de criação de questões', () => {
       'Disciplina e o Tema',
       'nomes exatos do catálogo',
       'banca real ou autoral',
-      'título exato de cada um',
+      'título exato de cada um e, para cada questão, o título exato da seção do material',
+      'Se a pessoa não disse a seção de uma questão, pergunte qual é a seção',
+      'Título do material > Título da seção',
+      'Nunca invente nem adivinhe uma seção',
       'Se faltar um dado, pergunte',
       'só material disponível on-line; nenhum livro-texto',
       'Nunca invente referência',
@@ -349,11 +367,24 @@ describe('44-H1 — prompt revisor de questões', () => {
     expect(p).toContain('"NÃO APTO — 1 achado grave" (quando há um só)');
     expect(p).toContain('"NÃO APTO — N achados graves" (em que N é o número de achados graves, sempre 2 ou mais)');
     expect(p).toContain('nenhuma outra linha da resposta começa com "APTO" ou com "NÃO APTO"');
-    const veredito = p.indexOf('(c) Veredito: uma linha só, a última antes do bloco de correção');
-    const bloco = p.indexOf('(d) UM único bloco de código');
+    const veredito = p.indexOf('Terceira parte, o veredito: uma linha só, a última antes do bloco de correção');
+    const bloco = p.indexOf('Quarta parte, a correção: UM único bloco de código');
     expect(veredito).toBeGreaterThan(-1);
     expect(bloco).toBeGreaterThan(veredito);
     expect(p.indexOf('REGRA DO VEREDITO')).toBeLessThan(p.indexOf('COMO TERMINAR A RESPOSTA'));
+  });
+
+  it('P12a: as letras "(a)" a "(d)" que levavam o modelo a escrever títulos saíram, como no prompt de material', () => {
+    expect(p).not.toMatch(/^\s*\([a-d]\)/m);
+    expect(p).not.toContain('(c) Veredito');
+    expect(p).not.toContain('(d) UM');
+    expect(p).toContain('não escreva título, letra, número, rótulo nem frase de introdução antes de nenhuma das quatro partes');
+    expect(p).toContain('elas não aparecem na resposta');
+    expect(p).toContain('Entre a linha do veredito e o bloco de correção (ou a frase "Nenhum achado muda o material.") não vai nenhum título, comentário ou texto');
+    // As quatro partes, na ordem: alto risco, o que não conferiu, veredito, correção.
+    const ordem = ['Primeira parte, o alto risco', 'Segunda parte, o que você não conseguiu conferir', 'Terceira parte, o veredito', 'Quarta parte, a correção'].map((t) => p.indexOf(t));
+    expect(ordem.every((i) => i > -1)).toBe(true);
+    expect([...ordem].sort((a, b) => a - b)).toEqual(ordem);
   });
 
   it('o bloco de correção do prompt começa exatamente como o revisor automático espera (o mesmo do prompt de material)', () => {

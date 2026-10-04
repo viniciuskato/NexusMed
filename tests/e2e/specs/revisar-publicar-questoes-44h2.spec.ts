@@ -82,7 +82,7 @@ test.describe('Questões: revisão por IA e publicação pelo veredito (44-H2)',
     const tituloMaterial = `${MATERIAL_PREFIX}h2-${tag}`;
     const materialId = insertPublishedMaterial(`h2-${tag}`);
     cleanup.push(() => deleteE2EMaterials());
-    const autor = await novoUsuario('h2-autor');
+    const autor = await novoUsuario('h2-autor', 'admin');
     const admin = await novoUsuario('h2-admin', 'admin');
     const totalPublicadasAntes = Number(psqlLocal(`select count(*) from public.questions where status = 'published';`));
 
@@ -190,12 +190,13 @@ test.describe('Questões: revisão por IA e publicação pelo veredito (44-H2)',
     await linha.getByRole('button', { name: 'Marcar como resolvido' }).click();
     await expect(linha).toContainText('Resolvido');
 
-    // 6. E a aba de envios do admin lista o lote (tipo questões), só leitura.
+    // 6. E a aba de envios do admin lista o lote (tipo questões).
     await paginaAdmin.locator('#admin-tab-envios').click();
     const lote = paginaAdmin.locator('#admin-envios-lista li[data-tipo="questoes"]', { hasText: nome });
     await expect(lote).toContainText('Publicado');
     await expect(lote).toContainText('por h2-autor');
-    await expect(paginaAdmin.locator('#admin-envios-lista button')).toHaveCount(0);
+    // P8: o admin publica daqui; o lote já publicado não tem botão de publicar.
+    await expect(lote.getByTestId('publicar-envio')).toHaveCount(0);
   });
 
   test('revisão "não apto": nada é publicado, o autor vê os achados, corrige e o texto corrigido volta à revisão e é publicado', async ({ page }) => {
@@ -204,7 +205,7 @@ test.describe('Questões: revisão por IA e publicação pelo veredito (44-H2)',
     const tituloMaterial = `${MATERIAL_PREFIX}h2n-${tag}`;
     insertPublishedMaterial(`h2n-${tag}`);
     cleanup.push(() => deleteE2EMaterials());
-    const autor = await novoUsuario('h2-corrige');
+    const autor = await novoUsuario('h2-corrige', 'admin');
     const nome = `Lote H2 corrigido ${tag}`;
     const tituloSql = q(nome);
 
@@ -278,7 +279,7 @@ test.describe('Questões: revisão por IA e publicação pelo veredito (44-H2)',
     insertPublishedMaterial(`h2-igual-${tag}`);
     insertPublishedMaterial(`h2-igual-${tag}`);
     cleanup.push(() => deleteE2EMaterials());
-    const autor = await novoUsuario('h2-ambiguo');
+    const autor = await novoUsuario('h2-ambiguo', 'admin');
     const nome = `Lote ambíguo ${tag}`;
 
     await login(page, autor);

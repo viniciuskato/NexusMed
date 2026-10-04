@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { Flashcard, Question, QuestionAnswerRecord, UserFeedback } from '../../src/types';
+import type { Flashcard, Question, QuestionAnswerRecord, QuestionReviewResult, UserFeedback } from '../../src/types';
 
 // Cobertura dos wrappers `Resilient*Repository` (src/repositories/*Repository.ts)
 // antes da refatoração do App.tsx. Prova o comportamento OBSERVÁVEL do padrão
@@ -770,6 +770,225 @@ describe('FlashcardsRepository.createFlashcardFromQuestion', () => {
     expect(new Set(matching.map((op) => op.id)).size).toBe(2);
     expect(new Set(matching.map((op) => op.clientOpId))).toEqual(new Set([first.id]));
     expect(matching.map((op) => op.state)).toEqual(['synced', 'synced']);
+  });
+});
+
+// P10: o card guarda a seção do material. O do erro leva a seção da questão; o do leitor é um por seção.
+function makeCardDeSecao(id: string, sectionId = 'sec-obstrutivo'): Flashcard {
+  return {
+    id,
+    disciplineId: 'd-1',
+    themeId: 't-1',
+    compendiumRefId: 'mat-1',
+    compendiumSectionId: sectionId,
+    front: '[Pneumologia] Padrão obstrutivo',
+    back: 'ponto',
+    mechanismHighlight: '',
+    tags: [],
+    difficulty: 'medio',
+    isCustom: true,
+    srs: { intervalDays: 1, repetitionCount: 1, easeFactor: 2.5, nextDueDate: '2026-10-04', state: 'new', reviewHistory: [] },
+  } as Flashcard;
+}
+
+describe('FlashcardsRepository — seção do material no card (P10)', () => {
+  it('o card do erro leva a seção da questão (local e no que vai para a fila)', async () => {
+    const { StorageService, queue } = await setup({ configured: true });
+    queue.registerHandler('flashcard_create_from_question', async (payload) => (payload as { flashcard: Flashcard }).flashcard);
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+    const question = { ...makeQuestionForFlashcard(), compendiumRefId: 'mat-1', compendiumSectionId: 'sec-obstrutivo' } as Question;
+
+    const card = await flashcardsRepository.createFlashcardFromQuestion(question);
+
+    expect(card).toMatchObject({ compendiumRefId: 'mat-1', compendiumSectionId: 'sec-obstrutivo', questionOriginId: question.id });
+    expect(StorageService.getFlashcards()[0].compendiumSectionId).toBe('sec-obstrutivo');
+    const op = queue.getOps(UID).find((o) => o.category === 'flashcard_create_from_question');
+    expect((op?.payload as { flashcard: Flashcard }).flashcard.compendiumSectionId).toBe('sec-obstrutivo');
+  });
+
+  it('o card de seção: gerar duas vezes não duplica (um card local, uma operação na fila)', async () => {
+    const { StorageService, queue } = await setup({ configured: true });
+    queue.registerHandler('flashcard_create_from_section', async (payload) => (payload as { flashcard: Flashcard }).flashcard);
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+
+    const primeiro = await flashcardsRepository.createFlashcardFromSection(makeCardDeSecao('card-1'));
+    const segundo = await flashcardsRepository.createFlashcardFromSection(makeCardDeSecao('card-2'));
+
+    expect(primeiro).toMatchObject({ created: true });
+    expect(segundo.created).toBe(false);
+    expect(segundo.card.id).toBe('card-1');
+    expect(StorageService.getFlashcards().filter((c) => c.compendiumSectionId === 'sec-obstrutivo')).toHaveLength(1);
+    expect(queue.getOps(UID).filter((o) => o.category === 'flashcard_create_from_section')).toHaveLength(1);
+  });
+
+  it('outra seção é outro card', async () => {
+    const { StorageService, queue } = await setup({ configured: true });
+    queue.registerHandler('flashcard_create_from_section', async (payload) => (payload as { flashcard: Flashcard }).flashcard);
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+
+    await flashcardsRepository.createFlashcardFromSection(makeCardDeSecao('card-1', 'sec-a'));
+    const outro = await flashcardsRepository.createFlashcardFromSection(makeCardDeSecao('card-2', 'sec-b'));
+
+    expect(outro.created).toBe(true);
+    expect(StorageService.getFlashcards().filter((c) => c.compendiumRefId === 'mat-1')).toHaveLength(2);
+  });
+
+  it('o card do erro da mesma seção não conta como o card da seção (são dois cards)', async () => {
+    const { StorageService } = await setup({ configured: false });
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+    const question = { ...makeQuestionForFlashcard(), compendiumRefId: 'mat-1', compendiumSectionId: 'sec-obstrutivo' } as Question;
+
+    await flashcardsRepository.createFlashcardFromQuestion(question);
+    const daSecao = await flashcardsRepository.createFlashcardFromSection(makeCardDeSecao('card-secao'));
+
+    expect(daSecao.created).toBe(true);
+    const meus = StorageService.getFlashcards().filter((c) => c.compendiumSectionId === 'sec-obstrutivo');
+    expect(meus.map((c) => c.questionOriginId ?? 'secao')).toEqual(expect.arrayContaining(['secao', question.id]));
+    expect(meus).toHaveLength(2);
+  });
+
+  it('o servidor já tinha o card da seção (outro aparelho): converge para ele, sem deixar o rascunho local', async () => {
+    const { StorageService, queue } = await setup({ configured: true });
+    const canonico = makeCardDeSecao('card-do-servidor');
+    queue.registerHandler('flashcard_create_from_section', async (payload) => {
+      const enviado = (payload as { flashcard: Flashcard }).flashcard;
+      StorageService.deleteFlashcard(enviado.id); // o que o handler real faz com o rascunho
+      StorageService.saveFlashcard(canonico);
+      return canonico;
+    });
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+
+    const res = await flashcardsRepository.createFlashcardFromSection(makeCardDeSecao('card-local'));
+
+    expect(res.created).toBe(false);
+    expect(res.card.id).toBe('card-do-servidor');
+    const daSecao = StorageService.getFlashcards().filter((c) => c.compendiumSectionId === 'sec-obstrutivo');
+    expect(daSecao.map((c) => c.id)).toEqual(['card-do-servidor']);
+  });
+
+  it('offline: o card fica no aparelho e na fila com a seção; pedir de novo não enfileira outro; ao voltar a rede sai uma operação só', async () => {
+    const { StorageService, queue } = await setup({ configured: true });
+    const enviados: Flashcard[] = [];
+    let semRede = true;
+    queue.registerHandler('flashcard_create_from_section', async (payload) => {
+      if (semRede) throw networkError();
+      const f = (payload as { flashcard: Flashcard }).flashcard;
+      enviados.push(f);
+      return f;
+    });
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+
+    setOnline(false);
+    const primeiro = await flashcardsRepository.createFlashcardFromSection(makeCardDeSecao('card-offline-1'));
+    const segundo = await flashcardsRepository.createFlashcardFromSection(makeCardDeSecao('card-offline-2'));
+    expect(primeiro.created).toBe(true);
+    expect(segundo).toMatchObject({ created: false, card: { id: 'card-offline-1' } });
+    const naFila = queue.getOps(UID).filter((o) => o.category === 'flashcard_create_from_section');
+    expect(naFila).toHaveLength(1);
+    expect((naFila[0].payload as { flashcard: Flashcard }).flashcard.compendiumSectionId).toBe('sec-obstrutivo');
+    expect(enviados).toHaveLength(0);
+    expect(StorageService.getFlashcards().filter((c) => c.compendiumSectionId === 'sec-obstrutivo')).toHaveLength(1);
+
+    setOnline(true);
+    semRede = false;
+    await queue.flush(UID, true);
+    expect(enviados.map((f) => f.id)).toEqual(['card-offline-1']);
+    expect(queue.getOps(UID).find((o) => o.category === 'flashcard_create_from_section')?.state).toBe('synced');
+    await queue.flush(UID, true);
+    expect(enviados).toHaveLength(1); // reenviar a fila não cria de novo
+  });
+});
+
+// P6 (03/10): para quem não é admin, a questão carregada não traz o gabarito (todas as alternativas com
+// isCorrect false, resumo vazio): o verso do card do erro tem de sair da revisão pós-resposta.
+function makeQuestionSemGabarito(): Question {
+  return {
+    ...makeQuestionForFlashcard(),
+    id: 'q-sem-gabarito',
+    options: [
+      { letter: 'A', text: 'Alternativa A', isCorrect: false, explanation: '' },
+      { letter: 'B', text: 'Alternativa B', isCorrect: false, explanation: '' },
+    ],
+    highYieldSummary: '',
+    generalCommentary: '',
+  } as Question;
+}
+
+function makeRevisao(): QuestionReviewResult {
+  return {
+    isCorrect: false,
+    correctOptionId: 'opt-b',
+    generalCommentary: 'Comentário do servidor',
+    highYieldSummary: 'Pérola do servidor',
+    options: [
+      { optionId: 'opt-a', letter: 'A', isCorrect: false, explanation: 'Errada' },
+      { optionId: 'opt-b', letter: 'B', isCorrect: true, explanation: 'Certa' },
+    ],
+    references: [],
+  };
+}
+
+describe('FlashcardsRepository.createFlashcardFromQuestion — verso para quem não é admin (P6)', () => {
+  it('com a revisão em mãos, o verso traz a alternativa correta e a explicação, mesmo sem gabarito na questão', async () => {
+    await setup({ configured: false });
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+
+    const card = await flashcardsRepository.createFlashcardFromQuestion(makeQuestionSemGabarito(), makeRevisao());
+
+    expect(card.back).toBe('Resposta Correta:' + '\n' + 'Alternativa B\n\nExplicação:\nPérola do servidor');
+    expect(card.mechanismHighlight).toBe('Pérola do servidor');
+  });
+
+  it('sem a revisão, busca a do servidor (RPC pós-resposta) e o card sai completo, também na fila de sincronização', async () => {
+    const getQuestionReview = vi.fn().mockResolvedValue(makeRevisao());
+    const { queue } = await setup({ configured: true, supa: { Questions: { getQuestionReview } } });
+    queue.registerHandler('flashcard_create_from_question', async (payload) => (payload as { flashcard: Flashcard }).flashcard);
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+
+    const card = await flashcardsRepository.createFlashcardFromQuestion(makeQuestionSemGabarito());
+
+    expect(getQuestionReview).toHaveBeenCalledTimes(1);
+    expect(getQuestionReview).toHaveBeenCalledWith('q-sem-gabarito');
+    expect(card.back).toContain('Alternativa B');
+    expect(card.back).toContain('Pérola do servidor');
+    const op = queue.getOps(UID).find((o) => o.category === 'flashcard_create_from_question');
+    expect((op?.payload as { flashcard: Flashcard }).flashcard.back).toContain('Alternativa B');
+  });
+
+  it('se a revisão não puder ser buscada, o erro sobe e nenhum card vazio é criado', async () => {
+    const getQuestionReview = vi.fn().mockRejectedValue(networkError());
+    const { StorageService, queue } = await setup({ configured: true, supa: { Questions: { getQuestionReview } } });
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+
+    await expect(flashcardsRepository.createFlashcardFromQuestion(makeQuestionSemGabarito())).rejects.toThrow('Failed to fetch');
+
+    expect(StorageService.getFlashcards()).toHaveLength(0);
+    expect(queue.getOps(UID).filter((o) => o.category === 'flashcard_create_from_question')).toHaveLength(0);
+  });
+
+  it('quem vê o gabarito (admin) continua com o verso de antes, sem pedir a revisão', async () => {
+    const getQuestionReview = vi.fn();
+    await setup({ configured: false, supa: { Questions: { getQuestionReview } } });
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+
+    const card = await flashcardsRepository.createFlashcardFromQuestion(makeQuestionForFlashcard());
+
+    expect(card.back).toBe('Resposta Correta:\nAlternativa A\n\nExplicação:\nResumo de alto rendimento');
+    expect(getQuestionReview).not.toHaveBeenCalled();
+  });
+
+  it('card já existente para a questão não pede a revisão de novo', async () => {
+    const getQuestionReview = vi.fn().mockResolvedValue(makeRevisao());
+    const { queue } = await setup({ configured: true, supa: { Questions: { getQuestionReview } } });
+    queue.registerHandler('flashcard_create_from_question', async (payload) => (payload as { flashcard: Flashcard }).flashcard);
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+    const question = makeQuestionSemGabarito();
+
+    const first = await flashcardsRepository.createFlashcardFromQuestion(question);
+    const second = await flashcardsRepository.createFlashcardFromQuestion(question);
+
+    expect(second.id).toBe(first.id);
+    expect(getQuestionReview).toHaveBeenCalledTimes(1);
   });
 });
 

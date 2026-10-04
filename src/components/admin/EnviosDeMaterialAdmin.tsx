@@ -10,21 +10,25 @@ import {
 } from '../../repositories/QuestionSubmissionsRepository';
 import { useServerLoad } from '../../hooks/useServerLoad';
 import { ConnectionNotice } from '../common/ConnectionNotice';
-import { ListaDeEnvios } from '../material/ListaDeEnvios';
+import { ListaDeEnvios, type EnvioDaLista } from '../material/ListaDeEnvios';
+import { publicarEnvioPeloAdmin } from '../../utils/publicarEnvioPeloAdmin';
 
 // Aba "Envios" da Área Editorial (44-E): todos os envios, de material e de
-// questões (44-H2), só leitura. Trocar o estado do envio e publicar é do
-// servidor (44-F/44-G/44-H2), não desta tela.
+// questões (44-H2). O revisor de IA só dá o parecer (44-F, D-12); desde a P8 o
+// dono publica o envio (ou aplica a atualização) daqui, com um clique, com
+// qualquer parecer: o botão pede confirmação quando o parecer não é "apto".
 
 interface EnviosDeMaterialAdminProps {
   disciplines: Discipline[];
   themes: Theme[];
   onAbrirMaterial?: (materialId: string) => void;
+  /** P8: o conteúdo foi ao ar por esta tela (a Área Editorial recarrega as listas). */
+  onConteudoPublicado?: () => void;
 }
 
-export const EnviosDeMaterialAdmin: React.FC<EnviosDeMaterialAdminProps> = ({ disciplines, themes, onAbrirMaterial }) => {
+export const EnviosDeMaterialAdmin: React.FC<EnviosDeMaterialAdminProps> = ({ disciplines, themes, onAbrirMaterial, onConteudoPublicado }) => {
   const [envios, setEnvios] = useState<Array<MaterialSubmission | QuestionSubmission>>([]);
-  const { status } = useServerLoad(async () => {
+  const { status, reload } = useServerLoad(async () => {
     const [materiais, questoes] = await Promise.all([
       materialSubmissionsRepository.listAll(),
       questionSubmissionsRepository.listAll(),
@@ -34,6 +38,16 @@ export const EnviosDeMaterialAdmin: React.FC<EnviosDeMaterialAdminProps> = ({ di
     return () => setEnvios(lista);
   }, 'envios-admin');
 
+  const publicar = async (envio: EnvioDaLista) => {
+    const r = await publicarEnvioPeloAdmin(envio, { disciplines, themes });
+    if (r.ok) {
+      onConteudoPublicado?.();
+      // A lista passa a mostrar o envio como "publicado", com o botão que abre o material.
+      void reload();
+    }
+    return r;
+  };
+
   return (
     <div id="admin-envios-de-material" className="space-y-4">
       <div className="bg-white dark:bg-[#0F172A] p-4 rounded-xl border border-stone-200 dark:border-[#243452] elev-xs">
@@ -41,9 +55,10 @@ export const EnviosDeMaterialAdmin: React.FC<EnviosDeMaterialAdminProps> = ({ di
           Envios de material e de questões
         </h3>
         <p className="text-[11px] text-stone-500 dark:text-slate-400">
-          Materiais e questões enviados pelos usuários pelo site, do mais novo para o mais antigo. Só leitura:
-          quando o revisor de IA aprova, o servidor publica sozinho (com o selo “revisado por IA”); aqui você
-          acompanha e abre o que foi publicado.
+          Materiais e questões enviados pelo site, do mais novo para o mais antigo. O revisor de IA dá o parecer
+          (o veredito e os achados), a cada 15 minutos, quando o computador do dono está ligado; ele só aconselha, e
+          quem decide e publica é você. “Publicar” (ou “Aplicar atualização”) funciona com qualquer parecer e pede
+          confirmação quando o parecer não é “apto”; sem “apto”, o conteúdo vai ao ar sem o selo “Revisado por IA”.
         </p>
       </div>
       <ConnectionNotice status={status} />
@@ -54,6 +69,7 @@ export const EnviosDeMaterialAdmin: React.FC<EnviosDeMaterialAdminProps> = ({ di
         themes={themes}
         mostrarAutor
         onAbrirMaterial={onAbrirMaterial}
+        onPublicar={publicar}
         vazio="Nenhum material nem questões foram enviados ainda."
       />
     </div>

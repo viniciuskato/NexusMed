@@ -27,6 +27,10 @@ diretoria. Quem mescla é o dono.
 > de um plano que o dono aprovou (D-9, 29/09), e nunca a sessão de defeitos.
 > Onde este protocolo disser outra coisa, valem a D-8 e a D-9
 > ([`DECISIONS.md`](DECISIONS.md)).
+>
+> **D-12 (03/10):** os limites de "2 merges por dia" e "nunca à noite" da D-7
+> foram revistos (revisto pela D-12, 03/10: sem limite por dia nem horário);
+> nenhuma outra regra deste protocolo muda.
 
 ## Ao abrir (uma vez)
 
@@ -59,7 +63,7 @@ publicados, ou uma regra de segurança escrita (riscos numerados do
 `AGENTS.md` — risco novo, só depois do "sim" do dono —, regras de segurança
 dos protocolos). Princípio do plano, "a plataforma vai ganhar" do padrão e
 decisão cujo mecanismo está numa unidade congelada não valem. Evolução
-(seção 5 do plano) não é defeito: tela ou fluxo novo, "funciona, mas
+(`DECISIONS.md`, D-7 item 3) não é defeito: tela ou fluxo novo, "funciona, mas
 ficaria melhor", refatoração, desempenho sem sintoma medido, dependência
 major sem falha, teste que falta sem defeito.
 

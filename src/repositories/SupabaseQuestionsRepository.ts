@@ -32,7 +32,7 @@ import { fetchAllRows } from './supabasePaging';
 //     explanation <-> question_option_keys.explanation
 //
 //   Campos do frontend SEM equivalente no schema atual (não persistidos):
-//     options[].mechanismReference, flashcardTemplate, isPremiumOnly
+//     options[].mechanismReference, flashcardTemplate
 //
 //   `saveCustomQuestion` não tem tabela/flag equivalente a "custom" para
 //   questions no schema (isso existe só em `flashcards.is_custom`). Aqui é

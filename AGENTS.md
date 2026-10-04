@@ -7,19 +7,29 @@ procedimentos vivem em `docs/operacao/`. Objetivo: uma sessão nova
 entender o presente e a próxima ação em até 10 minutos lendo este arquivo
 mais a porta de entrada abaixo.
 
+**O NexusMed é o caderno digital do dono (D-13, 03/10/2026), não um produto
+comercial:** só o dono publica, o revisor de IA aconselha, e material,
+questões e flashcards dos erros se ligam pelo trecho do material
+(`docs/operacao/DECISIONS.md`, D-13). Onde um documento antigo falar em
+plataforma comercial, em envio por qualquer usuário ou em "apto" como
+portão de publicação, vale a D-13.
+
 ## Leia primeiro, nesta ordem
 
-**Modelo D-7 (desde 28/09/2026): conteúdo é o produto.** Três sessões: a
+**Papéis da D-7 (desde 28/09/2026), ainda em vigor.** Três sessões: a
 **diretoria** (a única janela do dono; revisa, mantém a fila de defeitos e é
 a mesa editorial), a **sessão de defeitos** (a única que escreve código de
-produto; conserta, não constrói) e a **sessão de materiais** (o Gemini, fora
-do repositório). Funcionalidade nova está congelada, salvo pedido da
-produção. Papéis: [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md),
+produto) e a **sessão de materiais** (o Gemini, fora
+do repositório). O congelamento de funcionalidade nova da D-7 caiu com a D-10
+(29/09). Papéis: [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md),
 "Modelo D-7"; decisão: `DECISIONS.md`, D-7. Desde a D-8 (28/09), numa janela só: a diretoria é o agente `dev-senior`, a
 sessão de defeitos é o subagente `dev-junior` e a revisão é do subagente
 `dev-revisor` (`DECISIONS.md`, D-8). Desde a D-9 (29/09), com o "aprovado"
 do dono a um plano, a diretoria executa e publica tudo o que ele descreve
-(`DECISIONS.md`, D-9).
+(`DECISIONS.md`, D-9). Desde a D-12 (03/10), sem limite de publicações por
+dia nem proibição à noite (revisto pela D-12, 03/10: sem limite por dia nem
+horário), e a revisão dos envios da D-11 é feita pela equipe no Claude Code,
+com a cota da conta, sem API paga (`DECISIONS.md`, D-12).
 
 **Se você é a sessão de defeitos:** este arquivo,
 [`docs/operacao/EXECUTOR_PROTOCOL.md`](docs/operacao/EXECUTOR_PROTOCOL.md)
@@ -28,9 +38,9 @@ faltar um fato — leitura desnecessária custa tokens em toda sessão. A lista
 completa é da diretoria, que lê também o `MODELO-DIRETORIA.md`.
 
 1. [`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](docs/produto/PLANO-DE-DESENVOLVIMENTO.md)
-   — plano canônico: o que existe, o que está congelado e por quê (desde a
-   D-7, código só por defeito ou pedido da produção), e em que estado está
-   cada unidade.
+   — plano canônico: o que existe, o que está planejado e por quê (desde a
+   D-10 e a D-13, as unidades andam quando o dono as pede), e em que estado
+   está cada unidade.
 2. [`docs/operacao/PROJECT_STATE.md`](docs/operacao/PROJECT_STATE.md) —
    estado presente verificável, ambientes, baseline, riscos abertos.
 3. [`docs/operacao/DECISIONS.md`](docs/operacao/DECISIONS.md) — decisões
@@ -58,12 +68,21 @@ documento antigo citar um caminho que não existe mais):
 
 ## O que é o projeto
 
-Plataforma de estudos médicos (NexusMed/SynapseMed — o nome de marca é
-"NexusMed", o repositório e o projeto continuam se chamando SynapseMed)
-para residência médica: compêndios teóricos, banco de questões
-comentadas, flashcards com SRS, simulados, caderno de erros. Produção
-real, em uso por um grupo fechado de amigos do dono do projeto (não é
-protótipo).
+O caderno de estudos médicos do dono (NexusMed/SynapseMed — o nome de marca
+é "NexusMed", o repositório e o projeto continuam se chamando SynapseMed)
+para residência médica, com amigos aprovados lendo e estudando (D-13,
+03/10/2026; **não é produto comercial** — regra que existia só por isso,
+como a proibição de imagens, deixou de valer). Material (compêndios),
+banco de questões comentadas, flashcards com SRS, simulados e caderno de
+erros formam um só ciclo, ligado pelo trecho (seção) do material: o erro
+leva ao trecho, o trecho ao card, o card à revisão na seção. **Só o dono
+publica** (envio de material e de questões é só do admin; envios antigos de
+outros usuários ficam guardados) e o revisor de IA **aconselha**: o parecer
+aparece ao lado do envio, o dono publica com qualquer parecer, e o selo
+"Revisado por IA" só aparece com "apto". Já no ar: PRs #107 a #112 (admin
+publica sem "apto", revisor local, "Publicar" do admin, padrão v3 com
+figuras, cadeia erro → trecho → card, conta e sessão). Produção real, em
+uso por um grupo fechado (não é protótipo).
 
 - **Produzir conteúdo (compêndio) do zero até publicado** — Parte 1
   (autocontida, entregue a quem escreve, pessoa ou IA: níveis da árvore,
@@ -147,7 +166,8 @@ seção "Armadilhas já descobertas".
    com erro silencioso) é risco real de duplicação/perda de dado.** Ao
    criar repositório novo, seguir o modelo corrigido, não copiar o antigo.
 9. **`profiles.status`/gate de acesso é fail-closed:** só
-   `status === 'active'` entra no app.
+   `status === 'active'` entra no app. Falha momentânea de leitura do perfil
+   não derruba quem já foi lido como ativo; o resto continua fail-closed.
 10. **O projeto roda com `strict: true` desde 2026-09-18 — não desligar.**
 11. **`npm run lint` na raiz varre worktrees aninhadas sem o ignore
     existente; pgTAP deixa fixtures persistentes.** Manter o ignore e
@@ -209,12 +229,21 @@ seção "Armadilhas já descobertas".
     (`src/utils/compendiumMarkdownImport.ts`) e o leitor
     (`src/components/common/SafeMarkdown.tsx`) fazem hoje; mudou um dos dois,
     atualize o padrão no mesmo PR e rode o exemplo do bloco de formato pelo
-    importador para conferir. O padrão tem versão (v2 desde 2026-09-23):
+    importador para conferir. O padrão tem versão (v3 desde 03/10/2026, P9;
+    v2 desde 2026-09-23):
     mudança editorial sobe a versão e ganha entrada na seção 2.7; depois da
     unidade 44-C1, regra mecânica nova vem com a checagem correspondente
-    (sob a D-7, essa checagem é pedido da produção; até lá, a revisão
+    (essa checagem entra como unidade do plano, D-10; até lá, a revisão
     confere à mão). Desde 24/09 (D-5) quem escreve é o Gemini, fora do
-    repositório: o padrão é a interface entre ele e o sistema.
+    repositório: o padrão é a interface entre ele e o sistema. Figuras (v3):
+    bloco `figura:<uuid>` (imagem + legenda + `Fonte:`), arquivo no bucket
+    `material-figures`, imutável; o leitor e a checagem do padrão leem o bloco
+    pelo mesmo módulo (`src/utils/figuraDoMaterial.ts`) — não crie uma
+    segunda leitura.
+20. **Card de flashcard com seção:** `create_flashcard_from_question` tem 12
+    parâmetros (o último, `p_material_section_id`) e o card de seção nasce
+    por `create_flashcard_from_section`, nunca por `upsert` direto. O revisor
+    local agendado roda do checkout principal: não trocar de branch lá.
 
 ## Convenções de trabalho
 
@@ -237,8 +266,9 @@ seção "Armadilhas já descobertas".
 - **Modelo D-7 (28/09): diretoria, sessão de defeitos e sessão de
   materiais** — substitui as trilhas (23/09) e revê a D-6 acima no que fala
   de trilhas, de PRs esperando, da meta e de "processo congelado até 09/10"
-  (09/10 passa a ser a revisão da D-7). O código vem da fila de defeitos;
-  todo PR é revisado por quem não o escreveu, antes do merge; a diretoria
+  (09/10 passa a ser a revisão da D-7). O código vem da fila de defeitos e,
+  desde a D-10 (29/09) e a D-13 (03/10), das unidades do plano que o dono
+  pede; todo PR é revisado por quem não o escreveu, antes do merge; a diretoria
   mescla o que está num plano que o dono aprovou (D-9). Modelo:
   [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md).
 - **Testar contra Supabase LOCAL** antes de considerar qualquer mudança
@@ -259,8 +289,7 @@ probabilidade de recorrência deve gerar registro em
 `docs/operacao/standards/` ou `RUNBOOK.md`; somente um resumo curto e um
 link entram aqui quando todo agente precisar conhecê-los.
 
-O que existe, o que está congelado e por quê (desde a D-7, código só por
-defeito ou pedido da produção) vive no plano canônico
+O que existe, o que está planejado e em que estado vive no plano canônico
 (`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`); estado dos ambientes,
 decisões e fila operacional, em `PROJECT_STATE.md`, `DECISIONS.md` e
 `TASKS.md`, conforme `SESSION_PROTOCOL.md`. `docs/archive/diretoria/registro.md` é
@@ -281,12 +310,13 @@ e consultar [`docs/archive/diretoria/registro.md`](docs/archive/diretoria/regist
 para o histórico. Preserve os identificadores já emitidos ao continuar
 esse histórico.
 
-**Desde 2026-09-28 (D-7) o código vem da fila de defeitos** — issues com o
-rótulo `bug` e a gravidade (`grave` ou `menor`) — e, com o "sim" do dono, de
-um pedido da produção (`pedido-da-producao`), não das unidades do plano
-canônico:
-[`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](docs/produto/PLANO-DE-DESENVOLVIMENTO.md).
-O plano continua dizendo o que existe, o que está congelado e por quê, com a
-fronteira defeito × evolução na seção 5; quem o atualiza é a diretoria, em
-lote. `docs/archive/diretoria/prompts/` e `registro.md` são histórico — nada
+**O código vem de duas portas.** Da fila de defeitos — issues com o rótulo
+`bug` e a gravidade (`grave` ou `menor`), com a fronteira defeito × evolução
+em `DECISIONS.md`, D-7 item 3 — e das unidades do plano canônico
+([`docs/produto/PLANO-DE-DESENVOLVIMENTO.md`](docs/produto/PLANO-DE-DESENVOLVIMENTO.md)),
+que voltaram pela D-10 (29/09) e andam quando o dono as pede (D-13,
+03/10). O congelamento de funcionalidade e o "pedido da produção" como única
+porta da D-7 (28/09) ficaram só como histórico, em `DECISIONS.md`. O plano diz
+o que existe, o que está planejado e em que estado; quem o atualiza é a
+diretoria, em lote. `docs/archive/diretoria/prompts/` e `registro.md` são histórico — nada
 novo entra lá.

@@ -7,9 +7,11 @@ import { estadoEmPalavras } from '../../utils/envioDeMaterial';
 import { dividirEmBlocos } from '../../utils/padraoMaterial';
 import { copiarTexto } from '../../utils/areaDeTransferencia';
 import { SafeMarkdown } from '../common/SafeMarkdown';
+import type { ResultadoDaAcao } from '../../utils/publicarEnvioPeloAdmin';
+import { PublicarEnvioDoAdmin } from './PublicarEnvioDoAdmin';
 
 // Lista de envios — a mesma para "Meus envios" (estudante) e para a aba de
-// envios da Área Editorial (admin, só leitura nesta unidade).
+// envios da Área Editorial (admin, que também publica o envio, P8).
 //
 // 44-G: envio "publicado" tem o link para o material; o recado do servidor (ex.:
 // título repetido) aparece junto do estado.
@@ -43,6 +45,8 @@ interface ListaDeEnviosProps {
   ocupadoId?: string | null;
   /** 44-B: os materiais publicados, para dizer de qual deles o envio é a atualização. */
   materiais?: Array<{ id: string; title: string }>;
+  /** P8, admin: publica o envio (ou aplica a atualização) com qualquer parecer do revisor. */
+  onPublicar?: (envio: EnvioDaLista) => Promise<ResultadoDaAcao>;
 }
 
 export function dataDoEnvio(iso: string): string {
@@ -127,6 +131,7 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
   onAbrirQuestoes,
   ocupadoId,
   materiais,
+  onPublicar,
 }) => {
   if (envios.length === 0) {
     return <p className="text-sm text-slate-500 dark:text-slate-400">{vazio}</p>;
@@ -143,7 +148,7 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
         // 44-B: na atualização, "publicado" é "o conteúdo no ar foi trocado" (ou já era igual).
         const estado =
           alvoDoEnvio && item.status === 'apto'
-            ? { ...base, explicacao: 'A revisão aprovou a atualização. O conteúdo que está no ar será trocado em alguns minutos.' }
+            ? { ...base, explicacao: 'O revisor de IA deu parecer favorável à atualização. Ela não é aplicada sozinha: o conteúdo que está no ar só muda quando o dono do site decidir.' }
             : alvoDoEnvio && item.status === 'publicado'
               ? { ...base, explicacao: 'O material que está no ar já tem o conteúdo desta atualização, com o selo de revisado por IA.' }
               : alvoDoEnvio && item.status === 'nao_apto'
@@ -234,6 +239,15 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
             )}
             {item.review && item.status !== 'aguardando_revisao' && item.status !== 'em_revisao' && (
               <RevisaoDoEnvio revisao={item.review} objeto={questoes ? 'as questões' : 'o material'} />
+            )}
+            {onPublicar && (
+              <PublicarEnvioDoAdmin
+                titulo={item.title}
+                status={item.status}
+                veredito={item.review?.verdict}
+                tipo={questoes ? 'questoes' : alvoDaAtualizacao ? 'atualizacao' : 'material'}
+                onPublicar={() => onPublicar(item)}
+              />
             )}
             {(podeCorrigir || podeTentarDeNovo) && (
               <div className="flex flex-wrap gap-2 pt-1">

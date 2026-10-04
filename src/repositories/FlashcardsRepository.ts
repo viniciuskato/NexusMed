@@ -1,10 +1,16 @@
-import { Flashcard, FlashcardSRS, Question } from '../types';
+import { Flashcard, FlashcardSRS, Question, QuestionReviewResult } from '../types';
 import { StorageService, getStorageUser } from '../services/storage';
 import { SupabaseFlashcardsRepository } from './SupabaseFlashcardsRepository';
 import { enqueue, enqueueAndTry } from '../services/syncQueue';
-import { FlashcardCreateFromQuestionOpPayload, FlashcardReviewOpPayload } from '../services/syncHandlers';
+import {
+  FlashcardCreateFromQuestionOpPayload,
+  FlashcardCreateFromSectionOpPayload,
+  FlashcardReviewOpPayload,
+} from '../services/syncHandlers';
 
 import { isSupabaseConfigured } from '../lib/supabaseClient';
+import { questionsRepository } from './QuestionsRepository';
+import { questaoTraGabarito } from '../utils/flashcardDoErro';
 
 interface FlashcardReviewRpcResult {
   interval_days: number;
@@ -36,7 +42,16 @@ export interface FlashcardsRepository {
   deleteFlashcard(id: string): Promise<void>;
   getDueFlashcards(): Promise<Flashcard[]>;
   updateFlashcardSRS(cardId: string, srs: FlashcardSRS): Promise<void>;
-  createFlashcardFromQuestion(question: Question): Promise<Flashcard>;
+  /**
+   * Cria o card do erro. O verso traz a alternativa correta e a explicação: para quem não é admin elas
+   * não vêm na questão carregada, e saem da revisão pós-resposta (`review`, ou buscada aqui quando falta).
+   */
+  createFlashcardFromQuestion(question: Question, review?: QuestionReviewResult): Promise<Flashcard>;
+  /**
+   * P10: cria o card de uma seção do material (o do leitor). Um por usuário e seção: se já existe um (neste
+   * aparelho ou, ao sincronizar, no servidor), devolve esse com `created: false` e não cria outro.
+   */
+  createFlashcardFromSection(card: Flashcard): Promise<{ card: Flashcard; created: boolean }>;
   reviewFlashcard(card: Flashcard, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null>;
 }
 
@@ -59,8 +74,11 @@ class LocalStorageFlashcardsRepository implements FlashcardsRepository {
   async updateFlashcardSRS(cardId: string, srs: FlashcardSRS): Promise<void> {
     StorageService.updateFlashcardSRS(cardId, srs);
   }
-  async createFlashcardFromQuestion(question: Question): Promise<Flashcard> {
-    return StorageService.createFlashcardFromQuestion(question);
+  async createFlashcardFromQuestion(question: Question, review?: QuestionReviewResult): Promise<Flashcard> {
+    return StorageService.createFlashcardFromQuestion(question, review);
+  }
+  async createFlashcardFromSection(card: Flashcard): Promise<{ card: Flashcard; created: boolean }> {
+    return StorageService.createFlashcardFromSection(card);
   }
   async reviewFlashcard(card: Flashcard, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null> {
     return StorageService.reviewFlashcard(card.id, rating);
@@ -128,14 +146,34 @@ class ResilientFlashcardsRepository implements FlashcardsRepository {
     }
   }
 
-  async createFlashcardFromQuestion(question: Question): Promise<Flashcard> {
-    const localRes = await this.local.createFlashcardFromQuestion(question);
+  async createFlashcardFromQuestion(question: Question, review?: QuestionReviewResult): Promise<Flashcard> {
+    // Quem não é admin não recebe o gabarito junto com a questão: sem a revisão em mãos, busca a do
+    // servidor (que só responde depois de a pessoa ter respondido). Se a busca falhar, o erro sobe e
+    // nenhum card sai: um card criado sem o verso ficaria vazio para sempre (a criação é idempotente).
+    const jaExiste = (await this.local.getFlashcards()).some((card) => card.questionOriginId === question.id);
+    const revisao =
+      review ?? (jaExiste || questaoTraGabarito(question) ? undefined : await questionsRepository.getQuestionReview(question.id));
+    const localRes = await this.local.createFlashcardFromQuestion(question, revisao);
     const userId = getStorageUser();
     if (isSupabaseConfigured && userId) {
       const payload: FlashcardCreateFromQuestionOpPayload = { flashcard: localRes };
       enqueue(userId, 'flashcard_create_from_question', payload, localRes.id);
     }
     return localRes;
+  }
+
+  async createFlashcardFromSection(card: Flashcard): Promise<{ card: Flashcard; created: boolean }> {
+    // Local primeiro (um card por seção no aparelho); depois a fila, que cria no servidor pela RPC atômica:
+    // se o servidor já tem o card da seção (outro aparelho, outra aba), converge para ele, sem duplicar.
+    const local = await this.local.createFlashcardFromSection(card);
+    if (!local.created) return local;
+    const userId = getStorageUser();
+    if (isSupabaseConfigured && userId) {
+      const payload: FlashcardCreateFromSectionOpPayload = { flashcard: local.card };
+      const canonical = (await enqueueAndTry(userId, 'flashcard_create_from_section', payload, local.card.id)) as Flashcard | null;
+      if (canonical && canonical.id !== local.card.id) return { card: canonical, created: false };
+    }
+    return local;
   }
 
   async reviewFlashcard(card: Flashcard, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null> {

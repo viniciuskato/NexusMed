@@ -65,9 +65,14 @@ describe('44-D — página "Como escrever um material"', () => {
     expect(
       codigos.some((c) => c.startsWith('# Título completo do material') && c.includes('| Coluna A | Coluna B |')),
     ).toBe(true);
-    // Se o modelo tivesse sido interpretado, "Título da primeira seção" seria um título.
-    expect(screen.queryByRole('heading', { name: 'Título da primeira seção' })).toBeNull();
-    expect(screen.queryByRole('table')).toBeNull();
+    // Se o modelo tivesse sido interpretado, "Um subtítulo dentro da seção" seria um título e a tabela dele, uma tabela.
+    expect(screen.queryByRole('heading', { name: 'Um subtítulo dentro da seção' })).toBeNull();
+    expect(screen.queryByRole('columnheader', { name: 'Coluna A' })).toBeNull();
+    expect(container.querySelector('#como-escrever-padrao-texto pre table')).toBeNull();
+    // P9: o modelo traz a figura pendente, que no texto da página seria uma figura; aqui é literal.
+    expect(codigos.some((c) => c.includes('![Descrição da imagem, para quem não a vê](figura:PENDENTE)'))).toBe(true);
+    expect(container.querySelector('#como-escrever-padrao-texto figure')).toBeNull();
+    expect(container.querySelector('#como-escrever-padrao-texto img')).toBeNull();
   });
 
   it('lista as Disciplinas e os Temas do catálogo com os nomes exatos', () => {
@@ -105,8 +110,8 @@ describe('44-D — página "Como escrever um material"', () => {
     expect(fluxo).not.toMatch(/em breve/i);
     expect(fluxo).toMatch(/revisor de IA do próprio NexusMed confere/i);
     expect(fluxo).toContain('“APTO PARA ENVIAR”');
-    expect(fluxo).toMatch(/selo “revisado\s+por IA”/);
-    expect(fluxo).toMatch(/qualquer leitor pode reportar um erro/i);
+    expect(fluxo).toMatch(/dá o parecer/);
+    expect(fluxo).toMatch(/quem decide e publica é o dono do site/i);
     // Decisão do dono: a página não fala em atestação.
     expect(fluxo).not.toMatch(/atesta/i);
     expect(document.body.textContent ?? '').not.toMatch(/revisa e atesta/i);

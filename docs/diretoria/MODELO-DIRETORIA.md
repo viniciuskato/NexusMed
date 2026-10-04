@@ -84,7 +84,9 @@ diretoria, no "sim" do dono à pergunta da primeira rodada de cada janela
 nova (D-7, item 8).
 
 Limites, autorizações, métrica e a revisão da D-7 em 09/10: na própria
-decisão. Textos para abrir a diretoria e a sessão de defeitos: seção 0 do
+decisão (revisto pela D-12, 03/10: sem limite de merges por dia nem proibição à
+noite; a revisão dos envios da D-11 é feita pela equipe no Claude Code, sem
+API paga, D-12 item 2). Textos para abrir a diretoria e a sessão de defeitos: seção 0 do
 plano canônico. A sessão de auditoria continua só sob pedido explícito do
 dono (seção própria, abaixo). As seções "Três papéis" e "Trilhas e revisão"
 ficam como histórico; o resto deste documento vale onde não contradiz esta
@@ -134,7 +136,7 @@ mesmo código duas vezes; o que uma entendia se perdia na passagem; e o
 trabalho de um modelo mais barato voltava para ser refeito.
 
 - **Trilha** — sessão de vida longa, com o modelo mais capaz disponível,
-  dona de uma área do código (a seção 5 do plano diz quais e em que ordem).
+  dona de uma área do código (a divisão por trilhas é anterior à D-7: `DECISIONS.md`, D-6 e D-7).
   Desenha e implementa, uma unidade por PR; o contexto de uma unidade serve
   à próxima. Quando uma escolha muda o que o usuário vê ou contradiz uma
   decisão registrada, pergunta ao dono na própria sessão, sem passar por uma

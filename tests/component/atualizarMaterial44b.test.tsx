@@ -128,7 +128,7 @@ describe('44-B — Atualizar a partir de arquivo', () => {
     renderizar();
     await abrirEEscolher(editado);
 
-    const previa = await screen.findByText(/Veja o que vai mudar/);
+    const previa = await screen.findByText(/Veja o que mudaria/);
     expect(previa).toBeTruthy();
     const area = document.getElementById('atualizar-previa') as HTMLElement;
     expect(area.textContent).toContain('Seções alteradas');

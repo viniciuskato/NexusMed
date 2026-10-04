@@ -85,8 +85,6 @@ vi.mock('../../src/components/AppErrorBoundary', () => ({
 vi.mock('../../src/services/storage', () => ({
   StorageService: {
     getTheme: () => 'light',
-    getUserPlan: () => 'free',
-    setUserPlan: vi.fn(),
     getLastReadingSession: () => null,
     saveLastReadingSession: vi.fn(),
     checkLegacyDataSummary: () => ({
@@ -117,7 +115,8 @@ afterEach(() => {
 });
 
 describe('44-H1 — "Como escrever questões" no app', () => {
-  it('estudante ativo abre a página pelo menu do usuário', async () => {
+  it('admin ativo abre a página pelo menu do usuário (P6: só o dono envia)', async () => {
+    authState.profile = { role: 'admin', status: 'active' };
     render(<App />);
     await screen.findByRole('heading', { level: 1, name: 'Hoje' });
 
@@ -134,6 +133,7 @@ describe('44-H1 — "Como escrever questões" no app', () => {
   });
 
   it('o link da página leva a "Enviar material" já na aba de questões, e de lá volta às instruções', async () => {
+    authState.profile = { role: 'admin', status: 'active' };
     render(<App />);
     await screen.findByRole('heading', { level: 1, name: 'Hoje' });
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
@@ -150,6 +150,7 @@ describe('44-H1 — "Como escrever questões" no app', () => {
   });
 
   it('o item "Enviar material" do menu abre sempre na aba Material, mesmo depois de a aba Questões ter sido aberta (44-H2)', async () => {
+    authState.profile = { role: 'admin', status: 'active' };
     render(<App />);
     await screen.findByRole('heading', { level: 1, name: 'Hoje' });
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));

@@ -31,7 +31,7 @@ import { answersRepository } from '../../repositories/AnswersRepository';
 import { questionsRepository } from '../../repositories/QuestionsRepository';
 import { errorNotebookRepository } from '../../repositories/ErrorNotebookRepository';
 import { ExportCadernoModal } from './ExportCadernoModal';
-import { parseInline } from '../common/SafeMarkdown';
+import { parseInline, SafeMarkdown } from '../common/SafeMarkdown';
 import { useServerLoad } from '../../hooks/useServerLoad';
 import { ConnectionNotice } from '../common/ConnectionNotice';
 import { LoadStatus, loadStatusOf } from '../../services/connectivity';
@@ -281,7 +281,7 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
   };
 
   const handleCreateFlashcard = async (q: Question) => {
-    await flashcardsRepository.createFlashcardFromQuestion(q);
+    await flashcardsRepository.createFlashcardFromQuestion(q, reviews[q.id]);
     setCreatedFlashcardQuestionIds((prev) => [...prev, q.id]);
     onUpdate();
     showToast('Flashcard gerado com sucesso! Já agendado na sua rotina de SRS.');
@@ -627,6 +627,10 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
             const isEditingThis = editingNoteId === question.id;
             const review = reviews[question.id];
             const hasFlashcardCreated = createdFlashcardQuestionIds.includes(question.id);
+            // P10: o trecho do material a que a questão está ligada (a seção), mostrado ao lado do erro.
+            const linkedSection = question.compendiumSectionId
+              ? comp?.sections.find((sec) => sec.id === question.compendiumSectionId)
+              : undefined;
 
             return (
               <div
@@ -685,20 +689,47 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
                   </h4>
                 </div>
 
-                {/* Resumo Clínico & Pérola de Gabarito */}
-                <div className="p-3.5 rounded-2xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200/70 dark:border-rose-900/50 space-y-2 text-xs">
-                  <div className="flex items-center gap-1.5 font-bold text-rose-900 dark:text-rose-300">
-                    <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
-                    <span>Mecanismo Negligenciado & Distrator</span>
-                  </div>
-                  <p className="text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
-                    {parseInline(review?.generalCommentary || question.generalCommentary || 'Revise o mecanismo fisiopatológico ou os critérios diagnósticos desta diretriz.')}
-                  </p>
-                  {(review?.highYieldSummary || question.highYieldSummary) && (
-                    <div className="p-2.5 rounded-xl bg-white/80 dark:bg-[#0B1220]/80 border border-rose-200/50 dark:border-rose-900/40 text-[11px] text-slate-800 dark:text-slate-200">
-                      <strong className="text-teal-700 dark:text-teal-400">Ponto-chave da diretriz: </strong>
-                      {parseInline(review?.highYieldSummary || question.highYieldSummary || '')}
+                <div className={linkedSection ? 'grid grid-cols-1 lg:grid-cols-2 gap-3 items-start' : undefined}>
+                  {/* Resumo Clínico & Pérola de Gabarito */}
+                  <div className="p-3.5 rounded-2xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200/70 dark:border-rose-900/50 space-y-2 text-xs">
+                    <div className="flex items-center gap-1.5 font-bold text-rose-900 dark:text-rose-300">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                      <span>Mecanismo Negligenciado & Distrator</span>
                     </div>
+                    <p className="text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
+                      {parseInline(review?.generalCommentary || question.generalCommentary || 'Revise o mecanismo fisiopatológico ou os critérios diagnósticos desta diretriz.')}
+                    </p>
+                    {(review?.highYieldSummary || question.highYieldSummary) && (
+                      <div className="p-2.5 rounded-xl bg-white/80 dark:bg-[#0B1220]/80 border border-rose-200/50 dark:border-rose-900/40 text-[11px] text-slate-800 dark:text-slate-200">
+                        <strong className="text-teal-700 dark:text-teal-400">Ponto-chave da diretriz: </strong>
+                        {parseInline(review?.highYieldSummary || question.highYieldSummary || '')}
+                      </div>
+                    )}
+                  </div>
+                  {linkedSection && (
+                    <aside
+                      data-testid={`trecho-do-erro-${question.id}`}
+                      aria-label="Trecho do material ligado a esta questão"
+                      className="p-3.5 rounded-2xl bg-teal-50/60 dark:bg-teal-950/20 border border-teal-200/70 dark:border-teal-900/50 space-y-2 text-xs"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-1.5 font-bold text-teal-900 dark:text-teal-300 min-w-0">
+                          <BookOpen className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
+                          <span className="truncate">Trecho do material: {linkedSection.title}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onOpenCompendium(compId, linkedSection.id, question.id)}
+                          className="shrink-0 px-2.5 py-1 rounded-lg bg-white dark:bg-[#142038] hover:bg-teal-100 dark:hover:bg-teal-900/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800 text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>Abrir no material</span>
+                          <ExternalLink className="w-3 h-3 opacity-60" />
+                        </button>
+                      </div>
+                      <div className="max-h-72 overflow-y-auto pr-1 text-slate-800 dark:text-slate-200">
+                        <SafeMarkdown content={linkedSection.content} />
+                      </div>
+                    </aside>
                   )}
                 </div>
 

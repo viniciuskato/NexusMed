@@ -193,11 +193,11 @@ $$;
 -- 45-H: função nova não nasce executável por PUBLIC; os helpers rodam como service_role/authenticated.
 grant execute on all functions in schema tests to public;
 
-select plan(111);
+select plan(113);
 
 select tests.clear_auth();
 select tests.create_user('b.admin@test.local', 'admin', 'active') as v_admin \gset
-select tests.create_user('b.autor@test.local', 'student', 'active') as v_autor \gset
+select tests.create_user('b.autor@test.local', 'admin', 'active') as v_autor \gset
 select tests.create_user('b.outro@test.local', 'student', 'active') as v_outro \gset
 select tests.create_user('b.aluno@test.local', 'student', 'active') as v_aluno \gset
 select tests.create_user('b.pend@test.local', 'student', 'pending') as v_pend \gset
@@ -280,8 +280,18 @@ select is(app.titulo_normalizado('  Mecanismo   DE Ação  '), 'mecanismo de aca
 -- ---------------------------------------------------------------------------
 -- A tela pergunta ao banco quem vê os botões.
 select tests.authenticate_as(:'v_autor');
-select ok(public.pode_atualizar_material(:'v_m'::uuid), 'a tela mostra os botões ao autor do envio que publicou o material');
+select ok(public.pode_atualizar_material(:'v_m'::uuid), 'a tela mostra os botões ao autor do envio que publicou o material, que é admin');
 select tests.clear_auth();
+-- P6 (03/10): só o admin atualiza. O mesmo autor, se não for admin, não vê os botões nem pede a atualização.
+update public.profiles set role = 'student' where id = :'v_autor';
+select tests.authenticate_as(:'v_autor');
+select is(public.pode_atualizar_material(:'v_m'::uuid), false, 'P6: o autor do envio que publicou o material, se não é admin, não vê os botões');
+select throws_ok(
+  format($$ insert into public.material_submissions (title, content_md, target_material_id) values ('Ex-autor', '# x', %L) $$, :'v_m'),
+  '42501', NULL, 'P6: e não pede a atualização'
+);
+select tests.clear_auth();
+update public.profiles set role = 'admin' where id = :'v_autor';
 select tests.authenticate_as(:'v_admin');
 select ok(public.pode_atualizar_material(:'v_m'::uuid), 'e ao admin ativo');
 select tests.clear_auth();
@@ -294,7 +304,7 @@ select tests.clear_auth();
 select tests.authenticate_as(:'v_outro');
 select throws_ok(
   format($$ insert into public.material_submissions (title, content_md, target_material_id) values ('Alheio', '# x', %L) $$, :'v_m'),
-  '42501', NULL, 'quem não é admin nem enviou o material não pede atualização'
+  '42501', NULL, 'quem não é admin não pede atualização'
 );
 select tests.clear_auth();
 select tests.authenticate_as(:'v_pend');
@@ -362,9 +372,9 @@ select tests.create_user('b.fila@test.local', 'admin', 'active') as v_fila \gset
 insert into public.material_submissions (author_id, title, content_md, target_material_id) values
   (:'v_fila', 'Fila 1', '# 1', :'v_m'), (:'v_fila', 'Fila 2', '# 2', :'v_m'), (:'v_fila', 'Fila 3', '# 3', :'v_m');
 select tests.authenticate_as(:'v_fila');
-select throws_ok(
+select lives_ok(
   format($$ insert into public.material_submissions (title, content_md, target_material_id) values ('Fila 4', '# 4', %L) $$, :'v_m'),
-  'P0001', NULL, 'o quarto envio esperando revisão (de atualização também) é recusado'
+  'P7: o quarto envio esperando (de atualização também) não barra o admin'
 );
 select tests.clear_auth();
 

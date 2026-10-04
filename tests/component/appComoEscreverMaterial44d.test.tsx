@@ -14,9 +14,9 @@ vi.setConfig({ testTimeout: 30000 });
   disconnect() {}
 };
 
-// 44-D, aceite 1 — usuário ATIVO não-admin vê no menu "Como escrever um
-// material" e a página abre; pendente e bloqueado não chegam à página, mesmo
-// com o endereço direto (mesmo gate do resto do app).
+// 44-D, aceite 1, revisto pela P6 (03/10) — só o dono (admin) envia: o admin ATIVO vê no menu "Como
+// escrever um material" e a página abre; o estudante ativo não vê o menu de envio nem abre as telas
+// pelo endereço direto; pendente e bloqueado não chegam à página (mesmo gate do resto do app).
 
 const authState: { profile: { role: string; status: string } | null } = {
   profile: { role: 'student', status: 'active' },
@@ -85,8 +85,6 @@ vi.mock('../../src/components/AppErrorBoundary', () => ({
 vi.mock('../../src/services/storage', () => ({
   StorageService: {
     getTheme: () => 'light',
-    getUserPlan: () => 'free',
-    setUserPlan: vi.fn(),
     getLastReadingSession: () => null,
     saveLastReadingSession: vi.fn(),
     checkLegacyDataSummary: () => ({
@@ -117,7 +115,8 @@ afterEach(() => {
 });
 
 describe('44-D — "Como escrever um material" no app', () => {
-  it('estudante ativo abre a página pelo menu do usuário', async () => {
+  it('admin ativo abre a página pelo menu do usuário', async () => {
+    authState.profile = { role: 'admin', status: 'active' };
     render(<App />);
     await screen.findByRole('heading', { level: 1, name: 'Hoje' });
 
@@ -132,7 +131,8 @@ describe('44-D — "Como escrever um material" no app', () => {
     expect(window.location.hash).toBe('#/como-escrever-material');
   });
 
-  it('44-E: estudante ativo abre "Enviar material" pelo menu, e a página de instruções leva até ela', async () => {
+  it('44-E: admin ativo abre "Enviar material" pelo menu, e a página de instruções leva até ela', async () => {
+    authState.profile = { role: 'admin', status: 'active' };
     render(<App />);
     await screen.findByRole('heading', { level: 1, name: 'Hoje' });
 
@@ -147,6 +147,26 @@ describe('44-D — "Como escrever um material" no app', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Como escrever um material' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Enviar material' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Enviar material' })).toBeTruthy();
+  });
+
+  it('P6: estudante ativo não vê o menu de envio e não abre as telas de envio, nem pelo endereço direto', async () => {
+    render(<App />);
+    await screen.findByRole('heading', { level: 1, name: 'Hoje' });
+    fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
+    expect(screen.queryByRole('menuitem', { name: 'Como escrever um material' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Como escrever questões' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Enviar material' })).toBeNull();
+    cleanup();
+
+    for (const rota of ['enviar-material', 'como-escrever-material', 'como-escrever-questoes']) {
+      window.location.hash = `#/${rota}`;
+      render(<App />);
+      await screen.findByRole('heading', { level: 1, name: 'Hoje' });
+      expect(screen.queryByRole('heading', { level: 1, name: 'Enviar material' })).toBeNull();
+      expect(screen.queryByRole('heading', { level: 1, name: 'Como escrever um material' })).toBeNull();
+      expect(screen.queryByRole('heading', { level: 1, name: 'Como escrever questões' })).toBeNull();
+      cleanup();
+    }
   });
 
   it('usuário pendente não vê a página nem o menu, mesmo com o endereço direto', async () => {

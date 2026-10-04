@@ -3,7 +3,6 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import {
-  UserPlan,
   Flashcard,
   SimuladoConfig,
   ThemeMode,
@@ -67,6 +66,8 @@ import { LoginView } from './components/auth/LoginView';
 import { EmailVerificationScreen } from './components/auth/EmailVerificationScreen';
 import { MigrateDataModal } from './components/auth/MigrateDataModal';
 import { AwaitingApprovalView } from './components/auth/AwaitingApprovalView';
+import { SetNewPasswordView } from './components/auth/SetNewPasswordView';
+import { ProfileRefreshNotice } from './components/auth/ProfileRefreshNotice';
 import { BlockedAccountView } from './components/auth/BlockedAccountView';
 import { FeedbackModal } from './components/feedback/FeedbackModal';
 
@@ -74,7 +75,6 @@ import { FeedbackModal } from './components/feedback/FeedbackModal';
 import { Header } from './components/Header';
 import { MobileBottomNav } from './components/navigation/MobileBottomNav';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
-import { PlanModal } from './components/PlanModal';
 
 // Views
 import { DashboardView } from './components/dashboard/DashboardView';
@@ -131,15 +131,24 @@ const PERSISTED_VIEWS = [
   'admin',
 ] as const;
 
+// P6 (03/10): só o dono (admin) envia material e questões. As telas de envio, e as de "como escrever"
+// que levam a elas, não existem para quem não é admin; o banco recusa o envio de qualquer forma (RLS).
+const VIEWS_DE_ENVIO: readonly string[] = ['como-escrever-material', 'como-escrever-questoes', 'enviar-material'];
+
 function viewFromHash(): string {
   return window.location.hash.replace(/^#\/?/, '');
 }
 
 function AuthenticatedApp() {
-  const { user, profile, loading, isEmailVerified } = useAuth();
+  const { user, profile, loading, isEmailVerified, passwordRecovery } = useAuth();
 
   // Navigation State
   const [activeView, setActiveView] = useState<string>('today');
+  // P6: só o admin abre as telas de envio; a ref deixa o handler do histórico (sem dependências) saber.
+  const canSendRef = useRef(false);
+  useEffect(() => {
+    canSendRef.current = profile?.role === 'admin' && profile?.status === 'active';
+  }, [profile?.role, profile?.status]);
   // Estudo Temático: pack aberto (id derivado do compêndio). Fica aqui, e não
   // dentro da view, porque o retorno ao pack depois de ler/responder/revisar
   // depende dele, e porque a validação do id salvo precisa dos dados já
@@ -196,6 +205,8 @@ function AuthenticatedApp() {
   const [dashboardTab, setDashboardTab] = useState<'overview' | 'errors'>('overview');
 
   const handleSelectView = (view: string) => {
+    // P6: quem não é admin não abre as telas de envio (menu escondido; isto cobre atalhos e links).
+    if (VIEWS_DE_ENVIO.includes(view) && !canSendRef.current) return;
     // O menu "Enviar material" abre sempre na aba Material; quem quer a aba Questões a pede depois
     // ("Como escrever questões"), com setModoDoEnvio('questoes') logo em seguida.
     if (view === 'enviar-material') setModoDoEnvio('material');
@@ -237,7 +248,6 @@ function AuthenticatedApp() {
 
   // Modals
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isCreateSimuladoOpen, setIsCreateSimuladoOpen] = useState(false);
   const [isCreateFlashcardOpen, setIsCreateFlashcardOpen] = useState(false);
@@ -291,11 +301,10 @@ function AuthenticatedApp() {
     // `AuthContext`), então o valor novo é o de B, não um vazio à toa.
     setLastReadingSession(StorageService.getLastReadingSession());
     setMigrationSummary(null);
-    // Modais abertos (busca, plano, feedback, criar simulado/flashcard) não
+    // Modais abertos (busca, feedback, criar simulado/flashcard) não
     // guardam dado de outra conta, mas um formulário aberto no meio da troca
     // é um estado órfão — fecha todos, como o resto da tela.
     setIsSearchOpen(false);
-    setIsPlanModalOpen(false);
     setIsFeedbackOpen(false);
     setIsCreateSimuladoOpen(false);
     setIsCreateFlashcardOpen(false);
@@ -307,7 +316,6 @@ function AuthenticatedApp() {
 
   // Core Data State (carregados do StorageService / Supabase)
   const [theme, setTheme] = useState<ThemeMode>(() => StorageService.getTheme());
-  const [plan, setPlan] = useState<UserPlan>(() => StorageService.getUserPlan());
   // Carregamento do servidor (45-G, D-2): troca de usuário limpa o estado
   // antes de carregar; numa falha, o aviso aparece e a carga tenta de novo
   // sozinha; `dataReady` diz se os dados na tela são deste usuário. Ver
@@ -329,7 +337,6 @@ function AuthenticatedApp() {
   // Nunca lança: as telas chamam isto como `onUpdate` depois de gravar.
   const refreshData = useCallback(async () => {
     await refresh();
-    setPlan(StorageService.getUserPlan());
     setTheme(StorageService.getTheme());
   }, [refresh]);
 
@@ -337,7 +344,6 @@ function AuthenticatedApp() {
   useEffect(() => {
     if (user?.id) {
       setNavStateRestored(false);
-      setPlan(StorageService.getUserPlan());
       setTheme(StorageService.getTheme());
       const legacySummary = StorageService.checkLegacyDataSummary(user.id);
       if (legacySummary.hasLegacyData) {
@@ -371,7 +377,10 @@ function AuthenticatedApp() {
       : 'today';
     const isAllowedView = (PERSISTED_VIEWS as readonly string[]).includes(savedView);
     const canUseAdmin = profile?.role === 'admin' && profile?.status === 'active';
-    const restoredView = isAllowedView && (savedView !== 'admin' || canUseAdmin) ? savedView : 'today';
+    const restoredView =
+      isAllowedView && (savedView !== 'admin' || canUseAdmin) && (!VIEWS_DE_ENVIO.includes(savedView) || canUseAdmin)
+        ? savedView
+        : 'today';
 
     const savedPackId = StorageService.getUIState<string | null>('nav_thematic_pack', null);
     const isValidPack =
@@ -421,7 +430,7 @@ function AuthenticatedApp() {
   useEffect(() => {
     const onPopState = () => {
       const view = viewFromHash();
-      if ((PERSISTED_VIEWS as readonly string[]).includes(view)) {
+      if ((PERSISTED_VIEWS as readonly string[]).includes(view) && !(VIEWS_DE_ENVIO.includes(view) && !canSendRef.current)) {
         setActiveView(view);
       } else {
         // Entrada de sessão efêmera (via "avançar"): o estado dela não existe
@@ -487,6 +496,12 @@ function AuthenticatedApp() {
     return <LoginView />;
   }
 
+  // Abriu o link do e-mail de "Esqueci a senha" (45-F): define a senha nova antes de qualquer
+  // outra tela. Não libera nada — depois dela, o gate de e-mail e de status vale como sempre.
+  if (passwordRecovery) {
+    return <SetNewPasswordView />;
+  }
+
   // Bloqueio de acesso enquanto o e-mail não estiver verificado
   const hasVerifiedEmail = Boolean(user.email_confirmed_at) || isEmailVerified;
   if (!hasVerifiedEmail) {
@@ -523,19 +538,6 @@ function AuthenticatedApp() {
   // Calculate badges
   const errorCount = (Object.values(answers) as QuestionAnswerRecord[]).filter((a) => !a.isCorrect).length;
   const dueCardsCount = flashcards.filter((fc) => isCardDueToday(fc)).length;
-
-  // Plan toggles
-  const handleTogglePlan = () => {
-    const nextPlan = plan === 'premium' ? 'free' : 'premium';
-    StorageService.setUserPlan(nextPlan);
-    setPlan(nextPlan);
-  };
-
-  const handleSelectPlan = (newPlan: UserPlan) => {
-    StorageService.setUserPlan(newPlan);
-    setPlan(newPlan);
-    setIsPlanModalOpen(false);
-  };
 
   // Navigators
   const handleOpenCompendium = (compendiumId?: string, sectionId?: string, originQuestionId?: string) => {
@@ -761,9 +763,6 @@ function AuthenticatedApp() {
     <div className="min-h-screen bg-[#F6F7F9] dark:bg-[#0B1220] text-[#172033] dark:text-[#E5E7EB] font-sans flex flex-col selection:bg-teal-500 selection:text-white antialiased transition-colors max-w-full overflow-x-hidden">
       {/* Top Application Header */}
       <Header
-        currentPlan={plan}
-        onOpenPlanModal={() => setIsPlanModalOpen(true)}
-        onTogglePlanQuick={handleTogglePlan}
         onOpenSearch={() => setIsSearchOpen(true)}
         stats={stats}
         dueCardsCount={dueCardsCount}
@@ -785,6 +784,7 @@ function AuthenticatedApp() {
           }`}
         >
 
+          <ProfileRefreshNotice className="mb-4" />
           <ConnectionNotice status={dataStatus} className="mb-4" />
 
           {/* View Router */}
@@ -1029,7 +1029,7 @@ function AuthenticatedApp() {
           )}
 
           {/* 44-D: qualquer usuário ativo (o gate de status vem antes, no topo do componente) */}
-          {activeView === 'como-escrever-material' && (
+          {activeView === 'como-escrever-material' && isAdmin && (
             <ComoEscreverMaterialView
               disciplines={disciplines}
               themes={themes}
@@ -1041,7 +1041,7 @@ function AuthenticatedApp() {
           )}
 
           {/* 44-H1: idem, para questões */}
-          {activeView === 'como-escrever-questoes' && (
+          {activeView === 'como-escrever-questoes' && isAdmin && (
             <ComoEscreverQuestoesView
               disciplines={disciplines}
               themes={themes}
@@ -1054,7 +1054,7 @@ function AuthenticatedApp() {
           )}
 
           {/* 44-E: qualquer usuário ativo envia material; o envio só é guardado, não publica nada. */}
-          {activeView === 'enviar-material' && (
+          {activeView === 'enviar-material' && isAdmin && (
             <EnviarMaterialView
               disciplines={disciplines}
               themes={themes}
@@ -1141,13 +1141,6 @@ function AuthenticatedApp() {
           setActiveView('flashcards');
           setIsSearchOpen(false);
         }}
-      />
-
-      <PlanModal
-        isOpen={isPlanModalOpen}
-        onClose={() => setIsPlanModalOpen(false)}
-        currentPlan={plan}
-        onSelectPlan={handleSelectPlan}
       />
 
       {isTestarOpen && (

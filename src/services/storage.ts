@@ -3,10 +3,10 @@ import {
   Theme,
   Compendium,
   Question,
+  QuestionReviewResult,
   Flashcard,
   QuestionAnswerRecord,
   SimuladoSessionData,
-  UserPlan,
   UserStats,
   ErrorLogItem,
   ThemeMode,
@@ -15,7 +15,7 @@ import {
   LastReadingSession,
   FlashcardSRS,
 } from '../types';
-import { getOps } from './syncQueue';
+import { getOps, syncQueueStorageKey } from './syncQueue';
 import {
   INITIAL_DISCIPLINES,
   INITIAL_THEMES,
@@ -29,6 +29,7 @@ import { recoverLegacyLocalProgress } from './legacyRecovery';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { getOptionalErrorMessage } from '../utils/errorMessage';
 import { diaLocal } from '../utils/diaLocal';
+import { textoDoFlashcardDoErro } from '../utils/flashcardDoErro';
 
 // Conteúdo de demonstração (mockData) só existe no modo local, sem Supabase.
 // Com Supabase configurado, o cache local começa vazio: nunca mostrar ao
@@ -49,6 +50,7 @@ export const STORAGE_KEYS = {
   NOTES: 'synapse_notes_v1',
   NOTES_BASE_VERSION: 'synapse_notes_base_version_v1',
   SIMULADOS: 'synapse_simulados_v1',
+  // Legado: o plano saiu do app; a chave fica só para a limpeza apagar o que sobrou no navegador.
   USER_PLAN: 'synapse_user_plan_v1',
   ERROR_LOG: 'synapse_error_log_v1',
   HIGHLIGHTS: 'synapse_compendium_highlights_v1',
@@ -113,19 +115,25 @@ export const StorageService = {
   /**
    * Chamado no logout. Remove os caches globais de conteúdo (podem conter
    * gabarito/rascunho gravados por uma sessão de admin) e a cópia local dos
-   * dados pessoais que o Supabase já guarda — para que a próxima pessoa no
-   * mesmo navegador não os veja pelo devtools. Nunca remove o que só existe
-   * localmente (destaques, última leitura, plano, tema). Se a fila de
-   * sincronização ainda tiver operações pendentes, nada pessoal é removido:
-   * apagar agora perderia progresso não enviado.
+   * dados pessoais que o Supabase já guarda — respostas, anotações, favoritos,
+   * simulados (inclusive o rascunho do que estava em andamento) e a fila de
+   * sincronização — para que a próxima pessoa no mesmo navegador não os veja
+   * pelo devtools. Nunca remove o que só existe localmente (destaques, última
+   * leitura, plano, tema).
+   *
+   * Operação ainda não confirmada pelo servidor (`pending`, `syncing` ou
+   * `failed`; o histórico `synced` da fila não conta) é progresso que só existe
+   * neste aparelho: sem `discardUnsynced`, nada pessoal é removido, porque
+   * apagar agora perderia o que o estudante fez. Quem decide apagar mesmo assim
+   * (depois de avisado) passa `discardUnsynced: true`.
    * Retorna true se os dados pessoais foram removidos.
    */
-  clearLocalDataOnLogout(uid: string | null): boolean {
+  clearLocalDataOnLogout(uid: string | null, options: { discardUnsynced?: boolean } = {}): boolean {
     for (const key of [STORAGE_KEYS.DISCIPLINES, STORAGE_KEYS.THEMES, STORAGE_KEYS.COMPENDIUMS, STORAGE_KEYS.QUESTIONS]) {
       localStorage.removeItem(key);
     }
     if (!uid) return true;
-    if (getOps(uid).length > 0) {
+    if (!options.discardUnsynced && getOps(uid).some((op) => op.state !== 'synced')) {
       console.warn('[storage] logout com operações de sincronização pendentes — dados locais do usuário mantidos.');
       return false;
     }
@@ -143,6 +151,13 @@ export const StorageService = {
     ];
     for (const baseKey of serverBacked) {
       localStorage.removeItem(`synapse_${uid}_${baseKey.replace(/^synapse_/, '')}`);
+    }
+    localStorage.removeItem(syncQueueStorageKey(uid));
+    // Rascunho das respostas de um simulado em andamento (SimuladoSession).
+    const draftPrefix = `synapse_${uid}_simulado_draft_`;
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(draftPrefix)) localStorage.removeItem(key);
     }
     return true;
   },
@@ -251,24 +266,21 @@ export const StorageService = {
     }
   },
 
-  createFlashcardFromQuestion(question: Question): Flashcard {
+  createFlashcardFromQuestion(question: Question, review?: QuestionReviewResult): Flashcard {
     // Idempotência local: repetir o mesmo erro ou dar clique duplo não cria
     // dois cards no aparelho. A RPC/índice da 45-A fornece a mesma garantia
     // entre abas e dispositivos.
     const existing = this.getFlashcards().find((card) => card.questionOriginId === question.id);
     if (existing) return existing;
 
-    const template = question.flashcardTemplate || {
-      front: `[${question.institution} ${question.year}] ${question.questionStem.slice(0, 180)}...`,
-      back: `Resposta Correta:\n${question.options.find((o) => o.isCorrect)?.text || ''}\n\nExplicação:\n${question.highYieldSummary}`,
-      mechanismNote: question.highYieldSummary,
-    };
+    const template = textoDoFlashcardDoErro(question, review);
 
     const newCard: Flashcard = {
       id: crypto.randomUUID(),
       disciplineId: question.disciplineId,
       themeId: question.themeId,
       compendiumRefId: question.compendiumRefId,
+      compendiumSectionId: question.compendiumSectionId || undefined,
       questionOriginId: question.id,
       front: template.front,
       back: template.back,
@@ -281,6 +293,20 @@ export const StorageService = {
 
     this.saveFlashcard(newCard);
     return newCard;
+  },
+
+  /**
+   * P10: card de uma seção do material. Um por seção: se o aparelho já tem um card (que não vem de erro) para a
+   * mesma seção, devolve esse, sem criar outro. O servidor faz o mesmo entre aparelhos (RPC
+   * `create_flashcard_from_section`).
+   */
+  createFlashcardFromSection(card: Flashcard): { card: Flashcard; created: boolean } {
+    const existing = this.getFlashcards().find(
+      (c) => !c.questionOriginId && !!card.compendiumSectionId && c.compendiumSectionId === card.compendiumSectionId
+    );
+    if (existing) return { card: existing, created: false };
+    this.saveFlashcard(card);
+    return { card, created: true };
   },
 
   reviewFlashcard(cardId: string, rating: 1 | 2 | 3 | 4): Flashcard | null {
@@ -475,37 +501,6 @@ export const StorageService = {
       list.unshift(session);
     }
     setItem(getUserKey(STORAGE_KEYS.SIMULADOS), list);
-  },
-
-  // --- User Profile & Plan (Isolado por UID) ---
-  getUserProfile(): {
-    id: string;
-    name: string;
-    email: string;
-    cycle: 'clinico';
-    plan: UserPlan;
-    streakDays: number;
-    avatarUrl?: string;
-  } {
-    const plan = this.getUserPlan();
-    return {
-      id: currentUserId || 'user-med-1',
-      name: 'Estudante NexusMed',
-      email: '',
-      cycle: 'clinico',
-      plan,
-      streakDays: 4,
-    };
-  },
-  updatePlan(plan: UserPlan) {
-    this.setUserPlan(plan);
-    return this.getUserProfile();
-  },
-  getUserPlan(): UserPlan {
-    return getItem<UserPlan>(getUserKey(STORAGE_KEYS.USER_PLAN), 'free');
-  },
-  setUserPlan(plan: UserPlan): void {
-    setItem(getUserKey(STORAGE_KEYS.USER_PLAN), plan);
   },
 
   // --- Theme Mode (Isolado por UID) ---

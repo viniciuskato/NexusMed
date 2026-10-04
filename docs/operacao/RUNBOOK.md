@@ -80,9 +80,10 @@ mudança** — uma autorização anterior não cobre outra.
 > **Exceção explícita (D-9, 29/09):** o "aprovado" do dono a um plano é a
 > autorização para cada PR dele e para a manutenção técnica (D-9, item 1): a
 > diretoria aplica antes a migration no remoto e mescla, por squash e preso
-> ao commit aprovado, nas condições dos itens 2 e 3 da D-9; se o
-> classificador ou as permissões barrarem, o PR vai ao dono pelos cliques
-> (`DECISIONS.md`, D-9).
+> ao commit aprovado, nas condições dos itens 2 e 3 da D-9 (revisto pela
+> D-12, 03/10: sem limite por dia nem horário); se o classificador ou as
+> permissões barrarem, o PR vai ao dono pelos cliques (`DECISIONS.md`, D-9 e
+> D-12).
 
 Desde 2026-09-18, **toda mudança entra em `main` por Pull Request** — nunca
 por push direto. O PR dá três coisas que o push direto não dá: o CI roda
@@ -196,150 +197,187 @@ obrigatório antes prende o PR para sempre.
    (push de commit ou "Update branch") — sem isso ele fica preso, exigindo
    um check que nunca rodou nele.
 
-## 3.3. Revisor de IA dos envios (44-F)
+## 3.3. Revisor de IA dos envios (D-12, P7)
 
-Em 03/10 o dono decidiu não usar a API paga; até o revisor ser refeito para rodar no Claude Code, os passos (a)–(c) não se aplicam e os envios ficam aguardando revisão.
+> O revisor lê cada material, lote de questões ou atualização enviados pelo
+> site, confere fontes e formato e dá o veredito ("apto", "não apto" ou
+> "erro") com os achados. **Ele só aconselha: nunca publica nem aplica
+> atualização.** Quem decide e publica é o dono, pelo painel de administração.
+> O parecer aparece em "Meus envios" e na lista de envios do admin.
+>
+> **Publicar com um clique (P8):** na aba **Envios** da Área Editorial, cada envio
+> de material ou de questões tem o botão **Publicar** (e o envio de atualização,
+> **Aplicar atualização**). Ele funciona com qualquer parecer e com o envio ainda
+> aguardando a revisão: o parecer aparece ao lado do botão e, se não for "apto", a
+> tela pede confirmação antes. O conteúdo vai ao ar como se o servidor o tivesse
+> publicado (seções, referências, lugar na árvore, ids de seção preservados na
+> atualização), mas o selo "Revisado por IA" só existe quando o parecer do texto
+> atual é "apto". Recusa (título repetido, material acima fora do ar...) e falha não
+> mudam o envio nem criam nada. Envio "em revisão" (o revisor está lendo agora)
+> espera o parecer. Só admin ativo executa (funções `admin_publicar_envio`,
+> `admin_publicar_questoes`, `admin_aplicar_atualizacao`, migration `20261003120900`).
+>
+> Ele roda **no notebook do dono**, não no servidor: o Agendador de Tarefas do
+> Windows chama o programa a cada 15 minutos. O programa olha a fila no
+> Supabase de produção; se não há envio esperando, termina sem chamar a IA (custo
+> zero). Se há, pede o veredito ao `claude -p` da assinatura do dono (cota da
+> conta, sem Claude API paga), um envio por vez. O notebook precisa estar
+> ligado, com o dono logado, e com o Supabase CLI e o Claude já logados.
+>
+> A API paga foi desligada pela D-12: a Edge Function `revisar-envios` e o job
+> `revisar-envios` do pg_cron não são mais usados (o job foi desagendado na
+> migration `20261003120700`), e nenhum segredo deles é necessário.
 
-> O revisor lê cada material enviado pelo site, confere fontes e formato e
-> dá o veredito ("apto", "não apto" ou "erro"). Ele roda no servidor (uma
-> Edge Function do Supabase chamada `revisar-envios`), a cada 5 minutos, e usa
-> a API de lotes da Anthropic (metade do preço; a revisão de um material leva
-> de alguns minutos a algumas horas). **Cada revisão custa dinheiro**: os
-> limites abaixo protegem o bolso, mas só funcionam depois dos passos (a) e
-> (b). Enquanto eles não forem feitos, os envios ficam "aguardando revisão" e
-> nada é gasto.
+### Como funciona, em uma tela
 
-### (a) Publicar a função e guardar os segredos do agendamento
+- Programa: `scripts/revisor-local/` (`npm.cmd run revisor:local`). Reaproveita o
+  ciclo, as conferências, os textos de instrução e a leitura do veredito da
+  Edge Function; troca só a API de lotes pelo `claude -p`.
+- O `claude` roda com `--model opus`, **só com as ferramentas `WebSearch` e
+  `WebFetch`** (o prompt revisor manda abrir as fontes na internet; sem isso o
+  veredito seria sempre "não apto"), sem pular permissões, sem sessão gravada em
+  disco e sem tocar em nenhum `settings.json`. Para rodar **sem** internet, passe
+  `--sem-web` (ou defina `REVISOR_WEB=0`): nesse caso o veredito tende a "não apto".
+- Todo acesso ao banco é do programa, por `supabase db query --linked` (o login que
+  você já tem; nenhum segredo novo, nada de chave em arquivo). Ele só chama as
+  funções de revisão (reservar, registrar o veredito, liberar, travar), lê o
+  catálogo e a fila, e **não chama nenhuma função de publicar nem de aplicar**.
+- Só roda com o checkout em dia (P8): antes de qualquer coisa o programa confere que a
+  pasta do repositório está na branch `main`, no mesmo commit de `origin/main` (depois de
+  um `git fetch`) e sem arquivo rastreado alterado (arquivo novo não conta). Se não
+  estiver, registra o motivo no log, sai com código 1 (o `Last Result` da tarefa mostra) e
+  **não toca o banco nem o claude**.
+- Atualiza sozinho (P9): **antes** dessa conferência, se a pasta está na `main` e sem
+  arquivo rastreado alterado, o programa roda `git pull --ff-only origin main` (só avanço
+  rápido: nunca cria merge nem reescreve nada). Por isso você não precisa mais rodar
+  `git pull` em `C:\Users\vinic\dev\NexusMed` depois de cada merge. **Quando o pull move a
+  `main`, essa rodada encerra** (o programa já carregou o código antigo): registra no log
+  "a main foi atualizada pelo GitHub (antes → depois)", sai com código 0 sem tocar o banco
+  nem o claude, e a rodada seguinte, 15 minutos depois, já carrega o código novo. Se o
+  `package-lock.json` mudou no pull, a rodada roda `npm ci` antes de encerrar; se o `npm ci`
+  falhar, sai com código 1 e deixa o marcador `.git\revisor-npm-ci-pendente`: nenhuma
+  rodada roda até o `npm ci` passar (rode `npm.cmd ci` na pasta, ou a próxima rodada tenta
+  de novo). Se o pull falhar
+  (sem rede, commit local fora do GitHub, histórico que não avança em linha reta), nada é
+  alterado e a conferência decide pelo estado que ficou, como antes. Pasta em branch de
+  trabalho ou com arquivo rastreado editado não é tocada: não deixe a pasta do agendamento
+  numa branch de trabalho (um worktree separado serve para isso). Todo comando git do
+  programa roda com `GIT_OPTIONAL_LOCKS=0`, para a leitura do estado não disputar o
+  índice com o git do VS Code aberto na mesma pasta.
+- Se o prompt de sistema não couber na linha de comando do Windows, ele vai ao
+  `claude` por `--system-prompt-file` (arquivo temporário, apagado ao fim) e nunca é
+  misturado ao texto do envio; se não der para gravar o arquivo, a rodada falha sem
+  chamar o claude. Uma rodada faz no máximo 60 ciclos: passado o teto, o ciclo só
+  coleta o que já foi enviado ao claude e não reserva envio novo.
+- Limites de custo (`review_settings`): o teto do mês e o teto por pessoa por dia
+  continuam valendo para quem **não** é admin; o **admin não é barrado** por eles
+  nem pelo limite de 3 envios esperando (migration `20261003120800`). A revisão
+  sai da cota da assinatura, não de dinheiro.
+- Uma rodada por vez: um arquivo de trava local; se uma rodada demora, a seguinte
+  sai sem fazer nada (e o Agendador não abre uma segunda). Uma rodada para de
+  começar envios novos depois de 45 minutos.
+- Se o `claude` falhar (cota da assinatura esgotada, queda de rede, tempo
+  esgotado), o envio volta para a fila sem contar no limite e a rodada termina com
+  erro; a próxima tenta de novo. Um mesmo conteúdo que estoura o tempo duas vezes
+  vai a "erro" (para não gastar a cota à toa) e a pessoa reenvia.
 
-Ordem: primeiro a migration no banco remoto (`20261003120100_revisor_ia_44f.sql`,
-como qualquer outra), depois os passos abaixo. Os comandos são para o
-PowerShell, na pasta do projeto.
+### Ligar o agendamento (uma vez; é a diretoria que faz)
 
-1. Conferir que os textos que a função usa estão em dia com `docs/editorial/`
-   e com a checagem do padrão:
-   ```
-   npm.cmd run gerar:revisor -- --check
-   ```
-   Deve responder `arquivos em dia`. Se disser que algum arquivo está
-   desatualizado, rode `npm.cmd run gerar:revisor`, confira o `git status` e
-   faça commit antes de publicar a função.
-2. Criar a chave da API e o segredo do agendador, e colá-los no Supabase
-   (bloco (b), logo abaixo). **Faça isso antes do passo 3.**
-3. Publicar a função:
-   ```
-   C:\Users\vinic\bin\supabase.exe functions deploy revisar-envios --project-ref jfvhwwvixwvgjfqzlkkb
-   ```
-   Se o comando reclamar do Docker, repita com `--use-api` no fim.
-4. Guardar os segredos no cofre do banco. O agendamento em si já veio com a
-   migration `20261003120600_agendar_revisor_44f.sql` (um job,
-   `revisar-envios`, a cada 5 minutos, que chama `app.disparar_revisao()`);
-   enquanto os dois segredos não existem, o job roda e não faz nada. No painel
-   do Supabase, menu da esquerda, **SQL Editor** → **New query**. Cole o texto
-   abaixo, troque `COLE-AQUI-O-SEGREDO` pelo **mesmo** segredo do
-   `REVISOR_SEGREDO` (bloco (b)) e clique em **Run**:
-   ```sql
-   select vault.create_secret('https://jfvhwwvixwvgjfqzlkkb.supabase.co/functions/v1/revisar-envios', 'revisor_url');
-   select vault.create_secret('COLE-AQUI-O-SEGREDO', 'revisor_segredo');
-   ```
-   Isto guarda o endereço e o segredo no cofre do banco (o Vault); a partir daí
-   o banco chama a função a cada 5 minutos. Para **desligar** a qualquer
-   momento (por exemplo, se o gasto assustar), rode no mesmo lugar:
-   ```sql
-   select cron.unschedule('revisar-envios');
-   ```
-5. Conferir que funcionou: envie um material de teste pelo site e espere
-   alguns minutos. Na tela "Meus envios" ele passa de "Aguardando revisão" a
-   "Em revisão". Se não passar, veja duas coisas no painel do Supabase: em
-   **Edge Functions** → `revisar-envios` → **Logs** (mensagem de erro da
-   função) e, no SQL Editor, `select * from cron.job_run_details order by start_time desc limit 5;`
-   (se o agendador está chamando).
+Pré-requisitos: `npm.cmd ci` feito na pasta `C:\Users\vinic\dev\NexusMed` (com esta
+mudança já mesclada), `C:\Users\vinic\bin\supabase.exe` logado e vinculado ao
+projeto (`supabase.exe db query --linked "select 1"` responde), e o `claude` da
+extensão do VS Code logado na conta do dono. No PowerShell:
 
-**Se um envio ficar "Em revisão" por muito tempo**: pode ser uma revisão
-"incerta" (o servidor pediu o lote e a resposta se perdeu). Ela já conta no
-limite e **não é reenviada sozinha**: em até 15 minutos o disparo seguinte acha
-o lote pela lista da Anthropic e o adota, ou, se ele não existir, devolve o
-envio à fila. Para ver:
-```sql
-select status, count(*) from public.material_reviews group by 1;
+```
+C:\Users\vinic\dev\NexusMed\scripts\revisor-local\instalar-agendamento.cmd
 ```
 
-**Trocar os limites de custo** (no SQL Editor, botão **Run**):
+Isso cria a tarefa **NexusMed Revisor Local**: uma rodada a cada 15 minutos, janela
+escondida, só com você logado, também na bateria, sem segunda rodada enquanto uma
+está em andamento. Para ver que ela existe e quando rodou:
+
+```
+schtasks /Query /TN "NexusMed Revisor Local" /V /FO LIST
+```
+
+(`Last Result` 0 = rodada normal, inclusive "fila vazia"; 1 = a rodada parou com
+erro, veja o registro.)
+
+O programa acha sozinho o `claude.exe` da versão mais nova da extensão do VS Code
+(`C:\Users\vinic\.vscode\extensions\anthropic.claude-code-*-win32-x64\resources\native-binary\claude.exe`)
+ou o `claude` do PATH; a atualização da extensão não quebra nada.
+
+### Desligar, ligar, rodar na hora, remover
+
+```
+schtasks /Change /TN "NexusMed Revisor Local" /DISABLE     (pausa: nada roda)
+schtasks /Change /TN "NexusMed Revisor Local" /ENABLE      (volta)
+schtasks /Run /TN "NexusMed Revisor Local"                 (uma rodada agora)
+schtasks /Delete /TN "NexusMed Revisor Local" /F           (remove)
+```
+
+Com o agendamento desligado, os envios ficam "Aguardando revisão" e nada é gasto.
+Para uma rodada à mão, na pasta do projeto: `npm.cmd run revisor:local` (produção)
+ou `npm.cmd run revisor:local -- --local` (Supabase local, para teste).
+
+### Onde ver o que aconteceu
+
+O registro fica em `%LOCALAPPDATA%\NexusMedRevisor\revisor.log` (fora do git; passou
+de 1 MB vira `revisor.log.1`). Uma linha por fato, com horário, só números e os 8
+primeiros caracteres do id da revisão; **nunca o texto do envio nem dado pessoal**:
+
+```
+... rodada iniciada (banco remoto)
+... fila vazia: nada a fazer, o claude não foi chamado
+... ciclo 1: enviados=1 registrados=0 reprovados_antes_da_ia=0 liberadas=0 erros=0
+... veredito rev=1a2b3c4d apto gravado=true
+... falha: claude: cota — ... (o envio voltou à fila; tenta de novo na próxima rodada)
+```
+
+Na mesma pasta: `trava.lock` (a rodada em andamento) e `falhas.json` (contagem de
+tempos esgotados por conteúdo, só hashes).
+
+### Se um envio ficar "Em revisão" por muito tempo
+
+1. Veja o registro: há rodada recente? Se não, o agendamento está desligado, o
+   notebook estava desligado ou sem rede, ou a tarefa falhou
+   (`schtasks /Query ... /V /FO LIST`).
+2. Se há rodada com `falha: claude: cota`, a cota da assinatura acabou: espere a
+   renovação; o envio não perde nada.
+3. Revisão presa ("incerta"/"reservada") por um corte no meio da rodada: sai sozinha.
+   Reserva sem pedido volta à fila em 15 minutos; "incerta" é conferida pela
+   rodada seguinte e devolvida à fila depois de 15 minutos sem lote. Para ver:
+   ```sql
+   select status, count(*) from public.material_reviews group by 1;
+   ```
+   (no SQL Editor do Supabase, botão **Run**.)
+4. Revisão "submetida" com um lote da API antiga (de antes da D-12): a primeira
+   rodada a marca como "erro" sem custo; a pessoa reenvia.
+5. Se nada disso explica, rode uma rodada à mão (`npm.cmd run revisor:local`) e leia
+   o registro.
+
+### Trocar os limites de custo (valem só para quem não é admin)
+
+No SQL Editor do Supabase, botão **Run**:
+
 ```sql
 -- máximo de revisões no mês, no site inteiro (começa em 60)
 update public.review_settings set monthly_review_cap = 100;
 -- máximo de revisões por pessoa por dia (começa em 5)
 update public.review_settings set daily_review_cap_per_user = 3;
 ```
-Quando o teto do mês ou do dia é atingido, os envios ficam "aguardando revisão"
-e a pessoa lê na tela, em uma frase, que vão esperar. Dia e mês contam no
-horário de São Paulo.
 
-### (b) Criar a chave da API com teto mensal e colar o segredo no Supabase
+### Medir o uso de uma revisão
 
-A chave é a "senha" que autoriza a função a usar a IA e cobrar da sua conta.
-**Nunca** cole a chave em conversa, em arquivo do projeto ou em mensagem: ela
-só vai em dois lugares, o painel da Anthropic (onde nasce) e o painel do
-Supabase (onde a função a lê).
-
-1. Abra o **Claude Console** (`https://platform.claude.com`) e entre com a
-   conta da empresa/projeto.
-2. **Teto mensal de gasto** (faça antes de criar a chave). Menu **Settings**
-   → **Billing**. Na seção **Spend limits**, clique em **Adjust limit** (ou
-   **Set limit**, se ainda não houver) e digite o valor máximo em dólares por
-   mês. Sugestão para começar: **US$ 100** (60 revisões a ~US$ 1 cada dão ~US$
-   60, com folga). Quando o gasto do mês chega nesse valor, a API para de
-   responder até o mês virar: é a trava final, acima da trava de 60 revisões do
-   próprio site.
-3. **Criar a chave.** Menu **Settings** → **API keys** → botão **Create Key**.
-   Dê o nome `nexusmed-revisor`, confirme e **copie a chave que aparece** (ela
-   só é mostrada uma vez; se perder, crie outra e apague a antiga).
-4. Gere o segredo do agendador (uma sequência aleatória qualquer). No
-   PowerShell:
-   ```
-   [guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N')
-   ```
-   Copie o resultado.
-5. Abra o painel do **Supabase** (`https://supabase.com/dashboard`), o projeto
-   `synapsemed`. Menu da esquerda → **Edge Functions** → **Secrets** (ou
-   "Manage secrets"). Clique em **Add new secret** duas vezes:
-   - nome `ANTHROPIC_API_KEY`, valor = a chave copiada no passo 3;
-   - nome `REVISOR_SEGREDO`, valor = a sequência do passo 4.
-   Clique em **Save**.
-6. Use a mesma sequência do passo 4 no comando do passo 4 do bloco (a)
-   (`COLE-AQUI-O-SEGREDO`).
-
-Se um dia precisar trocar a chave (vazou, ou você só quer renovar): crie uma
-nova em **Settings** → **API keys**, troque o valor de `ANTHROPIC_API_KEY` no
-Supabase e apague a antiga no Console.
-
-### (c) Medir o custo real de uma revisão
-
-Cada revisão guarda, na tabela `material_reviews`, os tokens de entrada, de
-saída, de cache e o número de buscas e leituras de página. No **SQL Editor**
-do Supabase, botão **Run**:
+Cada revisão guarda os tokens (entrada, saída, cache) e o número de buscas e de
+leituras de página; o custo em dinheiro não existe (cota da assinatura), mas dá para
+comparar o tamanho das revisões:
 
 ```sql
--- Custo estimado por revisão, em dólares. Preços do Claude Opus 5.5 conferidos em
--- 25/09/2026, pela API de lotes (50% do preço normal), por milhão de tokens:
---   entrada 2,00 | gravação de cache de 1 hora 4,00 (2x a entrada do lote)
---   leitura de cache 0,20 (10% da entrada do lote) | saída 10,00
---   busca na web: US$ 0,01 cada (US$ 10 por mil).
--- PREÇOS MUDAM: confira sempre na tela de uso do Console (Usage e Billing) e
--- ajuste as constantes abaixo se forem outras.
-select r.created_at::date as dia,
-       s.title as material,
-       r.input_tokens as entrada,
-       r.output_tokens as saida,
-       r.cache_creation_tokens as cache_gravado,
-       r.cache_read_tokens as cache_lido,
-       r.web_searches as buscas,
-       r.web_fetches as leituras,
-       round((
-         coalesce(r.input_tokens, 0) * 2.0
-         + coalesce(r.cache_creation_tokens, 0) * 4.0
-         + coalesce(r.cache_read_tokens, 0) * 0.2
-         + coalesce(r.output_tokens, 0) * 10.0
-       ) / 1000000.0 + coalesce(r.web_searches, 0) * 0.01, 3) as custo_usd
+select r.created_at::date as dia, s.title as material,
+       r.input_tokens as entrada, r.output_tokens as saida,
+       r.cache_creation_tokens as cache_gravado, r.cache_read_tokens as cache_lido,
+       r.web_searches as buscas, r.web_fetches as leituras, r.verdict as veredito
 from public.material_reviews r
 join public.material_submissions s on s.id = r.submission_id
 where r.billable
@@ -347,19 +385,10 @@ order by r.created_at desc
 limit 50;
 ```
 
-Para o custo médio do mês (mesmas constantes), troque o final por
-`group by 1` sobre `date_trunc('month', r.created_at)` e some
-`custo_usd`; ou compare o total com **Usage** e **Billing** no Claude
-Console. O número que interessa é o da coluna `custo_usd`, que decide se o teto
-mensal de 60 revisões cabe no orçamento. Se cada revisão sair mais cara que
-o esperado, há alavancas no código, em `supabase/functions/revisar-envios/montagem.ts`:
-o esforço de raciocínio (`ESFORCO`, começa em `medium`), o teto de buscas e de
-leituras de página por revisão (`MAX_BUSCAS` e `MAX_LEITURAS_DE_PAGINA`, começam
-em 8 cada) e o tamanho máximo de cada página lida (`MAX_TOKENS_POR_PAGINA`,
-15000); e, em `ciclo.ts`, quantos envios novos entram por disparo
-(`MAX_ENVIOS_NOVOS_POR_CICLO`, 5).
-Depois de mudar, rode `npm.cmd run gerar:revisor -- --check` e publique a
-função de novo (passo 3 do bloco (a)).
+Se a cota da assinatura apertar, as alavancas estão em
+`supabase/functions/revisar-envios/montagem.ts` (esforço de raciocínio `ESFORCO`,
+usado também pelo revisor local; o teto de buscas vale só para a API antiga) e no
+tempo máximo de cada revisão (`--timeout-min`, padrão 12).
 
 ## 4. Rollback
 

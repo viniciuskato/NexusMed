@@ -6,6 +6,22 @@
 > `docs/archive/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-10-03 — O NexusMed é o caderno digital do dono (D-13)
+
+Origem: dono, 03/10/2026: "vamos mudar a lógica do nexusmed. Ao invés de tratar como plataforma de interesse comercial, vamos transformar em algo como meu caderno digital."; "vamos deixar só eu publicar mesmo, mas ainda vamos usar revisor."; "o nexusmed é uma plataforma que pretende ser altamente integrada, com material, questões e flashcards dos erros."; à pergunta "o revisor de IA trava ou aconselha?": "A" (aconselha).
+
+1. **Caderno pessoal.** O NexusMed é o caderno de estudo do dono, com amigos aprovados lendo e estudando. Não é produto comercial: regras que existiam só por isso (como a proibição de imagens) deixam de valer.
+2. **Só o dono publica.** Envio de material e de questões é só do admin; envios antigos de outros usuários ficam guardados.
+3. **O revisor de IA aconselha.** O parecer aparece ao lado do envio; o dono publica com qualquer parecer. O selo "Revisado por IA" só aparece com parecer "apto". Revê a D-11 (itens 1 a 3) nesses pontos e a atestação humana como portão de publicação.
+4. **Integração é o objetivo.** Material, questões e flashcards dos erros se ligam pelo trecho (seção) do material.
+
+## 2026-10-03 — Publicação sem limite por dia nem horário; revisão dos envios pela equipe (D-12)
+
+Origem: dono, 03/10/2026: "Não estou entendendo essa limitação de duas por dia e a peridiodização que você fez, ela é engessada e sem lógica." (escolheu tirar os dois limites); e "nós não queremos pagar diretamente. Iriamos gastar tokens da conta." (escolheu a revisão dos envios pela equipe, com a cota da conta).
+
+1. **Sem limite de publicações por dia e sem proibição à noite.** O que estiver pronto, revisado e com todos os checks verdes vai ao ar na hora, nas demais condições da D-9 (itens 2 e 3). Revê a D-7 (item 7, "até 2 merges por dia, nunca à noite"), a D-9 (item 2, "limites da D-7") e a D-10 nesse ponto.
+2. **Revisão dos envios sem API paga.** A revisão de que trata a D-11 é feita pela equipe no Claude Code, com a cota da assinatura do dono: um verificador sem custo olha a fila a cada 15 minutos e só chama a IA quando há envio esperando. A Edge Function `revisar-envios` com a Claude API fica desligada (sem segredos). Revê a D-11, item 2, só no "como"; o resto da D-11 continua.
+
 ## 2026-09-29 — Conteúdo enviado pelo site, revisado por IA e publicado pelo "apto" (D-11)
 
 Origem: pedidos do dono de 29/09/2026: "Se alguém quiser postar, deve

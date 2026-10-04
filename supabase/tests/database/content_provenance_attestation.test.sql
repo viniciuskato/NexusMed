@@ -233,7 +233,7 @@ grant execute on function tests.clear_auth() to anon, authenticated;
 -- ganham o EXECUTE que tinham antes.
 grant execute on all functions in schema tests to public;
 
-select plan(48);
+select plan(46);
 
 -- ----------------------------------------------------------------------------
 -- Fixtures
@@ -606,17 +606,11 @@ select is(
   'status vira aprovado_para_esta_versao após atestação aprovada com hash batendo'
 );
 
--- 44-G: a atestação humana sozinha já não publica; é preciso a revisão de IA apto
--- do conteúdo atual (o teste completo da trava está em publicar_pelo_veredito_44g).
-select throws_like(
-  format($$ select public.publish_material(%L) $$, :'v_material_id'),
-  '%revisor de IA%',
-  'publish_material não publica só com a atestação humana: falta a revisão de IA apto'
-);
-select tests.approve_material_by_ai(:'v_material_id');
+-- P6 (03/10): o admin publica sem a revisão de IA "apto" (o revisor aconselha, não trava).
+-- O teste completo está em publicar_pelo_veredito_44g.
 select lives_ok(
   format($$ select public.publish_material(%L) $$, :'v_material_id'),
-  'publish_material publica material com revisão de IA apto vinculada ao conteúdo atual'
+  'publish_material publica material só com a atestação humana (sem revisão de IA)'
 );
 select is(
   (select status from public.materials where id = :'v_material_id'),
@@ -655,23 +649,25 @@ select is(
   'aprovacao_desatualizada',
   'edição após aprovação vira aprovacao_desatualizada (hash atual não bate mais)'
 );
-select throws_ok(
+-- P6: a atestação perdida pela edição não trava mais o admin (o status acima continua dizendo
+-- que o conteúdo mudou depois da aprovação).
+select lives_ok(
   format($$ select public.publish_material(%L) $$, :'v_material_id'),
-  NULL::char(5), NULL::text,
-  'publish_material falha depois de editar o conteúdo aprovado (hash não bate mais)'
+  'publish_material publica de novo depois de editar o conteúdo aprovado (P6: o hash não trava mais)'
 );
 
 -- ============================================================================
 -- 8) publish_question: mesmo gate, preservando validações de conteúdo
 -- ============================================================================
 
--- Sem nenhuma revisão/atestação ainda: publish_question falha só pelo gate
--- novo (as validações de conteúdo antigas já passariam, questão está completa).
-select throws_ok(
+-- P6 (03/10): sem nenhuma revisão nem atestação, a questão completa publica (o gate de revisão
+-- acabou; as validações de conteúdo continuam, provadas em outros testes). Volta a rascunho para
+-- seguir o fluxo da atestação.
+select lives_ok(
   format($$ select public.publish_question(%L) $$, :'v_question_id'),
-  NULL::char(5), NULL::text,
-  'publish_question falha sem revisão aprovada, mesmo com conteúdo completo'
+  'publish_question publica questão completa sem revisão de IA nem atestação (P6)'
 );
+update public.questions set status = 'draft' where id = :'v_question_id';
 
 select (public.create_content_revision(null, :'v_question_id')).id as v_qrev_id \gset
 
@@ -681,16 +677,9 @@ returning id as v_qclaim_id \gset
 
 select public.attest_content_revision(:'v_qrev_id', 'aprovado', '{}'::jsonb) as v_qreview_json \gset
 
--- 44-H2: a atestação humana sozinha já não publica; é preciso a revisão de IA apto do conteúdo atual.
-select throws_like(
-  format($$ select public.publish_question(%L) $$, :'v_question_id'),
-  '%revisor de IA%',
-  'publish_question não publica só com a atestação humana: falta a revisão de IA apto'
-);
-select tests.approve_question_by_ai(:'v_question_id');
 select lives_ok(
   format($$ select public.publish_question(%L) $$, :'v_question_id'),
-  'publish_question publica questão com revisão de IA apto vinculada ao conteúdo atual'
+  'publish_question publica questão com a atestação humana, sem revisão de IA'
 );
 select is(
   (select status from public.questions where id = :'v_question_id'),
