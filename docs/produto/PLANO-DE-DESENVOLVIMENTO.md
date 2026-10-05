@@ -879,6 +879,26 @@ automático do erro, materiais e datas.
 
 ---
 
+### PAINEL-1 — Painel enxuto, direto e visual
+
+**Origem.** Pedido do dono (04/10/2026): "Simplifique o dashboard do nexusmed, está com
+muitas informações. Quero ele mais direto e visual." Plano aprovado em 04/10 (D-9).
+
+**Aceite.**
+- O painel ("Início") tem três blocos: "Hoje" (cartões para revisar, "Fazer questões" e
+  a sequência de dias), "Acertos por disciplina" (barras, da menor para a maior) e
+  "Continue lendo" (até 3 materiais iniciados e não concluídos). Estados vazios com
+  uma frase curta e um botão.
+- O resto do painel antigo (nível/XP, KPIs, missão, perfil cognitivo, banca,
+  especialidades, radar, erros recentes, desafios, SRS, conquistas e o caderno de
+  erros) vive em "Meu desempenho": link no fim do painel e menu Recursos.
+- Cabe em 360 px, em claro e escuro. Só frontend: sem migration nem dado novo.
+
+**Fora de escopo.** Banco, flashcards, leitura, questões, tela Hoje, materiais.
+**Estado.** Em revisão.
+
+---
+
 ## 9. Frente 45 — Confiabilidade
 
 **Origem.** Auditorias de 18/09 e 19/09 (`docs/diretoria/BACKLOG-ESTRATEGICO.md`).
@@ -1524,6 +1544,7 @@ conflitam aqui. "Publicado" significa em produção
 | 44-H2 | Concluída | #104 | — |
 | MAT-1 | Em revisão (migration: aplicar no remoto antes do merge) | — | — |
 | CARD-1 | Em revisão (migration: aplicar no remoto antes do merge) | — | — |
+| PAINEL-1 | Em revisão | — | — |
 | 45-A | Concluída; correções da revisão do #76 no #81 | #74, #76, #81 | 24/09 (parte 2: migration depois do merge — INC-2026-004); correções: 25/09 (INC-2026-005) |
 | 45-B | Concluída | #71 | 24/09 |
 | 45-C | Concluída (item de desempenho movido para a 46-D) | #73 | 24/09 |

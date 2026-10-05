@@ -172,8 +172,9 @@ test.describe('43-C — Testar o que li', () => {
 
     await login(page, student);
     // O app abre em "Hoje" (43-E), que só oferece o teste quando há questão para
-    // o que foi lido; este cenário parte do botão do Início.
-    await page.locator('#nav-dashboard').click();
+    // o que foi lido; este cenário parte do botão de "Meu desempenho" (PAINEL-1: saiu do Início).
+    await page.locator('#nav-resources').click();
+    await page.locator('#nav-resources-desempenho').click();
     await page.getByRole('button', { name: 'Testar o que li' }).click();
     const modal = page.getByRole('dialog', { name: 'Testar o que li' });
     await expect(modal.getByRole('checkbox', { name: titleD })).toBeChecked();

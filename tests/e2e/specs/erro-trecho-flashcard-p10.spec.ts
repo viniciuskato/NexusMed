@@ -106,7 +106,9 @@ async function errarQuestao(user: CreatedTestUser, questionId: string, alternati
 }
 
 async function abrirCadernoDeErros(page: Page) {
-  await page.locator('#dock-nav-dashboard').click();
+  // PAINEL-1: o caderno de erros mora em "Meu desempenho" (Recursos → Meu desempenho).
+  await page.locator('#dock-nav-resources').click();
+  await page.locator('#dock-resources-desempenho').click();
   await page.getByRole('button', { name: /Caderno de Erros & Metacognição/ }).click();
 }
 

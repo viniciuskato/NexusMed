@@ -335,7 +335,9 @@ test.describe('Simulado — rascunho local e finalização idempotente', () => {
   });
 
   async function startExpressSimulado(page: Page) {
-    await page.locator('#dock-nav-dashboard').click();
+    // PAINEL-1: o atalho "Simulados & Provas" mora em "Meu desempenho" (Recursos → Meu desempenho).
+    await page.locator('#dock-nav-resources').click();
+    await page.locator('#dock-resources-desempenho').click();
     await page.getByRole('button', { name: 'Simulados & Provas' }).click();
     await page.getByText('Simulado Express Misto', { exact: true }).click();
     await expect(page.getByRole('button', { name: 'Finalizar Prova' })).toBeVisible({ timeout: 15_000 });

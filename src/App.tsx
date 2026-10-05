@@ -78,6 +78,7 @@ import { GlobalSearchModal } from './components/GlobalSearchModal';
 
 // Views
 import { DashboardView } from './components/dashboard/DashboardView';
+import { DesempenhoView } from './components/dashboard/DesempenhoView';
 import { HojeView } from './components/hoje/HojeView';
 import { CreateSimuladoModal } from './components/questions/CreateSimuladoModal';
 import { CreateFlashcardModal } from './components/flashcards/CreateFlashcardModal';
@@ -119,6 +120,7 @@ const ComoEscreverMaterialView = lazyWithReload(() => import('./components/mater
 const PERSISTED_VIEWS = [
   'today',
   'dashboard',
+  'desempenho',
   'thematic-study',
   'compendiums',
   'questions',
@@ -224,12 +226,13 @@ function AuthenticatedApp() {
       setFilterThemeForFlashcards(undefined);
       setPackReturnContext(null);
     }
+    // PAINEL-1: o caderno de erros e o resto do painel antigo moram em "Meu desempenho".
     if (view === 'errors') {
       setDashboardTab('errors');
-      setActiveView('dashboard');
+      setActiveView('desempenho');
       return;
     }
-    if (view === 'dashboard') {
+    if (view === 'desempenho') {
       setDashboardTab('overview');
     }
     if (view === 'compendiums' && libraryLastView === 'reader' && selectedCompendiumId) {
@@ -813,6 +816,19 @@ function AuthenticatedApp() {
           {activeView === 'dashboard' && (
             <DashboardView
               disciplines={disciplines}
+              questions={questions}
+              compendiums={compendiums}
+              flashcards={flashcards}
+              lastReadingSession={lastReadingSession}
+              onSelectView={handleSelectView}
+              onOpenCompendium={(compendiumId, sectionId) => handleOpenCompendium(compendiumId, sectionId)}
+              onStartSRS={handleStartSRS}
+            />
+          )}
+
+          {activeView === 'desempenho' && (
+            <DesempenhoView
+              disciplines={disciplines}
               themes={themes}
               questions={questions}
               compendiums={compendiums}
@@ -1011,7 +1027,7 @@ function AuthenticatedApp() {
           )}
 
           {activeView === 'errors' && (
-            <DashboardView
+            <DesempenhoView
               disciplines={disciplines}
               themes={themes}
               questions={questions}
@@ -1023,7 +1039,7 @@ function AuthenticatedApp() {
               onStartSRS={handleStartSRS}
               initialTab="errors"
               onTabChange={(tab) => {
-                if (tab === 'overview') setActiveView('dashboard');
+                if (tab === 'overview') setActiveView('desempenho');
                 setDashboardTab(tab);
               }}
               onStartErrorSimulado={handleTrainMistakesUntimed}
