@@ -232,6 +232,11 @@ export interface Flashcard {
   compendiumSectionId?: string;
   questionOriginId?: string;
   derivedFromQuestionId?: string;
+  /**
+   * CARD-1: cartão escrito pelo usuário (frente e verso dele), ligado a uma seção ou a uma questão. Pode haver
+   * vários por seção ou questão; não é o cartão automático do erro (esse é um por questão).
+   */
+  isWritten?: boolean;
   front: string;
   back: string;
   mechanismHighlight: string;

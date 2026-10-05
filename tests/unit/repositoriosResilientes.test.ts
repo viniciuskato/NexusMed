@@ -1016,3 +1016,81 @@ describe('QuestionsRepository (escrita administrativa)', () => {
     expect(publishQuestion).not.toHaveBeenCalled();
   });
 });
+
+// CARD-1: o cartão que o usuário escreve. Vários por seção ou questão; o mesmo envio (mesmo id) não duplica;
+// nunca toma o lugar do cartão automático do erro.
+describe('FlashcardsRepository.createWrittenFlashcard — cartão escrito (CARD-1)', () => {
+  function cartaoEscrito(id: string, extra: Partial<Flashcard> = {}): Flashcard {
+    return { ...makeCardDeSecao(id), front: `Frente ${id}`, back: `Verso ${id}`, isWritten: true, ...extra } as Flashcard;
+  }
+
+  it('dois cartões na mesma seção são dois cartões no aparelho e duas operações na fila (cada uma com o id do cartão)', async () => {
+    const { StorageService, queue } = await setup({ configured: true });
+    queue.registerHandler('flashcard_create_written', async (payload) => (payload as { flashcard: Flashcard }).flashcard);
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+
+    await flashcardsRepository.createWrittenFlashcard(cartaoEscrito('escrito-1'));
+    await flashcardsRepository.createWrittenFlashcard(cartaoEscrito('escrito-2'));
+
+    expect(StorageService.getFlashcards().filter((c) => c.compendiumSectionId === 'sec-obstrutivo')).toHaveLength(2);
+    const ops = queue.getOps(UID).filter((o) => o.category === 'flashcard_create_written');
+    expect(ops.map((o) => o.clientOpId).sort()).toEqual(['escrito-1', 'escrito-2']);
+    expect((ops[0].payload as { flashcard: Flashcard }).flashcard).toMatchObject({ isWritten: true, compendiumSectionId: 'sec-obstrutivo' });
+  });
+
+  it('o mesmo cartão salvo de novo (mesmo id) continua um cartão no aparelho e leva o mesmo client_op_id', async () => {
+    const { StorageService, queue } = await setup({ configured: true });
+    queue.registerHandler('flashcard_create_written', async (payload) => (payload as { flashcard: Flashcard }).flashcard);
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+
+    await flashcardsRepository.createWrittenFlashcard(cartaoEscrito('escrito-1'));
+    await flashcardsRepository.createWrittenFlashcard(cartaoEscrito('escrito-1'));
+
+    expect(StorageService.getFlashcards().filter((c) => c.id === 'escrito-1')).toHaveLength(1);
+    const ops = queue.getOps(UID).filter((o) => o.category === 'flashcard_create_written');
+    expect(new Set(ops.map((o) => o.clientOpId))).toEqual(new Set(['escrito-1']));
+  });
+
+  it('offline: o cartão fica no aparelho e na fila; ao voltar a rede sai uma operação só, e reenviar a fila não cria de novo', async () => {
+    const { StorageService, queue } = await setup({ configured: true });
+    const enviados: Flashcard[] = [];
+    let semRede = true;
+    queue.registerHandler('flashcard_create_written', async (payload) => {
+      if (semRede) throw networkError();
+      const f = (payload as { flashcard: Flashcard }).flashcard;
+      enviados.push(f);
+      return f;
+    });
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+
+    setOnline(false);
+    await flashcardsRepository.createWrittenFlashcard(cartaoEscrito('escrito-offline'));
+    expect(StorageService.getFlashcards().map((c) => c.id)).toEqual(['escrito-offline']);
+    expect(queue.getOps(UID).filter((o) => o.category === 'flashcard_create_written')).toHaveLength(1);
+    expect(enviados).toHaveLength(0);
+
+    setOnline(true);
+    semRede = false;
+    await queue.flush(UID, true);
+    await queue.flush(UID, true);
+    expect(enviados.map((f) => f.id)).toEqual(['escrito-offline']);
+    expect(queue.getOps(UID).find((o) => o.category === 'flashcard_create_written')?.state).toBe('synced');
+  });
+
+  it('o cartão escrito ligado à questão não impede o cartão automático do erro da mesma questão', async () => {
+    const { StorageService } = await setup({ configured: false });
+    const { flashcardsRepository } = await import('../../src/repositories/FlashcardsRepository');
+    const question = makeQuestionForFlashcard();
+
+    await flashcardsRepository.createWrittenFlashcard(cartaoEscrito('escrito-q', { questionOriginId: question.id, compendiumSectionId: undefined }));
+    const automatico = await flashcardsRepository.createFlashcardFromQuestion(question);
+
+    expect(automatico.id).not.toBe('escrito-q');
+    expect(automatico.isWritten).toBeUndefined();
+    expect(StorageService.getFlashcards().filter((c) => c.questionOriginId === question.id)).toHaveLength(2);
+    // E pedir o do erro de novo continua devolvendo o MESMO automático (não o escrito).
+    const denovo = await flashcardsRepository.createFlashcardFromQuestion(question);
+    expect(denovo.id).toBe(automatico.id);
+    expect(StorageService.getFlashcards().filter((c) => c.questionOriginId === question.id)).toHaveLength(2);
+  });
+});

@@ -695,3 +695,42 @@ describe('45-E, revisão do 1af8cf3 — card antigo só no aparelho, com revisã
     expect(queue.getOps(UID).filter((o) => o.state !== 'synced')).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// CARD-1 — a recuperação legada não transforma o cartão escrito em automático
+// ---------------------------------------------------------------------------
+describe('CARD-1 — recuperação legada de cartão escrito', () => {
+  it('o cartão escrito só no aparelho volta pela operação do cartão escrito; o comum segue pelo upsert', async () => {
+    const escrito = { id: '33333333-3333-4333-8333-333333333333', isCustom: true, isWritten: true, front: 'f', back: 'b', questionOriginId: 'q-1' };
+    const comum = { id: '44444444-4444-4444-8444-444444444444', isCustom: true, front: 'f2', back: 'b2' };
+    vi.doMock('../../src/services/storage', () => ({
+      StorageService: { getAnswers: () => ({}), getFlashcards: () => [escrito, comum] },
+    }));
+    const remote: Remote = { sessionUid: null, attempts: [], attemptQueries: 0 };
+    const queue = await loadQueue(remote);
+    const recovery = await import('../../src/services/legacyRecovery');
+
+    await recovery.recoverLegacyLocalProgress(UID);
+
+    const ops = queue.getOps(UID).map((o) => [o.category, (o.payload as { flashcard: { id: string } }).flashcard.id]);
+    expect(ops).toEqual([
+      ['flashcard_create_written', escrito.id],
+      ['flashcard_upsert', comum.id],
+    ]);
+  });
+
+  it('cartão escrito com a criação já na fila não é reenviado pela recuperação', async () => {
+    const escrito = { id: '33333333-3333-4333-8333-333333333333', isCustom: true, isWritten: true, front: 'f', back: 'b' };
+    vi.doMock('../../src/services/storage', () => ({
+      StorageService: { getAnswers: () => ({}), getFlashcards: () => [escrito] },
+    }));
+    const remote: Remote = { sessionUid: null, attempts: [], attemptQueries: 0 };
+    const queue = await loadQueue(remote);
+    const recovery = await import('../../src/services/legacyRecovery');
+    queue.enqueue(UID, 'flashcard_create_written', { flashcard: escrito }, escrito.id);
+
+    await recovery.recoverLegacyLocalProgress(UID);
+
+    expect(queue.getOps(UID).map((o) => o.category)).toEqual(['flashcard_create_written']);
+  });
+});

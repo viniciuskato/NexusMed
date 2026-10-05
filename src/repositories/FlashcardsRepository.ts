@@ -5,6 +5,7 @@ import { enqueue, enqueueAndTry } from '../services/syncQueue';
 import {
   FlashcardCreateFromQuestionOpPayload,
   FlashcardCreateFromSectionOpPayload,
+  FlashcardCreateWrittenOpPayload,
   FlashcardReviewOpPayload,
 } from '../services/syncHandlers';
 
@@ -52,6 +53,11 @@ export interface FlashcardsRepository {
    * aparelho ou, ao sincronizar, no servidor), devolve esse com `created: false` e não cria outro.
    */
   createFlashcardFromSection(card: Flashcard): Promise<{ card: Flashcard; created: boolean }>;
+  /**
+   * CARD-1: cria o cartão que o usuário escreveu (frente e verso dele), ligado a uma seção ou a uma questão.
+   * Pode haver vários na mesma seção ou questão; repetir o MESMO envio (mesmo id, pela fila) não duplica.
+   */
+  createWrittenFlashcard(card: Flashcard): Promise<Flashcard>;
   reviewFlashcard(card: Flashcard, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null>;
 }
 
@@ -79,6 +85,9 @@ class LocalStorageFlashcardsRepository implements FlashcardsRepository {
   }
   async createFlashcardFromSection(card: Flashcard): Promise<{ card: Flashcard; created: boolean }> {
     return StorageService.createFlashcardFromSection(card);
+  }
+  async createWrittenFlashcard(card: Flashcard): Promise<Flashcard> {
+    return StorageService.saveFlashcard(card);
   }
   async reviewFlashcard(card: Flashcard, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null> {
     return StorageService.reviewFlashcard(card.id, rating);
@@ -150,7 +159,9 @@ class ResilientFlashcardsRepository implements FlashcardsRepository {
     // Quem não é admin não recebe o gabarito junto com a questão: sem a revisão em mãos, busca a do
     // servidor (que só responde depois de a pessoa ter respondido). Se a busca falhar, o erro sobe e
     // nenhum card sai: um card criado sem o verso ficaria vazio para sempre (a criação é idempotente).
-    const jaExiste = (await this.local.getFlashcards()).some((card) => card.questionOriginId === question.id);
+    const jaExiste = (await this.local.getFlashcards()).some(
+      (card) => card.questionOriginId === question.id && !card.isWritten
+    );
     const revisao =
       review ?? (jaExiste || questaoTraGabarito(question) ? undefined : await questionsRepository.getQuestionReview(question.id));
     const localRes = await this.local.createFlashcardFromQuestion(question, revisao);
@@ -174,6 +185,18 @@ class ResilientFlashcardsRepository implements FlashcardsRepository {
       if (canonical && canonical.id !== local.card.id) return { card: canonical, created: false };
     }
     return local;
+  }
+
+  async createWrittenFlashcard(card: Flashcard): Promise<Flashcard> {
+    // Local primeiro (o cartão não se perde); depois a fila, que cria no servidor pela RPC atômica. O id do cartão
+    // é o client_op_id: reenviar a mesma operação devolve o mesmo cartão, sem duplicar.
+    const saved = await this.local.createWrittenFlashcard(card);
+    const userId = getStorageUser();
+    if (isSupabaseConfigured && userId) {
+      const payload: FlashcardCreateWrittenOpPayload = { flashcard: saved };
+      enqueue(userId, 'flashcard_create_written', payload, saved.id);
+    }
+    return saved;
   }
 
   async reviewFlashcard(card: Flashcard, rating: 1 | 2 | 3 | 4): Promise<Flashcard | null> {

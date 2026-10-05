@@ -38,6 +38,7 @@ vi.mock('../../src/repositories/FlashcardsRepository', () => ({
   flashcardsRepository: {
     saveFlashcard: vi.fn().mockResolvedValue(undefined),
     createFlashcardFromSection: vi.fn().mockResolvedValue({ card: {}, created: true }),
+    createWrittenFlashcard: vi.fn().mockResolvedValue({}),
   },
 }));
 
@@ -106,7 +107,7 @@ afterEach(() => {
 });
 
 describe('CompendiumReader — ações de cada tópico', () => {
-  it('renderiza Gerar flashcard e Marcar lida somente depois de todo o conteúdo da seção', () => {
+  it('renderiza Criar cartão e Marcar lida somente depois de todo o conteúdo da seção', () => {
     const { container } = render(
       <CompendiumReader
         compendium={compendium}
@@ -127,7 +128,7 @@ describe('CompendiumReader — ações de cada tópico', () => {
 
       const sectionQueries = within(section!);
       const content = sectionQueries.getByText(sectionData.content);
-      const generateFlashcard = sectionQueries.getByRole('button', { name: 'Gerar flashcard' });
+      const generateFlashcard = sectionQueries.getByRole('button', { name: 'Criar cartão' });
       const markAsRead = sectionQueries.getByRole('button', { name: 'Marcar lida' });
 
       expect(content.compareDocumentPosition(generateFlashcard) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
@@ -138,14 +139,15 @@ describe('CompendiumReader — ações de cada tópico', () => {
 
     const sectionWithCallouts = container.querySelector<HTMLElement>('#sec-with-callouts')!;
     const consensus = within(sectionWithCallouts).getByText('Consenso final.');
-    const generateFlashcard = within(sectionWithCallouts).getByRole('button', { name: 'Gerar flashcard' });
+    const generateFlashcard = within(sectionWithCallouts).getByRole('button', { name: 'Criar cartão' });
 
     expect(consensus.compareDocumentPosition(generateFlashcard) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
   });
 });
 
-// P10: o card de seção guarda a seção (a revisão abre o material nela) e é um por seção.
-describe('CompendiumReader — Gerar flashcard guarda a seção e não duplica (P10)', () => {
+// CARD-1: o "Gerar flashcard" automático saiu; cada seção tem "Criar cartão", que abre uma caixa com Frente e
+// Verso, e o cartão sai ligado ao material e à seção, com o texto exatamente como foi digitado.
+describe('CompendiumReader — Criar cartão (CARD-1)', () => {
   function renderLeitor() {
     return render(
       <CompendiumReader
@@ -162,32 +164,51 @@ describe('CompendiumReader — Gerar flashcard guarda a seção e não duplica (
     );
   }
 
-  it('o card sai com o material e a seção da seção em que se clicou', async () => {
+  it('cada seção tem "Criar cartão" e o "Gerar flashcard" não existe mais', () => {
+    const { container } = renderLeitor();
+    expect(screen.queryByRole('button', { name: /Gerar flashcard/ })).toBeNull();
+    expect(container.textContent).not.toContain('Gerar flashcard');
+    for (const sec of compendium.sections) {
+      const secao = container.querySelector<HTMLElement>(`#${sec.id}`)!;
+      expect(within(secao).getAllByRole('button', { name: 'Criar cartão' })).toHaveLength(1);
+    }
+  });
+
+  it('o cartão sai com o material e a seção em que se clicou, com frente e verso como foram digitados', async () => {
     const { container } = renderLeitor();
     const secao = container.querySelector<HTMLElement>('#sec-content-only')!;
 
-    fireEvent.click(within(secao).getByRole('button', { name: 'Gerar flashcard' }));
+    fireEvent.click(within(secao).getByRole('button', { name: 'Criar cartão' }));
+    const dialogo = screen.getByRole('dialog');
+    fireEvent.change(within(dialogo).getByRole('textbox', { name: 'Frente' }), { target: { value: 'Qual o corte da TFG?' } });
+    fireEvent.change(within(dialogo).getByRole('textbox', { name: 'Verso' }), { target: { value: '60 mL/min por mais de 3 meses' } });
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Salvar' }));
 
-    expect(await screen.findByText('Flashcard criado para o seu SRS')).toBeTruthy();
-    expect(flashcardsRepository.createFlashcardFromSection).toHaveBeenCalledTimes(1);
-    expect(flashcardsRepository.createFlashcardFromSection).toHaveBeenCalledWith(
-      expect.objectContaining({
-        compendiumRefId: 'comp-function-renal',
-        compendiumSectionId: 'sec-content-only',
-        front: '[Nefrologia] Segundo tópico',
-      }),
-    );
+    expect(await screen.findByText('Cartão criado')).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(flashcardsRepository.createWrittenFlashcard).toHaveBeenCalledTimes(1);
+    const enviado = vi.mocked(flashcardsRepository.createWrittenFlashcard).mock.calls[0][0];
+    expect(enviado).toMatchObject({
+      disciplineId: 'disc-nefro',
+      themeId: 'theme-funcao-renal',
+      compendiumRefId: 'comp-function-renal',
+      compendiumSectionId: 'sec-content-only',
+      front: 'Qual o corte da TFG?',
+      back: '60 mL/min por mais de 3 meses',
+      isWritten: true,
+    });
+    expect(enviado.questionOriginId).toBeUndefined();
+    expect(flashcardsRepository.createFlashcardFromSection).not.toHaveBeenCalled();
     expect(flashcardsRepository.saveFlashcard).not.toHaveBeenCalled();
   });
 
-  it('a seção que já tem card: avisa, em vez de dizer que criou outro', async () => {
-    vi.mocked(flashcardsRepository.createFlashcardFromSection).mockResolvedValueOnce({ card: {} as never, created: false });
+  it('Cancelar fecha sem criar nada', () => {
     const { container } = renderLeitor();
     const secao = container.querySelector<HTMLElement>('#sec-with-callouts')!;
-
-    fireEvent.click(within(secao).getByRole('button', { name: 'Gerar flashcard' }));
-
-    expect(await screen.findByText('Esta seção já tem flashcard no seu SRS')).toBeTruthy();
-    expect(screen.queryByText('Flashcard criado para o seu SRS')).toBeNull();
+    fireEvent.click(within(secao).getByRole('button', { name: 'Criar cartão' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Frente' }), { target: { value: 'algo' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(flashcardsRepository.createWrittenFlashcard).not.toHaveBeenCalled();
   });
 });

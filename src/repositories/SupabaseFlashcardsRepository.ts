@@ -23,6 +23,7 @@ import { fetchAllRows, fetchAllRowsByIds } from './supabasePaging';
 //   front <-> front | back <-> back
 //   mechanismHighlight <-> mechanism_highlight | tags <-> tags
 //   difficulty <-> difficulty | isCustom <-> is_custom
+//   isWritten <-> is_written (CARD-1; a RPC create_written_flashcard cria; o upsert comum só envia a coluna quando true)
 //
 // FlashcardSRS <-> flashcard_srs_state (estado atual) + flashcard_reviews (histórico)
 //   intervalDays <-> interval_days | repetitionCount <-> repetition_count
@@ -73,6 +74,7 @@ interface FlashcardRow {
   tags: string[];
   difficulty: Flashcard['difficulty'];
   is_custom: boolean;
+  is_written?: boolean;
 }
 
 interface SRSStateRow {
@@ -137,6 +139,7 @@ function rowToFlashcard(
     tags: row.tags ?? [],
     difficulty: row.difficulty,
     isCustom: row.is_custom,
+    ...(row.is_written ? { isWritten: true } : {}),
     srs: rowToSRS(srsRow, reviews),
     bibliographicSources: row.question_origin_id
       ? bibliographicSourcesByQuestionId?.get(row.question_origin_id)
@@ -240,6 +243,9 @@ export class SupabaseFlashcardsRepository implements FlashcardsRepository {
       tags: flashcard.tags ?? [],
       difficulty: flashcard.difficulty,
       is_custom: flashcard.isCustom ?? true,
+      // CARD-1: nunca manda false (um objeto sem a marca não pode desmarcar um cartão escrito); o cartão escrito
+      // que passar por aqui continua escrito e não ocupa a vaga do automático.
+      ...(flashcard.isWritten ? { is_written: true } : {}),
     };
     const { error: upErr } = await supabase.from('flashcards').upsert(cardRow);
     if (upErr) throw upErr;
@@ -340,6 +346,28 @@ export class SupabaseFlashcardsRepository implements FlashcardsRepository {
     });
     if (error) throw error;
     return this.readCanonicalCard(row as FlashcardRow);
+  }
+
+  /** CARD-1: cartão escrito pelo usuário, atômico e idempotente pelo id (reenviar o mesmo envio devolve o mesmo cartão). */
+  async createWrittenFlashcardAtomic(card: Flashcard): Promise<Flashcard> {
+    const { data: row, error } = await supabase.rpc('create_written_flashcard', {
+      p_id: card.id,
+      p_discipline_id: card.disciplineId,
+      p_theme_id: card.themeId,
+      p_material_id: card.compendiumRefId || null,
+      p_material_section_id: card.compendiumSectionId || null,
+      p_question_origin_id: card.questionOriginId || null,
+      p_front: card.front,
+      p_back: card.back,
+      p_tags: card.tags ?? [],
+      p_difficulty: card.difficulty,
+    });
+    if (error) throw error;
+    return this.readCanonicalCard(row as FlashcardRow);
+  }
+
+  async createWrittenFlashcard(card: Flashcard): Promise<Flashcard> {
+    return this.createWrittenFlashcardAtomic(card);
   }
 
   private async readCanonicalCard(cardRow: FlashcardRow): Promise<Flashcard> {

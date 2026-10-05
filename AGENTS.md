@@ -305,6 +305,22 @@ seção "Armadilhas já descobertas".
     que agora também registra versão de cada seção que muda (`changed_by` é o
     admin): E2E que aplica atualização apaga o material ANTES do usuário (item 18).
 
+23. **Cartão escrito pelo usuário (CARD-1, 05/10/2026) não é o cartão automático.**
+    "Criar cartão" (`src/components/flashcards/CriarCartao.tsx`, na seção da
+    leitura e na questão já respondida) grava `flashcards.is_written = true` pela
+    RPC `create_written_flashcard` (idempotente pelo id, que também é o
+    `client_op_id` da operação `flashcard_create_written` da fila): pode haver
+    vários por seção ou questão, e a questão fica em `question_origin_id`. Os
+    índices únicos `flashcards_user_section_card_uq` (P10) e
+    `flashcards_user_question_origin_uq` (45-A) valem só para o automático
+    (`not is_written`), então todo código que procura "o cartão do erro" ou "o
+    cartão da seção" tem de ignorar o escrito (`!card.isWritten` no cliente,
+    `and not is_written` no SQL, e `ON CONFLICT ... where not is_written` no
+    índice parcial). Conta de "cartões de erro" por `questionOriginId` (painel)
+    e `app.reconcile_duplicate_flashcards_45a` (execução única da 45-A) não
+    distinguem o escrito: não os rode/consulte sem esse filtro. pgTAP que cria
+    cartões escritos apaga os seus no fim (a reconciliação da 45-A agrupa todos).
+
 ## Convenções de trabalho
 
 - **Toda mudança entra em `main` por Pull Request com CI verde** (desde

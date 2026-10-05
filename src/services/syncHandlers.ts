@@ -43,6 +43,11 @@ export interface FlashcardCreateFromSectionOpPayload {
   flashcard: Parameters<typeof supabaseFlashcardsRepository.createFlashcardFromSectionAtomic>[0];
 }
 
+/** CARD-1: cartão escrito pelo usuário; o id do cartão é o client_op_id, então o reenvio não duplica. */
+export interface FlashcardCreateWrittenOpPayload {
+  flashcard: Parameters<typeof supabaseFlashcardsRepository.createWrittenFlashcardAtomic>[0];
+}
+
 export interface FlashcardDeleteOpPayload {
   id: string;
 }
@@ -246,6 +251,12 @@ export function registerSyncHandlers(): void {
     const canonical = await supabaseFlashcardsRepository.createFlashcardFromSectionAtomic(payload.flashcard);
     // Outro aparelho já tinha o card da seção: o servidor devolve esse, e o rascunho local sai.
     if (canonical.id !== payload.flashcard.id) StorageService.deleteFlashcard(payload.flashcard.id);
+    StorageService.saveFlashcard(canonical);
+    return canonical;
+  });
+
+  registerHandler('flashcard_create_written', async (payload: FlashcardCreateWrittenOpPayload) => {
+    const canonical = await supabaseFlashcardsRepository.createWrittenFlashcardAtomic(payload.flashcard);
     StorageService.saveFlashcard(canonical);
     return canonical;
   });
