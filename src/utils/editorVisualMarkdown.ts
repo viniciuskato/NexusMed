@@ -52,7 +52,7 @@ export type RotuloDaCaixa = (typeof ROTULOS_DAS_CAIXAS)[number];
 // --- Cópias das regras do leitor (SafeMarkdown) ------------------------------------------------------------------------
 
 /** `SafeMarkdown`, `CAIXAS_DE_FUNCAO.padrao`: o que o leitor reconhece como caixa (variações de acento, caixa alta e dois-pontos incluídas). */
-const PADROES_DAS_CAIXAS: ReadonlyArray<{ padrao: RegExp; rotulo: RotuloDaCaixa }> = [
+export const PADROES_DAS_CAIXAS: ReadonlyArray<{ padrao: RegExp; rotulo: RotuloDaCaixa }> = [
   { padrao: /^\s*\*\*Cuidado:?\*\*:?\s*/i, rotulo: 'Cuidado' },
   { padrao: /^\s*\*\*Racioc[ií]nio(?: cl[ií]nico)?:?\*\*:?\s*/i, rotulo: 'Raciocínio' },
   { padrao: /^\s*\*\*N[aã]o confundir:?\*\*:?\s*/i, rotulo: 'Não confundir' },

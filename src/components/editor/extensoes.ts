@@ -8,7 +8,7 @@ import type { Command, Extensions } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
-import { findWrapping } from '@tiptap/pm/transform';
+import { AddMarkStep, findWrapping } from '@tiptap/pm/transform';
 import { hrefParaExibir, ROTULOS_DAS_CAIXAS } from '../../utils/editorVisualMarkdown';
 import { BlocoProtegidoView } from './BlocoProtegidoView';
 
@@ -180,7 +180,90 @@ const ListaNumeradaDesde1 = Extension.create({
   },
 });
 
-export function criarExtensoes(): Extensions {
+/**
+ * Negrito e itálico não incluem o espaço das pontas. Dois cliques numa palavra seleciona também o espaço depois dela
+ * (no Windows), e `**alvo **texto` não é negrito para quem lê Markdown de verdade (o leitor do app o tolera, mas o
+ * arquivo exportado e qualquer outra ferramenta, não). Aqui o espaço das pontas sai da marca, por qualquer caminho que a
+ * tenha posto: botão, atalho do teclado ou digitação.
+ */
+const MarcasSemEspacoNasPontas = Extension.create({
+  name: 'marcasSemEspacoNasPontas',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('marcasSemEspacoNasPontas'),
+        appendTransaction: (transacoes, _antes, depois) => {
+          const tr = depois.tr;
+          for (const transacao of transacoes) {
+            transacao.steps.forEach((passo, i) => {
+              if (!(passo instanceof AddMarkStep)) return;
+              const tipo = passo.mark.type;
+              if (tipo.name !== 'bold' && tipo.name !== 'italic') return;
+              // As posições do passo valem na hora dele; as de agora, depois dos passos seguintes.
+              const adiante = transacao.mapping.slice(i + 1);
+              const de = adiante.map(passo.from);
+              const ate = adiante.map(passo.to, -1);
+              const ehEspaco = (pos: number) => /^\s$/.test(depois.doc.textBetween(pos, pos + 1, '', ''));
+              let inicio = de;
+              while (inicio < ate && ehEspaco(inicio)) inicio++;
+              let fim = ate;
+              while (fim > inicio && ehEspaco(fim - 1)) fim--;
+              if (inicio > de) tr.removeMark(de, inicio, tipo);
+              if (fim < ate) tr.removeMark(fim, ate, tipo);
+            });
+          }
+          return tr.docChanged ? tr : null;
+        },
+      }),
+    ];
+  },
+});
+
+/** Campo de uma linha só (Pontos-chave, Pérola, Alerta): o texto é um parágrafo, e a tecla Enter não abre outro. */
+const DocumentoDeUmaLinha = Node.create({
+  name: 'doc',
+  topNode: true,
+  content: 'paragraph',
+});
+
+const SemQuebraDeLinha = Extension.create({
+  name: 'semQuebraDeLinha',
+  priority: 1000,
+  addKeyboardShortcuts() {
+    return { Enter: () => true, 'Shift-Enter': () => true, 'Mod-Enter': () => true };
+  },
+});
+
+/** Só o que cabe numa linha: negrito, itálico, código, link e referência, expoente. Sem blocos, sem lista, sem caixa. */
+function extensoesDeUmaLinha(): Extensions {
+  return [
+    StarterKit.configure({
+      document: false,
+      heading: false,
+      bulletList: false,
+      orderedList: false,
+      listItem: false,
+      blockquote: false,
+      codeBlock: false,
+      horizontalRule: false,
+      hardBreak: false,
+      strike: false,
+      underline: false,
+      code: false,
+      link: false,
+    }),
+    DocumentoDeUmaLinha,
+    SemQuebraDeLinha,
+    MarcasSemEspacoNasPontas,
+    Codigo,
+    Ligacao,
+    Expoente,
+    QuebraSuave,
+  ];
+}
+
+export function criarExtensoes(modo: 'secao' | 'linha' = 'secao'): Extensions {
+  if (modo === 'linha') return extensoesDeUmaLinha();
   return [
     StarterKit.configure({
       heading: { levels: [1, 2, 3, 4] },
@@ -205,6 +288,7 @@ export function criarExtensoes(): Extensions {
     Caixa,
     BlocoProtegido,
     ListaNumeradaDesde1,
+    MarcasSemEspacoNasPontas,
   ];
 }
 

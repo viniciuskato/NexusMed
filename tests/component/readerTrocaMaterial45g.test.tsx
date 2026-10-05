@@ -7,6 +7,8 @@ import type { Compendium } from '../../src/types';
 // favorito e as seções lidas do ANTERIOR não podem ficar na tela — nem ser
 // gravados no novo.
 
+// ED-2: o leitor pergunta se a pessoa é admin (botão "Editar"); aqui o leitor é de quem só lê.
+vi.mock('../../src/hooks/useEhAdmin', () => ({ useEhAdmin: () => false }));
 vi.mock('../../src/hooks/useScrollMemory', () => ({ useScrollMemory: vi.fn() }));
 vi.mock('../../src/components/feedback/ContextualFeedbackPopover', () => ({ ContextualFeedbackPopover: () => null }));
 vi.mock('../../src/services/storage', () => ({

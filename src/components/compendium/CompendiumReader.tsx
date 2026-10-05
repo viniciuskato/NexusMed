@@ -24,6 +24,7 @@ import {
   Copy,
   Check,
   GraduationCap,
+  Pencil,
 } from 'lucide-react';
 import { Compendium, CompendiumSection, Discipline, Theme } from '../../types';
 import { StorageService } from '../../services/storage';
@@ -35,11 +36,14 @@ import { SafeMarkdown, parseInline } from '../common/SafeMarkdown';
 import { ContextualFeedbackPopover } from '../feedback/ContextualFeedbackPopover';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
 import { useServerLoad } from '../../hooks/useServerLoad';
+import { useEhAdmin } from '../../hooks/useEhAdmin';
 import { ConnectionNotice } from '../common/ConnectionNotice';
 import { MaterialBreadcrumb, MaterialChildrenCards, MaterialLinkBoxes } from './MaterialNavigation';
 import { SeloDeRevisao } from '../material/SeloDeRevisao';
 import { ReportarErroDoMaterial } from '../material/ReportarErroDoMaterial';
 import { AtualizarMaterial } from '../material/AtualizarMaterial';
+import { EdicaoDaSecao } from './EdicaoDaSecao';
+import { lembrarEdicao, secaoComEdicao } from './secoesEditadas';
 
 interface CompendiumReaderProps {
   compendium: Compendium;
@@ -77,6 +81,11 @@ interface CompendiumReaderProps {
     label?: string;
   } | null;
   onReturnToQuestions?: () => void;
+  /**
+   * Chamado depois que o admin salva uma seção na própria página de leitura (ED-2). O leitor já mostra o texto salvo por
+   * conta própria; quem tem a lista de materiais do app pode recarregá-la aqui para as outras telas verem o texto novo.
+   */
+  onSectionSaved?: () => void;
 }
 
 export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
@@ -94,10 +103,17 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   onSectionJumpHandled,
   returnToQuestionsContext,
   onReturnToQuestions,
+  onSectionSaved,
 }) => {
   const discipline = disciplines.find((d) => d.id === compendium.disciplineId);
   const theme = themes.find((t) => t.id === compendium.themeId);
 
+  // ED-2: só o admin edita, e só uma seção por vez, na própria página de leitura.
+  const ehAdmin = useEhAdmin();
+  const [editandoSectionId, setEditandoSectionId] = useState<string | null>(null);
+  const [, setVersaoDasEdicoes] = useState(0);
+  // As seções com o que o admin acabou de salvar por cima (a lista do app só se atualiza ao recarregar).
+  const secoes = compendium.sections.map(secaoComEdicao);
   const [activeSectionId, setActiveSectionId] = useState<string>(
     targetSectionId || compendium.sections[0]?.id || ''
   );
@@ -120,6 +136,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
     setIsBookmarked(false);
     setUserNote('');
     setRemovedSectionNotes([]);
+    setEditandoSectionId(null);
     // A troca zera o que a tela mostra, mas `loadedFor` continuava com o id
     // do material ANTERIOR até a carga do novo terminar. Se essa carga
     // falha, `loadedFor` nunca chega a ser esse id novo — mas ao voltar
@@ -635,7 +652,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
 
               {/* List of sections */}
               <nav className="space-y-1 mt-2 max-h-[calc(100vh-160px)] overflow-y-auto pr-1">
-                {compendium.sections.map((sec, idx) => {
+                {secoes.map((sec, idx) => {
                   const isRead = readSectionIds.includes(sec.id);
                   const isCurrent = activeSectionId === sec.id;
 
@@ -784,8 +801,9 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
 
         {/* ── Article Sections (Clean spacing, no big wrapper cards) ── */}
         <div className="space-y-12">
-          {compendium.sections.map((sec, idx) => {
+          {secoes.map((sec, idx) => {
             const isRead = readSectionIds.includes(sec.id);
+            const editando = editandoSectionId === sec.id;
 
             return (
               <section
@@ -793,118 +811,155 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
                 id={sec.id}
                 className="pb-10 border-b border-[#E2E8F0] dark:border-[#263244] last:border-b-0"
               >
-                {/* Section Sub-header */}
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-[#0F766E] dark:text-[#14B8A6]">
-                    {sec.mechanismTag || `Seção ${idx + 1}`}
-                  </span>
-                </div>
-
-                {/* Section Title */}
-                <h2 className="text-xl sm:text-2xl font-bold text-[#172033] dark:text-[#E5E7EB] mb-4">
-                  {sec.title}
-                </h2>
-
-                {/* Section Content with Safe Markdown (no dangerouslySetInnerHTML) */}
-                <div className="text-[17px] leading-[1.7] text-[#172033] dark:text-[#E5E7EB]">
-                  <SafeMarkdown content={sec.content} />
-                </div>
-
-                {/* Key Takeaways Callout (Teal border only) */}
-                {sec.keyTakeaways && sec.keyTakeaways.length > 0 && (
-                  <div className="mt-6 p-4 rounded-r-lg border-l-4 border-[#0F766E] dark:border-[#14B8A6] bg-teal-500/5 dark:bg-teal-500/10">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#0F766E] dark:text-[#14B8A6] mb-2">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Pontos-chave & Mecanismos</span>
-                    </div>
-                    <ul className="space-y-1.5 text-sm text-[#172033] dark:text-[#E5E7EB]">
-                      {sec.keyTakeaways.map((takeaway, tIdx) => (
-                        <li key={tIdx} className="flex items-start gap-2">
-                          <span className="text-[#0F766E] dark:text-[#14B8A6] mt-0.5 shrink-0">•</span>
-                          <span>{parseInline(takeaway)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Clinical Pearl Callout (Amber border only) */}
-                {sec.clinicalPearl && (
-                  <div className="mt-4 p-4 rounded-r-lg border-l-4 border-[#F59E0B] bg-amber-500/5 dark:bg-amber-500/10 flex items-start gap-3">
-                    <Lightbulb className="w-4 h-4 text-[#F59E0B] shrink-0 mt-0.5" />
-                    <div>
-                      <span className="text-xs font-semibold uppercase tracking-wider text-[#F59E0B] block mb-0.5">
-                        Pérola clínica & Aplicação
+                {editando ? (
+                  <EdicaoDaSecao
+                    secao={sec}
+                    aoSalvar={(salvo) => {
+                      lembrarEdicao(compendium.sections[idx], salvo);
+                      setVersaoDasEdicoes((v) => v + 1);
+                      setEditandoSectionId(null);
+                      showToast('Seção salva');
+                      onSectionSaved?.();
+                    }}
+                    aoFechar={(aviso) => {
+                      setEditandoSectionId(null);
+                      if (aviso) showToast(aviso);
+                    }}
+                  />
+                ) : (
+                  <>
+                    {/* Section Sub-header */}
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-[#0F766E] dark:text-[#14B8A6]">
+                        {sec.mechanismTag || `Seção ${idx + 1}`}
                       </span>
-                      <p className="text-sm text-[#172033] dark:text-[#E5E7EB] leading-relaxed">
-                        {parseInline(sec.clinicalPearl)}
-                      </p>
+                      {/* ED-2: só o admin vê. Discreto: não compete com o texto. */}
+                      {ehAdmin && (
+                        <button
+                          type="button"
+                          aria-label={`Editar a seção ${sec.title}`}
+                          title={
+                            editandoSectionId !== null
+                              ? 'Termine a edição da outra seção primeiro'
+                              : 'Editar o texto desta seção aqui mesmo, com o editor visual'
+                          }
+                          disabled={editandoSectionId !== null}
+                          onClick={() => setEditandoSectionId(sec.id)}
+                          className="ml-auto -my-2 min-h-10 sm:min-h-8 px-2.5 py-1 rounded-md text-xs font-medium text-[#64748B] dark:text-[#94A3B8] hover:bg-slate-100 dark:hover:bg-[#182235] flex items-center gap-1.5 cursor-pointer transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-[#0F766E] dark:text-[#14B8A6]" aria-hidden="true" />
+                          <span>Editar</span>
+                        </button>
+                      )}
                     </div>
-                  </div>
-                )}
 
-                {/* Warning Alert (Red border only) */}
-                {sec.warningAlert && (
-                  <div className="mt-4 p-4 rounded-r-lg border-l-4 border-rose-500 bg-rose-500/5 dark:bg-rose-500/10 flex items-start gap-3">
-                    <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="text-xs font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400 block mb-0.5">
-                        Atenção redobrada
-                      </span>
-                      <p className="text-sm text-[#172033] dark:text-[#E5E7EB] leading-relaxed">
-                        {parseInline(sec.warningAlert)}
-                      </p>
+                    {/* Section Title */}
+                    <h2 className="text-xl sm:text-2xl font-bold text-[#172033] dark:text-[#E5E7EB] mb-4">
+                      {sec.title}
+                    </h2>
+
+                    {/* Section Content with Safe Markdown (no dangerouslySetInnerHTML) */}
+                    <div className="text-[17px] leading-[1.7] text-[#172033] dark:text-[#E5E7EB]">
+                      <SafeMarkdown content={sec.content} />
                     </div>
-                  </div>
-                )}
 
-                {/* Consenso de Prova vs. Prática Clínica (Indigo border) */}
-                {sec.examConsensus && (
-                  <div className="mt-4 p-4 rounded-r-lg border-l-4 border-indigo-600 bg-indigo-500/5 dark:bg-indigo-500/10 flex items-start gap-3">
-                    <GraduationCap className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 block mb-0.5">
-                        Consenso de Prova vs. Prática de Plantão
-                      </span>
-                      <p className="text-sm text-[#172033] dark:text-[#E5E7EB] leading-relaxed">
-                        {parseInline(sec.examConsensus)}
-                      </p>
+                    {/* Key Takeaways Callout (Teal border only) */}
+                    {sec.keyTakeaways && sec.keyTakeaways.length > 0 && (
+                      <div className="mt-6 p-4 rounded-r-lg border-l-4 border-[#0F766E] dark:border-[#14B8A6] bg-teal-500/5 dark:bg-teal-500/10">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#0F766E] dark:text-[#14B8A6] mb-2">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Pontos-chave & Mecanismos</span>
+                        </div>
+                        <ul className="space-y-1.5 text-sm text-[#172033] dark:text-[#E5E7EB]">
+                          {sec.keyTakeaways.map((takeaway, tIdx) => (
+                            <li key={tIdx} className="flex items-start gap-2">
+                              <span className="text-[#0F766E] dark:text-[#14B8A6] mt-0.5 shrink-0">•</span>
+                              <span>{parseInline(takeaway)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Clinical Pearl Callout (Amber border only) */}
+                    {sec.clinicalPearl && (
+                      <div className="mt-4 p-4 rounded-r-lg border-l-4 border-[#F59E0B] bg-amber-500/5 dark:bg-amber-500/10 flex items-start gap-3">
+                        <Lightbulb className="w-4 h-4 text-[#F59E0B] shrink-0 mt-0.5" />
+                        <div>
+                          <span className="text-xs font-semibold uppercase tracking-wider text-[#F59E0B] block mb-0.5">
+                            Pérola clínica & Aplicação
+                          </span>
+                          <p className="text-sm text-[#172033] dark:text-[#E5E7EB] leading-relaxed">
+                            {parseInline(sec.clinicalPearl)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Warning Alert (Red border only) */}
+                    {sec.warningAlert && (
+                      <div className="mt-4 p-4 rounded-r-lg border-l-4 border-rose-500 bg-rose-500/5 dark:bg-rose-500/10 flex items-start gap-3">
+                        <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="text-xs font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400 block mb-0.5">
+                            Atenção redobrada
+                          </span>
+                          <p className="text-sm text-[#172033] dark:text-[#E5E7EB] leading-relaxed">
+                            {parseInline(sec.warningAlert)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Consenso de Prova vs. Prática Clínica (Indigo border) */}
+                    {sec.examConsensus && (
+                      <div className="mt-4 p-4 rounded-r-lg border-l-4 border-indigo-600 bg-indigo-500/5 dark:bg-indigo-500/10 flex items-start gap-3">
+                        <GraduationCap className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 block mb-0.5">
+                            Consenso de Prova vs. Prática de Plantão
+                          </span>
+                          <p className="text-sm text-[#172033] dark:text-[#E5E7EB] leading-relaxed">
+                            {parseInline(sec.examConsensus)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Section actions belong after the section has been read */}
+                    <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        aria-label="Gerar flashcard"
+                        onClick={() => handleCreateFlashcardFromSection(sec)}
+                        className="px-2 py-1 rounded-md text-xs font-medium text-[#64748B] dark:text-[#94A3B8] hover:bg-slate-100 dark:hover:bg-[#182235] flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Gerar flashcard com os pontos desta seção"
+                      >
+                        <Layers className="w-3.5 h-3.5 text-[#0F766E] dark:text-[#14B8A6]" />
+                        <span className="hidden sm:inline">Gerar flashcard</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        aria-pressed={isRead}
+                        disabled={!dataReady}
+                        onClick={() => handleToggleRead(sec.id)}
+                        className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
+                          isRead
+                            ? 'bg-teal-50 dark:bg-teal-950/40 text-[#0F766E] dark:text-[#14B8A6]'
+                            : 'text-[#64748B] dark:text-[#94A3B8] hover:bg-slate-100 dark:hover:bg-[#182235]'
+                        }`}
+                      >
+                        <CheckCircle2
+                          className={`w-3.5 h-3.5 ${
+                            isRead ? 'text-teal-600 dark:text-teal-400' : 'text-[#94A3B8]'
+                          }`}
+                        />
+                        <span>{isRead ? 'Lida' : 'Marcar lida'}</span>
+                      </button>
                     </div>
-                  </div>
+                  </>
                 )}
-
-                {/* Section actions belong after the section has been read */}
-                <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    aria-label="Gerar flashcard"
-                    onClick={() => handleCreateFlashcardFromSection(sec)}
-                    className="px-2 py-1 rounded-md text-xs font-medium text-[#64748B] dark:text-[#94A3B8] hover:bg-slate-100 dark:hover:bg-[#182235] flex items-center gap-1 cursor-pointer transition-colors"
-                    title="Gerar flashcard com os pontos desta seção"
-                  >
-                    <Layers className="w-3.5 h-3.5 text-[#0F766E] dark:text-[#14B8A6]" />
-                    <span className="hidden sm:inline">Gerar flashcard</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    aria-pressed={isRead}
-                    disabled={!dataReady}
-                    onClick={() => handleToggleRead(sec.id)}
-                    className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
-                      isRead
-                        ? 'bg-teal-50 dark:bg-teal-950/40 text-[#0F766E] dark:text-[#14B8A6]'
-                        : 'text-[#64748B] dark:text-[#94A3B8] hover:bg-slate-100 dark:hover:bg-[#182235]'
-                    }`}
-                  >
-                    <CheckCircle2
-                      className={`w-3.5 h-3.5 ${
-                        isRead ? 'text-teal-600 dark:text-teal-400' : 'text-[#94A3B8]'
-                      }`}
-                    />
-                    <span>{isRead ? 'Lida' : 'Marcar lida'}</span>
-                  </button>
-                </div>
               </section>
             );
           })}

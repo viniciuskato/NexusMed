@@ -15,14 +15,14 @@ interface EditorAbertoProps extends EditorVisualDeSecaoProps {
   documento: NoVisual;
 }
 
-const EditorAberto: React.FC<EditorAbertoProps> = ({ documento, onChange, rotulo, somenteLeitura, aoCriar }) => {
+const EditorAberto: React.FC<EditorAbertoProps> = ({ documento, onChange, modo = 'secao', rotulo, somenteLeitura, aoCriar }) => {
   const [fiel, setFiel] = useState(true);
   const aoMudar = useRef(onChange);
   useEffect(() => {
     aoMudar.current = onChange;
   }, [onChange]);
 
-  const extensoes = useMemo(() => criarExtensoes(), []);
+  const extensoes = useMemo(() => criarExtensoes(modo), [modo]);
   const conteudoInicial = useMemo(
     () => (documento.content && documento.content.length > 0 ? documento : { type: 'doc', content: [{ type: 'paragraph' }] }),
     [documento]
@@ -36,15 +36,22 @@ const EditorAberto: React.FC<EditorAbertoProps> = ({ documento, onChange, rotulo
       attributes: {
         class: 'ev-conteudo',
         role: 'textbox',
-        'aria-multiline': 'true',
+        'aria-multiline': modo === 'linha' ? 'false' : 'true',
         'aria-label': rotulo ?? 'Texto da seção',
       },
+      // Campo de uma linha: o que se cola com várias linhas entra numa linha só (o texto não pode ter quebra de linha).
+      ...(modo === 'linha'
+        ? {
+            transformPastedText: (texto: string) => texto.replace(/\s*\n+\s*/g, ' '),
+            transformPastedHTML: (html: string) => html.replace(/<\/(?:p|div|li|h[1-6])>|<br\s*\/?>/gi, ' '),
+          }
+        : {}),
     },
     onUpdate: ({ editor: e }) => {
       const doc = e.getJSON() as NoVisual;
-      const ehFiel = documentoEhFiel(doc);
+      const ehFiel = documentoEhFiel(doc, modo);
       setFiel(ehFiel);
-      aoMudar.current(docParaTexto(doc), { fiel: ehFiel });
+      aoMudar.current(docParaTexto(doc, modo), { fiel: ehFiel });
     },
   });
 
@@ -58,8 +65,8 @@ const EditorAberto: React.FC<EditorAbertoProps> = ({ documento, onChange, rotulo
   }, [editor, aoCriar]);
 
   return (
-    <div className="ev-editor">
-      {!somenteLeitura && <BarraDoEditor editor={editor} />}
+    <div className={modo === 'linha' ? 'ev-editor ev-editor--linha' : 'ev-editor'}>
+      {!somenteLeitura && <BarraDoEditor editor={editor} modo={modo} />}
       <EditorContent editor={editor} />
       {!fiel && (
         <p className="ev-aviso" role="alert">
@@ -72,8 +79,8 @@ const EditorAberto: React.FC<EditorAbertoProps> = ({ documento, onChange, rotulo
 };
 
 export const EditorVisualDeSecao: React.FC<EditorVisualDeSecaoProps> = (props) => {
-  const { texto, onNaoSeguro } = props;
-  const avaliacao = useMemo(() => avaliarTextoParaEditorVisual(texto), [texto]);
+  const { texto, onNaoSeguro, modo = 'secao' } = props;
+  const avaliacao = useMemo(() => avaliarTextoParaEditorVisual(texto, modo), [texto, modo]);
   const motivo = avaliacao.seguro ? null : avaliacao.motivo;
 
   useEffect(() => {

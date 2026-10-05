@@ -257,7 +257,29 @@ seção "Armadilhas já descobertas".
     conversão repete as regras do `SafeMarkdown`: mudou o leitor, mude os dois
     (`tests/component/editorVisualLeitor.test.tsx` compara) e o padrão (item
     19). `onChange` devolve `fiel`; `false` (ex.: negrito e itálico no trecho
-    inteiro, que o leitor lê torto) não deve ser salvo.
+    inteiro, que o leitor lê torto) não deve ser salvo. **Edição na leitura
+    (ED-2, 04/10/2026):** o admin edita cada seção na própria página de leitura
+    (`CompendiumReader` → `EdicaoDaSecao`, em `src/components/compendium/`; o
+    botão "Editar" só aparece com `useEhAdmin`, a mesma regra do `isAdmin` do
+    `App.tsx`). Grava por `materialsRepository.updateSectionContent` (a do
+    `SectionEditor`, que registra versão), só com os campos que mudaram
+    (`mudancasDaSecao.ts`; sem mudança não chama nada, item 17), e "Salvar"
+    fica desligado com `fiel=false`. O leitor mostra o texto salvo por
+    `secoesEditadas.ts` até a lista do app recarregar (o leitor não recarrega
+    a lista; `onSectionSaved` existe para o `App.tsx` fazer isso). Campos curtos
+    (Pontos-chave, Pérola, Alerta) usam o editor em `modo="linha"`. Texto não
+    seguro abre num editor de texto com prévia pelo `SafeMarkdown`; o botão
+    "Abrir no editor visual" só aparece se `normalizarParaEditorVisual`
+    (`src/utils/`) propõe um texto que o editor aceita E que o leitor renderiza
+    igual (conferido de fato em `normalizacaoDoTexto.tsx`, que baixa
+    `react-dom/server` só nesse momento, nunca no pacote inicial); a proposta só
+    é gravada se o dono salvar. Mudou uma regra do leitor: atualize também
+    `normalizarParaEditorVisual.ts` (`tests/component/normalizacaoEditorVisual.test.tsx`
+    compara os dois). Negrito e itálico não levam o espaço das pontas
+    (`**alvo **texto` não é negrito em Markdown de verdade; dois cliques numa
+    palavra, no Windows, seleciona o espaço depois dela). E2E que edita seção
+    apaga o material (e com ele o histórico, `changed_by` aponta para o autor)
+    ANTES do usuário (item 18).
 
 ## Convenções de trabalho
 
