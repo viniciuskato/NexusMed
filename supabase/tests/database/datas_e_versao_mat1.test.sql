@@ -137,7 +137,7 @@ $$;
 
 grant execute on all functions in schema tests to public;
 
-select plan(62);
+select plan(69);
 
 select tests.clear_auth();
 select tests.create_user('mat1.admin@test.local', 'admin', 'active') as v_admin \gset
@@ -251,12 +251,12 @@ select ok(
 -- Simula o banco ANTES da migration: sem os gatilhos (replica), material no ar sem data nem versão.
 set session_replication_role = replica;
 
-insert into public.materials (discipline_id, theme_id, title, status, created_at)
-values (:'v_disc', :'v_theme', 'Antigo A ' || :'v_sfx', 'published', '2026-01-01T12:00:00Z') returning id as v_a \gset
+insert into public.materials (discipline_id, theme_id, title, status, created_at, updated_at)
+values (:'v_disc', :'v_theme', 'Antigo A ' || :'v_sfx', 'published', '2026-01-01T12:00:00Z', '2026-01-01T12:00:00Z') returning id as v_a \gset
 insert into public.materials (discipline_id, theme_id, title, status, created_at)
 values (:'v_disc', :'v_theme', 'Antigo B ' || :'v_sfx', 'published', '2026-01-05T12:00:00Z') returning id as v_b \gset
-insert into public.materials (discipline_id, theme_id, title, status, created_at)
-values (:'v_disc', :'v_theme', 'Antigo C ' || :'v_sfx', 'published', '2026-01-10T12:00:00Z') returning id as v_c \gset
+insert into public.materials (discipline_id, theme_id, title, status, created_at, updated_at)
+values (:'v_disc', :'v_theme', 'Antigo C ' || :'v_sfx', 'published', '2026-01-10T12:00:00Z', '2026-04-01T12:00:00Z') returning id as v_c \gset
 insert into public.materials (discipline_id, theme_id, title, status, created_at)
 values (:'v_disc', :'v_theme', 'Antigo D arquivado ' || :'v_sfx', 'archived', '2026-01-11T12:00:00Z') returning id as v_d \gset
 insert into public.materials (discipline_id, theme_id, title, status, created_at)
@@ -278,6 +278,14 @@ values (:'v_rev_b', :'v_admin', 'aprovado', 'p1', 'h1', '2026-01-20T12:00:00Z');
 insert into public.material_submissions (author_id, title, discipline_id, theme_id, content_md, status, target_material_id, base_snapshot_hash, applied_at, publication_note, updated_at)
 values (:'v_admin', 'Atualização F', :'v_disc', :'v_theme', E'# F\n**Versão do padrão:** 5\n\n### S\ntexto', 'publicado', :'v_f', 'x', '2026-03-02T12:00:00Z', 'O arquivo é igual ao material que está no ar: nada mudou.', '2026-03-02T12:00:00Z');
 -- D: arquivado, sem nenhuma fonte.
+-- "Atualizado em": A foi editada em 10/02 e 15/02 (histórico de seção; nem save_compendium nem a edição na leitura moviam
+-- updated_at), mas o updated_at dela ficou em 01/01; C foi editada em 01/03 e o updated_at dela (01/04) é mais novo.
+insert into public.material_sections (material_id, sort_order, title, content) values (:'v_a', 0, 'S', 'C.') returning id as v_sec_a \gset
+insert into public.material_sections (material_id, sort_order, title, content) values (:'v_c', 0, 'S', 'C.') returning id as v_sec_c \gset
+insert into public.material_section_versions (material_section_id, changed_by, changed_fields, before_snapshot, after_snapshot, created_at) values
+  (:'v_sec_a', :'v_admin', array['content'], '{}'::jsonb, '{}'::jsonb, '2026-02-10T12:00:00Z'),
+  (:'v_sec_a', :'v_admin', array['content'], '{}'::jsonb, '{}'::jsonb, '2026-02-15T12:00:00Z'),
+  (:'v_sec_c', :'v_admin', array['content'], '{}'::jsonb, '{}'::jsonb, '2026-03-01T12:00:00Z');
 
 set session_replication_role = origin;
 
@@ -293,12 +301,14 @@ select is((select published_at from public.materials where id = :'v_c'), '2026-0
 select is((select published_at from public.materials where id = :'v_d'), null, 'D: arquivado sem fonte não ganha data inventada');
 select is((select published_at from public.materials where id = :'v_e'), null, 'E: rascunho continua sem data');
 select is((select standard_version from public.materials where id = :'v_f'), null, 'F: a versão de um envio "nada mudou" não vale');
+select is((select updated_at from public.materials where id = :'v_a'), '2026-02-15T12:00:00Z'::timestamptz, 'A: "Atualizado em" sobe até a última edição de seção registrada no histórico');
+select is((select updated_at from public.materials where id = :'v_c'), '2026-04-01T12:00:00Z'::timestamptz, 'C: "Atualizado em" que já é mais novo que a última edição não volta no tempo');
 
-select md5(string_agg(id::text || coalesce(published_at::text, '-') || coalesce(standard_version::text, '-'), ',' order by id)) as v_foto
+select md5(string_agg(id::text || coalesce(published_at::text, '-') || coalesce(standard_version::text, '-') || updated_at::text, ',' order by id)) as v_foto
   from public.materials where id in (:'v_a', :'v_b', :'v_c', :'v_d', :'v_e', :'v_f') \gset
 select app.preencher_datas_e_versao_do_padrao();
 select is(
-  (select md5(string_agg(id::text || coalesce(published_at::text, '-') || coalesce(standard_version::text, '-'), ',' order by id))
+  (select md5(string_agg(id::text || coalesce(published_at::text, '-') || coalesce(standard_version::text, '-') || updated_at::text, ',' order by id))
      from public.materials where id in (:'v_a', :'v_b', :'v_c', :'v_d', :'v_e', :'v_f')),
   :'v_foto'::text, 'rodar o preenchimento de novo não muda nada (idempotente)'
 );
@@ -360,6 +370,41 @@ select tests.clear_auth();
 select is(:'v_r4'::text, 'aplicado', 'trocar só a ordem das seções é uma atualização');
 select ok((select updated_at > '2020-01-01T00:00:00Z' from public.materials where id = :'v_m'), 'e a data de atualização anda (mesmo sem seção com texto novo)');
 select is((select count(*)::int from public.material_section_versions where material_section_id in (:'v_s1', :'v_s2')), 1, 'sem texto novo, nenhuma versão de seção a mais');
+
+-- A versão que vale é a que o ARQUIVO declara: o "Exportar .md" declara a registrada (ou nenhuma linha), então um material
+-- antigo exportado, mexido e publicado continua antigo; só o arquivo reescrito no padrão de hoje declara a atual.
+select tests.m1_envio(:'v_admin', :'v_disc', :'v_theme', 'Antigo exportado MAT1 ' || :'v_sfx', E'# Antigo
+**Versão do padrão:** 2
+
+### Seção 1
+texto') as v_e2 \gset
+select tests.authenticate_as(:'v_admin');
+select (public.admin_publicar_envio(:'v_e2', tests.m1_sha(:'v_e2'), tests.m1_leitura('Antigo exportado MAT1 ' || :'v_sfx', 1)))->>'resultado' as v_r5 \gset
+select tests.clear_auth();
+select published_material_id as v_m2 from public.material_submissions where id = :'v_e2' \gset
+select is((select standard_version from public.materials where id = :'v_m2'), 2, 'material de versão 2 do padrão: registrada 2');
+select jsonb_set(tests.m1_leitura('Antigo exportado MAT1 ' || :'v_sfx', 1), '{sections,0,content}', '"Texto mexido num caractere"')::text as v_texto_mexido \gset
+select tests.m1_envio_atualizacao(:'v_admin', :'v_m2', 'Export mexido', E'# Antigo
+**Versão do padrão:** 2
+
+### Seção 1
+texto mexido') as v_u4 \gset
+select tests.authenticate_as(:'v_admin');
+select (public.admin_aplicar_atualizacao(:'v_u4', tests.m1_sha(:'v_u4'), :'v_texto_mexido'::jsonb))->>'resultado' as v_r6 \gset
+select tests.clear_auth();
+select is(:'v_r6'::text, 'aplicado', 'o export mexido é publicado');
+select is((select standard_version from public.materials where id = :'v_m2'), 2, 'e o material continua na versão 2 (o selo "Desatualizado" continua)');
+-- Export de material com versão desconhecida: sem a linha. Publicado, o material continua com versão nula.
+select jsonb_set(tests.m1_leitura('Antigo exportado MAT1 ' || :'v_sfx', 1), '{sections,0,content}', '"Mexido de novo"')::text as v_texto_mexido2 \gset
+select tests.m1_envio_atualizacao(:'v_admin', :'v_m2', 'Export sem linha', E'# Antigo
+
+### Seção 1
+texto mexido de novo') as v_u5 \gset
+select tests.authenticate_as(:'v_admin');
+select (public.admin_aplicar_atualizacao(:'v_u5', tests.m1_sha(:'v_u5'), :'v_texto_mexido2'::jsonb))->>'resultado' as v_r7 \gset
+select tests.clear_auth();
+select is(:'v_r7'::text, 'aplicado', 'o export sem linha de versão também é publicado');
+select is((select standard_version from public.materials where id = :'v_m2'), null, 'e a versão fica desconhecida (nula), nunca a atual');
 
 -- Um aluno não aplica nada e nada muda.
 select tests.create_user('mat1.aluno@test.local', 'student', 'active') as v_aluno \gset

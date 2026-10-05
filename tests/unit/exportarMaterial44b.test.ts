@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Compendium, Discipline, Question, Theme } from '../../src/types';
-import { exportarMaterialParaMarkdown, VERSAO_DO_PADRAO } from '../../src/utils/exportarMaterial';
+import { exportarMaterialParaMarkdown } from '../../src/utils/exportarMaterial';
 import { compararComPublicado, tituloNormalizado } from '../../src/utils/atualizarMaterial';
 import { avaliarEnvio, lerArquivoParaEnvio, lerMaterialParaPublicar, type MaterialParaPublicar } from '../../src/utils/envioDeMaterial';
-import { situacaoDaChecagem, checarMaterialMarkdown } from '../../src/utils/compendiumStandardCheck';
+import { situacaoDaChecagem, checarMaterialMarkdown, versaoDoPadraoDoTexto, VERSAO_ATUAL_DO_PADRAO } from '../../src/utils/compendiumStandardCheck';
 import { materialParaEnvio } from '../e2e/fixtures/materialParaEnvio';
 
 // 44-B — exportar um material como `.md` do padrão e a prévia da atualização. O teste de IDA E VOLTA é o
@@ -25,6 +25,7 @@ function materialPublicado(over: Partial<Compendium> = {}): Compendium {
     lastUpdated: '',
     author: 'Equipe NexusMed',
     publicationStatus: 'published',
+    standardVersion: VERSAO_ATUAL_DO_PADRAO,
     tags: ['diurético', 'furosemida', 'hidroclorotiazida'],
     sections: [
       {
@@ -62,7 +63,7 @@ describe('44-B — exportar o material para o .md do padrão', () => {
     expect(texto).toContain('**Tema:** Clínica');
     expect(texto).toContain('**Autor:** Equipe NexusMed');
     expect(texto).toContain('**Tempo estimado de leitura:** 14 minutos');
-    expect(texto).toContain(`**Versão do padrão:** ${VERSAO_DO_PADRAO}`);
+    expect(texto).toContain(`**Versão do padrão:** ${VERSAO_ATUAL_DO_PADRAO}`);
     expect(texto).toContain('### Mecanismo de ação');
     expect(texto).toContain('**Tag de Mecanismo:** Farmacodinâmica');
     expect(texto).toContain('**Pontos-Chave:**');
@@ -71,6 +72,30 @@ describe('44-B — exportar o material para o .md do padrão', () => {
     expect(texto).toContain('### Palavras-chave\n`diurético` `furosemida` `hidroclorotiazida`');
     expect(texto).toContain('### Referências Bibliográficas\n1. Fonte de exemplo 1.');
     expect(texto.endsWith('\n')).toBe(true);
+  });
+
+  it('MAT-1: o arquivo declara a versão REGISTRADA do material; sem versão registrada, sai sem a linha', () => {
+    const declarada = (v: number | null | undefined) =>
+      versaoDoPadraoDoTexto(exportarMaterialParaMarkdown(materialPublicado({ standardVersion: v }), [disciplina], [tema]).texto);
+    expect(declarada(2)).toBe(2);
+    expect(declarada(VERSAO_ATUAL_DO_PADRAO)).toBe(VERSAO_ATUAL_DO_PADRAO);
+    expect(declarada(null)).toBeNull();
+    expect(declarada(undefined)).toBeNull();
+    expect(exportarMaterialParaMarkdown(materialPublicado({ standardVersion: null }), [disciplina], [tema]).texto).not.toContain('Versão do padrão');
+  });
+
+  it('MAT-1: material antigo exportado e reenviado com uma mudança NÃO passa por atual (versão nula/2), e a checagem do padrão ainda pede a linha da versão atual', () => {
+    for (const registrada of [null, 2]) {
+      const { texto } = exportarMaterialParaMarkdown(materialPublicado({ standardVersion: registrada }), [disciplina], [tema]);
+      const editado = texto.replace('Indicados na sobrecarga de volume', 'Indicados na sobrecarga de volume e na ascite');
+      expect(editado).not.toBe(texto);
+      // O que o banco gravaria ao aplicar este arquivo é a versão que ele declara: a mesma registrada, nunca a atual.
+      expect(versaoDoPadraoDoTexto(editado)).toBe(registrada);
+      expect(versaoDoPadraoDoTexto(editado) ?? 0).toBeLessThan(VERSAO_ATUAL_DO_PADRAO);
+      // E a tela de envio não o aceita como arquivo no padrão de hoje: falta (ou está velha) a linha da versão.
+      const regras = checarMaterialMarkdown(editado).pendencias.map((p) => p.regra);
+      expect(regras).toContain('versao-do-padrao-ausente');
+    }
   });
 
   it('IDA E VOLTA: a checagem do padrão e o importador aceitam, e ler de novo dá exatamente o mesmo conteúdo', () => {

@@ -63,7 +63,7 @@ describe('MAT-1 — versão do padrão', () => {
     expect(padraoDesatualizado(VERSAO_ATUAL_DO_PADRAO + 1)).toBe(false);
   });
 
-  it('a versão que a exportação escreve é a que a leitura devolve (ida e volta)', () => {
+  it('a versão que a exportação escreve é a registrada do material, e a leitura a devolve (ida e volta)', () => {
     const disciplina = { id: 'd1', name: 'Farmacologia' } as Discipline;
     const tema = { id: 't1', disciplineId: 'd1', name: 'Clínica' } as Theme;
     const material = {
@@ -77,7 +77,11 @@ describe('MAT-1 — versão do padrão', () => {
       disciplineId: 'd1',
       themeId: 't1',
     } as unknown as Compendium;
-    expect(versaoDoPadraoDoTexto(exportarMaterialParaMarkdown(material, [disciplina], [tema]).texto)).toBe(VERSAO_ATUAL_DO_PADRAO);
+    const exportada = (standardVersion: number | null) =>
+      versaoDoPadraoDoTexto(exportarMaterialParaMarkdown({ ...material, standardVersion }, [disciplina], [tema]).texto);
+    expect(exportada(VERSAO_ATUAL_DO_PADRAO)).toBe(VERSAO_ATUAL_DO_PADRAO);
+    expect(exportada(2)).toBe(2);
+    expect(exportada(null)).toBeNull();
   });
 
   it('o importador lê o material com a linha da versão sem tropeçar nela', () => {

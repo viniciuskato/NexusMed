@@ -51,6 +51,7 @@ function material(): Compendium {
     lastUpdated: '',
     author: 'Equipe',
     publicationStatus: 'published',
+    standardVersion: VERSAO_ATUAL_DO_PADRAO,
     tags: ['diurético'],
     sections: [
       { id: 'sec-a', title: 'Mecanismo', content: 'Alça bloqueia Na-K-2Cl [1](#ref-1).', keyTakeaways: ['Alça: potente'] },
@@ -127,6 +128,31 @@ describe('44-B — Exportar .md', () => {
     expect(texto).toContain('### Mecanismo');
     expect(texto).toContain('### Referências Bibliográficas');
     expect(await screen.findByText(/Arquivo “diureticos.md” gerado/)).toBeTruthy();
+  });
+});
+
+describe('MAT-1 — o material antigo não passa por atual ao ser exportado e reenviado', () => {
+  it('versão registrada nula: o export sai sem a linha da versão e o arquivo editado não é aceito como atual (nada é publicado)', async () => {
+    const antigo = { ...material(), standardVersion: null };
+    const editado = exportarMaterialParaMarkdown(antigo, [disciplina], [tema]).texto.replace('Alça: potente', 'Alça: potente e rápida');
+    expect(editado).not.toContain('Versão do padrão');
+    renderizar(antigo);
+    await abrirEEscolher(editado);
+    await screen.findByText(/ainda não pode ser enviado/);
+    expect(screen.getByText(/Falta a linha .*Versão do padrão/)).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Publicar versão nova' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(repo.submitUpdate).not.toHaveBeenCalled();
+  });
+
+  it('"Baixar para atualizar" leva o material com a versão registrada (ou sem linha), e a abertura pede a atual', async () => {
+    renderizar({ ...material(), standardVersion: 2 });
+    fireEvent.click(await screen.findByRole('button', { name: /Baixar para atualizar/ }));
+    await waitFor(() => expect(baixar).toHaveBeenCalledTimes(1));
+    const texto = (baixar.mock.calls[0] as [string, string])[1];
+    expect(texto).toContain(`com a linha "**Versão do padrão:** ${VERSAO_ATUAL_DO_PADRAO}"`);
+    const materialNoArquivo = texto.slice(texto.indexOf('=== MATERIAL ATUAL ==='));
+    expect(materialNoArquivo).toContain('**Versão do padrão:** 2');
+    expect(materialNoArquivo).not.toContain(`**Versão do padrão:** ${VERSAO_ATUAL_DO_PADRAO}`);
   });
 });
 

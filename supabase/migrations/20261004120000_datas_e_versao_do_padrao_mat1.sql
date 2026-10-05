@@ -15,8 +15,9 @@
 --      novas, nem `updated_at`, entra no hash do conteúdo (`app.build_material_snapshot`): atestação e selo não mudam.
 --   3. A versão do padrão vem do texto do envio que foi ao ar (material novo ou atualização), lida da linha
 --      "**Versão do padrão:** N" por UMA função (`app.versao_do_padrao_do_texto`), por um gatilho no envio:
---      vale para os quatro caminhos (`admin_*` e `revisao_*`) sem reescrever nenhum. Arquivo igual ao que está no ar
---      ("nada mudou") não grava versão: o arquivo exportado de um material antigo já declara a versão atual.
+--      vale para os quatro caminhos (`admin_*` e `revisao_*`) sem reescrever nenhum. Vale a versão que o arquivo
+--      declara (o "Exportar .md" declara a REGISTRADA do material, ou nenhuma linha; só o arquivo reescrito no padrão
+--      de hoje declara a atual). Arquivo igual ao que está no ar ("nada mudou") não grava versão.
 --   4. "Importar material" (Admin) grava a versão do arquivo (`import_compendium_draft` ganha `p_standard_version`).
 --   5. `admin_aplicar_atualizacao`: a mesma função da P8, com duas diferenças: cada seção cujo texto muda ganha uma
 --      versão em `material_section_versions` (o mesmo histórico da edição na leitura) e, se o conteúdo mudou, a
@@ -162,8 +163,8 @@ declare
   v_material uuid := coalesce(new.published_material_id, new.target_material_id);
   v_versao int;
 begin
-  -- "Nada mudou" (o arquivo é igual ao que está no ar) deixa um recado no envio: o arquivo exportado de um
-  -- material antigo já declara a versão atual, e isso não torna o material atual.
+  -- "Nada mudou" (o arquivo é igual ao que está no ar) deixa um recado no envio: um arquivo igual ao do ar não
+  -- reescreveu nada, então a linha de versão dele não torna o material atual.
   if v_material is null or new.publication_note is not null then
     return null;
   end if;
@@ -678,6 +679,8 @@ grant execute on function public.admin_aplicar_atualizacao(uuid, text, jsonb) to
 --     aprovada do conteúdo; senão, para material no ar, a criação. Material arquivado sem nenhuma fonte fica sem data.
 --   * versão do padrão: a linha "**Versão do padrão:** N" do texto do envio mais recente que foi ao ar para o material
 --     (criou-o ou o atualizou); sem envio, ou sem a linha, fica nula.
+--   * atualizado em: antes desta migration, a edição na leitura (ED-2) e o formulário do Admin (`save_compendium`) não
+--     moviam `materials.updated_at`; a data passa a ser a maior entre a atual e a da última versão de seção do material.
 create or replace function app.preencher_datas_e_versao_do_padrao()
 returns void
 language plpgsql
@@ -710,6 +713,18 @@ begin
        order by x.material_id, x.updated_at desc
     ) v
    where m.id = v.material_id and m.standard_version is null and v.versao is not null;
+
+  -- "Atualizado em" dos existentes: nunca anterior à última edição de seção registrada no histórico (nada do
+  -- conteúdo atestado muda: `updated_at` fica fora do hash). Só sobe, então rodar de novo não muda nada.
+  update public.materials m
+     set updated_at = v.ultima
+    from (
+      select s.material_id, max(sv.created_at) as ultima
+        from public.material_section_versions sv
+        join public.material_sections s on s.id = sv.material_section_id
+       group by s.material_id
+    ) v
+   where m.id = v.material_id and v.ultima > m.updated_at;
 end;
 $$;
 

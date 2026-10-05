@@ -294,7 +294,11 @@ seção "Armadilhas já descobertas".
     `app.versao_do_padrao_do_texto` (SQL) e `versaoDoPadraoDoTexto`
     (`compendiumStandardCheck.ts`): mudou o formato dela, mude os dois. Subir
     `VERSAO_ATUAL_DO_PADRAO` deixa todo material "Desatualizado" para o admin
-    (é o efeito pretendido). As três colunas ficam fora do hash da atestação
+    (é o efeito pretendido). O "Exportar .md" (e o material dentro do "Baixar para
+    atualizar") declara a versão REGISTRADA do material, ou nenhuma linha se ela é
+    nula: só o arquivo reescrito no padrão de hoje tira o selo. O preenchimento da
+    migration também leva `updated_at` à última edição de seção do histórico.
+    As três colunas ficam fora do hash da atestação
     (`build_material_snapshot`). "Baixar para atualizar" monta o `.txt` com o
     prompt e a Parte 1 de `content/padraoMaterial.ts` (nunca cópia no código);
     "Enviar versão nova" grava o envio e o aplica por `admin_aplicar_atualizacao`,
