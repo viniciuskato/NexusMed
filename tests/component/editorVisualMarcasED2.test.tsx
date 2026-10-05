@@ -99,3 +99,41 @@ describe('editor visual — o espaço das pontas fica fora do negrito e do itál
     expect(palavra.ultimo()).toBe('**x**');
   });
 });
+
+// ED-2, rodada 2 — colar no campo de uma linha (Pontos-chave, Pérola, Alerta): o que vem do Word, do Google Docs ou do
+// NotebookLM costuma ter vários parágrafos ou uma lista. Tudo entra na linha, com os blocos separados por espaço; nada se perde.
+describe('editor visual (campo de uma linha) — colar vários blocos', () => {
+  const colar = (html: string) => {
+    const aberto = abrir('Inicio.', 'linha');
+    act(() => void aberto.editor.commands.setTextSelection(aberto.editor.state.doc.content.size - 1));
+    act(() => void aberto.editor.view.pasteHTML(html));
+    return aberto;
+  };
+  const ultimoInfo = (onChange: ReturnType<typeof vi.fn>) => onChange.mock.calls[onChange.mock.calls.length - 1][1];
+
+  it('dois parágrafos: os dois entram, separados por espaço, numa linha só', () => {
+    const { ultimo, editor, onChange } = colar('<p>Primeira frase.</p><p>Segunda frase.</p>');
+    expect(ultimo()).toMatch(/^Inicio\.\s*Primeira frase\.\s+Segunda frase\.\s*$/);
+    expect(ultimo()).not.toContain('\n');
+    expect(editor.getJSON().content).toHaveLength(1);
+    expect(ultimoInfo(onChange)).toEqual({ fiel: true });
+  });
+
+  it('parágrafo, lista e parágrafo: nenhum texto se perde', () => {
+    const { ultimo, editor } = colar('<p>Um.</p><ul><li>dois</li><li>tres</li></ul><p>Quatro.</p>');
+    expect(ultimo()).toMatch(/^Inicio\.\s*Um\.\s+dois\s+tres\s+Quatro\.\s*$/);
+    expect(editor.getJSON().content).toHaveLength(1);
+  });
+
+  it('título, quebra de linha e tabela do Google Docs: tudo entra', () => {
+    const { ultimo } = colar('<h2>Titulo</h2><div>Linha A<br>Linha B</div><table><tr><td>c1</td><td>c2</td></tr></table>');
+    expect(ultimo()).toMatch(/^Inicio\.\s*Titulo\s+Linha A\s+Linha B\s+c1\s+c2\s*$/);
+  });
+
+  it('o mesmo vale para texto puro com várias linhas', () => {
+    const aberto = abrir('Inicio.', 'linha');
+    act(() => void aberto.editor.commands.setTextSelection(aberto.editor.state.doc.content.size - 1));
+    act(() => void aberto.editor.view.pasteText('Primeira.\n\nSegunda.\nTerceira.'));
+    expect(aberto.ultimo()).toMatch(/^Inicio\.\s*Primeira\.\s+Segunda\.\s+Terceira\.\s*$/);
+  });
+});

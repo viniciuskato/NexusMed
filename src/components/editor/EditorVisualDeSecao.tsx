@@ -39,11 +39,14 @@ const EditorAberto: React.FC<EditorAbertoProps> = ({ documento, onChange, modo =
         'aria-multiline': modo === 'linha' ? 'false' : 'true',
         'aria-label': rotulo ?? 'Texto da seção',
       },
-      // Campo de uma linha: o que se cola com várias linhas entra numa linha só (o texto não pode ter quebra de linha).
+      // Campo de uma linha: o que se cola com vários parágrafos, itens ou quebras entra numa linha só, com os blocos
+      // separados por espaço (o texto não pode ter quebra de linha). Abertura E fechamento de cada bloco viram espaço:
+      // trocar só o fechamento deixava o `<p>` de abertura separando os blocos, e tudo depois do primeiro se perdia.
       ...(modo === 'linha'
         ? {
             transformPastedText: (texto: string) => texto.replace(/\s*\n+\s*/g, ' '),
-            transformPastedHTML: (html: string) => html.replace(/<\/(?:p|div|li|h[1-6])>|<br\s*\/?>/gi, ' '),
+            transformPastedHTML: (html: string) =>
+              html.replace(/<\/?(?:p|div|ul|ol|li|h[1-6]|blockquote|pre|table|thead|tbody|tr|td|th|section|article)\b[^>]*>|<br\b[^>]*>/gi, ' '),
           }
         : {}),
     },

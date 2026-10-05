@@ -219,6 +219,50 @@ test.describe('ED-2 — editar a seção na página de leitura', () => {
     }
   });
 
+  test('sem recarregar a página, a Área Editorial já recebe o texto editado na leitura e salvar os metadados do material não o desfaz', async ({ page }) => {
+    const tag = `${Date.now()}`;
+    const titulo = `${MATERIAL_PREFIX}ed2-meta-${tag}`;
+    const { secaoId } = materialComDuasSecoes(`ed2-meta-${tag}`);
+    cleanup.unshift(() => deleteE2EMaterials());
+    const admin = await usuario('admin', 'e2e-ed2-meta');
+    const lerConteudo = () => psqlLocal(`select content from public.material_sections where id = '${secaoId}';`);
+
+    await login(page, admin);
+    await abrirMaterial(page, titulo);
+    await page.getByRole('button', { name: `Editar a seção ${TITULO_DA_SECAO}` }).click();
+    const principal = page.getByRole('textbox', { name: 'Texto da seção' });
+    await expect(principal).toBeVisible({ timeout: 15_000 });
+    await principal.getByText('A palavra alvo precisa de negrito.').click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' EDITADO NA LEITURA');
+    await page.getByRole('button', { name: 'Salvar', exact: true }).click();
+    await expect(page.getByText('Seção salva')).toBeVisible();
+    expect(lerConteudo()).toContain('EDITADO NA LEITURA');
+
+    // Sem recarregar a página: Área Editorial → Conteúdos & Mecanismos → o editor de seções já traz o texto novo.
+    await page.locator('#btn-user-profile-menu').click();
+    await page.getByRole('menuitem', { name: 'Área Editorial / CMS' }).click();
+    await page.getByRole('button', { name: 'Conteúdos & Mecanismos', exact: false }).click();
+    await page.getByPlaceholder('Buscar por título, subtítulo, tag ou conteúdo...').fill(titulo);
+    const linha = page.locator('[data-compendium-row-id]').filter({ hasText: titulo });
+    await linha.getByRole('button', { name: 'Editar', exact: true }).click();
+    await page.getByRole('button', { name: /^Conteúdo Texto das seções/ }).click();
+    await page.getByRole('button', { name: TITULO_DA_SECAO, exact: true }).click();
+    await expect(page.getByLabel('Conteúdo (markdown)')).toHaveValue(/EDITADO NA LEITURA/);
+
+    // Salvar os "Metadados e posição na árvore" do mesmo material regrava as seções a partir da lista do app: elas têm de
+    // ser as editadas (antes, voltavam ao texto antigo, sem versão).
+    await linha.getByRole('button', { name: 'Editar', exact: true }).click();
+    await page.getByRole('button', { name: /^Metadados e posição na árvore/ }).click();
+    // (O editor de seções também tem um "Salvar alterações": o dos metadados é o botão de envio do formulário.)
+    await page.locator('form').getByRole('button', { name: 'Salvar alterações', exact: true }).click();
+    await expect(page.getByText('Conteúdo atualizado com sucesso!')).toBeVisible({ timeout: 15_000 });
+    // O material é regravado por inteiro (o id da seção pode mudar); o texto, não.
+    const doMaterial = `material_id in (select id from public.materials where title = '${titulo}')`;
+    expect(psqlLocal(`select count(*) from public.material_sections where ${doMaterial} and content like 'A palavra alvo precisa de negrito. EDITADO NA LEITURA%';`)).toBe('1');
+    expect(psqlLocal(`select count(*) from public.material_sections where ${doMaterial} and content like 'A palavra alvo precisa de negrito.%' and content not like '%EDITADO NA LEITURA%';`)).toBe('0');
+  });
+
   test('em tela de celular (375 px) o editor não cria rolagem horizontal e os botões continuam ao alcance', async ({ browser }) => {
     const tag = `${Date.now()}`;
     const titulo = `${MATERIAL_PREFIX}ed2-cel-${tag}`;

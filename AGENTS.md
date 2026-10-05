@@ -265,8 +265,11 @@ seção "Armadilhas já descobertas".
     `SectionEditor`, que registra versão), só com os campos que mudaram
     (`mudancasDaSecao.ts`; sem mudança não chama nada, item 17), e "Salvar"
     fica desligado com `fiel=false`. O leitor mostra o texto salvo por
-    `secoesEditadas.ts` até a lista do app recarregar (o leitor não recarrega
-    a lista; `onSectionSaved` existe para o `App.tsx` fazer isso). Campos curtos
+    `secoesEditadas.ts` até a lista do app recarregar, e o `App.tsx` a recarrega
+    em seguida (`onSectionSaved={() => void refreshData()}`): sem isso a Área
+    Editorial partiria do texto antigo e, ao salvar os "Metadados e posição na
+    árvore" do mesmo material, o regravaria sem versão (E2E em
+    `editar-na-leitura-ed2.spec.ts`). Campos curtos
     (Pontos-chave, Pérola, Alerta) usam o editor em `modo="linha"`. Texto não
     seguro abre num editor de texto com prévia pelo `SafeMarkdown`; o botão
     "Abrir no editor visual" só aparece se `normalizarParaEditorVisual`
