@@ -102,9 +102,10 @@ vi.mock('../../src/components/questions/QuestionCard', () => ({
   QuestionCard: ({ question }: { question: Question }) => <div data-testid="card">{question.questionStem}</div>,
 }));
 
-// DashboardView real arrasta uma árvore grande — só o botão que abre o modal.
-vi.mock('../../src/components/dashboard/DashboardView', () => ({
-  DashboardView: ({ onTestarOQueLi }: { onTestarOQueLi?: () => void }) => (
+// DesempenhoView real arrasta uma árvore grande — só o botão que abre o modal.
+// (Desde o PAINEL-1 o botão "Testar o que li" do painel antigo mora em "Meu desempenho".)
+vi.mock('../../src/components/dashboard/DesempenhoView', () => ({
+  DesempenhoView: ({ onTestarOQueLi }: { onTestarOQueLi?: () => void }) => (
     <button type="button" onClick={onTestarOQueLi}>
       abrir-testar-teste
     </button>
@@ -141,7 +142,7 @@ const { default: App } = await import('../../src/App');
 
 beforeEach(() => {
   authState.user = { id: 'user-a' };
-  window.history.replaceState(null, '', '#/dashboard');
+  window.history.replaceState(null, '', '#/desempenho');
 });
 afterEach(() => {
   cleanup();

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
+  BarChart3,
   CalendarCheck,
   BookOpen,
   HelpCircle,
@@ -58,6 +59,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       activeAlso: ['flashcard-session'],
       badge: dueCardsCount > 0 ? dueCardsCount : null,
     },
+    // PAINEL-1: "Meu desempenho" (e, nele, o caderno de erros) a um clique do dock.
+    { id: 'desempenho', label: 'Desempenho', icon: BarChart3, activeAlso: ['errors'], badge: null as number | null },
   ];
   const isResourceActive = resourceItems.some(
     (item) => activeView === item.id || item.activeAlso.includes(activeView)
@@ -158,6 +161,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                   type="button"
                   role="menuitem"
                   id={`dock-resources-${item.id}`}
+                  aria-label={item.id === 'desempenho' ? 'Meu desempenho' : undefined}
                   onClick={() => {
                     setResourcesOpen(false);
                     onSelectView(item.id);

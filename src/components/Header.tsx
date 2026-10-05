@@ -3,6 +3,7 @@ import {
   Search,
   Compass,
   LayoutDashboard,
+  BarChart3,
   CalendarCheck,
   BookOpen,
   HelpCircle,
@@ -82,11 +83,14 @@ export const Header: React.FC<HeaderProps> = ({
 
   // Navegação principal (Prompt 22-A): Início, Estudo Temático e Recursos —
   // desde a 43-E, com "Hoje" antes de Início, que é a tela inicial —
-  // este último agrupando os três acervos (Biblioteca, Questões, Cards).
+  // este último agrupando os três acervos (Biblioteca, Questões, Cards) e, desde
+  // o PAINEL-1, "Meu desempenho".
   const resourceItems = [
     { id: 'compendiums', label: 'Biblioteca', icon: BookOpen, activeAlso: ['compendium-reader'] },
     { id: 'questions', label: 'Questões', icon: HelpCircle, activeAlso: ['simulados', 'simulado-session'] },
     { id: 'flashcards', label: 'Cards', icon: Layers, activeAlso: ['flashcard-session'] },
+    // PAINEL-1: tudo o que saiu do painel (e o caderno de erros) fica a um clique daqui.
+    { id: 'desempenho', label: 'Meu desempenho', icon: BarChart3, activeAlso: ['errors'] },
   ];
   const isResourceActive = resourceItems.some(
     (item) => activeView === item.id || item.activeAlso.includes(activeView)
