@@ -23,7 +23,7 @@ import { fetchAllRows, fetchAllRowsByIds } from './supabasePaging';
 //   front <-> front | back <-> back
 //   mechanismHighlight <-> mechanism_highlight | tags <-> tags
 //   difficulty <-> difficulty | isCustom <-> is_custom
-//   isWritten <-> is_written (CARD-1; só a RPC create_written_flashcard grava, o upsert comum não mexe na coluna)
+//   isWritten <-> is_written (CARD-1; a RPC create_written_flashcard cria; o upsert comum só envia a coluna quando true)
 //
 // FlashcardSRS <-> flashcard_srs_state (estado atual) + flashcard_reviews (histórico)
 //   intervalDays <-> interval_days | repetitionCount <-> repetition_count
@@ -243,6 +243,9 @@ export class SupabaseFlashcardsRepository implements FlashcardsRepository {
       tags: flashcard.tags ?? [],
       difficulty: flashcard.difficulty,
       is_custom: flashcard.isCustom ?? true,
+      // CARD-1: nunca manda false (um objeto sem a marca não pode desmarcar um cartão escrito); o cartão escrito
+      // que passar por aqui continua escrito e não ocupa a vaga do automático.
+      ...(flashcard.isWritten ? { is_written: true } : {}),
     };
     const { error: upErr } = await supabase.from('flashcards').upsert(cardRow);
     if (upErr) throw upErr;

@@ -8,7 +8,7 @@
 -- ============================================================================
 
 create extension if not exists pgtap;
-select plan(46);
+select plan(48);
 
 select tests.clear_auth();
 select tests.create_user('card1.a@test.local', 'student', 'active') as v_user_a \gset
@@ -214,6 +214,22 @@ select throws_ok(
   'P0001',
   'o cartão precisa estar ligado a uma seção ou a uma questão',
   'sem seção nem questão é recusado'
+);
+
+-- ----------------------------------------------------------------------------
+-- Reconciliação da 45-A: 2 escritos + 1 automático na mesma questão não são
+-- "duplicados"; ela não apaga nenhum.
+-- ----------------------------------------------------------------------------
+select tests.clear_auth();
+select is(
+  (select (app.reconcile_duplicate_flashcards_45a() ->> 'duplicate_cards_removed')::int),
+  0,
+  'a reconciliação da 45-A não remove nenhum cartão (escritos não são duplicados do automático)'
+);
+select is(
+  (select count(*)::int from public.flashcards where user_id = :'v_user_a' and question_origin_id = :'v_q1'),
+  3,
+  'e os 2 escritos + 1 automático da questão continuam lá'
 );
 
 -- ----------------------------------------------------------------------------

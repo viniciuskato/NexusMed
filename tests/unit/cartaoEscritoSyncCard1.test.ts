@@ -8,6 +8,7 @@ import type { Flashcard } from '../../src/types';
 //   envio repetido (replay da fila) manda o MESMO id e não apaga nada.
 
 const rpc = vi.fn();
+const upsert = vi.fn();
 const handlers = new Map<string, (payload: unknown, clientOpId?: string) => Promise<unknown>>();
 
 vi.mock('../../src/services/syncQueue', async (importOriginal) => ({
@@ -19,7 +20,11 @@ vi.mock('../../src/lib/supabaseClient', () => ({
   supabase: {
     rpc: (...args: unknown[]) => rpc(...args),
     auth: { getUser: async () => ({ data: { user: { id: 'user-a' } }, error: null }) },
-    from: () => ({
+    from: (tabela: string) => ({
+      upsert: (l: unknown) => {
+        upsert(tabela, l);
+        return Promise.resolve({ error: null });
+      },
       select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null, error: null }) }) }),
     }),
   },
@@ -80,6 +85,7 @@ beforeEach(() => {
   vi.resetModules();
   vi.restoreAllMocks();
   rpc.mockReset();
+  upsert.mockReset();
   handlers.clear();
 });
 
@@ -133,6 +139,22 @@ describe('SupabaseFlashcardsRepository.createWrittenFlashcardAtomic (CARD-1)', (
     const { supabaseFlashcardsRepository } = await import('../../src/repositories/SupabaseFlashcardsRepository');
     const lido = await supabaseFlashcardsRepository.createWrittenFlashcardAtomic(cartao('c-4'));
     expect('isWritten' in lido).toBe(false);
+  });
+});
+
+describe('SupabaseFlashcardsRepository.saveFlashcard — upsert comum (CARD-1)', () => {
+  it('o cartão escrito mantém a marca no upsert (nunca vira automático por esse caminho)', async () => {
+    const { supabaseFlashcardsRepository } = await import('../../src/repositories/SupabaseFlashcardsRepository');
+    await supabaseFlashcardsRepository.saveFlashcard(cartao('c-9', { questionOriginId: 'q-1' }));
+    const linhaGravada = upsert.mock.calls.find(([tabela]) => tabela === 'flashcards')?.[1];
+    expect(linhaGravada).toMatchObject({ id: 'c-9', is_written: true, question_origin_id: 'q-1' });
+  });
+
+  it('o cartão comum não manda a coluna (nunca desmarca um escrito)', async () => {
+    const { supabaseFlashcardsRepository } = await import('../../src/repositories/SupabaseFlashcardsRepository');
+    await supabaseFlashcardsRepository.saveFlashcard(cartao('c-10', { isWritten: undefined }));
+    const linhaGravada = upsert.mock.calls.find(([tabela]) => tabela === 'flashcards')?.[1] as Record<string, unknown>;
+    expect('is_written' in linhaGravada).toBe(false);
   });
 });
 

@@ -506,7 +506,14 @@ async function runRecovery(uid: string): Promise<void> {
         if (!remoteIds.has(card.id)) {
           // Antes da revisão/SRS deste card que já estejam na fila: eles só
           // passam com o card no servidor.
-          enqueueBefore(uid, 'flashcard_upsert', { flashcard: card }, (o) => CARD_DEPENDENTS.has(o.category) && cardIdOf(o) === card.id);
+          // CARD-1: o cartão escrito volta pela RPC própria. Pelo upsert comum ele nasceria como automático e
+          // ocuparia a vaga do cartão do erro ou da seção.
+          enqueueBefore(
+            uid,
+            card.isWritten ? 'flashcard_create_written' : 'flashcard_upsert',
+            { flashcard: card },
+            (o) => CARD_DEPENDENTS.has(o.category) && cardIdOf(o) === card.id
+          );
         }
         ledger.flashcards.push(card.id);
         ledgerChanged = true;
