@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import type { Compendium, Discipline, Theme } from '../../src/types';
 
+// ED-2: o leitor pergunta se a pessoa é admin (botão "Editar"); aqui o leitor é de quem só lê.
+vi.mock('../../src/hooks/useEhAdmin', () => ({ useEhAdmin: () => false }));
 vi.mock('../../src/hooks/useScrollMemory', () => ({
   useScrollMemory: vi.fn(),
 }));

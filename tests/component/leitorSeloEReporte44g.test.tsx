@@ -6,6 +6,8 @@ import type { Compendium, Discipline, Theme } from '../../src/types';
 // 44-G — no leitor: material publicado mostra o selo de revisão (se houver) e o
 // botão "Reportar erro"; rascunho e material sem estado de publicação não.
 
+// ED-2: o leitor pergunta se a pessoa é admin (botão "Editar"); aqui o leitor é de quem só lê.
+vi.mock('../../src/hooks/useEhAdmin', () => ({ useEhAdmin: () => false }));
 vi.mock('../../src/hooks/useScrollMemory', () => ({ useScrollMemory: vi.fn() }));
 vi.mock('../../src/components/feedback/ContextualFeedbackPopover', () => ({ ContextualFeedbackPopover: () => null }));
 vi.mock('../../src/services/storage', () => ({ StorageService: { saveLastReadingSession: vi.fn() } }));

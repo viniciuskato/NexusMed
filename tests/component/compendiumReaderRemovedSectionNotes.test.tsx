@@ -7,6 +7,8 @@ import type { Compendium } from '../../src/types';
 // o aluno, no próprio material, indicada como de uma seção removida — e não
 // se mistura com a anotação do material, que ele continua editando.
 
+// ED-2: o leitor pergunta se a pessoa é admin (botão "Editar"); aqui o leitor é de quem só lê.
+vi.mock('../../src/hooks/useEhAdmin', () => ({ useEhAdmin: () => false }));
 vi.mock('../../src/hooks/useScrollMemory', () => ({ useScrollMemory: vi.fn() }));
 vi.mock('../../src/components/feedback/ContextualFeedbackPopover', () => ({ ContextualFeedbackPopover: () => null }));
 vi.mock('../../src/services/storage', () => ({ StorageService: { saveLastReadingSession: vi.fn() } }));

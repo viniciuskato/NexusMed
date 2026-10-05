@@ -2,6 +2,7 @@
 // tempo de execução, para quem usa o editor (pelo `EditorVisualCarregavel`) não puxar a biblioteca para o pacote inicial.
 
 import type { Editor } from '@tiptap/core';
+import type { ModoDoTexto } from '../../utils/editorVisualMarkdown';
 
 export interface InformacoesDaEdicao {
   /**
@@ -19,6 +20,11 @@ export interface EditorVisualDeSecaoProps {
   onChange: (texto: string, info: InformacoesDaEdicao) => void;
   /** Chamado uma vez quando o texto não é seguro para o editor visual: nada é aberto e o texto não é tocado. */
   onNaoSeguro?: (motivo: string) => void;
+  /**
+   * `secao` (padrão): o texto inteiro de uma seção, com todos os blocos. `linha`: campo curto de uma linha só (Pontos-chave,
+   * Pérola, Alerta), com negrito, itálico, código, link e referência, e sem blocos nem quebra de linha.
+   */
+  modo?: ModoDoTexto;
   /** Nome do campo para leitores de tela. */
   rotulo?: string;
   somenteLeitura?: boolean;

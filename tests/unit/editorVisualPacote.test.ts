@@ -32,7 +32,7 @@ describe('editor visual — fora do carregamento inicial', () => {
       if (arquivo.startsWith(PASTA_DO_EDITOR)) continue;
       for (const origem of importacoesEstaticas(fonte(arquivo))) {
         if (origem.startsWith('@tiptap/') || origem.startsWith('prosemirror-')) infratores.push(`${relativo(arquivo)} → ${origem}`);
-        if (/components\/editor\/(?!EditorVisualCarregavel|tipos)/.test(origem)) infratores.push(`${relativo(arquivo)} → ${origem}`);
+        if (/(?:^|\/)editor\/(?!EditorVisualCarregavel|tipos)/.test(origem)) infratores.push(`${relativo(arquivo)} → ${origem}`);
       }
     }
     expect(infratores).toEqual([]);
@@ -55,10 +55,30 @@ describe('editor visual — fora do carregamento inicial', () => {
     for (const arquivo of codigo) {
       if (arquivo.startsWith(PASTA_DO_EDITOR)) continue;
       for (const origem of importacoesEstaticas(fonte(arquivo))) {
-        if (/components\/editor\//.test(origem)) usadoFora.add(origem.split('/').pop() as string);
+        if (/(?:^|\/)editor\//.test(origem)) usadoFora.add(origem.split('/').pop() as string);
       }
     }
-    // Nesta ORDEM nenhuma tela usa o editor ainda; quando usar (ED-2), só o carregável.
+    // Desde a ED-2 a página de leitura usa o editor, e só pelo carregável.
     expect([...usadoFora].filter((n) => n !== 'EditorVisualCarregavel' && n !== 'tipos')).toEqual([]);
+    expect(usadoFora.has('EditorVisualCarregavel')).toBe(true);
+  });
+
+  it('a página de leitura abre o editor só pelo carregável, e a renderização para HTML (conferência da normalização) só por import() dinâmico', () => {
+    const campo = fonte(path.join(RAIZ, 'components', 'compendium', 'CampoDeTexto.tsx'));
+    expect(importacoesEstaticas(campo).filter((o) => /(?:^|\/)editor\//.test(o))).toEqual(['../editor/EditorVisualCarregavel']);
+
+    const infratores: string[] = [];
+    for (const arquivo of codigo) {
+      for (const origem of importacoesEstaticas(fonte(arquivo))) {
+        if (origem === 'react-dom/server' || origem.startsWith('react-dom/server.')) infratores.push(`${relativo(arquivo)} → ${origem}`);
+      }
+    }
+    expect(infratores).toEqual([]);
+    expect(fonte(path.join(RAIZ, 'components', 'compendium', 'normalizacaoDoTexto.tsx'))).toMatch(/import\(\s*['"]react-dom\/server['"]\s*\)/);
+  });
+
+  it('a normalização em src/utils também não depende de editor nem de React', () => {
+    const importadas = importacoesEstaticas(fonte(path.join(RAIZ, 'utils', 'normalizarParaEditorVisual.ts')));
+    expect(importadas.sort()).toEqual(['./editorVisualMarkdown', './markdownBlocks']);
   });
 });

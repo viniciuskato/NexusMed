@@ -1,7 +1,7 @@
 import React, { useEffect, useId, useState } from 'react';
 import type { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
-import { ROTULOS_DAS_CAIXAS } from '../../utils/editorVisualMarkdown';
+import { ROTULOS_DAS_CAIXAS, type ModoDoTexto } from '../../utils/editorVisualMarkdown';
 import { alternarContainer } from './extensoes';
 
 // Barra de botões do editor visual. Rótulos e dicas em português, para quem não programa: cada botão diz o que faz, e
@@ -33,7 +33,26 @@ interface Estado {
   podeCaixa: boolean;
 }
 
-function estadoDoEditor(editor: Editor): Estado {
+function estadoDoEditor(editor: Editor, modo: ModoDoTexto): Estado {
+  if (modo === 'linha') {
+    // Campo de uma linha: só existe o formato dentro da linha (não há blocos).
+    return {
+      negrito: editor.isActive('bold'),
+      italico: editor.isActive('italic'),
+      codigo: editor.isActive('code'),
+      expoente: editor.isActive('expoente'),
+      link: editor.isActive('link'),
+      subtitulo: false,
+      lista: false,
+      listaNumerada: false,
+      citacao: false,
+      caixaAtiva: null,
+      podeLista: false,
+      podeListaNumerada: false,
+      podeCitacao: false,
+      podeCaixa: false,
+    };
+  }
   const caixa = editor.getAttributes('caixa').rotulo as string | undefined;
   return {
     negrito: editor.isActive('bold'),
@@ -78,8 +97,8 @@ const Botao: React.FC<BotaoProps> = ({ rotulo, dica, ativo, desabilitado, aoClic
   </button>
 );
 
-export const BarraDoEditor: React.FC<{ editor: Editor }> = ({ editor }) => {
-  const estado = useEditorState({ editor, selector: ({ editor: e }) => estadoDoEditor(e) });
+export const BarraDoEditor: React.FC<{ editor: Editor; modo?: ModoDoTexto }> = ({ editor, modo = 'secao' }) => {
+  const estado = useEditorState({ editor, selector: ({ editor: e }) => estadoDoEditor(e, modo) });
   const [painel, setPainel] = useState<'referencia' | 'link' | null>(null);
   const [numero, setNumero] = useState('');
   const [endereco, setEndereco] = useState('');
@@ -162,48 +181,53 @@ export const BarraDoEditor: React.FC<{ editor: Editor }> = ({ editor }) => {
         </Botao>
       </div>
 
-      <div className="ev-grupo" role="group" aria-label="Blocos">
-        <Botao
-          rotulo="Subtítulo"
-          dica="Transforma o parágrafo em um subtítulo dentro da seção"
-          ativo={estado.subtitulo}
-          aoClicar={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
-        />
-        <Botao
-          rotulo="Lista"
-          dica="Lista com marcadores"
-          ativo={estado.lista}
-          desabilitado={!estado.podeLista}
-          aoClicar={() => editor.chain().focus().toggleBulletList().run()}
-        />
-        <Botao
-          rotulo="Lista numerada"
-          dica="Lista com números: 1, 2, 3"
-          ativo={estado.listaNumerada}
-          desabilitado={!estado.podeListaNumerada}
-          aoClicar={() => editor.chain().focus().toggleOrderedList().run()}
-        />
-        <Botao
-          rotulo="Citação em bloco"
-          dica="Destaca o parágrafo com uma barra ao lado, como uma citação"
-          ativo={estado.citacao}
-          desabilitado={!estado.podeCitacao && !estado.citacao}
-          aoClicar={() => editor.chain().focus().command(alternarContainer('blockquote')).run()}
-        />
-      </div>
-
-      <div className="ev-grupo" role="group" aria-label="Caixas de destaque">
-        {ROTULOS_DAS_CAIXAS.map((rotulo) => (
+      {modo === 'secao' && (
+      <>
+        <div className="ev-grupo" role="group" aria-label="Blocos">
           <Botao
-            key={rotulo}
-            rotulo={rotulo}
-            dica={DICAS_DAS_CAIXAS[rotulo]}
-            ativo={estado.caixaAtiva === rotulo}
-            desabilitado={!estado.podeCaixa}
-            aoClicar={() => editor.chain().focus().command(alternarContainer('caixa', { rotulo })).run()}
+            rotulo="Subtítulo"
+            dica="Transforma o parágrafo em um subtítulo dentro da seção"
+            ativo={estado.subtitulo}
+            aoClicar={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
           />
-        ))}
-      </div>
+          <Botao
+            rotulo="Lista"
+            dica="Lista com marcadores"
+            ativo={estado.lista}
+            desabilitado={!estado.podeLista}
+            aoClicar={() => editor.chain().focus().toggleBulletList().run()}
+          />
+          <Botao
+            rotulo="Lista numerada"
+            dica="Lista com números: 1, 2, 3"
+            ativo={estado.listaNumerada}
+            desabilitado={!estado.podeListaNumerada}
+            aoClicar={() => editor.chain().focus().toggleOrderedList().run()}
+          />
+          <Botao
+            rotulo="Citação em bloco"
+            dica="Destaca o parágrafo com uma barra ao lado, como uma citação"
+            ativo={estado.citacao}
+            desabilitado={!estado.podeCitacao && !estado.citacao}
+            aoClicar={() => editor.chain().focus().command(alternarContainer('blockquote')).run()}
+          />
+        </div>
+
+        <div className="ev-grupo" role="group" aria-label="Caixas de destaque">
+          {ROTULOS_DAS_CAIXAS.map((rotulo) => (
+            <Botao
+              key={rotulo}
+              rotulo={rotulo}
+              dica={DICAS_DAS_CAIXAS[rotulo]}
+              ativo={estado.caixaAtiva === rotulo}
+              desabilitado={!estado.podeCaixa}
+              aoClicar={() => editor.chain().focus().command(alternarContainer('caixa', { rotulo })).run()}
+            />
+          ))}
+        </div>
+
+      </>
+      )}
 
       <div className="ev-grupo" role="group" aria-label="Inserir">
         <Botao
