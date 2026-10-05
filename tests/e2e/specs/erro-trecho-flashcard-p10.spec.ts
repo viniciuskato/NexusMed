@@ -17,7 +17,7 @@ import {
 // - o caderno de erros mostra, ao lado do erro e sem trocar de tela, o trecho da SEÇÃO a que a questão está
 //   ligada, com "Abrir no material" (que abre o material nessa seção);
 // - o flashcard criado do erro guarda a seção (e a questão de origem);
-// - "Gerar flashcard" no leitor guarda a seção e, pedido duas vezes, não duplica.
+// - "Criar cartão" no leitor (CARD-1, no lugar do antigo "Gerar flashcard") guarda a seção do material.
 
 const STEM = 'e2e-p10-questao-ligada-a-secao';
 const TEXTO_DO_TRECHO = 'Trecho P10: a relação VEF1/CVF reduzida define o padrão obstrutivo.';
@@ -158,7 +158,7 @@ test.describe('P10 — erro → trecho do material → flashcard do trecho', () 
     await expect(secao).toBeInViewport({ timeout: 10_000 });
   });
 
-  test('"Gerar flashcard" no leitor guarda a seção e, pedido duas vezes, não duplica', async ({ page }) => {
+  test('"Criar cartão" no leitor guarda a seção do material (e nenhuma questão)', async ({ page }) => {
     const t = `${Date.now()}`;
     const titulo = `p10-leitor-${t}`;
     const { materialId, secaoDoTrechoId } = materialComSecoes(titulo);
@@ -179,11 +179,12 @@ test.describe('P10 — erro → trecho do material → flashcard do trecho', () 
 
     const secao = page.locator(`[id="${secaoDoTrechoId}"]`);
     await expect(secao).toBeVisible({ timeout: 15_000 });
-    const gerar = secao.getByRole('button', { name: 'Gerar flashcard' });
-    await gerar.click();
-    await expect(page.getByText('Flashcard criado para o seu SRS')).toBeVisible({ timeout: 15_000 });
-    await gerar.click();
-    await expect(page.getByText('Esta seção já tem flashcard no seu SRS')).toBeVisible({ timeout: 15_000 });
+    await secao.getByRole('button', { name: 'Criar cartão' }).click();
+    const dialogo = page.getByRole('dialog');
+    await dialogo.getByRole('textbox', { name: 'Frente' }).fill('Frente do leitor P10');
+    await dialogo.getByRole('textbox', { name: 'Verso' }).fill('Verso do leitor P10');
+    await dialogo.getByRole('button', { name: 'Salvar' }).click();
+    await expect(page.getByText('Cartão criado')).toBeVisible({ timeout: 15_000 });
 
     const contar = () =>
       psqlLocal(

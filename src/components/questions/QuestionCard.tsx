@@ -18,6 +18,7 @@ import { Question, QuestionAnswerRecord, QuestionReviewResult, Discipline, Theme
 import { parseInline } from '../common/SafeMarkdown';
 import { bookmarksRepository } from '../../repositories/BookmarksRepository';
 import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
+import { CriarCartao } from '../flashcards/CriarCartao';
 import { answersRepository } from '../../repositories/AnswersRepository';
 import { questionsRepository } from '../../repositories/QuestionsRepository';
 import { questionReactionsRepository } from '../../repositories/QuestionReactionsRepository';
@@ -869,6 +870,21 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 />
               </div>
             )}
+          </div>
+
+          {/* CARD-1: o cartão que o próprio usuário escreve, ligado a esta questão (também em questão acertada). */}
+          <div className="flex justify-end">
+            <CriarCartao
+              origem={{
+                disciplineId: question.disciplineId,
+                themeId: question.themeId,
+                materialId: question.compendiumRefId || undefined,
+                sectionId: question.compendiumSectionId || undefined,
+                questionId: question.id,
+                tags: [discipline?.name, theme?.name].filter((t): t is string => Boolean(t)),
+              }}
+              onCriado={() => showToast('Cartão criado')}
+            />
           </div>
 
           {/* Vínculo de Conteúdo Teórico da Biblioteca */}

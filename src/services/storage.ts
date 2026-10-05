@@ -270,7 +270,7 @@ export const StorageService = {
     // Idempotência local: repetir o mesmo erro ou dar clique duplo não cria
     // dois cards no aparelho. A RPC/índice da 45-A fornece a mesma garantia
     // entre abas e dispositivos.
-    const existing = this.getFlashcards().find((card) => card.questionOriginId === question.id);
+    const existing = this.getFlashcards().find((card) => card.questionOriginId === question.id && !card.isWritten);
     if (existing) return existing;
 
     const template = textoDoFlashcardDoErro(question, review);
@@ -302,7 +302,7 @@ export const StorageService = {
    */
   createFlashcardFromSection(card: Flashcard): { card: Flashcard; created: boolean } {
     const existing = this.getFlashcards().find(
-      (c) => !c.questionOriginId && !!card.compendiumSectionId && c.compendiumSectionId === card.compendiumSectionId
+      (c) => !c.questionOriginId && !c.isWritten && !!card.compendiumSectionId && c.compendiumSectionId === card.compendiumSectionId
     );
     if (existing) return { card: existing, created: false };
     this.saveFlashcard(card);

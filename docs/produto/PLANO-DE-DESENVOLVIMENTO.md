@@ -851,6 +851,34 @@ linha "**Versão do padrão:** N" do texto que foi ao ar (arquivo igual ao do ar
 
 ---
 
+### CARD-1 — Cartão escrito pelo usuário (Frente/Verso) na leitura e nas questões
+
+**Origem.** Pedido do dono (04/10/2026): o cartão gerado sozinho na leitura (frente
+"[Disciplina] título", verso com todos os pontos-chave) é denso demais; ele quer
+que o aluno escreva o próprio cartão, simples e direto. Plano aprovado em 04/10 (D-9).
+
+**Aceite.**
+- Cada seção da leitura e cada questão já respondida (inclusive a acertada) tem
+  "Criar cartão": uma caixinha com "Frente", "Verso", Salvar e Cancelar; vale para
+  todos os usuários. O "Gerar flashcard" automático da leitura deixou de existir.
+- O cartão grava a frente e o verso exatamente como digitados, ligado ao material e
+  à seção, ou à questão. Pode haver vários na mesma seção ou questão; reenviar o
+  MESMO envio pela fila (mesmo id) não duplica.
+- O cartão automático do erro de questão e os cartões que já existem seguem como
+  estavam.
+
+**Regras que ficam.** `flashcards.is_written` marca o cartão escrito; os índices
+únicos "um por seção" (P10) e "um por questão" (45-A) valem só para o cartão
+automático (`not is_written`), e o escrito nasce por `create_written_flashcard`,
+idempotente pelo id.
+
+**Fora de escopo.** Painel, página de Flashcards e o modal antigo dela, cartão
+automático do erro, materiais e datas.
+**Depende de.** P10, 45-A.
+**Estado.** Em revisão (migration: aplicar no remoto antes do merge).
+
+---
+
 ## 9. Frente 45 — Confiabilidade
 
 **Origem.** Auditorias de 18/09 e 19/09 (`docs/diretoria/BACKLOG-ESTRATEGICO.md`).
@@ -1495,6 +1523,7 @@ conflitam aqui. "Publicado" significa em produção
 | 44-H1 | Concluída | #104 | — |
 | 44-H2 | Concluída | #104 | — |
 | MAT-1 | Em revisão (migration: aplicar no remoto antes do merge) | — | — |
+| CARD-1 | Em revisão (migration: aplicar no remoto antes do merge) | — | — |
 | 45-A | Concluída; correções da revisão do #76 no #81 | #74, #76, #81 | 24/09 (parte 2: migration depois do merge — INC-2026-004); correções: 25/09 (INC-2026-005) |
 | 45-B | Concluída | #71 | 24/09 |
 | 45-C | Concluída (item de desempenho movido para a 46-D) | #73 | 24/09 |

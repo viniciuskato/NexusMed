@@ -273,6 +273,7 @@ const CARD_WRITES = new Set([
   'flashcard_upsert',
   'flashcard_create_from_question',
   'flashcard_create_from_section',
+  'flashcard_create_written',
   'flashcard_delete',
 ]);
 const CARD_DEPENDENTS = new Set(['flashcard_review', 'flashcard_srs_upsert']);

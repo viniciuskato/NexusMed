@@ -26,11 +26,11 @@ import {
   GraduationCap,
   Pencil,
 } from 'lucide-react';
-import { Compendium, CompendiumSection, Discipline, Theme } from '../../types';
+import { Compendium, Discipline, Theme } from '../../types';
 import { StorageService } from '../../services/storage';
 import { bookmarksRepository } from '../../repositories/BookmarksRepository';
 import { notesRepository, type RemovedSectionNote } from '../../repositories/NotesRepository';
-import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
+import { CriarCartao } from '../flashcards/CriarCartao';
 import { readingProgressRepository } from '../../repositories/ReadingProgressRepository';
 import { SafeMarkdown, parseInline } from '../common/SafeMarkdown';
 import { ContextualFeedbackPopover } from '../feedback/ContextualFeedbackPopover';
@@ -318,36 +318,6 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
     if (!dataReady) return; // gravaria por cima da anotação que o servidor tem e a tela não mostrou
     await notesRepository.saveNote(compendium.id, userNote);
     showToast('Anotação salva com sucesso');
-  };
-
-  const handleCreateFlashcardFromSection = async (sec: CompendiumSection) => {
-    // P10: o card guarda a seção (a revisão abre o material nela) e é um por seção: pedir de novo não cria outro.
-    try {
-      const { created } = await flashcardsRepository.createFlashcardFromSection({
-        id: crypto.randomUUID(),
-        disciplineId: compendium.disciplineId,
-        themeId: compendium.themeId,
-        compendiumRefId: compendium.id,
-        compendiumSectionId: sec.id,
-        front: `[${discipline?.name || 'Medicina'}] ${sec.title}`,
-        back: sec.keyTakeaways.join('\n• '),
-        mechanismHighlight: sec.clinicalPearl || sec.keyTakeaways[0] || '',
-        tags: [discipline?.name || 'Geral', theme?.name || 'Teoria', 'Conteúdo'],
-        difficulty: 'medio',
-        isCustom: true,
-        srs: {
-          intervalDays: 1,
-          repetitionCount: 1,
-          easeFactor: 2.5,
-          nextDueDate: new Date().toISOString(),
-          state: 'new',
-          reviewHistory: [],
-        },
-      });
-      showToast(created ? 'Flashcard criado para o seu SRS' : 'Esta seção já tem flashcard no seu SRS');
-    } catch {
-      showToast('Não foi possível criar o flashcard agora. Tente de novo.');
-    }
   };
 
   const scrollToSection = (secId: string) => {
@@ -922,16 +892,16 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
 
                     {/* Section actions belong after the section has been read */}
                     <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        aria-label="Gerar flashcard"
-                        onClick={() => handleCreateFlashcardFromSection(sec)}
-                        className="px-2 py-1 rounded-md text-xs font-medium text-[#64748B] dark:text-[#94A3B8] hover:bg-slate-100 dark:hover:bg-[#182235] flex items-center gap-1 cursor-pointer transition-colors"
-                        title="Gerar flashcard com os pontos desta seção"
-                      >
-                        <Layers className="w-3.5 h-3.5 text-[#0F766E] dark:text-[#14B8A6]" />
-                        <span className="hidden sm:inline">Gerar flashcard</span>
-                      </button>
+                      <CriarCartao
+                        origem={{
+                          disciplineId: compendium.disciplineId,
+                          themeId: compendium.themeId,
+                          materialId: compendium.id,
+                          sectionId: sec.id,
+                          tags: [discipline?.name, theme?.name].filter((t): t is string => Boolean(t)),
+                        }}
+                        onCriado={() => showToast('Cartão criado')}
+                      />
 
                       <button
                         type="button"
