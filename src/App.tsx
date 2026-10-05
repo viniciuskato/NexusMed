@@ -918,6 +918,7 @@ function AuthenticatedApp() {
               // ED-2: depois de salvar uma seção na leitura, a lista do app é recarregada; sem isso a Área Editorial
               // (SectionEditor, "Metadados e posição na árvore") partiria do texto antigo e o regravaria.
               onSectionSaved={() => void refreshData()}
+              onMaterialAtualizado={() => void refreshData()}
             />
           )}
 

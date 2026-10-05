@@ -29,6 +29,7 @@ import { fetchAllRows, fetchAllRowsByIds } from './supabasePaging';
 //   title <-> title | subtitle <-> subtitle
 //   estimatedReadTimeMinutes <-> estimated_read_time_minutes
 //   lastUpdated <-> updated_at (ISO string) | author <-> author
+//   publishedAt <-> published_at | standardVersion <-> standard_version (MAT-1)
 //   mode <-> mode | studyLens <-> study_lens | tags <-> tags
 //   sections <-> material_sections (uma linha por seção, ordenada por sort_order)
 //     CompendiumSection.id <-> id | title <-> title
@@ -79,6 +80,8 @@ interface MaterialRow {
   author: string | null;
   tags: string[];
   updated_at: string;
+  published_at: string | null;
+  standard_version: number | null;
   status: string;
   parent_material_id: string | null;
   tree_sort_order: number;
@@ -269,6 +272,8 @@ function buildCompendium(
     moduleNumber: material.module_number ?? undefined,
     estimatedReadTimeMinutes: material.estimated_read_time_minutes ?? 0,
     lastUpdated: material.updated_at,
+    publishedAt: material.published_at ?? null,
+    standardVersion: material.standard_version ?? null,
     author: material.author ?? '',
     mode: (material.mode as Compendium['mode']) ?? undefined,
     studyLens: (material.study_lens as Compendium['studyLens']) ?? undefined,
@@ -428,12 +433,16 @@ export class SupabaseMaterialsRepository implements MaterialsRepository {
         link_type: l.linkType,
         sort_order: l.sortOrder,
       })),
+      // MAT-1: a versão do padrão que o arquivo declarava (nulo = não declara).
+      p_standard_version: compendium.standardVersion ?? null,
     });
     if (error) throw error;
     const materialRow = data as MaterialRow;
     return {
       ...compendium,
       lastUpdated: materialRow.updated_at,
+      publishedAt: materialRow.published_at ?? null,
+      standardVersion: materialRow.standard_version ?? null,
       publicationStatus: (materialRow.status as Compendium['publicationStatus']) ?? 'draft',
     };
   }

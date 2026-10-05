@@ -8,6 +8,7 @@ import type { Compendium, Discipline, Theme } from '../../src/types';
 // acha que perdeu a anotação, que é o que a 45-D promete que não acontece.
 
 vi.mock('../../src/hooks/useScrollMemory', () => ({ useScrollMemory: vi.fn() }));
+vi.mock('../../src/hooks/useEhAdmin', () => ({ useEhAdmin: () => false }));
 vi.mock('../../src/services/storage', () => ({
   StorageService: { getHighlights: () => ({}), getUIState: (_k: string, d: unknown) => d, setUIState: () => {} },
 }));

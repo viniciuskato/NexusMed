@@ -284,6 +284,23 @@ seção "Armadilhas já descobertas".
     apaga o material (e com ele o histórico, `changed_by` aponta para o autor)
     ANTES do usuário (item 18).
 
+22. **Datas e versão do padrão do material (MAT-1, 04/10/2026) são do banco, não
+    do cliente.** `materials.published_at` ("Publicado em") nasce na primeira
+    publicação e nunca muda (gatilho; nem o admin escolhe); `updated_at`
+    ("Atualizado em") anda quando uma seção entra, sai ou muda de texto, e gravar
+    o mesmo não o move (risco 17); `standard_version` vem da linha
+    `**Versão do padrão:** N` do texto que foi ao ar (gatilho no envio; arquivo
+    igual ao do ar, o "nada mudou", não grava). A linha é lida em dois lugares:
+    `app.versao_do_padrao_do_texto` (SQL) e `versaoDoPadraoDoTexto`
+    (`compendiumStandardCheck.ts`): mudou o formato dela, mude os dois. Subir
+    `VERSAO_ATUAL_DO_PADRAO` deixa todo material "Desatualizado" para o admin
+    (é o efeito pretendido). As três colunas ficam fora do hash da atestação
+    (`build_material_snapshot`). "Baixar para atualizar" monta o `.txt` com o
+    prompt e a Parte 1 de `content/padraoMaterial.ts` (nunca cópia no código);
+    "Enviar versão nova" grava o envio e o aplica por `admin_aplicar_atualizacao`,
+    que agora também registra versão de cada seção que muda (`changed_by` é o
+    admin): E2E que aplica atualização apaga o material ANTES do usuário (item 18).
+
 ## Convenções de trabalho
 
 - **Toda mudança entra em `main` por Pull Request com CI verde** (desde

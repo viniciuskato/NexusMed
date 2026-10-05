@@ -40,6 +40,7 @@ import { useEhAdmin } from '../../hooks/useEhAdmin';
 import { ConnectionNotice } from '../common/ConnectionNotice';
 import { MaterialBreadcrumb, MaterialChildrenCards, MaterialLinkBoxes } from './MaterialNavigation';
 import { SeloDeRevisao } from '../material/SeloDeRevisao';
+import { DatasDoMaterial, SeloDesatualizado } from '../material/DatasDoMaterial';
 import { ReportarErroDoMaterial } from '../material/ReportarErroDoMaterial';
 import { AtualizarMaterial } from '../material/AtualizarMaterial';
 import { EdicaoDaSecao } from './EdicaoDaSecao';
@@ -86,6 +87,8 @@ interface CompendiumReaderProps {
    * conta própria; quem tem a lista de materiais do app pode recarregá-la aqui para as outras telas verem o texto novo.
    */
   onSectionSaved?: () => void;
+  /** Chamado depois que o admin publica uma versão nova do material por arquivo (MAT-1): recarregue a lista de materiais. */
+  onMaterialAtualizado?: () => void;
 }
 
 export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
@@ -104,6 +107,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   returnToQuestionsContext,
   onReturnToQuestions,
   onSectionSaved,
+  onMaterialAtualizado,
 }) => {
   const discipline = disciplines.find((d) => d.id === compendium.disciplineId);
   const theme = themes.find((t) => t.id === compendium.themeId);
@@ -361,16 +365,6 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   const authorDisplay = compendium.author?.trim()
     ? compendium.author
     : 'Revisão editorial pendente';
-
-  // compendium.lastUpdated vem de materials.updated_at como ISO cru
-  // (ex. "2026-09-11T14:20:36.886889+00:00") -- formata pra data legível em
-  // vez de mostrar o timestamp bruto. Cai no texto original (ou no
-  // fallback) se a data vier vazia ou não for parseável.
-  const parsedLastUpdated = compendium.lastUpdated?.trim() ? new Date(compendium.lastUpdated) : null;
-  const lastUpdatedDisplay =
-    parsedLastUpdated && !Number.isNaN(parsedLastUpdated.getTime())
-      ? parsedLastUpdated.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-      : compendium.lastUpdated?.trim() || 'Revisão editorial pendente';
 
   return (
     <div className="min-h-screen bg-[#F6F7F9] dark:bg-[#0B1220] text-[#172033] dark:text-[#E5E7EB] transition-colors pb-24">
@@ -770,8 +764,8 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
             </span>
             <span>•</span>
             <span>{authorDisplay}</span>
-            <span>•</span>
-            <span>Atualizado: {lastUpdatedDisplay}</span>
+            <DatasDoMaterial compendium={compendium} className="contents" separador="•" comSeparadorInicial />
+            <SeloDesatualizado compendium={compendium} ehAdmin={ehAdmin} />
           </div>
 
           {/* Tags */}
@@ -793,8 +787,8 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mt-4">
               <SeloDeRevisao materialId={compendium.id} />
               <ReportarErroDoMaterial materialId={compendium.id} materialTitle={compendium.title} />
-              {/* 44-B: "Exportar .md" e "Atualizar a partir de arquivo" (só admin e o autor do envio que o publicou). */}
-              <AtualizarMaterial compendium={compendium} disciplines={disciplines} themes={themes} />
+              {/* 44-B/MAT-1: "Baixar para atualizar", "Enviar versão nova" e "Exportar .md" (só o admin). */}
+              <AtualizarMaterial compendium={compendium} disciplines={disciplines} themes={themes} onPublicado={onMaterialAtualizado} />
             </div>
           )}
         </header>

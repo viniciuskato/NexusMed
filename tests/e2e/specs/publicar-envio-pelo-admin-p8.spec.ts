@@ -91,7 +91,9 @@ test.describe('O dono publica o envio pela aba Envios (P8)', () => {
     const tituloNao = `P8 nao apto ${tag}`;
     const tituloApto = `P8 apto ${tag}`;
     const admin = await novoAdmin('p8-admin');
-    cleanup.push(() => {
+    // MAT-1: aplicar a atualização grava o histórico da seção (`changed_by` aponta para o admin): os materiais saem ANTES
+    // do usuário (AGENTS.md, item 18; `runCleanup` roda na ordem dada).
+    cleanup.unshift(() => {
       psqlLocal(`delete from public.materials where title in ('${q(tituloNao)}', '${q(tituloApto)}');`);
     });
 

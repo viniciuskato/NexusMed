@@ -134,8 +134,8 @@ export function exportarMaterialParaMarkdown(
 }
 
 /** Baixa o texto como arquivo pelo navegador (só no navegador). */
-export function baixarArquivoDeTexto(nome: string, texto: string): void {
-  const blob = new Blob([texto], { type: 'text/markdown;charset=utf-8' });
+export function baixarArquivoDeTexto(nome: string, texto: string, tipo = 'text/markdown;charset=utf-8'): void {
+  const blob = new Blob([texto], { type: tipo });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

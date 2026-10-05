@@ -816,6 +816,41 @@ inclusive pelo admin. Selo e "Reportar erro" nas questões.
 
 ---
 
+### MAT-1 — Datas, selo "Desatualizado" e versão nova de material
+
+**Origem.** Pedido do dono (04/10/2026): há materiais antigos no ar (ex.: "Cardiac
+anatomy", ainda em inglês) e não há como ver quais estão velhos nem um caminho
+curto para atualizá-los. Plano aprovado em 04/10 (D-9); só o dono publica (D-13).
+
+**Aceite.**
+- Todo material mostra "Publicado em" e "Atualizado em" (dd/mm/aaaa), na
+  biblioteca e na leitura, para qualquer pessoa. Os materiais que já existem são
+  preenchidos com a melhor data registrada (envio que o criou, primeira
+  atestação ou a criação); nada é apagado.
+- O admin vê o selo "Desatualizado" quando a versão do padrão do material é
+  desconhecida ou anterior à atual (`VERSAO_ATUAL_DO_PADRAO`); na versão atual,
+  nenhum selo. Quem não é admin nunca vê o selo nem os botões.
+- "Baixar para atualizar" (admin): UM `.txt` com a instrução de abertura, o prompt
+  de criação de material, a Parte 1 do padrão e o material atual, para uma IA
+  reescrevê-lo.
+- "Enviar versão nova" (admin): o arquivo reescrito mostra o que muda e entra no ar
+  na hora, sem esperar o parecer do revisor (que só aconselha). Posição na
+  árvore, questões, cards e progresso continuam; cada seção que muda ganha uma
+  versão no histórico; "Atualizado em" e a versão do padrão passam a ser as do
+  arquivo novo.
+
+**Regras que ficam.** `materials.published_at` nasce na primeira publicação e
+nunca muda; `materials.updated_at` ("Atualizado em") anda quando uma seção entra,
+sai ou muda de texto (gravar o mesmo não anda); `materials.standard_version` vem da
+linha "**Versão do padrão:** N" do texto que foi ao ar (arquivo igual ao do ar,
+"nada mudou", não grava versão). As três colunas ficam fora do hash da atestação.
+
+**Fora de escopo.** Painel, flashcards, conteúdo dos materiais, revisor local.
+**Depende de.** 44-B, P8.
+**Estado.** Em revisão (PR aberto).
+
+---
+
 ## 9. Frente 45 — Confiabilidade
 
 **Origem.** Auditorias de 18/09 e 19/09 (`docs/diretoria/BACKLOG-ESTRATEGICO.md`).
@@ -1459,6 +1494,7 @@ conflitam aqui. "Publicado" significa em produção
 | 44-G | Concluída | #104 | — |
 | 44-H1 | Concluída | #104 | — |
 | 44-H2 | Concluída | #104 | — |
+| MAT-1 | Em revisão (migration: aplicar no remoto antes do merge) | — | — |
 | 45-A | Concluída; correções da revisão do #76 no #81 | #74, #76, #81 | 24/09 (parte 2: migration depois do merge — INC-2026-004); correções: 25/09 (INC-2026-005) |
 | 45-B | Concluída | #71 | 24/09 |
 | 45-C | Concluída (item de desempenho movido para a 46-D) | #73 | 24/09 |
