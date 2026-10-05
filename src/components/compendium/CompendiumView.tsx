@@ -32,6 +32,8 @@ import { useScrollMemory } from '../../hooks/useScrollMemory';
 import { buildMaterialTree } from '../../utils/materialTree';
 import { MaterialTreeList } from './MaterialNavigation';
 import { useServerLoad } from '../../hooks/useServerLoad';
+import { useEhAdmin } from '../../hooks/useEhAdmin';
+import { DatasDoMaterial, SeloDesatualizado } from '../material/DatasDoMaterial';
 import { ConnectionNotice } from '../common/ConnectionNotice';
 
 interface CompendiumViewProps {
@@ -102,16 +104,6 @@ function compareByModuleThenTitle(a: Compendium, b: Compendium): number {
   return a.title.localeCompare(b.title, 'pt-BR');
 }
 
-// Mesma lógica de CompendiumReader.tsx (lastUpdatedDisplay): formata a data
-// em vez de mostrar o timestamp ISO cru salvo em materials.updated_at.
-function formatLastUpdated(raw?: string): string {
-  const parsed = raw?.trim() ? new Date(raw) : null;
-  if (parsed && !Number.isNaN(parsed.getTime())) {
-    return parsed.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  }
-  return raw?.trim() || 'Revisão editorial pendente';
-}
-
 export const CompendiumView: React.FC<CompendiumViewProps> = ({
   compendiums,
   disciplines,
@@ -132,6 +124,7 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
     'library_discipline',
     initialDisciplineId || 'all'
   );
+  const ehAdmin = useEhAdmin();
   const [selectedLens, setSelectedLens] = usePersistedState<string>('library_lens', 'all');
   const [viewMode, setViewMode] = usePersistedState<'grid' | 'list' | 'tree'>('library_view_mode', 'grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -759,10 +752,11 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
                               ) : (
                                 <span />
                               )}
-                              <span className="flex items-center gap-1 text-slate-400">
-                                <Calendar className="w-3 h-3" />
-                                {formatLastUpdated(comp.lastUpdated)}
-                              </span>
+                              <SeloDesatualizado compendium={comp} ehAdmin={ehAdmin} />
+                            </div>
+                            <div className="flex items-center gap-1 text-slate-400">
+                              <Calendar className="w-3 h-3 shrink-0" />
+                              <DatasDoMaterial compendium={comp} />
                             </div>
 
                             {/* Tags & Highlights/Notes Pill */}
@@ -911,7 +905,8 @@ export const CompendiumView: React.FC<CompendiumViewProps> = ({
                     {comp.author?.trim() && (
                       <span>Curadoria: <strong className="font-medium text-slate-600 dark:text-slate-300">{comp.author}</strong></span>
                     )}
-                    <span>Atualizado: {formatLastUpdated(comp.lastUpdated)}</span>
+                    <DatasDoMaterial compendium={comp} className="flex items-center gap-2" />
+                    <SeloDesatualizado compendium={comp} ehAdmin={ehAdmin} />
                     {compHighlights.length > 0 && (
                       <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
                         <Highlighter className="w-3 h-3" /> {compHighlights.length} destaques

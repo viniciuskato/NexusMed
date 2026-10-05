@@ -152,7 +152,7 @@ export const ListaDeEnvios: React.FC<ListaDeEnviosProps> = ({
             : alvoDoEnvio && item.status === 'publicado'
               ? { ...base, explicacao: 'O material que está no ar já tem o conteúdo desta atualização, com o selo de revisado por IA.' }
               : alvoDoEnvio && item.status === 'nao_apto'
-                ? { ...base, explicacao: 'A atualização não foi aprovada: o material continua como estava. Corrija o arquivo, e use “Atualizar a partir de arquivo” no material para enviar de novo.' }
+                ? { ...base, explicacao: 'A atualização não foi aprovada: o material continua como estava. Corrija o arquivo, e use “Enviar versão nova” no material para enviar de novo.' }
                 : base;
         const disciplina = envio ? disciplines.find((d) => d.id === envio.disciplineId)?.name : undefined;
         const tema = envio ? themes.find((t) => t.id === envio.themeId)?.name : undefined;

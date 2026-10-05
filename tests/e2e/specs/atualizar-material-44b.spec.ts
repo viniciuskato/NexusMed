@@ -11,7 +11,7 @@ import {
 import { materialParaEnvio } from '../fixtures/materialParaEnvio';
 import { rodarServidorDoRevisor } from '../fixtures/servidorDoRevisor';
 
-// 44-B — exportar um material para o .md do padrão e atualizá-lo a partir de arquivo, pelo revisor de IA.
+// 44-B — exportar um material para o .md do padrão e enviar a versão nova para o revisor de IA (o botão "Publicar versão nova" é do MAT-1).
 // Contra o app real (build de teste) e o Supabase local. O servidor do revisor roda de verdade (o ciclo, a
 // ponte com o banco, a conferência do padrão e a aplicação da atualização); só a API paga é simulada.
 
@@ -136,7 +136,7 @@ test.describe('Exportar e atualizar material pelo revisor de IA (44-B)', () => {
 
     // 2. O arquivo exportado, sem mudança, não tem nada a atualizar (ida e volta).
     await page.locator('#btn-atualizar-material').click();
-    const dialogo = page.getByRole('dialog', { name: 'Atualizar a partir de arquivo' });
+    const dialogo = page.getByRole('dialog', { name: 'Enviar versão nova' });
     await expect(dialogo).toBeVisible();
     await dialogo.locator('#atualizar-arquivo').setInputFiles({
       name: 'igual.md',
@@ -156,7 +156,7 @@ test.describe('Exportar e atualizar material pelo revisor de IA (44-B)', () => {
     await expect(dialogo.locator('#atualizar-previa')).toContainText('Seções alteradas');
     await expect(dialogo.locator('#atualizar-previa')).toContainText('Primeira seção');
     await dialogo.locator('#btn-enviar-atualizacao').click();
-    await expect(dialogo.locator('#atualizar-sucesso')).toContainText('Atualização enviada para revisão');
+    await expect(dialogo.locator('#atualizar-sucesso')).toContainText('Enviado para revisão');
     await dialogo.getByRole('button', { name: 'Fechar', exact: true }).last().click();
 
     const envio = psqlLocal(
@@ -236,7 +236,7 @@ test.describe('Exportar e atualizar material pelo revisor de IA (44-B)', () => {
     // O envio de atualização entra pelo banco, como a tela o faria (a tela é provada no teste acima).
     await abrirMaterialComoAutor(page, titulo);
     await page.locator('#btn-atualizar-material').click();
-    const dialogo = page.getByRole('dialog', { name: 'Atualizar a partir de arquivo' });
+    const dialogo = page.getByRole('dialog', { name: 'Enviar versão nova' });
     const { disciplina, tema } = catalogoDoSeed();
     await dialogo.locator('#atualizar-arquivo').setInputFiles({
       name: 'novo.md',

@@ -161,6 +161,38 @@ Texto da seção.
     expect(onImported).toHaveBeenCalledTimes(1);
   });
 
+  it('MAT-1: o .md que declara a versão do padrão grava essa versão; sem a linha, ou em .yaml, grava nulo', async () => {
+    const md = (versao: string) => `# Meningite Bacteriana Aguda
+
+**Subtítulo:** Da fisiopatologia ao manejo
+**Disciplina:** Infectologia
+**Tema:** Clínica
+${versao}
+### Definição
+Texto da seção.
+
+### Referências Bibliográficas
+1. Referência 1
+`;
+    const importar = async (arquivo: File) => {
+      importCompendiumDraftMock.mockClear();
+      const { unmount } = render(
+        <ImportMaterialModal disciplines={[discipline]} themes={[theme]} compendiums={[]} onClose={vi.fn()} onImported={vi.fn()} />
+      );
+      await selectFile(arquivo);
+      await waitFor(() => screen.getAllByText('Meningite Bacteriana Aguda'));
+      fireEvent.click(screen.getByRole('button', { name: /salvar rascunho/i }));
+      await waitFor(() => expect(importCompendiumDraftMock).toHaveBeenCalledTimes(1));
+      const saved = importCompendiumDraftMock.mock.calls[0][0] as Compendium;
+      unmount();
+      return saved;
+    };
+    expect((await importar(makeMarkdownFile(md('**Versão do padrão:** 3')))).standardVersion).toBe(3);
+    expect((await importar(makeMarkdownFile(md('**Versão do padrão:** 2')))).standardVersion).toBe(2);
+    expect((await importar(makeMarkdownFile(md('')))).standardVersion).toBeNull();
+    expect((await importar(makeYamlFile(validYaml))).standardVersion).toBeNull();
+  });
+
   it('mostra erro em linguagem simples para arquivo inválido e não grava nada', async () => {
     render(
       <ImportMaterialModal

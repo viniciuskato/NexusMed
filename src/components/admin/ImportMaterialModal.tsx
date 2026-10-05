@@ -11,6 +11,7 @@ import {
   CompendiumImportSection,
 } from '../../utils/compendiumImport';
 import { parseCompendiumMarkdownText } from '../../utils/compendiumMarkdownImport';
+import { versaoDoPadraoDoTexto } from '../../utils/compendiumStandardCheck';
 import {
   MaterialNavigationValue,
   emptyNavigationValue,
@@ -52,6 +53,8 @@ type WizardState =
       sections: CompendiumImportSection[];
       references: string[];
       tags: string[];
+      /** MAT-1: a versão do padrão que o arquivo .md declara (nulo = não declara, ou é .yaml). */
+      standardVersion: number | null;
       overrideDisciplineId: string | null;
       overrideThemeId: string | null;
       /** Posição na árvore escolhida já na importação — antes exigia reabrir o rascunho. */
@@ -105,6 +108,7 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
       sections: result.sections,
       references: result.references,
       tags: result.tags,
+      standardVersion: isMarkdown ? versaoDoPadraoDoTexto(text) : null,
       overrideDisciplineId: result.preview.disciplineId,
       overrideThemeId: result.preview.themeId,
       navigation: emptyNavigationValue(),
@@ -134,6 +138,7 @@ export const ImportMaterialModal: React.FC<ImportMaterialModalProps> = ({
           themeId
         ),
         ...navigationFieldsFromValue(navigation),
+        standardVersion: state.standardVersion,
       };
       await materialsRepository.importCompendiumDraft(compendium);
       onImported();

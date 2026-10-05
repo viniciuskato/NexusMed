@@ -114,7 +114,12 @@ export interface Compendium {
   /** Número de módulo do currículo de origem (ex. "M7"), quando aplicável — nem todo material tem. */
   moduleNumber?: number;
   estimatedReadTimeMinutes: number;
+  /** "Atualizado em": a última mudança de conteúdo (materials.updated_at). */
   lastUpdated: string;
+  /** "Publicado em": quando o material foi ao ar pela primeira vez (materials.published_at); ausente = nunca publicado. MAT-1. */
+  publishedAt?: string | null;
+  /** Versão do padrão de conteúdos do texto que originou a versão no ar (materials.standard_version); nulo/ausente = desconhecida ou antiga. MAT-1. */
+  standardVersion?: number | null;
   author: string;
   mode?: 'atlas' | 'mecanismos';
   studyLens?: StudyLens;

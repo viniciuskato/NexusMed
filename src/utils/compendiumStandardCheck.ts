@@ -540,6 +540,24 @@ const itemObrigatorioAusente: RegraDoPadrao = {
 /** Versão do padrão contra a qual o material é escrito (3 desde 03/10/2026: figuras e a estrutura do caderno). */
 export const VERSAO_ATUAL_DO_PADRAO = 3;
 
+/**
+ * A versão do padrão que o texto declara na linha "**Versão do padrão:** N", ou null (sem a linha, ou com valor que não
+ * é um inteiro positivo). Lê o cabeçalho como a regra abaixo; o banco lê a mesma linha na função
+ * `app.versao_do_padrao_do_texto` (migration 20261004120000) — mudou o formato da linha, mude as duas.
+ */
+export function versaoDoPadraoDoTexto(texto: string): number | null {
+  const arq = lerArquivoDeMaterial(texto);
+  const i = linhaDoMetadado(arq, 'versao do padrao');
+  if (i === -1) return null;
+  const valor = arq.linhas[i].trim().replace(/^\*\*[^*:]+:\*\*\s*/, '');
+  return /^\d{1,6}$/.test(valor) && Number(valor) >= 1 ? Number(valor) : null;
+}
+
+/** O material (versão do padrão conhecida ou não) está numa versão anterior à atual do padrão? Nulo = desconhecida = antiga. */
+export function padraoDesatualizado(versao: number | null | undefined): boolean {
+  return typeof versao !== 'number' || versao < VERSAO_ATUAL_DO_PADRAO;
+}
+
 const versaoAusente: RegraDoPadrao = {
   id: 'versao-do-padrao-ausente',
   descricao: `Linha de versão do padrão ausente ou diferente de ${VERSAO_ATUAL_DO_PADRAO}`,

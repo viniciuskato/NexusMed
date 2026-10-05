@@ -1,6 +1,5 @@
 import type { Compendium, Discipline, Theme } from '../types';
 import { ALERT_LABEL, PEARL_LABEL, TAKEAWAYS_LABEL } from './compendiumMarkdownImport';
-import { VERSAO_ATUAL_DO_PADRAO } from './compendiumStandardCheck';
 
 // ============================================================================
 // Exportar um material como arquivo `.md` do padrão (44-B)
@@ -17,8 +16,10 @@ import { VERSAO_ATUAL_DO_PADRAO } from './compendiumStandardCheck';
 // a lista de `avisos` diz o quê — para a pessoa ver antes de editar e reenviar.
 // ============================================================================
 
-/** A versão do padrão de conteúdos que a linha de metadados declara. */
-export const VERSAO_DO_PADRAO = VERSAO_ATUAL_DO_PADRAO;
+// A linha "**Versão do padrão:** N" do arquivo exportado é a versão REGISTRADA do material (`standardVersion`), nunca a
+// atual: exportar um material antigo, mexer num caractere e reenviar não pode fazê-lo passar por atual (MAT-1). Sem versão
+// registrada, o arquivo sai sem a linha. Só um arquivo que declara a versão atual (o reescrito no padrão de hoje) tira o
+// selo "Desatualizado".
 
 export interface MaterialExportado {
   texto: string;
@@ -63,7 +64,7 @@ function linhasAmbiguasDoCorpo(conteudo: string): string[] {
 export function exportarMaterialParaMarkdown(
   material: Pick<
     Compendium,
-    'title' | 'subtitle' | 'author' | 'estimatedReadTimeMinutes' | 'tags' | 'sections' | 'references' | 'disciplineId' | 'themeId'
+    'title' | 'subtitle' | 'author' | 'estimatedReadTimeMinutes' | 'tags' | 'sections' | 'references' | 'disciplineId' | 'themeId' | 'standardVersion'
   >,
   disciplines: Discipline[],
   themes: Theme[],
@@ -79,7 +80,10 @@ export function exportarMaterialParaMarkdown(
   linhas.push(`**Tema:** ${tema}`);
   if (material.author && material.author.trim()) linhas.push(`**Autor:** ${umaLinha(material.author)}`);
   if (material.estimatedReadTimeMinutes > 0) linhas.push(`**Tempo estimado de leitura:** ${material.estimatedReadTimeMinutes} minutos`);
-  linhas.push(`**Versão do padrão:** ${VERSAO_DO_PADRAO}`, '');
+  if (typeof material.standardVersion === 'number' && material.standardVersion >= 1) {
+    linhas.push(`**Versão do padrão:** ${material.standardVersion}`);
+  }
+  linhas.push('');
 
   for (const secao of material.sections) {
     linhas.push(`### ${umaLinha(secao.title)}`);
@@ -134,8 +138,8 @@ export function exportarMaterialParaMarkdown(
 }
 
 /** Baixa o texto como arquivo pelo navegador (só no navegador). */
-export function baixarArquivoDeTexto(nome: string, texto: string): void {
-  const blob = new Blob([texto], { type: 'text/markdown;charset=utf-8' });
+export function baixarArquivoDeTexto(nome: string, texto: string, tipo = 'text/markdown;charset=utf-8'): void {
+  const blob = new Blob([texto], { type: tipo });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
