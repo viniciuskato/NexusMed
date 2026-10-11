@@ -6,7 +6,9 @@ import type { Flashcard } from '../types';
 // cartão, "frente<TAB>verso". O cabeçalho `#separator:tab` e `#html:false` é lido pelo próprio Anki: o texto entra
 // como está, sem interpretar HTML. Como a tabulação separa os campos e a quebra de linha separa os cartões, os dois
 // são trocados por espaço dentro do texto (o Anki, sem HTML, não tem como guardar uma quebra de linha no meio de um
-// campo sem as aspas do CSV, e o pedido é uma linha por cartão).
+// campo sem as aspas do CSV, e o pedido é uma linha por cartão). Todo campo vai entre aspas duplas, com as aspas
+// internas dobradas (RFC 4180): o Anki trata aspas como delimitador de campo, e um campo que começa com aspa ou tem
+// aspa sem par juntaria as linhas seguintes num cartão só.
 
 export interface ArquivoAnki {
   /** Conteúdo do arquivo (UTF-8, quebras de linha `\n`). */
@@ -19,6 +21,11 @@ export interface ArquivoAnki {
 /** Texto de um campo: sem tabulação nem quebra de linha, espaços repetidos viram um e as pontas são aparadas. */
 export function campoDoAnki(texto: string | null | undefined): string {
   return (texto ?? '').replace(/\s+/g, ' ').trim();
+}
+
+/** O campo pronto para o arquivo: entre aspas duplas, aspas internas dobradas. */
+export function campoEntreAspas(texto: string): string {
+  return `"${texto.replace(/"/g, '""')}"`;
 }
 
 /** O verso que o usuário via na revisão: o verso e, se houver e não repetir o verso, o destaque do mecanismo. */
@@ -42,7 +49,7 @@ export function montarArquivoAnki(cards: readonly Flashcard[], agora: Date = new
   const linhas = cards
     .map((card) => ({ frente: campoDoAnki(card.front), verso: versoDoCartao(card) }))
     .filter((c) => c.frente !== '')
-    .map((c) => `${c.frente}\t${c.verso}`);
+    .map((c) => `${campoEntreAspas(c.frente)}\t${campoEntreAspas(c.verso)}`);
   const cabecalho = ['#separator:tab', '#html:false'];
   return {
     texto: `${[...cabecalho, ...linhas].join('\n')}\n`,

@@ -54,6 +54,13 @@ export const Header: React.FC<HeaderProps> = ({
     return () => observer.disconnect();
   }, []);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  // Aviso do "Baixar meus cartões para o Anki": fica fora do menu da conta, visível depois que ele fecha.
+  const [avisoDaConta, setAvisoDaConta] = useState('');
+  useEffect(() => {
+    if (!avisoDaConta) return;
+    const t = setTimeout(() => setAvisoDaConta(''), 8000);
+    return () => clearTimeout(t);
+  }, [avisoDaConta]);
   const [resourcesOpen, setResourcesOpen] = useState(false);
 
   // Fechar o menu de usuário com a tecla Escape
@@ -424,7 +431,7 @@ export const Header: React.FC<HeaderProps> = ({
                     </button>
                   )}
 
-                  <BaixarCartoesAnki />
+                  <BaixarCartoesAnki onFechar={() => setUserDropdownOpen(false)} onAviso={setAvisoDaConta} />
 
                   <button
                     type="button"
@@ -444,6 +451,12 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
         </div>
+      </div>
+      <div
+        role="status"
+        className="absolute left-1/2 top-full z-50 mt-2 max-w-[92vw] -translate-x-1/2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-800 elev-lg empty:hidden dark:border-[#263244] dark:bg-[#111827] dark:text-slate-100"
+      >
+        {avisoDaConta}
       </div>
     </header>
   );

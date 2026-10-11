@@ -311,8 +311,9 @@ seção "Armadilhas já descobertas".
 
 23. (Tela retirada pela D-14, 11/10/2026; dados e RPCs seguem no banco.)
     **Cartão escrito pelo usuário (CARD-1, 05/10/2026) não é o cartão automático.**
-    "Criar cartão" (`src/components/flashcards/CriarCartao.tsx`, na seção da
-    leitura e na questão já respondida) grava `flashcards.is_written = true` pela
+    "Criar cartão" (componente removido pela D-14, antes em
+    `src/components/flashcards/CriarCartao.tsx`, na seção da leitura e na
+    questão já respondida) gravava `flashcards.is_written = true` pela
     RPC `create_written_flashcard` (idempotente pelo id, que também é o
     `client_op_id` da operação `flashcard_create_written` da fila): pode haver
     vários por seção ou questão, e a questão fica em `question_origin_id`. Os
@@ -321,7 +322,8 @@ seção "Armadilhas já descobertas".
     (`not is_written`), então todo código que procura "o cartão do erro" ou "o
     cartão da seção" tem de ignorar o escrito (`!card.isWritten` no cliente,
     `and not is_written` no SQL, e `ON CONFLICT ... where not is_written` no
-    índice parcial). pgTAP que cria
+    índice parcial). `app.reconcile_duplicate_flashcards_45a` (execução única da
+    45-A) não distingue o cartão escrito: não a rode sem esse filtro. pgTAP que cria
     cartões escritos apaga os seus no fim (a reconciliação da 45-A agrupa todos).
 
 ## Convenções de trabalho

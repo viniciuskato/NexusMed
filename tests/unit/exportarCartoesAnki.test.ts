@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { campoDoAnki, montarArquivoAnki } from '../../src/utils/exportarCartoesAnki';
+import { campoDoAnki, campoEntreAspas, montarArquivoAnki } from '../../src/utils/exportarCartoesAnki';
 import type { Flashcard } from '../../src/types';
 
 // CORTE-1 (D-14): o arquivo de importação do Anki com os cartões que o usuário já tem.
@@ -18,15 +18,53 @@ const cartao = (front: string, back: string, extra: Partial<Flashcard> = {}): Fl
     ...extra,
   }) as Flashcard;
 
+/** Leitor de texto separado por tabulação com aspas (RFC 4180), como o importador de texto do Anki lê o arquivo. */
+function lerComoAnki(texto: string): string[][] {
+  const linhas: string[][] = [];
+  let campo = '';
+  let linha: string[] = [];
+  let entreAspas = false;
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto[i];
+    if (entreAspas) {
+      if (c === '"' && texto[i + 1] === '"') {
+        campo += '"';
+        i++;
+      } else if (c === '"') entreAspas = false;
+      else campo += c;
+    } else if (c === '"' && campo === '') entreAspas = true;
+    else if (c === '\t') {
+      linha.push(campo);
+      campo = '';
+    } else if (c === '\n') {
+      linha.push(campo);
+      linhas.push(linha);
+      linha = [];
+      campo = '';
+    } else campo += c;
+  }
+  if (campo !== '' || linha.length > 0) {
+    linha.push(campo);
+    linhas.push(linha);
+  }
+  return linhas;
+}
+
+const corpo = (texto: string) => texto.split('\n').slice(2).join('\n');
+
 describe('montarArquivoAnki', () => {
-  it('cabeçalho do Anki (#separator:tab e #html:false) e uma linha frente<TAB>verso por cartão', () => {
+  it('cabeçalho do Anki (#separator:tab e #html:false) e uma linha frente<TAB>verso por cartão, cada campo entre aspas', () => {
     const r = montarArquivoAnki([cartao('Qual o corte da TFG?', '60 mL/min'), cartao('Segunda', 'Resposta')]);
-    expect(r.texto).toBe('#separator:tab\n#html:false\nQual o corte da TFG?\t60 mL/min\nSegunda\tResposta\n');
+    expect(r.texto).toBe('#separator:tab\n#html:false\n"Qual o corte da TFG?"\t"60 mL/min"\n"Segunda"\t"Resposta"\n');
     expect(r.total).toBe(2);
     const linhas = r.texto.split('\n').filter((l) => l !== '');
     expect(linhas.slice(0, 2)).toEqual(['#separator:tab', '#html:false']);
     // Uma linha por cartão, cada uma com exatamente uma tabulação (dois campos).
     for (const linha of linhas.slice(2)) expect(linha.split('\t')).toHaveLength(2);
+    expect(lerComoAnki(corpo(r.texto))).toEqual([
+      ['Qual o corte da TFG?', '60 mL/min'],
+      ['Segunda', 'Resposta'],
+    ]);
   });
 
   it('tabulação e quebra de linha dentro do texto viram espaço: nunca criam campo nem linha a mais', () => {
@@ -35,13 +73,25 @@ describe('montarArquivoAnki', () => {
       cartao('Outro', 'cartão'),
     ]);
     const linhas = r.texto.split('\n').filter((l) => l !== '').slice(2);
-    expect(linhas).toEqual(['Frente com quebras e tabulação\tVerso: 1. um 2. dois 3. três', 'Outro\tcartão']);
+    expect(linhas).toEqual(['"Frente com quebras e tabulação"\t"Verso: 1. um 2. dois 3. três"', '"Outro"\t"cartão"']);
     expect(r.total).toBe(2);
   });
 
-  it('o texto do cartão não é alterado além disso (acentos, aspas, Markdown e HTML ficam como estão)', () => {
-    const r = montarArquivoAnki([cartao('"Pérola" — **negrito** <b>x</b>', "d'água & CO₂ ≥ 60")]);
-    expect(r.texto.split('\n')[2]).toBe('"Pérola" — **negrito** <b>x</b>\td\'água & CO₂ ≥ 60');
+  it('aspas no texto: as internas são dobradas, e a leitura devolve o texto e a contagem certos (não junta cartões)', () => {
+    const cards = [
+      cartao('"Pérola" — **negrito** <b>x</b>', "d'água & CO₂ ≥ 60"),
+      cartao('Termina com aspa"', 'Aspa " no meio'),
+      cartao('Cartão seguinte', 'Verso seguinte'),
+    ];
+    const r = montarArquivoAnki(cards);
+    expect(r.texto.split('\n')[2]).toBe('"""Pérola"" — **negrito** <b>x</b>"\t"d\'água & CO₂ ≥ 60"');
+    const lidos = lerComoAnki(corpo(r.texto));
+    expect(lidos).toEqual([
+      ['"Pérola" — **negrito** <b>x</b>', "d'água & CO₂ ≥ 60"],
+      ['Termina com aspa"', 'Aspa " no meio'],
+      ['Cartão seguinte', 'Verso seguinte'],
+    ]);
+    expect(lidos).toHaveLength(r.total);
   });
 
   it('o destaque do mecanismo entra no verso, a menos que o verso já o traga', () => {
@@ -51,16 +101,16 @@ describe('montarArquivoAnki', () => {
       cartao('C', '', { mechanismHighlight: 'Só o destaque' }),
     ]);
     expect(r.texto.split('\n').slice(2, 5)).toEqual([
-      'A\tVerso A — Mecanismo A',
-      'B\tVerso B com o Mecanismo B dentro',
-      'C\tSó o destaque',
+      '"A"\t"Verso A — Mecanismo A"',
+      '"B"\t"Verso B com o Mecanismo B dentro"',
+      '"C"\t"Só o destaque"',
     ]);
   });
 
   it('cartão sem frente não entra; sem nenhum cartão o total é 0', () => {
     const r = montarArquivoAnki([cartao('  ', 'verso sem frente'), cartao('Com frente', 'verso')]);
     expect(r.total).toBe(1);
-    expect(r.texto).toBe('#separator:tab\n#html:false\nCom frente\tverso\n');
+    expect(r.texto).toBe('#separator:tab\n#html:false\n"Com frente"\t"verso"\n');
     expect(montarArquivoAnki([]).total).toBe(0);
     expect(montarArquivoAnki([cartao('', 'x')]).total).toBe(0);
   });
@@ -76,5 +126,13 @@ describe('campoDoAnki', () => {
     expect(campoDoAnki('')).toBe('');
     expect(campoDoAnki(undefined)).toBe('');
     expect(campoDoAnki(null)).toBe('');
+  });
+});
+
+describe('campoEntreAspas', () => {
+  it('envolve em aspas e dobra as aspas internas', () => {
+    expect(campoEntreAspas('a')).toBe('"a"');
+    expect(campoEntreAspas('"')).toBe('""""');
+    expect(campoEntreAspas('')).toBe('""');
   });
 });

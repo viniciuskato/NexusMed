@@ -156,8 +156,8 @@ export const LoginView: React.FC = () => {
               Aprofundamento clínico com rigor fisiopatológico e questões de residência.
             </h1>
             <p className="text-base text-slate-600 dark:text-slate-300 leading-relaxed mb-8">
-              Uma plataforma integrada de ensino médico que une compêndios editoriais aprofundados,
-              banco de questões comentadas alternativa por alternativa.
+              Uma plataforma integrada de ensino médico que une compêndios editoriais aprofundados
+              e banco de questões comentadas alternativa por alternativa.
             </p>
           </div>
 
@@ -206,7 +206,7 @@ export const LoginView: React.FC = () => {
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
               {authMode === 'login'
                 ? 'Entre para sincronizar seu plano de estudos, simulados e revisões diárias.'
-                : 'Cadastre-se para iniciar seus estudos com acompanhamento por repetição espaçada.'}
+                : 'Cadastre-se para iniciar seus estudos com questões de residência e materiais baseados em evidências.'}
             </p>
           </div>
 
@@ -264,7 +264,7 @@ export const LoginView: React.FC = () => {
                 <span>Modo Local / Demonstração Ativo</span>
               </div>
               <p className="leading-relaxed text-teal-800 dark:text-teal-300">
-                O aplicativo está pronto para uso offline/local com todas as matérias, questões comentadas carregados. Você pode clicar no botão rápido abaixo ou entrar com qualquer e-mail.
+                O aplicativo está pronto para uso offline/local com todas as matérias e questões comentadas carregadas. Você pode clicar no botão rápido abaixo ou entrar com qualquer e-mail.
               </p>
             </div>
           )}

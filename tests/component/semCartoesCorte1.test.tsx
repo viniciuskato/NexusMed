@@ -121,6 +121,11 @@ describe('CORTE-1 — "Baixar meus cartões para o Anki" no menu da conta', () =
     fireEvent.click(document.getElementById('btn-user-profile-menu') as HTMLElement);
     return screen.getByRole('menuitem', { name: 'Baixar meus cartões para o Anki' });
   }
+  /** O aviso mora fora do menu da conta e continua ali depois que ele fecha. */
+  function avisoDaConta() {
+    expect(screen.queryByRole('menu')).toBeNull();
+    return screen.getByRole('status');
+  }
 
   it('está no menu da conta de qualquer usuário logado', () => {
     renderHeader();
@@ -128,7 +133,7 @@ describe('CORTE-1 — "Baixar meus cartões para o Anki" no menu da conta', () =
     expect(abrirMenuDaConta()).toBeTruthy();
   });
 
-  it('com cartões: baixa um .txt de importação do Anki, uma linha por cartão, e diz quantos', async () => {
+  it('com cartões: baixa um .txt de importação do Anki, uma linha por cartão, e diz quantos fora do menu', async () => {
     getFlashcards.mockResolvedValue([cartao('1', 'Frente um', 'Verso um'), cartao('2', 'Frente dois', 'Verso dois')]);
     renderHeader();
     fireEvent.click(abrirMenuDaConta());
@@ -137,38 +142,40 @@ describe('CORTE-1 — "Baixar meus cartões para o Anki" no menu da conta', () =
     const [nome, texto, tipo] = baixar.mock.calls[0] as [string, string, string];
     expect(nome).toMatch(/^cartoes-nexusmed-\d{4}-\d{2}-\d{2}\.txt$/);
     expect(tipo).toContain('text/plain');
-    expect(texto).toBe('#separator:tab\n#html:false\nFrente um\tVerso um\nFrente dois\tVerso dois\n');
-    expect(await screen.findByText(/2 cartões no arquivo/)).toBeTruthy();
+    expect(texto).toBe('#separator:tab\n#html:false\n"Frente um"\t"Verso um"\n"Frente dois"\t"Verso dois"\n');
+    await waitFor(() => expect(avisoDaConta().textContent).toMatch(/2 cartões no arquivo/));
   });
 
-  it('com 0 cartões: avisa "Você não tem cartões" e não baixa nada', async () => {
+  it('com 0 cartões: avisa "Você não tem cartões." fora do menu e não baixa nada', async () => {
     getFlashcards.mockResolvedValue([]);
     renderHeader();
     fireEvent.click(abrirMenuDaConta());
 
-    expect(await screen.findByText('Você não tem cartões.')).toBeTruthy();
+    await waitFor(() => expect(avisoDaConta().textContent).toBe('Você não tem cartões.'));
     expect(baixar).not.toHaveBeenCalled();
   });
 
-  it('se não consegue carregar os cartões, avisa e não baixa nada', async () => {
+  it('se não consegue carregar os cartões, avisa fora do menu e não baixa nada', async () => {
     getFlashcards.mockRejectedValue(new TypeError('Failed to fetch'));
     renderHeader();
     fireEvent.click(abrirMenuDaConta());
 
-    expect(await screen.findByText(/Não foi possível carregar seus cartões/)).toBeTruthy();
+    await waitFor(() => expect(avisoDaConta().textContent).toMatch(/Não foi possível carregar seus cartões/));
     expect(baixar).not.toHaveBeenCalled();
   });
 
-  it('clique duplo não baixa duas vezes enquanto carrega', async () => {
+  it('o menu fecha ao clicar, e o aviso fica fora de qualquer role="menu"', async () => {
     let resolver: (v: Flashcard[]) => void = () => undefined;
     getFlashcards.mockReturnValue(new Promise<Flashcard[]>((r) => (resolver = r)));
     renderHeader();
-    const botao = abrirMenuDaConta();
-    fireEvent.click(botao);
-    fireEvent.click(botao);
+    fireEvent.click(abrirMenuDaConta());
+    expect(screen.queryByRole('menu')).toBeNull();
     expect(getFlashcards).toHaveBeenCalledTimes(1);
+
     resolver([cartao('1', 'F', 'V')]);
     await waitFor(() => expect(baixar).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(avisoDaConta().textContent).toMatch(/1 cartão no arquivo/));
+    expect(document.querySelector('[role="menu"] [role="status"]')).toBeNull();
   });
 });
 
