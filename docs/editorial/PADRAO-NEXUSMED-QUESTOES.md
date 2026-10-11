@@ -309,7 +309,9 @@ O que o NexusMed reconhece, sempre **no começo da linha**:
 - **Início de questão:** `1.`, `1)`, `01 -`, `Questão 1` ou `QUESTÃO 01`.
   Tudo entre esse início e a primeira alternativa é o enunciado: as
   quebras de linha do PDF dentro de um parágrafo são juntadas, e a linha
-  em branco entre parágrafos é mantida.
+  em branco entre parágrafos é mantida. O número sozinho na linha (`31`,
+  como sai de algumas caixas de PDF) não é lido: numere como `31.` ou
+  `Questão 31`.
 - **Alternativas**, de A em diante e em sequência, sem limite de
   quantidade: `A)`, `A.`, `(A)`, `a)` ou `A -`. `A)`, `(A)` e `a)` valem
   sempre; `A.` e `A -` também aparecem em frases comuns (uma linha
@@ -323,7 +325,10 @@ O que o NexusMed reconhece, sempre **no começo da linha**:
   - em bloco, no fim da prova: uma linha que seja só o título
     (`Gabarito` ou `Respostas`, com ou sem `:`) e, abaixo, os pares
     `1-B`, `1 B`, `1) B` ou `01. B`, um por linha ou vários na mesma linha
-    separados por vírgula ou espaço. Só **letra maiúscula** vale como
+    separados por vírgula ou espaço. O título e os pares também podem vir
+    na mesma linha (`Gabarito: 1-B 2-C`), desde que ela não tenha mais
+    nada; se tiver, nenhum par dela vale e a prévia aponta essa linha
+    como a causa das questões "Sem gabarito". Só **letra maiúscula** vale como
     resposta. Uma linha do bloco que tenha qualquer coisa além de pares
     (por exemplo, `Recursos de 10 a 15 de março`) não é lida: nenhum par
     dela é aproveitado, a prévia mostra a linha e as questões que
@@ -378,7 +383,8 @@ alternativas com a correta marcada e os avisos e erros:
   menos de 2 alternativas, enunciado vazio, anulada e **"Numeração
   ambígua — confira o texto"** (número repetido ou fora de ordem: ficam
   bloqueadas as questões com o número e a que vem logo antes, porque
-  uma delas pode ter sido cortada ao meio).
+  uma delas pode ter sido cortada ao meio) e **"Leitura duvidosa —
+  confira o texto"**, com o motivo (veja a conferência, abaixo).
 - **Aviso** (não bloqueia): numeração pulada (por exemplo, da questão 2
   para a 5), linha do gabarito que não se entendeu, linha lida como
   continuação de uma alternativa e o lembrete de que o rascunho ainda não
@@ -397,8 +403,33 @@ alternativa A). Por isso `1. Fumo` e `2. Álcool` dentro do enunciado, ou
 `2 - 3 tomadas` no meio de uma alternativa, ficam no texto da questão.
 Quando mesmo assim o texto engana o NexusMed, o resultado é sempre uma
 questão bloqueada com o motivo na linha, nunca um gabarito gravado em
-silêncio: confira a prévia e corrija o texto. Uma prova que recomeça a
-numeração (duas seções de 1 a 50) fica bloqueada por numeração repetida:
+silêncio: confira a prévia e corrija o texto.
+
+**A conferência.** Depois de separar as questões, o NexusMed confere o
+resultado de cada uma, sem tentar adivinhar de novo. A questão fica
+bloqueada com **"Leitura duvidosa — confira o texto:"** e o motivo
+quando:
+
+- as letras das alternativas não seguem de A em diante, ou a mesma
+  questão mistura jeitos de marcar (`a)` numas, `(A)` noutras);
+- sobrou no meio do enunciado, de uma alternativa ou do comentário algo
+  que parece marcador: `(A)` ou `A)` (letras A a J, depois de um
+  espaço), `Questão 32` (com ou sem espaço) ou `Resposta:`, `Gabarito:`,
+  `Alternativa correta:`;
+- uma linha que começa com número (`11 - `, `2. `, `3) `) foi juntada a
+  uma alternativa ou ao comentário, mesmo quando era só a continuação
+  do texto (como `2 - 3 tomadas`);
+- a questão tem dois gabaritos diferentes (duas linhas de resposta, ou
+  a da questão diferente da do bloco do fim);
+- a questão seguinte começou só com o número (`12.`, e não `Questão 12`)
+  e ficou bloqueada: o falso começo dela pode ter cortado as
+  alternativas desta. Uma seguinte só anulada não conta.
+
+Ela bloqueia de propósito mais do que o necessário: uma questão boa
+bloqueada se resolve corrigindo o texto e colando de novo; uma questão
+gravada errada, não.
+
+Uma prova que recomeça a numeração (duas seções de 1 a 50) fica bloqueada por numeração repetida:
 cole uma seção por vez. Texto que
 já esteja no formato `.md` deste guia (blocos `## Questão N`) também pode
 ser colado: vale o que o arquivo diz, e a banca e o ano preenchidos

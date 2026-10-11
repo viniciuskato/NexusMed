@@ -36,15 +36,19 @@ const theme: Theme = {
   order: 1,
 };
 
-// 3 questões, a segunda sem gabarito.
-const provaDeTres = `1. Pergunta um?
+// 3 questões, a segunda sem gabarito. Abertas por "Questão N": com "2." a questão 1 também ficaria
+// bloqueada (IMPORT-2b, regra e: a seguinte, aberta por número, bloqueada pode ter cortado a anterior).
+const provaDeTres = `Questão 1
+Pergunta um?
 A) Sim
 B) Não
 Resposta: B
-2. Pergunta dois, sem gabarito?
+Questão 2
+Pergunta dois, sem gabarito?
 A) Sim
 B) Não
-3. Pergunta três, com
+Questão 3
+Pergunta três, com
 quebra de linha?
 A) Um
 B) Dois
@@ -277,6 +281,21 @@ describe('ImportQuestionsModal — Colar texto: repetida no próprio texto e lei
     expect(screen.queryAllByText('Pronta')).toHaveLength(0);
     expect((screen.getByRole('button', { name: /importar 0 rascunho/i }) as HTMLButtonElement).disabled).toBe(true);
     expect(importQuestionDraftMock).not.toHaveBeenCalled();
+  });
+
+  it('leitura duvidosa (IMPORT-2b): a questão fica Bloqueada com o motivo na própria linha, e a outra segue', async () => {
+    abrir();
+    preencher({
+      texto: 'QUESTÃO 31\nPaciente com dor.\n(A) IAM\n(B) TEP\nQUESTÃO32\nCriança com febre.\n(A) Otite\n(B) Faringite\nResposta: A\nQUESTÃO 33\nOutra.\n(A) um\n(B) dois\nResposta: B\n',
+    });
+    lerEAplicarATodas();
+    const linha31 = screen.getByTestId('import-questions-row-31');
+    expect(within(linha31).getByText('Bloqueada')).toBeTruthy();
+    expect(within(linha31).getByText('Leitura duvidosa — confira o texto: sobrou "QUESTÃO32" no meio da alternativa B.')).toBeTruthy();
+    expect(within(screen.getByTestId('import-questions-row-33')).getByText('Pronta')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /importar 1 rascunho/i }));
+    await waitFor(() => expect(importQuestionDraftMock).toHaveBeenCalledTimes(1));
+    expect((importQuestionDraftMock.mock.calls[0][0] as Question).questionStem).toBe('Outra.');
   });
 });
 

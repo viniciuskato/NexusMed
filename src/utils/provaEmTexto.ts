@@ -26,6 +26,10 @@ import { ehQuestaoDeResidencia } from './questoesDeResidencia';
 //   B") ou em bloco no fim ("Gabarito" e pares "1-B", "1 B", "1) B", "01. B");
 // - anulada no gabarito ("ANULADA", "*", "X"): marcada, não importa;
 // - "Comentário:" opcional, até a próxima questão.
+//
+// Depois da leitura, uma conferência independente (`conferirLeitura`, IMPORT-2b)
+// confere invariantes simples sobre o resultado; a questão que não passa fica
+// bloqueada com "Leitura duvidosa — confira o texto: <motivo>".
 // ============================================================================
 
 export interface AlternativaDaProva {
@@ -57,6 +61,8 @@ export interface ProvaLida {
 export type ResultadoDaProva = ({ ok: true } & ProvaLida) | { ok: false; errors: string[] };
 
 const ANULADA = 'ANULADA';
+const ERRO_ANULADA = 'Anulada no gabarito — não é importada.';
+const PREFIXO_DUVIDA = 'Leitura duvidosa — confira o texto: ';
 
 // Princípio desta leitura: leitura ambígua nunca vira questão "Pronta". Ou lê certo,
 // ou a questão fica bloqueada com o motivo escrito (gravar gabarito errado em silêncio
@@ -78,6 +84,8 @@ const GABARITO_DA_QUESTAO =
 
 // Só a linha-título abre o bloco de gabarito: "Gabarito", "GABARITO OFICIAL:", "Respostas".
 const TITULO_DO_BLOCO = /^(?:gabarito(?:\s+(?:oficial|final|preliminar|definitivo))?|respostas)\s*:?\s*$/i;
+// Título e pares na mesma linha: "Gabarito: 1-B 2-C" (grupo 1: os dois-pontos, se houver; grupo 2: o resto).
+const TITULO_COM_PARES = /^(?:gabarito(?:\s+(?:oficial|final|preliminar|definitivo))?|respostas)\b\s*(:?)\s*(\S.*)$/i;
 
 // Um par do bloco: "1-B", "1 B", "1) B", "01. B", "7 ANULADA", "5 - *". Só letra MAIÚSCULA vale como resposta.
 const PAR_DO_GABARITO = /(?<![\d.])(\d{1,3})\s*[-–—.):=]?\s*(ANULAD[AO]|Anulad[ao]|[A-Z*])(?![A-Za-z0-9*])/g;
@@ -131,9 +139,11 @@ interface Rascunho {
   ultimaLinha: string;
   erros: string[];
   avisos: string[];
+  /** O que a conferência final precisa saber da leitura (IMPORT-2b). */
+  leitura: LeituraDaQuestao;
 }
 
-function novoRascunho(numero: number): Rascunho {
+function novoRascunho(numero: number, abertaPorNumero: boolean): Rascunho {
   return {
     numero,
     enunciado: new Paragrafos(),
@@ -146,6 +156,7 @@ function novoRascunho(numero: number): Rascunho {
     ultimaLinha: '',
     erros: [],
     avisos: [],
+    leitura: { marcadores: [], juntadasComNumero: [], gabaritosDaQuestao: [], gabaritoDoBloco: null, abertaPorNumero },
   };
 }
 
@@ -160,6 +171,8 @@ interface AlternativaLida {
   /** "A)", "(A)" e "a)" são marcadores fortes; "A." e "A -" também abrem frases comuns ("B. pertussis"). */
   forte: boolean;
   estilo: EstiloDaAlternativa;
+  /** O marcador como está no texto, para a conferência: "(A)", "A)", "a)", "A.", "A -". */
+  marcador: string;
 }
 
 function lerAlternativa(linha: string): AlternativaLida | null {
@@ -167,8 +180,10 @@ function lerAlternativa(linha: string): AlternativaLida | null {
   if (!m) return null;
   const letter = (m[1] ?? m[2] ?? m[3] ?? m[4]).toUpperCase();
   const texto = m[5].trim();
-  if (m[1] !== undefined || m[2] !== undefined) return { letter, texto, forte: true, estilo: 'parenteses' };
-  return { letter, texto, forte: false, estilo: m[3] !== undefined ? 'ponto' : 'hifen' };
+  if (m[1] !== undefined) return { letter, texto, forte: true, estilo: 'parenteses', marcador: `(${m[1]})` };
+  if (m[2] !== undefined) return { letter, texto, forte: true, estilo: 'parenteses', marcador: `${m[2]})` };
+  if (m[3] !== undefined) return { letter, texto, forte: false, estilo: 'ponto', marcador: `${m[3]}.` };
+  return { letter, texto, forte: false, estilo: 'hifen', marcador: `${m[4]} -` };
 }
 
 function comecaEmMinuscula(texto: string): boolean {
@@ -260,8 +275,8 @@ export function lerProvaEmTexto(texto: string): ResultadoDaProva {
   let tituloDoBloco = '';
   let sobraNoBloco = false;
 
-  const abrirQuestao = (numero: number, resto: string): Rascunho => {
-    const nova = novoRascunho(numero);
+  const abrirQuestao = (numero: number, resto: string, porNumero: boolean): Rascunho => {
+    const nova = novoRascunho(numero, porNumero);
     rascunhos.push(nova);
     if (resto) {
       nova.enunciado.adicionar(resto);
@@ -290,18 +305,18 @@ export function lerProvaEmTexto(texto: string): ResultadoDaProva {
    *     alternativas (questão pulada ou fora de ordem), e logo adiante vem a alternativa A.
    * Fora disso é continuação do texto da questão aberta (enunciado, alternativa ou comentário).
    */
-  const lerInicio = (linha: string, i: number): { numero: number; resto: string } | null => {
+  const lerInicio = (linha: string, i: number): { numero: number; resto: string; porNumero: boolean } | null => {
     const porPalavra = linha.match(INICIO_COM_PALAVRA);
-    if (porPalavra) return { numero: parseInt(porPalavra[1], 10), resto: porPalavra[2].trim() };
+    if (porPalavra) return { numero: parseInt(porPalavra[1], 10), resto: porPalavra[2].trim(), porNumero: false };
     const porNumero = linha.match(INICIO_NUMERICO);
     if (!porNumero) return null;
     const numero = parseInt(porNumero[1], 10);
     const resto = porNumero[2].trim();
-    if (atual === null) return { numero, resto };
+    if (atual === null) return { numero, resto, porNumero: true };
     const completa = atual.alternativas.length >= 2;
-    if (completa && numero === atual.numero + 1) return { numero, resto };
+    if (completa && numero === atual.numero + 1) return { numero, resto, porNumero: true };
     const jaUsado = rascunhos.some((r) => r.numero === numero);
-    if ((jaUsado || completa) && temAlternativaAAdiante(i)) return { numero, resto };
+    if ((jaUsado || completa) && temAlternativaAAdiante(i)) return { numero, resto, porNumero: true };
     return null;
   };
 
@@ -344,9 +359,30 @@ export function lerProvaEmTexto(texto: string): ResultadoDaProva {
       continue;
     }
 
+    // "Gabarito: 1-B 2-C": título e pares na mesma linha abrem o bloco só se o resto for só pares. Com "título:"
+    // e pares mais alguma sobra, nenhum par vale e o aviso do lote aponta a linha (as questões ficam "Sem gabarito").
+    const tituloComPares = atual ? linha.match(TITULO_COM_PARES) : null;
+    if (atual && tituloComPares) {
+      const resto = tituloComPares[2].trim();
+      const soPares = ehLinhaSoDePares(resto);
+      if (soPares || (tituloComPares[1] === ':' && lerPares(resto).length > 0)) {
+        noBloco = true;
+        questaoDoBloco = atual;
+        tituloDoBloco = linha;
+        sobraNoBloco = false;
+        if (soPares) linhasDoBloco.push(resto);
+        else {
+          avisos.push(
+            `A linha "${linha}" tem algo além do título e dos pares e não foi lida: as questões "Sem gabarito" podem depender dela.`
+          );
+        }
+        continue;
+      }
+    }
+
     const inicio = lerInicio(linha, i);
     if (inicio) {
-      atual = abrirQuestao(inicio.numero, inicio.resto);
+      atual = abrirQuestao(inicio.numero, inicio.resto, inicio.porNumero);
       continue;
     }
 
@@ -356,6 +392,7 @@ export function lerProvaEmTexto(texto: string): ResultadoDaProva {
     const gabarito = linha.match(GABARITO_DA_QUESTAO);
     if (gabarito) {
       q.gabaritoDaQuestao = ehAnulada(gabarito[1]) ? ANULADA : gabarito[1].toUpperCase();
+      q.leitura.gabaritosDaQuestao.push(q.gabaritoDaQuestao);
       continue;
     }
 
@@ -374,6 +411,7 @@ export function lerProvaEmTexto(texto: string): ResultadoDaProva {
           q.fase = 'alternativas';
           if (q.alternativas.length === 0) q.estilo = alternativa.estilo;
           q.alternativas.push({ letter: alternativa.letter, text: alternativa.texto });
+          q.leitura.marcadores.push(alternativa.marcador);
           q.ultimaLinha = alternativa.texto;
           continue;
         }
@@ -383,12 +421,17 @@ export function lerProvaEmTexto(texto: string): ResultadoDaProva {
       }
     }
 
-    // Continuação (quebra de linha do PDF).
+    // Continuação (quebra de linha do PDF). Linha que começa com número + separador e é juntada a uma
+    // alternativa ou ao comentário fica anotada para a conferência (pode ser outra questão).
+    const comNumero = INICIO_NUMERICO.test(linha);
     if (q.fase === 'enunciado') q.enunciado.adicionar(linha);
-    else if (q.fase === 'comentario') q.comentario.adicionar(linha);
-    else {
+    else if (q.fase === 'comentario') {
+      q.comentario.adicionar(linha);
+      if (comNumero) q.leitura.juntadasComNumero.push({ linha, onde: 'ao comentário' });
+    } else {
       const ultima = q.alternativas[q.alternativas.length - 1];
       ultima.text = ultima.text ? `${ultima.text} ${linha}` : linha;
+      if (comNumero) q.leitura.juntadasComNumero.push({ linha, onde: `à alternativa ${ultima.letter}` });
     }
     q.ultimaLinha = linha;
   }
@@ -397,7 +440,8 @@ export function lerProvaEmTexto(texto: string): ResultadoDaProva {
     return {
       ok: false,
       errors: [
-        'Nenhuma questão encontrada no texto. Cada questão precisa começar numa linha nova com o número ("1.", "1)", "01 -") ou com "Questão 1".',
+        'Nenhuma questão encontrada no texto. Cada questão precisa começar numa linha nova com o número ("1.", "1)", "01 -") ou com "Questão 1". ' +
+          "Numere as questões como '31.' ou 'Questão 31': o número sozinho na linha (\"31\") não é lido.",
       ],
     };
   }
@@ -428,7 +472,7 @@ export function lerProvaEmTexto(texto: string): ResultadoDaProva {
   const numeracao = conferirNumeracao(rascunhos.map((r) => r.numero));
   avisos.unshift(...numeracao.avisos);
 
-  const questoes = rascunhos.map((r, indice): QuestaoDaProva => {
+  const lidas = rascunhos.map((r, indice): QuestaoLida => {
     const erros: string[] = [...r.erros];
     const enunciado = r.enunciado.texto();
     if (!enunciado) erros.push('Enunciado vazio.');
@@ -440,16 +484,12 @@ export function lerProvaEmTexto(texto: string): ResultadoDaProva {
     }
     if (numeracao.ambiguas.has(indice)) erros.push('Numeração ambígua — confira o texto.');
 
+    // Gabarito da questão diferente do bloco do fim: a conferência bloqueia (regra d).
     const bruto = r.gabaritoDaQuestao ?? r.gabaritoDoBloco;
-    if (r.gabaritoDaQuestao && r.gabaritoDoBloco && r.gabaritoDaQuestao !== r.gabaritoDoBloco) {
-      avisos.push(
-        `Questão ${r.numero}: o gabarito da questão (${r.gabaritoDaQuestao}) difere do bloco do fim (${r.gabaritoDoBloco}); valeu o da questão.`
-      );
-    }
     const anulada = bruto === ANULADA;
     let gabarito: string | null = null;
     if (anulada) {
-      erros.push('Anulada no gabarito — não é importada.');
+      erros.push(ERRO_ANULADA);
     } else if (!bruto) {
       erros.push('Sem gabarito.');
     } else if (!r.alternativas.some((a) => a.letter === bruto)) {
@@ -459,18 +499,115 @@ export function lerProvaEmTexto(texto: string): ResultadoDaProva {
     }
 
     return {
-      numero: r.numero,
-      enunciado,
-      alternativas: r.alternativas,
-      gabarito,
-      anulada,
-      comentario: r.comentario.texto(),
-      erros,
-      avisos: r.avisos,
+      questao: {
+        numero: r.numero,
+        enunciado,
+        alternativas: r.alternativas,
+        gabarito,
+        anulada,
+        comentario: r.comentario.texto(),
+        erros,
+        avisos: r.avisos,
+      },
+      leitura: { ...r.leitura, gabaritoDoBloco: r.gabaritoDoBloco },
     };
   });
 
-  return { ok: true, questoes, avisos };
+  return { ok: true, questoes: conferirLeitura(lidas), avisos };
+}
+
+// ---------------------------------------------------------------------------
+// Conferência final (IMPORT-2b): rede de segurança independente das heurísticas
+// de leitura. Invariantes simples sobre o resultado; o que não passa é bloqueado
+// com o motivo. Bloquear demais é aceitável; gravar errado em silêncio, não.
+// ---------------------------------------------------------------------------
+
+/** O que a conferência precisa saber de como a questão foi lida. */
+export interface LeituraDaQuestao {
+  /** O marcador de cada alternativa como estava no texto: "(A)", "A)", "a)", "A.", "A -". */
+  marcadores: string[];
+  /** Linhas começadas por número + separador ("11 - ", "2. ", "3) ") juntadas a uma alternativa ou ao comentário. */
+  juntadasComNumero: Array<{ linha: string; onde: string }>;
+  /** Cada gabarito escrito na própria questão ("Resposta: B"), na ordem em que apareceu. */
+  gabaritosDaQuestao: string[];
+  gabaritoDoBloco: string | null;
+  /** A questão foi aberta por número ("12.", "12)", "12 -"), não por "Questão 12". */
+  abertaPorNumero: boolean;
+}
+
+export interface QuestaoLida {
+  questao: QuestaoDaProva;
+  leitura: LeituraDaQuestao;
+}
+
+// Resíduo de marcador no meio de um campo: "(A)" ou "A)" (A–J, depois de início ou espaço), "QUESTÃO 32" /
+// "Questão32", ou "Resposta:", "Gabarito:", "Alternativa correta:" (não depois do artigo: "assinale a
+// alternativa correta:" é enunciado comum).
+const RESIDUO_DE_MARCADOR =
+  /(?<!\S)\(?[A-Ja-j]\)|(?:QUEST[ÃA]O|Quest[ãa]o)\s*\d+|(?<!(?:^|\s)[Aa]\s)(?:(?:Resposta|RESPOSTA|Gabarito|GABARITO)(?:\s+(?:correta|CORRETA|oficial|OFICIAL))?|Alternativa correta|ALTERNATIVA CORRETA)\s*:/;
+
+/** "(A)" → "(X)", "a)" → "x)", "A -" → "X -": o estilo do marcador, sem a letra. */
+function estiloDoMarcador(marcador: string): string {
+  return marcador.replace(/[A-Z]/, 'X').replace(/[a-z]/, 'x');
+}
+
+function motivosDeDuvida(q: QuestaoDaProva, leitura: LeituraDaQuestao): string[] {
+  const motivos: string[] = [];
+
+  // (a) letras de A em diante, em sequência, e um só estilo de marcador.
+  const letras = q.alternativas.map((a) => a.letter);
+  if (letras.some((letra, i) => letra !== String.fromCharCode(65 + i))) {
+    motivos.push(`as letras das alternativas não seguem de A em diante (${letras.join(', ')})`);
+  }
+  const estilos = new Map<string, string>();
+  for (const marcador of leitura.marcadores) {
+    const estilo = estiloDoMarcador(marcador);
+    if (!estilos.has(estilo)) estilos.set(estilo, marcador);
+  }
+  if (estilos.size > 1) {
+    motivos.push(`marcadores de alternativa misturados (${Array.from(estilos.values(), (m) => `"${m}"`).join(' e ')})`);
+  }
+
+  // (b) resíduo de marcador forte, de início de questão ou de gabarito dentro de um campo.
+  const campos: Array<[string, string]> = [
+    ['do enunciado', q.enunciado],
+    ...q.alternativas.map((a): [string, string] => [`da alternativa ${a.letter}`, a.text]),
+    ['do comentário', q.comentario],
+  ];
+  for (const [onde, texto] of campos) {
+    const residuo = texto.match(RESIDUO_DE_MARCADOR);
+    if (residuo) motivos.push(`sobrou "${residuo[0].trim()}" no meio ${onde}`);
+  }
+
+  // (c) linha começada por número juntada a uma alternativa ou ao comentário.
+  const juntada = leitura.juntadasComNumero[0];
+  if (juntada) motivos.push(`a linha "${juntada.linha.slice(0, 40)}" começa com número e foi juntada ${juntada.onde}`);
+
+  // (d) mais de um gabarito: duas respostas diferentes na questão, ou a da questão diferente da do bloco.
+  const gabaritos = new Set(leitura.gabaritosDaQuestao);
+  if (leitura.gabaritoDoBloco) gabaritos.add(leitura.gabaritoDoBloco);
+  if (gabaritos.size > 1) motivos.push(`gabaritos diferentes (${Array.from(gabaritos).join(' e ')})`);
+
+  return motivos;
+}
+
+/**
+ * Conferência final, aplicada a toda questão depois da leitura. Regras (a) a (d) olham a própria questão;
+ * a (e) bloqueia a questão quando a SEGUINTE foi aberta por número e ficou bloqueada por (a)–(d) ou pela
+ * leitura (a abertura falsa pode ter cortado as alternativas desta). Anulada não conta como bloqueada, e a
+ * regra (e) não se propaga em cadeia.
+ */
+export function conferirLeitura(lidas: QuestaoLida[]): QuestaoDaProva[] {
+  const conferidas = lidas.map(({ questao, leitura }) => ({
+    ...questao,
+    erros: [...questao.erros, ...motivosDeDuvida(questao, leitura).map((m) => `${PREFIXO_DUVIDA}${m}.`)],
+  }));
+  return conferidas.map((q, i) => {
+    const seguinte = conferidas[i + 1];
+    if (!seguinte || !lidas[i + 1].leitura.abertaPorNumero) return q;
+    if (!seguinte.erros.some((e) => e !== ERRO_ANULADA)) return q;
+    return { ...q, erros: [...q.erros, `${PREFIXO_DUVIDA}a questão seguinte (${seguinte.numero}) ficou bloqueada e pode ter cortado esta.`] };
+  });
 }
 
 /** O texto colado já está no formato `.md` do import por arquivo (blocos "## Questão N")? */
