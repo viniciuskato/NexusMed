@@ -44,6 +44,8 @@ export interface QuestaoDaProva {
   comentario: string;
   /** Impedem a gravação desta questão. */
   erros: string[];
+  /** Leitura incerta que não impede a gravação, mas que o admin precisa conferir na prévia. */
+  avisos: string[];
 }
 
 export interface ProvaLida {
@@ -56,12 +58,16 @@ export type ResultadoDaProva = ({ ok: true } & ProvaLida) | { ok: false; errors:
 
 const ANULADA = 'ANULADA';
 
+// Princípio desta leitura: leitura ambígua nunca vira questão "Pronta". Ou lê certo,
+// ou a questão fica bloqueada com o motivo escrito (gravar gabarito errado em silêncio
+// é o pior resultado possível).
+
 // "Questão 1", "QUESTÃO 01", "Questão 1 -", "Questão 1." (o resto da linha é o começo do enunciado).
 const INICIO_COM_PALAVRA = /^quest(?:ã|a)o\s+(\d{1,3})\b[\s.:)\-–—]*(.*)$/i;
 // "1.", "1)", "01 -": o ponto exige espaço depois (para "37.5 mg" não virar questão 37).
 const INICIO_NUMERICO = /^(\d{1,3})(?:\s*\)\s*|\.(?:\s+|$)|\s+[-–—]\s*)(.*)$/;
 
-// "A)", "(A)", "a)", "A.", "A -". O ponto e o hífen exigem espaço depois ("E. coli" só vale se for a próxima letra).
+// "(A)", "A)", "a)" (marcadores fortes) e "A.", "A -" (fracos: "B. pertussis" também começa assim).
 const ALTERNATIVA = /^(?:\(([A-Za-z])\)\s*|([A-Za-z])\s*\)\s*|([A-Za-z])\.(?:\s+|$)|([A-Za-z])\s+[-–—]\s*)(.*)$/;
 
 const COMENTARIO = /^coment(?:á|a)rio\s*:\s*(.*)$/i;
@@ -70,11 +76,17 @@ const COMENTARIO = /^coment(?:á|a)rio\s*:\s*(.*)$/i;
 const GABARITO_DA_QUESTAO =
   /^(?:resposta(?:\s+correta)?|gabarito(?:\s+oficial)?|alternativa\s+correta)\s*[:\-–]\s*(?:alternativa\s+)?\(?(anulad[ao]|[A-Za-z*])\)?(?:\s*[).\-–—:,;].*)?$/i;
 
-// "Gabarito", "GABARITO OFICIAL:", "Respostas" e, na mesma linha, os primeiros pares.
-const CABECALHO_DO_BLOCO = /^(?:gabarito(?:\s+(?:oficial|final|preliminar|definitivo))?|respostas)\s*:?\s*(.*)$/i;
+// Só a linha-título abre o bloco de gabarito: "Gabarito", "GABARITO OFICIAL:", "Respostas".
+const TITULO_DO_BLOCO = /^(?:gabarito(?:\s+(?:oficial|final|preliminar|definitivo))?|respostas)\s*:?\s*$/i;
 
-// Um par do bloco: "1-B", "1 B", "1) B", "01. B", "7 ANULADA", "5 - *".
-const PAR_DO_GABARITO = /(?<![\d.])(\d{1,3})\s*[-–—.):=]?\s*(anulad[ao]|[A-Za-z*])(?![A-Za-z0-9*])/gi;
+// Um par do bloco: "1-B", "1 B", "1) B", "01. B", "7 ANULADA", "5 - *". Só letra MAIÚSCULA vale como resposta.
+const PAR_DO_GABARITO = /(?<![\d.])(\d{1,3})\s*[-–—.):=]?\s*(ANULAD[AO]|Anulad[ao]|[A-Z*])(?![A-Za-z0-9*])/g;
+
+// "Questões 1 e 2 anuladas", "3 anulada após recurso": só lista simples de números (sem "a"/intervalo) e sem outro número depois.
+const ANULADAS_NA_LINHA =
+  /^(?:quest(?:ões|oes|ão|ao)\s+)?(\d{1,3}(?:\s*(?:,|;|e)\s*\d{1,3})*)\s+(?:(?:foram|ficaram|estão)\s+)?anuladas?\b[^\d]*$/i;
+
+const TERMINA_FRASE = /[.;!?]$/;
 
 function ehAnulada(token: string): boolean {
   const t = token.toUpperCase();
@@ -104,6 +116,8 @@ class Paragrafos {
   }
 }
 
+type EstiloDaAlternativa = 'parenteses' | 'ponto' | 'hifen';
+
 interface Rascunho {
   numero: number;
   enunciado: Paragrafos;
@@ -112,6 +126,11 @@ interface Rascunho {
   fase: 'enunciado' | 'alternativas' | 'comentario';
   gabaritoDaQuestao: string | null; // letra ou ANULADA
   gabaritoDoBloco: string | null;
+  estilo: EstiloDaAlternativa | null;
+  /** Última linha de texto lida nesta questão (para decidir se uma alternativa terminou). */
+  ultimaLinha: string;
+  erros: string[];
+  avisos: string[];
 }
 
 function novoRascunho(numero: number): Rascunho {
@@ -123,6 +142,10 @@ function novoRascunho(numero: number): Rascunho {
     fase: 'enunciado',
     gabaritoDaQuestao: null,
     gabaritoDoBloco: null,
+    estilo: null,
+    ultimaLinha: '',
+    erros: [],
+    avisos: [],
   };
 }
 
@@ -131,15 +154,53 @@ function proximaLetra(alternativas: AlternativaDaProva[]): string {
   return String.fromCharCode(alternativas[alternativas.length - 1].letter.charCodeAt(0) + 1);
 }
 
-function lerAlternativa(linha: string): { letter: string; texto: string } | null {
+interface AlternativaLida {
+  letter: string;
+  texto: string;
+  /** "A)", "(A)" e "a)" são marcadores fortes; "A." e "A -" também abrem frases comuns ("B. pertussis"). */
+  forte: boolean;
+  estilo: EstiloDaAlternativa;
+}
+
+function lerAlternativa(linha: string): AlternativaLida | null {
   const m = linha.match(ALTERNATIVA);
   if (!m) return null;
   const letter = (m[1] ?? m[2] ?? m[3] ?? m[4]).toUpperCase();
-  return { letter, texto: m[5].trim() };
+  const texto = m[5].trim();
+  if (m[1] !== undefined || m[2] !== undefined) return { letter, texto, forte: true, estilo: 'parenteses' };
+  return { letter, texto, forte: false, estilo: m[3] !== undefined ? 'ponto' : 'hifen' };
 }
 
+function comecaEmMinuscula(texto: string): boolean {
+  return /^[a-zà-ÿ]/.test(texto);
+}
+
+/**
+ * A linha é uma alternativa nova da questão ou continuação da anterior? Marcador forte ("A)", "(A)") vale
+ * sempre que a letra é a esperada. "X." e "X -" só valem na lista do mesmo estilo (ou se a alternativa
+ * anterior terminou com ponto final), e "B. pertussis" (minúscula logo depois do ponto) nunca vale sem isso.
+ */
+function decidirAlternativa(q: Rascunho, alt: AlternativaLida): { abre: boolean; duvida: boolean } {
+  if (alt.forte) return { abre: true, duvida: false };
+  const primeira = q.alternativas.length === 0;
+  const anteriorTerminou = TERMINA_FRASE.test(q.ultimaLinha);
+  if (primeira) {
+    const suspeita = alt.estilo === 'ponto' && comecaEmMinuscula(alt.texto);
+    return { abre: !suspeita, duvida: suspeita };
+  }
+  const mesmoEstilo = q.estilo === alt.estilo;
+  if (!mesmoEstilo) return { abre: anteriorTerminou, duvida: !anteriorTerminou };
+  const suspeita = alt.estilo === 'ponto' && comecaEmMinuscula(alt.texto) && !anteriorTerminou;
+  return { abre: !suspeita, duvida: suspeita };
+}
+
+/** Pares "1-B" etc. e nada além de separadores na linha. */
 function lerPares(texto: string): Array<{ numero: number; token: string }> {
   return Array.from(texto.matchAll(PAR_DO_GABARITO), (m) => ({ numero: parseInt(m[1], 10), token: m[2] }));
+}
+
+function ehLinhaSoDePares(linha: string): boolean {
+  return lerPares(linha).length > 0 && linha.replace(PAR_DO_GABARITO, ' ').replace(/[\s,;|]+/g, '') === '';
 }
 
 function listaDeFaltantes(de: number, ate: number): string {
@@ -148,8 +209,10 @@ function listaDeFaltantes(de: number, ate: number): string {
   return `${de} a ${ate}`;
 }
 
-function avisosDeNumeracao(numeros: number[]): string[] {
+/** Avisos de numeração e as posições (índices) das questões cuja numeração é ambígua e por isso fica bloqueada. */
+function conferirNumeracao(numeros: number[]): { avisos: string[]; ambiguas: Set<number> } {
   const avisos: string[] = [];
+  const ambiguas = new Set<number>();
   const vistos = new Set<number>();
   const repetidos = new Set<number>();
   numeros.forEach((n, i) => {
@@ -164,11 +227,24 @@ function avisosDeNumeracao(numeros: number[]): string[] {
         avisos.push(`Numeração pulada: depois da questão ${anterior} vem a ${n} (faltam ${listaDeFaltantes(anterior + 1, n - 1)}).`);
       } else if (n < anterior) {
         avisos.push(`Numeração fora de ordem: a questão ${n} vem depois da ${anterior}.`);
+        ambiguas.add(i);
+        ambiguas.add(i - 1);
       }
     }
     vistos.add(n);
   });
-  return avisos;
+  // Número repetido: todas as questões com ele, e a que vem logo antes da primeira (pode ter sido cortada
+  // por uma falsa abertura, como "2 - 3 tomadas" no meio de uma alternativa).
+  const primeiras = new Set<number>();
+  numeros.forEach((n, i) => {
+    if (!repetidos.has(n)) return;
+    ambiguas.add(i);
+    if (!primeiras.has(n)) {
+      primeiras.add(n);
+      if (i > 0) ambiguas.add(i - 1);
+    }
+  });
+  return { avisos, ambiguas };
 }
 
 /** Lê o texto colado de uma prova. Só lê: banca, ano e disciplina vêm depois. */
@@ -179,20 +255,78 @@ export function lerProvaEmTexto(texto: string): ResultadoDaProva {
   const linhasDoBloco: string[] = [];
   let atual: Rascunho | null = null;
   let noBloco = false;
+  /** Questão aberta quando o bloco começou, e se o bloco engoliu texto que não era gabarito. */
+  let questaoDoBloco: Rascunho | null = null;
+  let tituloDoBloco = '';
+  let sobraNoBloco = false;
 
   const abrirQuestao = (numero: number, resto: string): Rascunho => {
     const nova = novoRascunho(numero);
     rascunhos.push(nova);
-    if (resto) nova.enunciado.adicionar(resto);
+    if (resto) {
+      nova.enunciado.adicionar(resto);
+      nova.ultimaLinha = resto;
+    }
     return nova;
   };
 
-  for (const bruta of linhas) {
-    const linha = bruta.trim();
+  /** Há uma alternativa "A" logo adiante, antes de outro início de questão? (distingue questão pulada de item de lista) */
+  const temAlternativaAAdiante = (de: number): boolean => {
+    for (let j = de + 1; j < linhas.length && j <= de + 12; j++) {
+      const l = linhas[j].trim();
+      if (l === '') continue;
+      if (INICIO_COM_PALAVRA.test(l) || INICIO_NUMERICO.test(l) || TITULO_DO_BLOCO.test(l)) return false;
+      if (lerAlternativa(l)?.letter === 'A') return true;
+    }
+    return false;
+  };
+
+  /**
+   * Início de questão? "Questão N" sempre. Número no começo da linha (1., 1), 01 -) só abre questão quando:
+   * (a) é o seguinte ao da questão aberta E ela já tem 2 alternativas (uma questão de verdade termina com
+   *     as alternativas; número logo depois do enunciado ou de uma só alternativa é item de lista ou quebra
+   *     de linha do PDF, como "1. Tabagismo" ou "dividida em\n2 - 3 tomadas"); ou
+   * (b) o número já foi usado (a repetição será bloqueada na conferência) ou a questão aberta já tem 2
+   *     alternativas (questão pulada ou fora de ordem), e logo adiante vem a alternativa A.
+   * Fora disso é continuação do texto da questão aberta (enunciado, alternativa ou comentário).
+   */
+  const lerInicio = (linha: string, i: number): { numero: number; resto: string } | null => {
+    const porPalavra = linha.match(INICIO_COM_PALAVRA);
+    if (porPalavra) return { numero: parseInt(porPalavra[1], 10), resto: porPalavra[2].trim() };
+    const porNumero = linha.match(INICIO_NUMERICO);
+    if (!porNumero) return null;
+    const numero = parseInt(porNumero[1], 10);
+    const resto = porNumero[2].trim();
+    if (atual === null) return { numero, resto };
+    const completa = atual.alternativas.length >= 2;
+    if (completa && numero === atual.numero + 1) return { numero, resto };
+    const jaUsado = rascunhos.some((r) => r.numero === numero);
+    if ((jaUsado || completa) && temAlternativaAAdiante(i)) return { numero, resto };
+    return null;
+  };
+
+  for (let i = 0; i < linhas.length; i++) {
+    const linha = linhas[i].trim();
 
     if (noBloco) {
-      if (linha) linhasDoBloco.push(linha);
-      continue;
+      if (linha === '') continue;
+      if (ehLinhaSoDePares(linha) || ANULADAS_NA_LINHA.test(linha)) {
+        linhasDoBloco.push(linha);
+        continue;
+      }
+      if (lerInicio(linha, i) === null) {
+        linhasDoBloco.push(linha);
+        sobraNoBloco = true;
+        continue;
+      }
+      // Nova questão numerada: o bloco terminou. Se ele engoliu texto, a questão onde abriu pode ter perdido um pedaço.
+      noBloco = false;
+      if (sobraNoBloco && questaoDoBloco) {
+        questaoDoBloco.erros.push(
+          `O texto depois da linha "${tituloDoBloco}" foi tratado como gabarito e ignorado — confira o enunciado e as alternativas.`
+        );
+      }
+      sobraNoBloco = false;
     }
 
     if (linha === '') {
@@ -201,30 +335,19 @@ export function lerProvaEmTexto(texto: string): ResultadoDaProva {
       continue;
     }
 
-    // Bloco de gabarito no fim: "Gabarito" sozinho ou seguido de pares. "Gabarito: B" é de uma questão só.
-    const cabecalho = linha.match(CABECALHO_DO_BLOCO);
-    if (cabecalho && atual && (cabecalho[1].trim() === '' || lerPares(cabecalho[1]).length > 0)) {
+    // Bloco de gabarito: só a linha-título ("Gabarito", "Respostas") o abre. "Gabarito: B" é de uma questão só.
+    if (atual && TITULO_DO_BLOCO.test(linha)) {
       noBloco = true;
-      if (cabecalho[1].trim()) linhasDoBloco.push(cabecalho[1].trim());
+      questaoDoBloco = atual;
+      tituloDoBloco = linha;
+      sobraNoBloco = false;
       continue;
     }
 
-    // Início de questão.
-    const porPalavra = linha.match(INICIO_COM_PALAVRA);
-    const porNumero = porPalavra ? null : linha.match(INICIO_NUMERICO);
-    if (porPalavra) {
-      atual = abrirQuestao(parseInt(porPalavra[1], 10), porPalavra[2].trim());
+    const inicio = lerInicio(linha, i);
+    if (inicio) {
+      atual = abrirQuestao(inicio.numero, inicio.resto);
       continue;
-    }
-    if (porNumero) {
-      const numero = parseInt(porNumero[1], 10);
-      const anterior: Rascunho | null = atual;
-      // Dentro do enunciado, um número fora da sequência é item de lista do próprio enunciado ("1. Fumo").
-      const itemDeLista = anterior !== null && anterior.fase === 'enunciado' && anterior.alternativas.length === 0 && numero !== anterior.numero + 1;
-      if (!itemDeLista) {
-        atual = abrirQuestao(numero, porNumero[2].trim());
-        continue;
-      }
     }
 
     if (!atual) continue; // título, instruções: antes da primeira questão não há o que ler
@@ -246,9 +369,17 @@ export function lerProvaEmTexto(texto: string): ResultadoDaProva {
     if (q.fase !== 'comentario') {
       const alternativa = lerAlternativa(linha);
       if (alternativa && alternativa.letter === proximaLetra(q.alternativas)) {
-        q.fase = 'alternativas';
-        q.alternativas.push({ letter: alternativa.letter, text: alternativa.texto });
-        continue;
+        const { abre, duvida } = decidirAlternativa(q, alternativa);
+        if (abre) {
+          q.fase = 'alternativas';
+          if (q.alternativas.length === 0) q.estilo = alternativa.estilo;
+          q.alternativas.push({ letter: alternativa.letter, text: alternativa.texto });
+          q.ultimaLinha = alternativa.texto;
+          continue;
+        }
+        if (duvida) {
+          q.avisos.push(`A linha "${linha.slice(0, 50)}" foi lida como continuação do texto anterior, não como alternativa ${alternativa.letter} — confira.`);
+        }
       }
     }
 
@@ -259,6 +390,7 @@ export function lerProvaEmTexto(texto: string): ResultadoDaProva {
       const ultima = q.alternativas[q.alternativas.length - 1];
       ultima.text = ultima.text ? `${ultima.text} ${linha}` : linha;
     }
+    q.ultimaLinha = linha;
   }
 
   if (rascunhos.length === 0) {
@@ -271,24 +403,33 @@ export function lerProvaEmTexto(texto: string): ResultadoDaProva {
   }
 
   // Gabarito em bloco: cada par vale para a primeira questão com aquele número que ainda não recebeu.
-  for (const linha of linhasDoBloco) {
-    const pares = lerPares(linha);
-    const sobra = linha.replace(PAR_DO_GABARITO, ' ').replace(/[\s,;|]+/g, '');
-    if (sobra !== '') avisos.push(`Linha do gabarito não entendida: "${linha}".`);
-    for (const par of pares) {
-      const alvo = rascunhos.find((r) => r.numero === par.numero && r.gabaritoDoBloco === null);
-      if (!alvo) {
-        avisos.push(`O gabarito cita a questão ${par.numero}, que não está na prova (ou já tem gabarito).`);
-        continue;
-      }
-      alvo.gabaritoDoBloco = ehAnulada(par.token) ? ANULADA : par.token.toUpperCase();
+  // Linha que não é só pares (nem "N e M anuladas") não aplica par nenhum: as questões ficam sem gabarito, bloqueadas.
+  const aplicar = (numero: number, valor: string) => {
+    const alvo = rascunhos.find((r) => r.numero === numero && r.gabaritoDoBloco === null);
+    if (!alvo) {
+      avisos.push(`O gabarito cita a questão ${numero}, que não está na prova (ou já tem gabarito).`);
+      return;
     }
+    alvo.gabaritoDoBloco = valor;
+  };
+  for (const linha of linhasDoBloco) {
+    if (ehLinhaSoDePares(linha)) {
+      for (const par of lerPares(linha)) aplicar(par.numero, ehAnulada(par.token) ? ANULADA : par.token.toUpperCase());
+      continue;
+    }
+    const anuladas = linha.match(ANULADAS_NA_LINHA);
+    if (anuladas) {
+      for (const n of anuladas[1].match(/\d{1,3}/g) ?? []) aplicar(parseInt(n, 10), ANULADA);
+      continue;
+    }
+    avisos.push(`Linha do gabarito não entendida (nenhum gabarito foi tirado dela): "${linha}".`);
   }
 
-  avisos.unshift(...avisosDeNumeracao(rascunhos.map((r) => r.numero)));
+  const numeracao = conferirNumeracao(rascunhos.map((r) => r.numero));
+  avisos.unshift(...numeracao.avisos);
 
-  const questoes = rascunhos.map((r): QuestaoDaProva => {
-    const erros: string[] = [];
+  const questoes = rascunhos.map((r, indice): QuestaoDaProva => {
+    const erros: string[] = [...r.erros];
     const enunciado = r.enunciado.texto();
     if (!enunciado) erros.push('Enunciado vazio.');
     if (r.alternativas.length < 2) {
@@ -297,6 +438,7 @@ export function lerProvaEmTexto(texto: string): ResultadoDaProva {
     for (const a of r.alternativas) {
       if (!a.text.trim()) erros.push(`Alternativa ${a.letter} sem texto.`);
     }
+    if (numeracao.ambiguas.has(indice)) erros.push('Numeração ambígua — confira o texto.');
 
     const bruto = r.gabaritoDaQuestao ?? r.gabaritoDoBloco;
     if (r.gabaritoDaQuestao && r.gabaritoDoBloco && r.gabaritoDaQuestao !== r.gabaritoDoBloco) {
@@ -324,6 +466,7 @@ export function lerProvaEmTexto(texto: string): ResultadoDaProva {
       anulada,
       comentario: r.comentario.texto(),
       erros,
+      avisos: r.avisos,
     };
   });
 
@@ -394,6 +537,7 @@ export function previewsDaProva(questoes: QuestaoDaProva[], institution: string,
     materialTitles: [],
     materialLinks: [],
     missingFields: [
+      ...q.avisos,
       q.comentario
         ? 'Sem explicação por alternativa nem pérola: o rascunho fica com o texto padrão e precisa ser completado antes de publicar.'
         : 'Sem explicações, comentário e pérola: o rascunho fica com o texto padrão e precisa ser completado antes de publicar.',

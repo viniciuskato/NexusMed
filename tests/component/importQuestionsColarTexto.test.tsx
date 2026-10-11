@@ -251,6 +251,35 @@ describe('ImportQuestionsModal — Colar texto: questão repetida', () => {
   });
 });
 
+describe('ImportQuestionsModal — Colar texto: repetida no próprio texto e leitura ambígua', () => {
+  it('a mesma questão duas vezes no texto: a segunda vem desmarcada como "Repetida neste texto"', async () => {
+    abrir();
+    preencher({
+      texto: '1. Mesma pergunta?\nA) x\nB) y\nResposta: A\n2. Mesma   PERGUNTA?\nA) x\nB) y\nResposta: A\n3. Outra?\nA) x\nB) y\nResposta: B\n',
+    });
+    lerEAplicarATodas();
+    const linha2 = screen.getByTestId('import-questions-row-2');
+    expect(within(linha2).getByText('Repetida neste texto')).toBeTruthy();
+    expect(within(linha2).getByText('Desmarcada')).toBeTruthy();
+    expect(within(screen.getByTestId('import-questions-row-1')).queryByText('Repetida neste texto')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /importar 2 rascunho/i }));
+    await waitFor(() => expect(importQuestionDraftMock).toHaveBeenCalledTimes(2));
+    expect((importQuestionDraftMock.mock.calls[1][0] as Question).questionStem).toBe('Outra?');
+  });
+
+  it('numeração ambígua: as questões envolvidas ficam bloqueadas com o motivo na linha e nada é gravado', () => {
+    abrir();
+    preencher({
+      texto: '1. Dose?\nA) 50 mg/kg/dia\nB) 100 mg/kg/dia dividida em\n2 - 3 tomadas\n2. Outra pergunta.\nA) sim\nB) não\n\nGabarito\n1-A 2-B\n',
+    });
+    lerEAplicarATodas();
+    expect(screen.getAllByText('Numeração ambígua — confira o texto.').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryAllByText('Pronta')).toHaveLength(0);
+    expect((screen.getByRole('button', { name: /importar 0 rascunho/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect(importQuestionDraftMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('ImportQuestionsModal — Colar texto no formato .md', () => {
   const md = `## Questão 1
 

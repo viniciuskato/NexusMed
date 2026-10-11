@@ -115,7 +115,8 @@ B) Não
 4) Pergunta quatro?
 A) Sim
 B) Não
-Gabarito: 1) A  2 B; 3 - X
+Gabarito
+1) A  2 B; 3 - X
 4: *
 `;
 
@@ -259,7 +260,7 @@ describe('lerProvaEmTexto — erros e avisos', () => {
 
   it('linha do gabarito que não se entende vira aviso', () => {
     const { avisos } = ler(`1. Um?\nA) x\nB) y\n\nGabarito\n1-A\nconforme edital\n`);
-    expect(avisos).toEqual(['Linha do gabarito não entendida: "conforme edital".']);
+    expect(avisos).toEqual(['Linha do gabarito não entendida (nenhum gabarito foi tirado dela): "conforme edital".']);
   });
 
   it('texto sem nenhuma questão devolve erro, não lista vazia', () => {
@@ -305,6 +306,200 @@ Resposta: B
   it('aceita CRLF e espaço não separável', () => {
     const { questoes } = ler('1. Um?\r\nA) x\r\nB) y\r\nResposta: B\r\n');
     expect(resumo(questoes)).toEqual([{ n: 1, alts: 2, gab: 'B', anulada: false, erros: [] }]);
+  });
+});
+
+// Rodada 2 da IMPORT-2 (revisor): leitura ambígua nunca fica "Pronta". Ou lê certo, ou a questão
+// fica bloqueada com o motivo escrito; gravar gabarito errado em silêncio é o pior resultado.
+describe('lerProvaEmTexto — leitura ambígua nunca vira questão gravável', () => {
+  /** Questões sem erro: as que a prévia deixaria "Prontas" (com disciplina e tema escolhidos). */
+  const gravaveis = (qs: QuestaoDaProva[]) => qs.filter((q) => q.erros.length === 0);
+
+  it('lista numerada no enunciado da questão 1 ("1. Tabagismo / 2. Obesidade") fica no enunciado: as 3 questões reais saem certas', () => {
+    const { questoes, avisos } = ler(`1. Sobre os fatores de risco, considere:
+1. Tabagismo
+2. Obesidade
+3. Sedentarismo
+Quais estão corretos?
+A) Apenas 1
+B) Apenas 2
+C) Apenas 1 e 2
+D) Todos
+2. Segunda questão real.
+A) a
+B) b
+3. Terceira questão real.
+A) x
+B) y
+
+Gabarito
+1-D 2-A 3-B`);
+    expect(resumo(questoes)).toEqual([
+      { n: 1, alts: 4, gab: 'D', anulada: false, erros: [] },
+      { n: 2, alts: 2, gab: 'A', anulada: false, erros: [] },
+      { n: 3, alts: 2, gab: 'B', anulada: false, erros: [] },
+    ]);
+    expect(questoes[0].enunciado).toBe('Sobre os fatores de risco, considere: 1. Tabagismo 2. Obesidade 3. Sedentarismo Quais estão corretos?');
+    expect(avisos).toEqual([]);
+  });
+
+  it('item de lista seguido direto da alternativa A, com número já usado antes: nunca grava errado (lê certo ou bloqueia)', () => {
+    const { questoes } = ler(
+      `1. Um?\nA) x\nB) y\nResposta: A\n2. Dois?\nA) x\nB) y\nResposta: B\n3. Considere:\n1. fumo\n2. álcool\nA) só 1\nB) só 2\nResposta: A\n`
+    );
+    // "2. álcool" seguido de "A)" parece o início da questão 2 de novo: a numeração ambígua bloqueia as envolvidas.
+    expect(questoes.filter((q) => q.erros.length === 0)).toEqual([]);
+  });
+
+  it('lista "1) 2)" no enunciado da questão 1, com alternativas "a)": fica no enunciado, as 2 questões saem certas', () => {
+    const { questoes } = ler(
+      `1) Considere as afirmativas:\n1) A febre é comum.\n2) A tosse é rara.\nEstá correto:\na) só 1\nb) só 2\nc) ambas\nd) nenhuma\n2) Outra questão.\na) x\nb) y\nc) z\nd) w\n\nGabarito\n1) C\n2) A`
+    );
+    expect(resumo(questoes)).toEqual([
+      { n: 1, alts: 4, gab: 'C', anulada: false, erros: [] },
+      { n: 2, alts: 4, gab: 'A', anulada: false, erros: [] },
+    ]);
+    expect(questoes[0].enunciado).toBe('Considere as afirmativas: 1) A febre é comum. 2) A tosse é rara. Está correto:');
+  });
+
+  it('número com hífen numa quebra de linha da alternativa ("2 - 3 tomadas") fica no texto dela', () => {
+    const { questoes } = ler(
+      `1. Dose de amoxicilina?\nA) 50 mg/kg/dia dividida em\n2 - 3 tomadas\nB) 100 mg/kg/dia\n2. Outra pergunta.\nA) sim\nB) não\n\nGabarito\n1-A 2-B`
+    );
+    expect(resumo(questoes)).toEqual([
+      { n: 1, alts: 2, gab: 'A', anulada: false, erros: [] },
+      { n: 2, alts: 2, gab: 'B', anulada: false, erros: [] },
+    ]);
+    expect(questoes[0].alternativas[0].text).toBe('50 mg/kg/dia dividida em 2 - 3 tomadas');
+  });
+
+  it('o mesmo "2 - 3 tomadas" depois de a questão já ter 2 alternativas abre uma questão falsa: a numeração repetida bloqueia tudo que ela tocou', () => {
+    const { questoes, avisos } = ler(
+      `1. Dose de amoxicilina?\nA) 50 mg/kg/dia\nB) 100 mg/kg/dia dividida em\n2 - 3 tomadas\n2. Outra pergunta.\nA) sim\nB) não\n\nGabarito\n1-A 2-B`
+    );
+    expect(gravaveis(questoes)).toEqual([]);
+    expect(avisos).toContain('Numeração repetida: a questão 2 aparece mais de uma vez.');
+    expect(questoes.every((q) => q.erros.includes('Numeração ambígua — confira o texto.'))).toBe(true);
+  });
+
+  it('"10 - 15 anos" quebrado no enunciado da questão 9 fica no enunciado', () => {
+    const { questoes } = ler(
+      `9. Faixa etária de maior incidência:\nentre\n10 - 15 anos de idade, qual o diagnóstico?\nA) a\nB) b\n10. Outra.\nA) c\nB) d\n\nGabarito\n9-A 10-B`
+    );
+    expect(resumo(questoes)).toEqual([
+      { n: 9, alts: 2, gab: 'A', anulada: false, erros: [] },
+      { n: 10, alts: 2, gab: 'B', anulada: false, erros: [] },
+    ]);
+    expect(questoes[0].enunciado).toBe('Faixa etária de maior incidência: entre 10 - 15 anos de idade, qual o diagnóstico?');
+  });
+
+  it('número fora da sequência no comentário e nas alternativas é continuação, não questão nova', () => {
+    const { questoes, avisos } = ler(
+      `Questão 5\nPaciente com febre.\nA) Dengue\nB) Zika\nResposta: A\nComentário: Os critérios são:\n1. febre\n2. mialgia\nQuestão 6\nOutra.\nA) um\nB) dois\nResposta: B`
+    );
+    expect(resumo(questoes)).toEqual([
+      { n: 5, alts: 2, gab: 'A', anulada: false, erros: [] },
+      { n: 6, alts: 2, gab: 'B', anulada: false, erros: [] },
+    ]);
+    expect(questoes[0].comentario).toBe('Os critérios são: 1. febre 2. mialgia');
+    expect(avisos).toEqual([]);
+  });
+
+  it('questão realmente pulada (a próxima tem alternativa A logo abaixo) continua sendo lida, só com aviso', () => {
+    const { questoes, avisos } = ler(`1. Um?\nA) x\nB) y\nResposta: A\n2. Dois?\nA) x\nB) y\nResposta: B\n5. Cinco?\nA) x\nB) y\nResposta: A\nComentário: texto\n`);
+    expect(questoes.map((q) => q.numero)).toEqual([1, 2, 5]);
+    expect(gravaveis(questoes)).toHaveLength(3);
+    expect(avisos).toEqual(['Numeração pulada: depois da questão 2 vem a 5 (faltam 3, 4).']);
+  });
+
+  it('numeração fora de ordem e repetida bloqueia as questões envolvidas, com o motivo', () => {
+    const rep = ler(`1. Um?\nA) x\nB) y\nResposta: A\n2. Dois?\nA) x\nB) y\nResposta: A\n2. Dois de novo?\nA) x\nB) y\nResposta: A\n`);
+    // As duas com o número repetido e a que vem antes da primeira (pode ter sido cortada) ficam bloqueadas.
+    expect(rep.questoes.map((q) => q.erros)).toEqual(Array(3).fill(['Numeração ambígua — confira o texto.']));
+    const fora = ler(`1. Um?\nA) x\nB) y\nResposta: A\n3. Três?\nA) x\nB) y\nResposta: A\n2. Dois?\nA) x\nB) y\nResposta: A\n`);
+    expect(fora.avisos).toContain('Numeração fora de ordem: a questão 2 vem depois da 3.');
+    expect(fora.questoes.map((q) => q.erros.length)).toEqual([0, 1, 1]);
+  });
+
+  it('questão com menos de 2 alternativas continua bloqueada', () => {
+    const { questoes } = ler(`1. Um?\nA) x\nResposta: A\n`);
+    expect(gravaveis(questoes)).toEqual([]);
+  });
+});
+
+describe('lerProvaEmTexto — bloco de gabarito só aplica o que entende', () => {
+  const alts = 'A) a\nB) b\nC) c\nD) d\nE) e';
+
+  it('frase comum com números ("Questões 1 e 2 anuladas após recursos") marca essas questões como anuladas, sem inventar letra', () => {
+    const { questoes, avisos } = ler(`1. P1\n${alts}\n2. P2\n${alts}\n3. P3\n${alts}\nGABARITO\n3-C\nQuestões 1 e 2 anuladas após recursos`);
+    expect(resumo(questoes)).toEqual([
+      { n: 1, alts: 5, gab: null, anulada: true, erros: ['Anulada no gabarito — não é importada.'] },
+      { n: 2, alts: 5, gab: null, anulada: true, erros: ['Anulada no gabarito — não é importada.'] },
+      { n: 3, alts: 5, gab: 'C', anulada: false, erros: [] },
+    ]);
+    expect(avisos).toEqual([]);
+  });
+
+  it('observação com datas ("Recursos de 10 a 15 de março") não vira par: a questão 10 segue com a letra do gabarito', () => {
+    const { questoes, avisos } = ler(
+      `10. P10\n${alts}\n11. P11\n${alts}\nGABARITO DEFINITIVO\n10-C 11-D\nRecursos de 10 a 15 de março; 11 e 12 com nova redação`
+    );
+    expect(questoes.map((q) => q.gabarito)).toEqual(['C', 'D']);
+    expect(avisos).toEqual([
+      'Linha do gabarito não entendida (nenhum gabarito foi tirado dela): "Recursos de 10 a 15 de março; 11 e 12 com nova redação".',
+    ]);
+  });
+
+  it('linha com pares e sobra não entendida não aplica nenhum par: as questões ficam sem gabarito e bloqueadas', () => {
+    const { questoes, avisos } = ler(`1. P1\n${alts}\n2. P2\n${alts}\nGabarito\n1-B 2-C conforme edital`);
+    expect(questoes.map((q) => q.erros)).toEqual([['Sem gabarito.'], ['Sem gabarito.']]);
+    expect(avisos).toHaveLength(1);
+  });
+
+  it('letra minúscula no bloco não vale como resposta', () => {
+    const { questoes } = ler(`1. P1\n${alts}\nGabarito\n1-b`);
+    expect(questoes[0].erros).toEqual(['Sem gabarito.']);
+  });
+
+  it('"Gabarito:" no meio do enunciado, com texto depois, não engole a questão: só a linha-título abre o bloco', () => {
+    const { questoes } = ler(`1. Sobre inflamação,\nRespostas agudas aparecem em 2 a 3 dias.\nA) certo\nB) errado\nResposta: A\n2. Outra.\nA) um\nB) dois\nResposta: B`);
+    expect(resumo(questoes)).toEqual([
+      { n: 1, alts: 2, gab: 'A', anulada: false, erros: [] },
+      { n: 2, alts: 2, gab: 'B', anulada: false, erros: [] },
+    ]);
+    expect(questoes[0].enunciado).toBe('Sobre inflamação, Respostas agudas aparecem em 2 a 3 dias.');
+  });
+
+  it('linha-título "Gabarito:" no meio da questão, com a resposta na linha de baixo: nada gravável e o motivo na questão', () => {
+    const { questoes } = ler(`1. Pergunta um.\nA) um\nB) dois\nGabarito:\nB\n2. Pergunta dois.\nA) um\nB) dois\nGabarito:\nA`);
+    expect(questoes.filter((q) => q.erros.length === 0)).toEqual([]);
+    expect(questoes[0].erros[0]).toMatch(/foi tratado como gabarito e ignorado/);
+  });
+
+  it('nova questão numerada depois do título encerra o bloco', () => {
+    const { questoes } = ler(`1. P1\nA) a\nB) b\nResposta: A\nRespostas\n2. P2\nA) a\nB) b\nResposta: B`);
+    expect(resumo(questoes)).toEqual([
+      { n: 1, alts: 2, gab: 'A', anulada: false, erros: [] },
+      { n: 2, alts: 2, gab: 'B', anulada: false, erros: [] },
+    ]);
+  });
+});
+
+describe('lerProvaEmTexto — linha que começa com "Letra." dentro de uma alternativa', () => {
+  it('"B. pertussis" quebrado no meio da alternativa A não abre a alternativa B: fica no texto, com aviso na questão', () => {
+    const { questoes } = ler(`1. Agente da coqueluche?\nA) Bactéria gram-negativa\nB. pertussis, cocobacilo\nB) Vírus\nC) Fungo\nResposta: A`);
+    expect(questoes[0].alternativas.map((a) => a.letter)).toEqual(['A', 'B', 'C']);
+    expect(questoes[0].alternativas[0].text).toBe('Bactéria gram-negativa B. pertussis, cocobacilo');
+    expect(questoes[0].avisos).toHaveLength(1);
+    expect(questoes[0].avisos[0]).toMatch(/B\. pertussis/);
+    expect(questoes[0].erros).toEqual([]);
+  });
+
+  it('lista inteira no estilo "A." com frases terminadas em ponto continua lida; "A -" também', () => {
+    const ponto = ler(`1. Um?\nA. Sim.\nB. Não.\nC. Talvez.\nResposta: B`);
+    expect(ponto.questoes[0].alternativas).toHaveLength(3);
+    const hifen = ler(`1. Um?\nA - Sim\nB - Não\nResposta: B`);
+    expect(hifen.questoes[0].alternativas).toHaveLength(2);
   });
 });
 

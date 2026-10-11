@@ -56,6 +56,8 @@ interface RowState {
   /** IMPORT-2: só as marcadas são gravadas. Nasce marcada, menos a que já existe. */
   selecionada: boolean;
   jaExiste: boolean;
+  /** A mesma questão (enunciado, banca e ano) já apareceu antes neste mesmo lote: a segunda vem desmarcada. */
+  repetidaNoTexto: boolean;
 }
 
 /** De onde veio o lote: arquivo escolhido ou texto colado (IMPORT-2). */
@@ -109,15 +111,26 @@ export const ImportQuestionsModal: React.FC<ImportQuestionsModalProps> = ({
   ];
 
   /** Cada questão lida vira uma linha da prévia; o que o arquivo cita de material é resolvido aqui (P10). */
-  const montarLinhas = (previews: QuestionImportPreview[]): RowState[] =>
-    previews.map((preview) => {
-      const jaExiste = chavesExistentes.has(chaveDeRepeticao(preview));
-      const base = { overrideDisciplineId: preview.disciplineId, overrideThemeId: preview.themeId, selecionada: !jaExiste, jaExiste };
+  const montarLinhas = (previews: QuestionImportPreview[]): RowState[] => {
+    const vistasNoLote = new Set<string>();
+    return previews.map((preview) => {
+      const chave = chaveDeRepeticao(preview);
+      const jaExiste = chavesExistentes.has(chave);
+      const repetidaNoTexto = vistasNoLote.has(chave);
+      vistasNoLote.add(chave);
+      const base = {
+        overrideDisciplineId: preview.disciplineId,
+        overrideThemeId: preview.themeId,
+        selecionada: !jaExiste && !repetidaNoTexto,
+        jaExiste,
+        repetidaNoTexto,
+      };
       // P10: a questão que cita material (e seção) no arquivo se liga a eles; o que não se acha bloqueia a linha.
       if (preview.materialLinks.length === 0) return { preview, ...base };
       const { links, erros } = resolverLigacoesDoArquivo(preview.materialLinks, compendiums);
       return { preview: { ...preview, blockingErrors: [...preview.blockingErrors, ...erros] }, ...base, fileLinks: links };
     });
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -518,6 +531,15 @@ export const ImportQuestionsModal: React.FC<ImportQuestionsModalProps> = ({
                         <span>
                           Mesmo enunciado, banca e ano de uma questão que já está no sistema — vem desmarcada.
                         </span>
+                      </div>
+                    )}
+
+                    {row.repetidaNoTexto && (
+                      <div className="flex flex-wrap items-center gap-2 text-amber-700 dark:text-amber-400">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800">
+                          Repetida neste texto
+                        </span>
+                        <span>Mesmo enunciado, banca e ano de uma questão que aparece antes neste mesmo texto — vem desmarcada.</span>
                       </div>
                     )}
 

@@ -311,15 +311,28 @@ O que o NexusMed reconhece, sempre **no começo da linha**:
   quebras de linha do PDF dentro de um parágrafo são juntadas, e a linha
   em branco entre parágrafos é mantida.
 - **Alternativas**, de A em diante e em sequência, sem limite de
-  quantidade: `A)`, `A.`, `(A)`, `a)` ou `A -`.
+  quantidade: `A)`, `A.`, `(A)`, `a)` ou `A -`. `A)`, `(A)` e `a)` valem
+  sempre; `A.` e `A -` também aparecem em frases comuns (uma linha
+  quebrada que comece com `B. pertussis` não é a alternativa B), então
+  só valem na lista que já usa esse estilo ou quando a alternativa
+  anterior terminou com ponto final; na dúvida, a linha fica no texto da
+  alternativa anterior e a prévia avisa.
 - **Gabarito**, de um destes dois jeitos:
   - em cada questão: `Resposta: B`, `Gabarito: B` ou
     `Alternativa correta: B`;
-  - em bloco, no fim da prova: uma linha só com `Gabarito` e, abaixo (ou
-    na mesma linha, separados por vírgula ou espaço), os pares `1-B`,
-    `1 B`, `1) B` ou `01. B`.
-- **Questão anulada:** no gabarito, `ANULADA`, `*` ou `X`. Ela aparece
-  na prévia marcada como **Anulada** e não é importada.
+  - em bloco, no fim da prova: uma linha que seja só o título
+    (`Gabarito` ou `Respostas`, com ou sem `:`) e, abaixo, os pares
+    `1-B`, `1 B`, `1) B` ou `01. B`, um por linha ou vários na mesma linha
+    separados por vírgula ou espaço. Só **letra maiúscula** vale como
+    resposta. Uma linha do bloco que tenha qualquer coisa além de pares
+    (por exemplo, `Recursos de 10 a 15 de março`) não é lida: nenhum par
+    dela é aproveitado, a prévia mostra a linha e as questões que
+    dependiam dela ficam "Sem gabarito". Uma nova questão numerada depois
+    do título encerra o bloco.
+- **Questão anulada:** no gabarito, `ANULADA`, `*` ou `X`, ou uma linha
+  do bloco como `Questões 1 e 2 anuladas` (só números separados por
+  vírgula ou `e`). Ela aparece na prévia marcada como **Anulada** e não é
+  importada.
 - **Comentário** (opcional): uma linha que comece com `Comentário:`,
   até a próxima questão. Vira o comentário geral do rascunho.
 
@@ -362,19 +375,31 @@ alternativas com a correta marcada e os avisos e erros:
   de uma vez para todas em **"Aplicar a todas"**.
 - **Erro que bloqueia** a questão (ela não é gravada, e as outras
   seguem): **"Sem gabarito"**, gabarito que não é uma das alternativas,
-  menos de 2 alternativas, enunciado vazio, anulada.
-- **Aviso** (não bloqueia): numeração pulada ou repetida (por exemplo, da
-  questão 2 para a 5), linha do gabarito que não se entendeu e o lembrete
-  de que o rascunho ainda não tem explicações por alternativa, comentário
-  e pérola (obrigatórios antes de publicar, Passo 3).
+  menos de 2 alternativas, enunciado vazio, anulada e **"Numeração
+  ambígua — confira o texto"** (número repetido ou fora de ordem: ficam
+  bloqueadas as questões com o número e a que vem logo antes, porque
+  uma delas pode ter sido cortada ao meio).
+- **Aviso** (não bloqueia): numeração pulada (por exemplo, da questão 2
+  para a 5), linha do gabarito que não se entendeu, linha lida como
+  continuação de uma alternativa e o lembrete de que o rascunho ainda não
+  tem explicações por alternativa, comentário e pérola (obrigatórios
+  antes de publicar, Passo 3).
 - **"Já existe"**: se o enunciado (sem diferenciar maiúsculas nem espaços
   repetidos), a banca e o ano são iguais aos de uma questão que já está
   no sistema, a questão vem desmarcada. Marque-a se quiser importar mesmo
-  assim.
+  assim. A mesma coisa vale para a questão repetida dentro do próprio
+  texto colado: a segunda vem desmarcada como **"Repetida neste texto"**.
 
-Cuidados com o texto do PDF: um item de lista no enunciado que comece com
-número e ponto (`1. Fumo`) só é entendido como parte do enunciado quando
-o número não é o da próxima questão; prefira conferir a prévia. Texto que
+Cuidados com o texto do PDF: um número no começo da linha só abre uma
+questão nova quando a questão anterior já tem 2 alternativas e o número
+é o seguinte (ou, se a numeração não segue, quando logo abaixo vem a
+alternativa A). Por isso `1. Fumo` e `2. Álcool` dentro do enunciado, ou
+`2 - 3 tomadas` no meio de uma alternativa, ficam no texto da questão.
+Quando mesmo assim o texto engana o NexusMed, o resultado é sempre uma
+questão bloqueada com o motivo na linha, nunca um gabarito gravado em
+silêncio: confira a prévia e corrija o texto. Uma prova que recomeça a
+numeração (duas seções de 1 a 50) fica bloqueada por numeração repetida:
+cole uma seção por vez. Texto que
 já esteja no formato `.md` deste guia (blocos `## Questão N`) também pode
 ser colado: vale o que o arquivo diz, e a banca e o ano preenchidos
 entram só nas questões que não trazem os seus.
