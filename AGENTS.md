@@ -326,6 +326,8 @@ seção "Armadilhas já descobertas".
     45-A) não distingue o cartão escrito: não a rode sem esse filtro. pgTAP que cria
     cartões escritos apaga os seus no fim (a reconciliação da 45-A agrupa todos).
 
+24. **Telas de estudo recebem só questões de residência (RESID-1, D-14, 11/10/2026).** O `App.tsx` filtra `questions` por `soQuestoesDeResidencia` (`src/utils/questoesDeResidencia.ts`), a única definição de residência; tela nova que lista ou conta questões recebe essa lista, nunca `todasAsQuestoes`, que é só da Área Editorial. Conta de desempenho usa `respostasDasQuestoes`: resposta antiga a questão de estudo não entra em conta nenhuma.
+
 ## Convenções de trabalho
 
 - **Toda mudança entra em `main` por Pull Request com CI verde** (desde

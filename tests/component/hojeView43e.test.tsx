@@ -227,3 +227,23 @@ describe('HojeView (43-E)', () => {
     expect(screen.queryByText(/Carregando/)).toBeNull();
   });
 });
+
+// RESID-1 (D-14): sem nenhuma questão de residência publicada, "tudo feito" seria falso.
+describe('HojeView sem questão de residência (RESID-1)', () => {
+  it('mostra o aviso no bloco de teste, em vez de "Tudo feito por hoje"', async () => {
+    getLeituras.mockResolvedValue([{ materialId: 'a', secoesLidas: 1, ultimaLeitura: agora }]);
+    renderHoje({ questions: [] });
+
+    const bloco = await screen.findByRole('region', { name: 'Testar o que li' });
+    expect(within(bloco).getByText('Ainda não há questões de residência publicadas.')).toBeTruthy();
+    expect(screen.queryByText(/Tudo feito/)).toBeNull();
+    expect(screen.queryByText(/Nenhum teste pendente/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Testar o que li' })).toBeNull();
+  });
+
+  it('com os dados do app ainda sem vir do servidor, não afirma que não há questões', async () => {
+    renderHoje({ questions: [], dataReady: false });
+    await waitFor(() => expect(getLeituras).toHaveBeenCalled());
+    expect(screen.queryByText('Ainda não há questões de residência publicadas.')).toBeNull();
+  });
+});

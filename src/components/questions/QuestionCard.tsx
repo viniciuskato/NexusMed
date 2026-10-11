@@ -27,6 +27,7 @@ import { ReportarErroDaQuestao } from '../material/ReportarErroDoMaterial';
 import { ConnectionNotice } from '../common/ConnectionNotice';
 import { LoadStatus, loadStatusOf } from '../../services/connectivity';
 import { useAutoRetry } from '../../hooks/useAutoRetry';
+import { soQuestoesDeResidencia } from '../../utils/questoesDeResidencia';
 
 interface QuestionCardProps {
   question: Question;
@@ -281,7 +282,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       answersRepository.getAnswers(),
       questionsRepository.getQuestions(),
     ]);
-    const disciplineByQuestionId = new Map(allQuestions.map((q) => [q.id, q.disciplineId]));
+    // D-14: a sequência de acertos só olha respostas a questões de residência.
+    const disciplineByQuestionId = new Map(soQuestoesDeResidencia(allQuestions).map((q) => [q.id, q.disciplineId]));
 
     const sameDisciplineAnswers = Object.values(allAnswers)
       .filter((a) => disciplineByQuestionId.get(a.questionId) === question.disciplineId)

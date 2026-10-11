@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import {
   ShieldAlert,
 } from 'lucide-react';
@@ -21,6 +21,11 @@ import { simuladosRepository } from './repositories/SimuladosRepository';
 import { feedbackRepository } from './repositories/FeedbackRepository';
 import { questionReactionsRepository } from './repositories/QuestionReactionsRepository';
 import { buildSimuladoSelection, SimuladoSelectionResult } from './services/simuladoSelection';
+import {
+  respostasDasQuestoes,
+  soQuestoesDeResidencia,
+  TEXTO_SEM_QUESTOES_DE_RESIDENCIA,
+} from './utils/questoesDeResidencia';
 import { questionMatchesMaterialScope } from './utils/questionMaterials';
 import { jaEntrouNestaAba, marcarEntradaNestaAba } from './utils/navEntrada';
 
@@ -171,6 +176,8 @@ function AuthenticatedApp() {
   // questões elegíveis existiam, para a UI avisar quando pedir mais do que
   // o banco tem disponível.
   const [activeSimuladoSelection, setActiveSimuladoSelection] = useState<SimuladoSelectionResult | null>(null);
+  // RESID-1: recado de um simulado que não abriu por não ter nenhuma questão de residência elegível.
+  const [avisoSimuladoVazio, setAvisoSimuladoVazio] = useState<string | null>(null);
   const [filterThemeForQuestions, setFilterThemeForQuestions] = useState<string | undefined>(undefined);
   const [focusQuestionId, setFocusQuestionId] = useState<string | undefined>(undefined);
   // "Treinar Apenas Questões Erradas" (Prompt 10-A): antes, esse botão criava
@@ -252,6 +259,7 @@ function AuthenticatedApp() {
     setNavStateRestored(false);
     setActiveSimuladoConfig(null);
     setActiveSimuladoSelection(null);
+    setAvisoSimuladoVazio(null);
     setSelectedCompendiumId(null);
     setSelectedSectionId(undefined);
     setLibraryLastView('list');
@@ -293,13 +301,18 @@ function AuthenticatedApp() {
     disciplines,
     themes,
     compendiums,
-    questions,
+    questions: todasAsQuestoes,
     answers,
     loading: dataLoading,
     ready: dataReady,
     status: dataStatus,
     refresh,
   } = useAppData(user?.id ?? null);
+
+  // RESID-1 (D-14): as telas de estudo só veem questões de residência (banca e
+  // ano de prova reais). O filtro é este, num ponto só; a Área Editorial
+  // (admin) continua com `todasAsQuestoes`, inclusive rascunhos e autorais.
+  const questions = useMemo(() => soQuestoesDeResidencia(todasAsQuestoes), [todasAsQuestoes]);
 
   // Nunca lança: as telas chamam isto como `onUpdate` depois de gravar.
   const refreshData = useCallback(async () => {
@@ -482,7 +495,10 @@ function AuthenticatedApp() {
   const isAdmin = profile?.role === 'admin' && profile?.status === 'active';
 
   // Calculate badges
-  const errorCount = (Object.values(answers) as QuestionAnswerRecord[]).filter((a) => !a.isCorrect).length;
+  // Só respostas a questões de residência contam (a resposta antiga a questão de estudo não entra em conta nenhuma).
+  const errorCount = (Object.values(respostasDasQuestoes(answers, questions)) as QuestionAnswerRecord[]).filter(
+    (a) => !a.isCorrect
+  ).length;
 
   // Navigators
   const handleOpenCompendium = (compendiumId?: string, sectionId?: string, originQuestionId?: string) => {
@@ -521,7 +537,7 @@ function AuthenticatedApp() {
   // ainda não o tem: recarrega antes de abrir.
   // 44-H2: "Abrir as questões publicadas" a partir de um envio de questões.
   const handleAbrirQuestoesPublicadas = async (questionIds: string[]) => {
-    if (!questionIds.every((id) => questions.some((q) => q.id === id))) await refreshData();
+    if (!questionIds.every((id) => todasAsQuestoes.some((q) => q.id === id))) await refreshData();
     handleStartTestarOQueLi(questionIds);
   };
 
@@ -620,6 +636,20 @@ function AuthenticatedApp() {
     // render), preservando a mesma seleção/ordem enquanto esta sessão
     // permanecer montada.
     const selection = buildSimuladoSelection(questions, config, answers);
+    // D-14: sem nenhuma questão de residência elegível não se abre sessão (e, portanto, nada é gravado).
+    if (selection.selected.length === 0) {
+      setActiveSimuladoConfig(null);
+      setActiveSimuladoSelection(null);
+      setIsCreateSimuladoOpen(false);
+      setAvisoSimuladoVazio(
+        questions.length === 0
+          ? TEXTO_SEM_QUESTOES_DE_RESIDENCIA
+          : 'Nenhuma questão de residência corresponde a este simulado. Ajuste os filtros ou escolha outro.'
+      );
+      setActiveView('simulados');
+      return;
+    }
+    setAvisoSimuladoVazio(null);
     setActiveSimuladoConfig(config);
     setActiveSimuladoSelection(selection);
     setIsCreateSimuladoOpen(false);
@@ -683,6 +713,7 @@ function AuthenticatedApp() {
             <DashboardView
               disciplines={disciplines}
               questions={questions}
+              dadosProntos={dataReady}
               compendiums={compendiums}
               lastReadingSession={lastReadingSession}
               onSelectView={handleSelectView}
@@ -695,6 +726,7 @@ function AuthenticatedApp() {
               disciplines={disciplines}
               themes={themes}
               questions={questions}
+              dadosProntos={dataReady}
               compendiums={compendiums}
               onSelectView={handleSelectView}
               onOpenCompendium={handleOpenCompendium}
@@ -779,6 +811,7 @@ function AuthenticatedApp() {
           {activeView === 'questions' && (
             <QuestionsView
               questions={questions}
+              dadosProntos={dataReady}
               disciplines={disciplines}
               themes={themes}
               compendiums={compendiums}
@@ -803,6 +836,10 @@ function AuthenticatedApp() {
             <SimuladosView
               disciplines={disciplines}
               themes={themes}
+              questions={questions}
+              answers={answers}
+              dadosProntos={dataReady}
+              aviso={avisoSimuladoVazio}
               onOpenCreateModal={() => setIsCreateSimuladoOpen(true)}
               onStartCustomSimulado={handleStartCustomSimulado}
               onUpdate={refreshData}
@@ -832,6 +869,7 @@ function AuthenticatedApp() {
               disciplines={disciplines}
               themes={themes}
               questions={questions}
+              dadosProntos={dataReady}
               compendiums={compendiums}
               onSelectView={handleSelectView}
               onOpenCompendium={handleOpenCompendium}
@@ -892,7 +930,7 @@ function AuthenticatedApp() {
               <AdminCMSView
                 disciplines={disciplines}
                 themes={themes}
-                questions={questions}
+                questions={todasAsQuestoes}
                 compendiums={compendiums}
                 onRefreshData={refreshData}
                 onOpenCompendium={(compendiumId) => handleOpenCompendium(compendiumId)}

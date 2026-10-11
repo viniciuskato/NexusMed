@@ -157,7 +157,8 @@ test.describe('Questões: revisão por IA e publicação pelo veredito (44-H2)',
     await expect(item.getByTestId('questoes-publicadas')).toHaveText('2 questões publicadas.');
     await item.getByRole('button', { name: 'Abrir as questões publicadas' }).click();
 
-    await expect(page.locator('#questions-testar-scope')).toContainText('2 questões');
+    // RESID-1 (D-14): das 2 publicadas, só a de banca real (ENARE 2024) aparece; a autoral, sem banca nem ano, fica fora da tela.
+    await expect(page.locator('#questions-testar-scope')).toContainText('1 questão dos materiais');
     const card = page.locator('[data-answer-origin]').first();
     await expect(card.getByTestId('selo-da-questao')).toHaveText('Revisado por IA — ainda não lido por uma pessoa');
     await card.getByText('Obstrutivo', { exact: false }).first().click();

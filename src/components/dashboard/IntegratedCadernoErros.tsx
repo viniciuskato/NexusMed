@@ -34,8 +34,10 @@ import { useServerLoad } from '../../hooks/useServerLoad';
 import { ConnectionNotice } from '../common/ConnectionNotice';
 import { LoadStatus, loadStatusOf } from '../../services/connectivity';
 import { useAutoRetry } from '../../hooks/useAutoRetry';
+import { errosDasQuestoes, respostasDasQuestoes } from '../../utils/questoesDeResidencia';
 
 interface IntegratedCadernoErrosProps {
+  /** Só questões de residência (RESID-1, D-14): quem monta a lista é o App. */
   questions: Question[];
   disciplines: Discipline[];
   themes: Theme[];
@@ -67,9 +69,12 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  const [answers, setAnswers] = useState<Record<string, QuestionAnswerRecord>>({});
+  const [todasAsRespostas, setTodasAsRespostas] = useState<Record<string, QuestionAnswerRecord>>({});
   const [reviews, setReviews] = useState<Record<string, QuestionReviewResult>>({});
-  const [errorLogs, setErrorLogs] = useState<ErrorLogItem[]>([]);
+  const [todosOsErros, setTodosOsErros] = useState<ErrorLogItem[]>([]);
+  // D-14: erro em questão que não é de residência (estudo, autoral) não aparece nem conta no caderno.
+  const answers = useMemo(() => respostasDasQuestoes(todasAsRespostas, questions), [todasAsRespostas, questions]);
+  const errorLogs = useMemo(() => errosDasQuestoes(todosOsErros, questions), [todosOsErros, questions]);
 
   // Do servidor (45-G, D-2): sem rede, o que já está na tela fica e o aviso aparece.
   const { status: loadStatus, reload } = useServerLoad(async () => {
@@ -78,8 +83,8 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
       errorNotebookRepository.getErrorLogs(),
     ]);
     return () => {
-      setAnswers(nextAnswers);
-      setErrorLogs(nextErrorLogs);
+      setTodasAsRespostas(nextAnswers);
+      setTodosOsErros(nextErrorLogs);
     };
   });
 
@@ -252,7 +257,7 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
   };
 
   const applyErrorLogUpdate = (updated: ErrorLogItem) => {
-    setErrorLogs((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+    setTodosOsErros((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
   };
 
   const handleToggleResolved = async (questionId: string, resolved: boolean) => {

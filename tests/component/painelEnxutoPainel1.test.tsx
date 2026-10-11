@@ -164,7 +164,7 @@ describe('Painel enxuto (PAINEL-1)', () => {
   });
 
   it('usuário novo: cada bloco tem uma frase curta e um botão, e nada quebra', async () => {
-    const { onSelectView } = renderPainel({ disciplines: [], questions: [], compendiums: [] });
+    const { onSelectView } = renderPainel({ disciplines: [], compendiums: [] });
     await screen.findByText('Nenhum material em andamento');
     expect(screen.getByText('Nenhuma questão respondida ainda')).toBeTruthy();
     expect(document.querySelectorAll('#painel-view section')).toHaveLength(3);

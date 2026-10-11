@@ -59,7 +59,7 @@ const themes: Theme[] = [{ id: 't1', disciplineId: 'd1', name: 'Tema Um' } as Th
 const questions: Question[] = [
   {
     id: 'q-1', disciplineId: 'd1', themeId: 't1', compendiumRefId: 'mat-1', materialLinks: [{ materialId: 'mat-1' }],
-    cycle: 'clinico', difficulty: 'medio', institution: '', year: 2026, clinicalVignette: '', questionStem: 'Questão um',
+    cycle: 'clinico', difficulty: 'medio', institution: 'ENARE', year: 2024, clinicalVignette: '', questionStem: 'Questão um',
     options: [], generalCommentary: '', highYieldSummary: '', tags: [],
   },
 ];
