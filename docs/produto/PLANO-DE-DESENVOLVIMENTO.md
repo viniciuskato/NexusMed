@@ -1542,9 +1542,10 @@ conflitam aqui. "Publicado" significa em produção
 | 44-G | Concluída | #104 | — |
 | 44-H1 | Concluída | #104 | — |
 | 44-H2 | Concluída | #104 | — |
-| MAT-1 | Em revisão (migration: aplicar no remoto antes do merge) | — | — |
-| CARD-1 | Em revisão (migration: aplicar no remoto antes do merge) | — | — |
-| PAINEL-1 | Em revisão | — | — |
+| MAT-1 | Concluída | #117 | — |
+| CARD-1 | Concluída; tela retirada pela D-14 (11/10) | #118 | — |
+| PAINEL-1 | Concluída; será substituída pela PAINEL-2 | #119 | — |
+| CORTE-1 | Em revisão | — | — |
 | 45-A | Concluída; correções da revisão do #76 no #81 | #74, #76, #81 | 24/09 (parte 2: migration depois do merge — INC-2026-004); correções: 25/09 (INC-2026-005) |
 | 45-B | Concluída | #71 | 24/09 |
 | 45-C | Concluída (item de desempenho movido para a 46-D) | #73 | 24/09 |

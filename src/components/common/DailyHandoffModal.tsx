@@ -21,7 +21,6 @@ interface DailyHandoffModalProps {
   themes: Theme[];
   answers: Record<string, QuestionAnswerRecord>;
   errorLogs: ErrorLogItem[];
-  streakDays: number;
 }
 
 export const DailyHandoffModal: React.FC<DailyHandoffModalProps> = ({
@@ -31,7 +30,6 @@ export const DailyHandoffModal: React.FC<DailyHandoffModalProps> = ({
   disciplines,
   themes,
   answers,
-  streakDays,
 }) => {
   const { profile, user } = useAuth();
   const [copied, setCopied] = useState(false);
@@ -99,7 +97,7 @@ export const DailyHandoffModal: React.FC<DailyHandoffModalProps> = ({
 
     let report = `📋 PASSAGEM DE PLANTÃO — NEXUSMED\n`;
     report += `Data: ${dateFormatted}\n`;
-    report += `Médico: ${studentName} | Ofensiva: ${streakDays} dias\n\n`;
+    report += `Médico: ${studentName}\n\n`;
     report += `── 1. SITUAÇÃO CLÍNICA DO DIA (S) ──\n`;
     report += `• Questões resolvidas hoje: ${todayStats.totalToday}\n`;
     report += `• Acurácia do plantão: ${todayStats.accuracyToday}% (${todayStats.correctToday} acertos, ${todayStats.wrongToday} erros)\n\n`;
@@ -115,9 +113,9 @@ export const DailyHandoffModal: React.FC<DailyHandoffModalProps> = ({
 
     report += `\n── 3. CONDUTA RECOMENDADA PARA AMANHÃ (R) ──\n`;
     if (todayStats.criticalPoints.length > 0) {
-      report += `• Revisar diretrizes e flashcards de ${todayStats.criticalPoints[0].name}.\n`;
+      report += `• Revisar diretrizes e refazer as questões de ${todayStats.criticalPoints[0].name}.\n`;
     } else {
-      report += `• Manter ciclo ativo de SRS e avançar em novo bloco temático.\n`;
+      report += `• Manter o ritmo de questões e avançar em novo bloco temático.\n`;
     }
 
     report += `\n"Plantão concluído com foco e método. Descanso merecido!"\n`;
@@ -168,9 +166,6 @@ export const DailyHandoffModal: React.FC<DailyHandoffModalProps> = ({
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-teal-400">
                   Ritual de Fechamento Diário
-                </span>
-                <span className="px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-[10px] font-bold">
-                  {streakDays}d Streak
                 </span>
               </div>
               <h3 id="daily-handoff-title" className="text-lg font-bold tracking-tight">Passagem de Plantão</h3>

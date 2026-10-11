@@ -31,8 +31,9 @@ test.describe('Registro de erros do cliente', () => {
     cleanup.push(() => deleteTestUser(student.id));
 
     await login(page, student);
-    await page.route('**/assets/ThematicStudyView-*.js', (route) => route.fulfill({ status: 404, body: 'not found' }));
-    await page.locator('#nav-thematic-study').click();
+    await page.route('**/assets/QuestionsView-*.js', (route) => route.fulfill({ status: 404, body: 'not found' }));
+    await page.locator('#nav-resources').click();
+    await page.locator('#nav-resources-questions').click();
     await expect(page.locator('#app-load-error')).toBeVisible({ timeout: 20_000 });
 
     await expect
@@ -41,7 +42,7 @@ test.describe('Registro de erros do cliente', () => {
       })
       .toBe('1');
     expect(psqlLocal(`select url from public.client_errors where user_id = '${student.id}' and kind = 'boundary';`)).toBe(
-      '/#/thematic-study'
+      '/#/questions'
     );
   });
 });

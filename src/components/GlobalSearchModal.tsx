@@ -4,10 +4,9 @@ import {
   X,
   BookOpen,
   HelpCircle,
-  Layers,
   ChevronRight,
 } from 'lucide-react';
-import { Discipline, Question, Flashcard } from '../types';
+import { Discipline, Question } from '../types';
 import { useDialogA11y } from '../hooks/useDialogA11y';
 import { parseInline } from './common/SafeMarkdown';
 import { HighlightedText } from './common/HighlightedText';
@@ -18,10 +17,8 @@ interface GlobalSearchModalProps {
   onClose: () => void;
   disciplines: Discipline[];
   questions: Question[];
-  flashcards: Flashcard[];
   onNavigateToCompendium: (compendiumId: string, sectionId?: string) => void;
   onNavigateToQuestion: (questionId: string) => void;
-  onNavigateToFlashcards: (filterTag?: string) => void;
 }
 
 // Espera entre a última tecla e a ida ao banco.
@@ -44,13 +41,11 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
   onClose,
   disciplines,
   questions,
-  flashcards,
   onNavigateToCompendium,
   onNavigateToQuestion,
-  onNavigateToFlashcards,
 }) => {
   const [query, setQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'compendium' | 'question' | 'card'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'compendium' | 'question'>('all');
   const [disciplineId, setDisciplineId] = useState('');
   const [onlyUnread, setOnlyUnread] = useState(false);
 
@@ -105,9 +100,9 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
   const materialResults =
     materialStatus === 'idle' || materialStatus === 'error' || materialSearch?.failed ? [] : materialSearch?.results ?? [];
 
-  // ── Questões e flashcards: filtro local, como antes ───────────────────────
+  // ── Questões: filtro local, como antes ────────────────────────────────────
   const results = useMemo(() => {
-    if (!query.trim() || query.length < 2) return { questions: [], cards: [] };
+    if (!query.trim() || query.length < 2) return { questions: [] };
     const q = query.toLowerCase().trim();
 
     const matchedQuestions = questions.filter(
@@ -118,19 +113,10 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
         ques.tags.some((t) => t.toLowerCase().includes(q))
     );
 
-    const matchedCards = flashcards.filter(
-      (fc) =>
-        fc.front.toLowerCase().includes(q) ||
-        fc.back.toLowerCase().includes(q) ||
-        fc.mechanismHighlight.toLowerCase().includes(q) ||
-        fc.tags.some((t) => t.toLowerCase().includes(q))
-    );
-
     return {
       questions: matchedQuestions,
-      cards: matchedCards,
     };
-  }, [query, questions, flashcards]);
+  }, [query, questions]);
 
   // Foco inicial no campo de busca (antes era `autoFocus`); Escape, Tab preso
   // e devolução de foco ficam com o hook.
@@ -141,8 +127,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
 
   const totalResults =
     materialResults.length +
-    results.questions.length +
-    results.cards.length;
+    results.questions.length;
   const showCompendiums = activeFilter === 'all' || activeFilter === 'compendium';
 
   return (
@@ -225,18 +210,6 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
           >
             <HelpCircle className="w-3.5 h-3.5" />
             <span>Questões ({results.questions.length})</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveFilter('card')}
-            className={`px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              activeFilter === 'card'
-                ? 'bg-teal-700 dark:bg-teal-600 text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/70 dark:hover:bg-[#142038]'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Flashcards ({results.cards.length})</span>
           </button>
         </div>
 
@@ -402,46 +375,6 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                   </div>
                 </div>
               )}
-
-              {/* Flashcards Match */}
-              {(activeFilter === 'all' || activeFilter === 'card') && results.cards.length > 0 && (
-                <div>
-                  <div className="px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5" />
-                    <span>Flashcards de Repetição Espaçada</span>
-                  </div>
-                  <div className="space-y-1.5 mt-1">
-                    {results.cards.map((fc) => (
-                      <button
-                        type="button"
-                        key={fc.id}
-                        onClick={() => {
-                          onNavigateToFlashcards(fc.tags[0]);
-                          onClose();
-                        }}
-                        className="w-full text-left p-2.5 rounded-xl border border-slate-200/80 dark:border-[#243452] bg-white dark:bg-[#142038] hover:border-emerald-300 dark:hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/30 transition-all flex items-center justify-between group cursor-pointer"
-                      >
-                        <div className="space-y-0.5 max-w-[85%]">
-                          <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 line-clamp-1">
-                            {fc.front}
-                          </p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
-                            {parseInline(fc.mechanismHighlight || fc.back)}
-                          </p>
-                          <div className="flex gap-1 flex-wrap">
-                            {fc.tags.map((t) => (
-                              <span key={t} className="text-[9px] px-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded">
-                                #{t}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 shrink-0" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </>
           )}
         </div>
@@ -449,7 +382,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
         {/* Footer info */}
         <div className="p-3 bg-slate-50 dark:bg-[#0B1220] border-t border-slate-100 dark:border-[#243452] flex items-center justify-between text-xs text-slate-400 dark:text-slate-500">
           <span>Pressione <kbd className="px-1 py-0.5 bg-white dark:bg-[#142038] border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded font-mono text-[10px]">ESC</kbd> para fechar</span>
-          <span className="text-teal-700 dark:text-teal-400 font-medium">Pesquisa unificada em 3 bases de conhecimento</span>
+          <span className="text-teal-700 dark:text-teal-400 font-medium">Pesquisa unificada em 2 bases de conhecimento</span>
         </div>
       </div>
     </div>

@@ -7,7 +7,7 @@ import { createTestUser, deleteTestUser, runCleanup, type CreatedTestUser } from
 // o React desmonta a árvore inteira e a pessoa fica com a tela em branco.
 // Aqui o 404 do chunk é simulado interceptando a requisição.
 
-const CHUNK_TELA_TEMATICA = '**/assets/ThematicStudyView-*.js';
+const CHUNK_TELA_QUESTOES = '**/assets/QuestionsView-*.js';
 
 async function login(page: Page, user: CreatedTestUser) {
   await page.goto('/');
@@ -42,7 +42,7 @@ test.describe('Recuperação quando o arquivo de uma tela sumiu depois de um dep
     await login(page, student);
 
     let falhas = 0;
-    await page.route(CHUNK_TELA_TEMATICA, async (route) => {
+    await page.route(CHUNK_TELA_QUESTOES, async (route) => {
       if (falhas === 0) {
         falhas += 1;
         await route.fulfill({ status: 404, body: 'not found' });
@@ -51,10 +51,11 @@ test.describe('Recuperação quando o arquivo de uma tela sumiu depois de um dep
       await route.continue();
     });
 
-    await page.locator('#nav-thematic-study').click();
+    await page.locator('#nav-resources').click();
+    await page.locator('#nav-resources-questions').click();
 
-    await expect(page.locator('#thematic-study-view')).toBeVisible({ timeout: 20_000 });
-    await expect(page).toHaveURL(/#\/thematic-study$/);
+    await expect(page.getByRole('heading', { name: 'Banco de Questões Médicas' })).toBeVisible({ timeout: 20_000 });
+    await expect(page).toHaveURL(/#\/questions$/);
     expect(falhas).toBe(1);
   });
 
@@ -66,9 +67,10 @@ test.describe('Recuperação quando o arquivo de uma tela sumiu depois de um dep
     page.on('load', () => {
       carregamentos += 1;
     });
-    await page.route(CHUNK_TELA_TEMATICA, (route) => route.fulfill({ status: 404, body: 'not found' }));
+    await page.route(CHUNK_TELA_QUESTOES, (route) => route.fulfill({ status: 404, body: 'not found' }));
 
-    await page.locator('#nav-thematic-study').click();
+    await page.locator('#nav-resources').click();
+    await page.locator('#nav-resources-questions').click();
 
     await expect(page.locator('#app-load-error')).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('#btn-app-load-error-reload')).toBeVisible();

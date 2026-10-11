@@ -11,7 +11,6 @@ import { Question, SimuladoConfig, Discipline, Theme, SimuladoSessionData, Quest
 import { answersRepository } from '../../repositories/AnswersRepository';
 import { simuladosRepository } from '../../repositories/SimuladosRepository';
 import type { SimuladoServerResult } from '../../repositories/SimuladosRepository';
-import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { getStorageUser } from '../../services/storage';
 import { QuestionCard } from './QuestionCard';
 
@@ -142,10 +141,6 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
     if (appliedQuestionCorrectionsRef.current.has(question.id)) return;
     appliedQuestionCorrectionsRef.current.add(question.id);
     setReviewResults((previous) => ({ ...previous, [question.id]: review }));
-    if (!review.isCorrect) {
-      // A correção já foi confirmada; só agora o erro pode gerar SRS.
-      void flashcardsRepository.createFlashcardFromQuestion(question, review);
-    }
   }, []);
 
   const applySimulationResult = useCallback((result: SimuladoServerResult, totalTimeSpent: number) => {
@@ -561,7 +556,7 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
                     ? 'Nenhuma resposta será tratada como erro antes da confirmação.'
                     : sessionResults.correctionStatus === 'failed'
                       ? 'A nota não será exibida até o servidor confirmar todas as tentativas.'
-                      : <>Todas as questões erradas foram enviadas para o seu <strong>Caderno de Erros</strong> e ganharam flashcards recomendados para revisão espaçada.</>}
+                      : <>Todas as questões erradas foram enviadas para o seu <strong>Caderno de Erros</strong>.</>}
                 </p>
                 <button
                   onClick={onFinishSession}

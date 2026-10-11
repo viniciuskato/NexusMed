@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  acertosPorDisciplina,
-  cartoesParaHoje,
-  materiaisEmAndamento,
-  resumoDoBaralho,
-} from '../../src/components/dashboard/painelDados';
-import type { Compendium, Discipline, Flashcard, Question, QuestionAnswerRecord } from '../../src/types';
+import { acertosPorDisciplina, materiaisEmAndamento } from '../../src/components/dashboard/painelDados';
+import type { Compendium, Discipline, Question, QuestionAnswerRecord } from '../../src/types';
 
 // PAINEL-1 — as contas do painel enxuto e do "Meu desempenho".
 
@@ -20,21 +15,6 @@ const resp = (questionId: string, isCorrect: boolean): QuestionAnswerRecord => (
 });
 const material = (id: string, title: string, secoes: string[] = []): Compendium =>
   ({ id, title, sections: secoes.map((s) => ({ id: s, title: s })) }) as unknown as Compendium;
-const card = (id: string, extra: Partial<Flashcard> = {}, intervalDays = 1, vencido = false): Flashcard =>
-  ({
-    id,
-    tags: [],
-    srs: {
-      intervalDays,
-      repetitionCount: 1,
-      easeFactor: 2.5,
-      nextDueDate: new Date(Date.now() + (vencido ? -1 : 10) * 86_400_000).toISOString(),
-      state: 'review',
-      reviewHistory: [],
-    },
-    ...extra,
-  }) as Flashcard;
-
 describe('acertosPorDisciplina', () => {
   const disciplinas = [disc('cm', 'Clínica Médica'), disc('pe', 'Pediatria'), disc('gi', 'Ginecologia'), disc('ci', 'Cirurgia')];
   const questoes = [q('1', 'cm'), q('2', 'cm'), q('3', 'cm'), q('4', 'pe'), q('5', 'pe'), q('6', 'gi'), q('7', 'ci')];
@@ -108,26 +88,5 @@ describe('materiaisEmAndamento', () => {
 
   it('sem progresso nenhum, a lista é vazia', () => {
     expect(materiaisEmAndamento(materiais, {}, null)).toEqual([]);
-  });
-});
-
-describe('cartões do painel', () => {
-  it('cartoesParaHoje conta só os vencidos (3 de 5)', () => {
-    const baralho = [card('1', {}, 1, true), card('2', {}, 1, true), card('3', {}, 1, true), card('4'), card('5')];
-    expect(cartoesParaHoje(baralho)).toHaveLength(3);
-  });
-
-  it('resumoDoBaralho: cartão escrito pelo usuário não conta como "nascido de um erro", mesmo com questão de origem', () => {
-    const baralho = [
-      card('de-erro', { questionOriginId: 'q1' }),
-      card('escrito-com-origem', { questionOriginId: 'q2', isWritten: true }),
-      card('escrito-sem-origem', { isWritten: true }),
-      card('err-antigo'),
-      card('com-tag', { tags: ['erro'] }),
-      card('dominado', {}, 30),
-    ];
-    const resumo = resumoDoBaralho(baralho, 2, 1);
-    expect(resumo.errorLinked).toBe(3); // de-erro, err-antigo, com-tag
-    expect(resumo).toMatchObject({ total: 6, due: 2, reviewedToday: 1, mastered: 1, inProgress: 5 });
   });
 });

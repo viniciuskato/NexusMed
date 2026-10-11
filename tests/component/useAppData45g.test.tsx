@@ -22,9 +22,6 @@ vi.mock('../../src/repositories/MaterialsRepository', () => ({
   },
 }));
 vi.mock('../../src/repositories/QuestionsRepository', () => ({ questionsRepository: { getQuestions: () => ok([]) } }));
-vi.mock('../../src/repositories/FlashcardsRepository', () => ({
-  flashcardsRepository: { getFlashcards: () => ok([{ id: 'card-de-A', front: 'CARD DE A' }]) },
-}));
 vi.mock('../../src/repositories/AnswersRepository', () => ({
   answersRepository: {
     getAnswers: () =>
@@ -44,7 +41,7 @@ describe('useAppData', () => {
   it('troca de usuário com a carga do novo falhando: nada do anterior fica (item 2)', async () => {
     const { result, rerender } = renderHook(({ uid }) => useAppData(uid), { initialProps: { uid: 'user-a' as string | null } });
     await waitFor(() => expect(result.current.ready).toBe(true));
-    expect(result.current.flashcards).toHaveLength(1);
+    expect(result.current.compendiums).toHaveLength(1);
     expect(Object.keys(result.current.answers)).toEqual(['q-1']);
 
     serverUp = false; // erro transitório logo depois do login de B
@@ -52,9 +49,8 @@ describe('useAppData', () => {
     await waitFor(() => expect(result.current.status).toBe('offline'));
 
     expect(result.current.ready).toBe(false);
-    expect(result.current.flashcards).toEqual([]);
+    expect(result.current.compendiums).toEqual([]);
     expect(result.current.answers).toEqual({});
-    expect(result.current.stats.totalAnswered ?? 0).toBe(0);
   });
 
   it('carga inicial que falha não fica "pronta" com lista vazia; fica quando a carga dá certo (item 5)', async () => {

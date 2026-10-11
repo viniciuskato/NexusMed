@@ -1,30 +1,26 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowRight, BookOpen, Brain, ChevronRight, Flame, HelpCircle, Library } from 'lucide-react';
-import type { Compendium, Discipline, Flashcard, LastReadingSession, Question, QuestionAnswerRecord } from '../../types';
+import { ArrowRight, BookOpen, ChevronRight, HelpCircle, Library } from 'lucide-react';
+import type { Compendium, Discipline, LastReadingSession, Question, QuestionAnswerRecord } from '../../types';
 import { answersRepository } from '../../repositories/AnswersRepository';
 import { readingProgressRepository } from '../../repositories/ReadingProgressRepository';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
 import { useServerLoad } from '../../hooks/useServerLoad';
-import { GamificationService } from '../../services/gamification';
 import { ConnectionNotice } from '../common/ConnectionNotice';
-import { acertosPorDisciplina, cartoesParaHoje, materiaisEmAndamento } from './painelDados';
+import { acertosPorDisciplina, materiaisEmAndamento } from './painelDados';
 
 // PAINEL-1 (04/10/2026) — o painel enxuto: só o que importa hoje. Três blocos,
-// nesta ordem: "Hoje" (cartões, questões e sequência), "Acertos por disciplina"
-// (gráfico) e "Continue lendo" (materiais em andamento). Todo o resto do painel
-// antigo (nível/XP, KPIs, perfil cognitivo, banca, radar, desafios, SRS
-// detalhado, conquistas, caderno de erros) vive em "Meu desempenho"
-// (`DesempenhoView`), a um clique daqui.
+// nesta ordem: "Hoje" (questões), "Acertos por disciplina" (gráfico) e "Continue
+// lendo" (materiais em andamento). O resto vive em "Meu desempenho"
+// (`DesempenhoView`), a um clique daqui. Cartões, nível/XP e sequência saíram na
+// CORTE-1 (D-14); o painel será refeito na PAINEL-2.
 
 interface DashboardViewProps {
   disciplines: Discipline[];
   questions: Question[];
   compendiums: Compendium[];
-  flashcards: Flashcard[];
   lastReadingSession: LastReadingSession | null;
   onSelectView: (view: string) => void;
   onOpenCompendium: (compendiumId?: string, sectionId?: string) => void;
-  onStartSRS: () => void;
 }
 
 const cardClass =
@@ -39,11 +35,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   disciplines,
   questions,
   compendiums,
-  flashcards,
   lastReadingSession,
   onSelectView,
   onOpenCompendium,
-  onStartSRS,
 }) => {
   useScrollMemory('dashboard');
 
@@ -64,11 +58,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     };
   });
 
-  const cartoesDeHoje = useMemo(() => cartoesParaHoje(flashcards), [flashcards]);
-  const sequencia = useMemo(
-    () => GamificationService.computeRealStats(answers, flashcards, readingProgress).streakDays,
-    [answers, flashcards, readingProgress]
-  );
   const acertos = useMemo(() => acertosPorDisciplina(disciplines, questions, answers), [disciplines, questions, answers]);
   const emAndamento = useMemo(
     () => materiaisEmAndamento(compendiums, readingProgress, lastReadingSession),
@@ -89,31 +78,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <h2 id="painel-hoje-titulo" className={titleClass}>
             Hoje
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="rounded-2xl bg-slate-50 dark:bg-[#142038] border border-slate-200/80 dark:border-[#243452] p-4 flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <Brain className="w-6 h-6 shrink-0 text-indigo-600 dark:text-indigo-300" aria-hidden="true" />
-                <div>
-                  <p id="painel-cartoes-numero" className="text-4xl font-black tabular-nums text-slate-900 dark:text-slate-100 leading-none">
-                    {cartoesDeHoje.length}
-                  </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
-                    {cartoesDeHoje.length === 0 ? 'Nenhum cartão para hoje' : 'cartões para revisar'}
-                  </p>
-                </div>
-              </div>
-              {cartoesDeHoje.length > 0 ? (
-                <button type="button" id="painel-revisar-cartoes" onClick={() => onStartSRS()} className={primaryButtonClass}>
-                  <span>Revisar cartões</span>
-                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                </button>
-              ) : (
-                <button type="button" id="painel-abrir-cartoes" onClick={() => onSelectView('flashcards')} className={secondaryButtonClass}>
-                  <span>Abrir cartões</span>
-                </button>
-              )}
-            </div>
-
+          <div className="grid grid-cols-1 gap-4">
             <div className="rounded-2xl bg-slate-50 dark:bg-[#142038] border border-slate-200/80 dark:border-[#243452] p-4 flex flex-col gap-3">
               <div className="flex items-center gap-3">
                 <HelpCircle className="w-6 h-6 shrink-0 text-teal-700 dark:text-teal-300" aria-hidden="true" />
@@ -123,18 +88,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <span>Fazer questões</span>
                 <ArrowRight className="w-4 h-4" aria-hidden="true" />
               </button>
-            </div>
-
-            <div className="rounded-2xl bg-slate-50 dark:bg-[#142038] border border-slate-200/80 dark:border-[#243452] p-4 flex items-center gap-3">
-              <Flame className="w-6 h-6 shrink-0 text-orange-500 fill-orange-500" aria-hidden="true" />
-              <div>
-                <p id="painel-sequencia-numero" className="text-4xl font-black tabular-nums text-slate-900 dark:text-slate-100 leading-none">
-                  {carregado ? sequencia : '—'}
-                </p>
-                <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
-                  {carregado && sequencia === 0 ? 'Estude hoje para começar' : 'dias seguidos'}
-                </p>
-              </div>
             </div>
           </div>
         </section>

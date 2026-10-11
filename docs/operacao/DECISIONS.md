@@ -6,6 +6,14 @@
 > `docs/archive/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-10-11 — Foco em residência: só questões de residência, sem flashcards, biblioteca baseada em evidências (D-14)
+
+Pedido do dono (11/10/2026): usar só questões de residência (questões de estudo ele faz direto com IA, fora do sistema); a biblioteca de conteúdos continua e é toda baseada em evidências; flashcards saem (o Anki já faz isso); um painel inicial único e intuitivo com o que leu, o que não leu e o desempenho nas questões de residência. Plano aprovado em 11/10 ('Aprovado, B').
+
+- Questão de residência é a que tem banca/instituição e ano de prova real; questão autoral ou sem banca/ano sai da tela, mas fica no banco (nada é apagado).
+- Flashcards, Estudo Temático e XP/nível/ofensiva saem da tela; os dados ficam no banco; o usuário baixa seus cartões num arquivo para o Anki.
+- Revê a D-13 no ciclo 'material, questões e flashcards': o ciclo passa a ser material ⇄ questões de residência ⇄ caderno de erros.
+
 ## 2026-10-03 — O NexusMed é o caderno digital do dono (D-13)
 
 Origem: dono, 03/10/2026: "vamos mudar a lógica do nexusmed. Ao invés de tratar como plataforma de interesse comercial, vamos transformar em algo como meu caderno digital."; "vamos deixar só eu publicar mesmo, mas ainda vamos usar revisor."; "o nexusmed é uma plataforma que pretende ser altamente integrada, com material, questões e flashcards dos erros."; à pergunta "o revisor de IA trava ou aconselha?": "A" (aconselha).

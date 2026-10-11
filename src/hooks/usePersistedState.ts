@@ -3,7 +3,7 @@ import { StorageService } from '../services/storage';
 
 // useState que sobrevive à troca de seção do app (App.tsx desmonta cada view
 // ao trocar de activeView — ver AdminCMSView.tsx, CompendiumView.tsx,
-// QuestionsView.tsx, FlashcardsView.tsx, que perdiam aba/filtro selecionado
+// QuestionsView.tsx, que perdiam aba/filtro selecionado
 // a cada navegação). Grava no localStorage isolado por usuário via
 // StorageService.getUIState/setUIState — sobrevive a reload também, não só
 // a troca de seção dentro da sessão.

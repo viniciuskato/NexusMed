@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { materialsRepository } from '../repositories/MaterialsRepository';
 import { questionsRepository } from '../repositories/QuestionsRepository';
-import { flashcardsRepository } from '../repositories/FlashcardsRepository';
 import { answersRepository } from '../repositories/AnswersRepository';
-import { GamificationService } from '../services/gamification';
-import { Compendium, Discipline, Flashcard, Question, QuestionAnswerRecord, Theme, UserStats } from '../types';
+import { Compendium, Discipline, Question, QuestionAnswerRecord, Theme } from '../types';
 import { useServerLoad } from './useServerLoad';
 
 export interface AppData {
@@ -12,9 +10,7 @@ export interface AppData {
   themes: Theme[];
   compendiums: Compendium[];
   questions: Question[];
-  flashcards: Flashcard[];
   answers: Record<string, QuestionAnswerRecord>;
-  stats: UserStats;
 }
 
 function emptyData(): AppData {
@@ -23,9 +19,7 @@ function emptyData(): AppData {
     themes: [],
     compendiums: [],
     questions: [],
-    flashcards: [],
     answers: {},
-    stats: GamificationService.computeRealStats({}, []),
   };
 }
 
@@ -33,10 +27,10 @@ function emptyData(): AppData {
  * Dados que o componente raiz carrega para todas as telas (45-G, D-2).
  *
  * - Troca de usuário limpa tudo ANTES de carregar: se a carga do novo usuário
- *   falhar, a tela nunca mostra respostas, flashcards ou estatísticas do
- *   anterior (o componente raiz continua montado entre logout e login).
+ *   falhar, a tela nunca mostra respostas ou dados do anterior (o componente
+ *   raiz continua montado entre logout e login).
  * - `ready` diz se os dados na tela são DESTE usuário e vieram do servidor.
- *   Quem julga algo a partir deles (ex.: se o pack salvo ainda existe) espera
+ *   Quem julga algo a partir deles (ex.: se o material do link ainda existe) espera
  *   `ready`: uma carga que falhou deixa as listas vazias, e vazio não é
  *   "despublicado".
  * - Numa falha, `status` avisa e a carga tenta de novo sozinha
@@ -50,12 +44,11 @@ export function useAppData(userId: string | null) {
 
   const { status, reload } = useServerLoad(async () => {
     const uid = userId;
-    const [disciplines, themes, compendiums, questions, flashcards, answers] = await Promise.all([
+    const [disciplines, themes, compendiums, questions, answers] = await Promise.all([
       materialsRepository.getDisciplines(),
       materialsRepository.getThemes(),
       materialsRepository.getCompendiums(),
       questionsRepository.getQuestions(),
-      flashcardsRepository.getFlashcards(),
       answersRepository.getAnswers(),
     ]);
     return () => {
@@ -64,9 +57,7 @@ export function useAppData(userId: string | null) {
         themes,
         compendiums,
         questions,
-        flashcards,
         answers,
-        stats: GamificationService.computeRealStats(answers, flashcards),
       });
       setLoadedFor(uid);
     };

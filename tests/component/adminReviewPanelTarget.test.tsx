@@ -114,7 +114,6 @@ function renderAdmin() {
       themes={[theme]}
       questions={[]}
       compendiums={[matA, matB]}
-      flashcards={[]}
       onRefreshData={vi.fn()}
       onOpenCompendium={vi.fn()}
     />

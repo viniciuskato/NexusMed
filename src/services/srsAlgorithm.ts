@@ -92,25 +92,3 @@ export function createInitialSRS(): FlashcardSRS {
     reviewHistory: [],
   };
 }
-
-export function isCardDue(
-  srsOrCard?: FlashcardSRS | { srs?: FlashcardSRS } | null,
-  compareDate: Date = new Date()
-): boolean {
-  if (!srsOrCard) return true;
-  const srs: FlashcardSRS | undefined =
-    'srs' in srsOrCard && srsOrCard.srs ? srsOrCard.srs : (srsOrCard as FlashcardSRS);
-
-  if (!srs || !srs.nextDueDate) return true;
-  const dueDate = new Date(srs.nextDueDate);
-  if (isNaN(dueDate.getTime())) return true;
-  return dueDate <= compareDate || srs.state === 'new';
-}
-
-export function isCardDueToday(
-  cardOrSrs?: FlashcardSRS | { srs?: FlashcardSRS } | null,
-  compareDate: Date = new Date()
-): boolean {
-  return isCardDue(cardOrSrs, compareDate);
-}
-

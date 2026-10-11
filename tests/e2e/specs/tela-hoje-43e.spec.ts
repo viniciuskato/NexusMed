@@ -4,9 +4,7 @@ import {
   deleteTestUser,
   deleteE2EMaterials,
   getSeedIds,
-  insertFlashcardForUser,
   insertPublishedMaterial,
-  countFlashcardReviews,
   psqlLocal,
   runCleanup,
   MATERIAL_PREFIX,
@@ -15,9 +13,9 @@ import {
 
 // Unidade 43-E, contra o Supabase local de verdade: a tela "Hoje" é a entrada
 // do estudante ativo (sem tirar do reload a restauração da última tela, 22-A),
-// abre pelo menu, mostra continuar lendo / testar o que li / cards para hoje —
-// cada um levando à tela certa — e, com tudo feito no dia, diz isso. Sem rede,
-// avisa e nunca diz que está tudo feito.
+// abre pelo menu, mostra continuar lendo / testar o que li — cada um levando à
+// tela certa — e, com tudo feito no dia, diz isso. Sem rede, avisa e nunca diz
+// que está tudo feito. (Os cards para hoje saíram na CORTE-1, D-14.)
 
 const STEM_PREFIX = 'e2e-43e-';
 
@@ -105,7 +103,7 @@ test.describe('43-E — Tela "Hoje"', () => {
     await expect(page).toHaveURL(/#\/today$/);
     await expect(tudoFeito(page)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Testar o que li' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /^Revisar \d+ cards?$/ })).toHaveCount(0);
+    await expect(page.getByText(/\bcards?\b/i)).toHaveCount(0);
   });
 
   test('Hoje abre pelo menu (desktop e celular) e Início continua sendo outra tela', async ({ page }) => {
@@ -161,11 +159,12 @@ test.describe('43-E — Tela "Hoje"', () => {
     await login(page, student);
     await expect(hoje(page)).toBeVisible();
 
-    await page.locator('#nav-thematic-study').click();
-    await expect(page.locator('#thematic-study-view')).toBeVisible();
+    await page.locator('#nav-resources').click();
+    await page.locator('#nav-resources-desempenho').click();
+    await expect(page.locator('#desempenho-titulo')).toBeVisible();
 
     await page.reload();
-    await expect(page.locator('#thematic-study-view')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#desempenho-titulo')).toBeVisible({ timeout: 20_000 });
     await expect(hoje(page)).toHaveCount(0);
 
     // Aba nova, já autenticada, sem link direto: a última tela salva não vale,
@@ -173,14 +172,13 @@ test.describe('43-E — Tela "Hoje"', () => {
     const outraAba = await context.newPage();
     await outraAba.goto('/');
     await expect(outraAba.locator('#hoje-view')).toBeVisible({ timeout: 20_000 });
-    await expect(outraAba.locator('#thematic-study-view')).toHaveCount(0);
+    await expect(outraAba.locator('#desempenho-titulo')).toHaveCount(0);
     await outraAba.close();
   });
 
-  test('leu hoje, tem questão e card vencido: as três frentes aparecem, cada botão leva à tela certa e o dia fecha', async ({ page }) => {
+  test('leu hoje e tem questão: as duas frentes aparecem, cada botão leva à tela certa e o dia fecha', async ({ page }) => {
     const t = `${Date.now()}`;
     const titulo = `${MATERIAL_PREFIX}43e-A-${t}`;
-    const seed = getSeedIds();
     const materialId = insertPublishedMaterial(`43e-A-${t}`);
     cleanup.push(() => deleteE2EQuestions());
     cleanup.push(() => deleteE2EMaterials());
@@ -188,18 +186,13 @@ test.describe('43-E — Tela "Hoje"', () => {
 
     const student = await criarEstudante('dia');
     registrarLeitura(student.id, materialId, 'now()');
-    const cardId = insertFlashcardForUser(student.id, seed, { materialId: null, isCustom: false, front: 'Card 43-E do dia' });
-    cleanup.push(() => {
-      psqlLocal(`delete from public.flashcards where user_id = '${student.id}';`);
-    });
 
     await login(page, student);
     await expect(hoje(page)).toBeVisible();
 
-    // Testar o que li e Cards para hoje vêm do servidor; Continuar lendo só
-    // aparece depois de abrir o material (a sessão de leitura é do aparelho).
+    // Testar o que li vem do servidor; Continuar lendo só aparece depois de
+    // abrir o material (a sessão de leitura é do aparelho).
     await expect(page.getByRole('region', { name: 'Testar o que li' })).toContainText('1 questão dos materiais que você leu hoje');
-    await expect(page.getByRole('region', { name: 'Cards para hoje' })).toContainText('1 card para hoje');
     await expect(page.getByRole('region', { name: 'Continuar lendo' })).toHaveCount(0);
     await expect(tudoFeito(page)).toHaveCount(0);
 
@@ -229,25 +222,10 @@ test.describe('43-E — Tela "Hoje"', () => {
     await cartao.getByRole('button', { name: 'Confirmar Resposta' }).click();
     await expect(cartao).toHaveAttribute('data-answer-origin', 'session', { timeout: 15_000 });
 
+    // Respondida a questão, o dia está fechado: o teste sai de Hoje e a tela diz isso.
     await page.locator('#nav-today').click();
-    await expect(page.getByRole('region', { name: 'Cards para hoje' })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Testar o que li' })).toHaveCount(0);
-    await expect(tudoFeito(page)).toHaveCount(0);
-
-    // Cards para hoje: abre a revisão só com o card vencido; ao terminar,
-    // volta a Hoje e o dia está fechado.
-    await page.getByRole('button', { name: 'Revisar 1 card' }).click();
-    await expect(page.getByText('Card 43-E do dia')).toBeVisible();
-    await page.getByText('Revelar Resposta').click();
-    await page.getByText('3. Bom').click();
-    await expect(page.getByText('Sessão de Revisão Concluída!')).toBeVisible();
-    expect(countFlashcardReviews(cardId)).toBe(1);
-    await page.getByText('Voltar ao Painel de Flashcards').click();
-
-    await expect(hoje(page)).toBeVisible();
     await expect(tudoFeito(page)).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Cards para hoje' })).toHaveCount(0);
-    await expect(page.getByRole('region', { name: 'Testar o que li' })).toHaveCount(0);
     // Continuar lendo segue disponível: retomar não é pendência.
     await expect(page.getByRole('region', { name: 'Continuar lendo' })).toBeVisible();
   });

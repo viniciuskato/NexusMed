@@ -13,13 +13,13 @@ import React from 'react';
 // 45-G, revisão do #93 (item 2, e rodada 2 item 4): o componente raiz
 // (`AuthenticatedApp`) nunca desmonta entre logout e login (App() monta
 // `<AuthenticatedApp />` uma única vez, dentro de `<AuthProvider>`). O
-// estado de sessão (activeView, reviewCardsQueue, activeSimuladoSelection,
+// estado de sessão (activeView, activeSimuladoSelection,
 // "continuar lendo", aviso de dados antigos, modais abertos, ...) vive nele,
 // sem reset ligado à troca de usuário. Hoje, o único portão antes de
 // renderizar a tela normal é `if (dataLoading) return <LoadingScreen/>` — e
 // `useAppData` marca `loading=false` ao FIM de toda tentativa de carga,
 // mesmo que ela falhe (`.finally(() => setLoading(false))`). Então: usuário
-// A abre uma sessão de flashcards, deixa "continuar lendo" e o aviso de
+// A abre uma tela de sessão (aqui, as questões), deixa "continuar lendo" e o aviso de
 // dados antigos na tela, e um modal aberto; A faz logout, B faz login; a
 // carga dos dados de B falha (sem rede) — nada bloqueia o render normal, que
 // mostraria tudo isso da conta A pra B.
@@ -52,7 +52,7 @@ vi.mock('../../src/contexts/AuthContext', () => ({
 
 // useAppData controlado por teste: dataReady/dataLoading/status conforme o
 // `userId` pedido — sem isto, teríamos que simular rede real por baixo de
-// materialsRepository/questionsRepository/flashcardsRepository/answersRepository.
+// materialsRepository/questionsRepository/answersRepository.
 const appDataByUser: Record<string, { ready: boolean; loading: boolean; status: 'ok' | 'offline' | 'error' }> = {
   'user-a': { ready: true, loading: false, status: 'ok' },
   'user-b': { ready: false, loading: false, status: 'offline' }, // carga de B falhou
@@ -65,9 +65,7 @@ vi.mock('../../src/hooks/useAppData', () => ({
       themes: [],
       compendiums: [],
       questions: [],
-      flashcards: [],
       answers: {},
-      stats: { xp: 0, level: 1, streak: 0 },
       loading: st.loading,
       ready: st.ready,
       status: st.status,
@@ -77,23 +75,14 @@ vi.mock('../../src/hooks/useAppData', () => ({
 }));
 
 // DashboardView real arrasta uma árvore grande de widgets — só precisamos de
-// um jeito de disparar `onStartSRS`, exatamente como o botão real faz.
+// um jeito de trocar de tela, exatamente como o botão real faz.
 vi.mock('../../src/components/dashboard/DashboardView', () => ({
-  DashboardView: ({ onStartSRS }: { onStartSRS: (cards: unknown[]) => void }) => (
-    <button onClick={() => onStartSRS([{ id: 'card-de-A', front: 'DA CONTA A' }])}>
-      iniciar-srs-teste
-    </button>
+  DashboardView: ({ onSelectView }: { onSelectView: (view: string) => void }) => (
+    <button onClick={() => onSelectView('questions')}>abrir-questoes-teste</button>
   ),
 }));
-
-vi.mock('../../src/components/flashcards/FlashcardReviewSession', () => ({
-  FlashcardReviewSession: ({ cards }: { cards: Array<{ id: string; front: string }> }) => (
-    <div data-testid="flashcard-session">
-      {cards.map((c) => (
-        <span key={c.id}>{c.front}</span>
-      ))}
-    </div>
-  ),
+vi.mock('../../src/components/questions/QuestionsView', () => ({
+  QuestionsView: () => <div data-testid="tela-questoes">DA CONTA A</div>,
 }));
 
 // AppErrorBoundary importa clientErrorReporter, que lê `__APP_RELEASE__`
@@ -151,13 +140,13 @@ describe('45-G — troca de usuário com a carga do novo falhando', () => {
     const view = render(<App />);
 
     // Conta A: "continuar lendo" e o aviso de dados antigos aparecem sozinhos
-    // (efeito de carregamento), abre uma sessão de flashcards e deixa um
+    // (efeito de carregamento), abre a tela de questões e deixa um
     // modal aberto (busca).
     await waitFor(() => expect(screen.getByText('Histórico Local Encontrado')).toBeTruthy());
     expect(screen.getByTitle(/Retomar leitura: Material da conta A/)).toBeTruthy();
 
-    fireEvent.click(screen.getByText('iniciar-srs-teste'));
-    await screen.findByTestId('flashcard-session');
+    fireEvent.click(screen.getByText('abrir-questoes-teste'));
+    await screen.findByTestId('tela-questoes');
     expect(screen.getByText('DA CONTA A')).toBeTruthy();
 
     fireEvent.click(screen.getAllByTitle(/Buscar/)[0]);
@@ -171,7 +160,7 @@ describe('45-G — troca de usuário com a carga do novo falhando', () => {
     view.rerender(<App />);
     await waitFor(() => {});
 
-    expect(screen.queryByTestId('flashcard-session')).toBeNull();
+    expect(screen.queryByTestId('tela-questoes')).toBeNull();
     expect(screen.queryByText('DA CONTA A')).toBeNull();
     expect(screen.queryByText('Histórico Local Encontrado')).toBeNull();
     expect(screen.queryByTitle(/Retomar leitura: Material da conta A/)).toBeNull();

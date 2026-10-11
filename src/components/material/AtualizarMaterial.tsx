@@ -27,8 +27,8 @@ import { publicarEnvioPeloAdmin } from '../../utils/publicarEnvioPeloAdmin';
 // Aparecem só para o admin ativo (D-13: só o dono publica; o banco confere de novo). "Exportar .md" baixa o material no
 // formato do padrão. "Baixar para atualizar" baixa UM .txt com o texto atual e o prompt mais novo, para uma IA reescrevê-lo.
 // "Enviar versão nova" lê o arquivo reescrito, mostra o que mudaria e então PUBLICA na hora (o parecer do revisor de IA é só
-// conselho, D-12/D-13) ou, se o admin preferir, manda para a revisão sem publicar. Posição na árvore, progresso, questões e
-// cards continuam ligados (o banco casa as seções pelo título, 44-B/P8).
+// conselho, D-12/D-13) ou, se o admin preferir, manda para a revisão sem publicar. Posição na árvore, progresso e questões
+// continuam ligados (o banco casa as seções pelo título, 44-B/P8).
 // ============================================================================
 
 interface AtualizarMaterialProps {
@@ -218,7 +218,7 @@ const Dialogo: React.FC<AtualizarMaterialProps & { onClose: () => void }> = ({ c
 
         <div className="p-4 space-y-4 overflow-y-auto">
           <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-            Escolha o arquivo .md com a versão nova. Posição na árvore, questões e cards continuam ligados.
+            Escolha o arquivo .md com a versão nova. Posição na árvore e questões continuam ligadas.
           </p>
 
           <div className="flex flex-wrap items-center gap-2">

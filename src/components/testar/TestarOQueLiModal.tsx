@@ -7,8 +7,8 @@ import { materiaisLidosHoje, questoesParaTestar } from '../../services/testarOQu
 
 // 43-C — "Testar o que li": os materiais lidos hoje, todos marcados; o
 // estudante desmarca o que quiser, vê quantas questões entram e começa. A
-// sessão é a lista de questões recortada (`onStart`), onde errar já gera
-// flashcard como em qualquer questão.
+// sessão é a lista de questões recortada (`onStart`), a mesma tela de
+// questões de sempre.
 
 interface TestarOQueLiModalProps {
   compendiums: Compendium[];

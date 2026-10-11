@@ -39,7 +39,7 @@ vi.mock('../../src/repositories/QuestionReactionsRepository', () => ({
   },
 }));
 vi.mock('../../src/repositories/FlashcardsRepository', () => ({ flashcardsRepository: { createFlashcardFromQuestion: vi.fn() } }));
-vi.mock('../../src/services/gamification', () => ({ GamificationService: { triggerCelebration: vi.fn() }, CELEBRATION_STREAK_LENGTH: 5 }));
+vi.mock('../../src/services/celebracao', () => ({ triggerCelebration: vi.fn(), CELEBRATION_STREAK_LENGTH: 5 }));
 
 const { QuestionCard } = await import('../../src/components/questions/QuestionCard');
 

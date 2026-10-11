@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   BookMarked,
   BookOpen,
-  Layers,
   CheckCircle2,
   AlertTriangle,
   Play,
@@ -26,7 +25,6 @@ import {
   QuestionReviewResult,
   ErrorLogItem,
 } from '../../types';
-import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { answersRepository } from '../../repositories/AnswersRepository';
 import { questionsRepository } from '../../repositories/QuestionsRepository';
 import { errorNotebookRepository } from '../../repositories/ErrorNotebookRepository';
@@ -72,7 +70,6 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
   const [answers, setAnswers] = useState<Record<string, QuestionAnswerRecord>>({});
   const [reviews, setReviews] = useState<Record<string, QuestionReviewResult>>({});
   const [errorLogs, setErrorLogs] = useState<ErrorLogItem[]>([]);
-  const [createdFlashcardQuestionIds, setCreatedFlashcardQuestionIds] = useState<string[]>([]);
 
   // Do servidor (45-G, D-2): sem rede, o que já está na tela fica e o aviso aparece.
   const { status: loadStatus, reload } = useServerLoad(async () => {
@@ -280,13 +277,6 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
     showToast('Anotação de aprendizado salva com sucesso!');
   };
 
-  const handleCreateFlashcard = async (q: Question) => {
-    await flashcardsRepository.createFlashcardFromQuestion(q, reviews[q.id]);
-    setCreatedFlashcardQuestionIds((prev) => [...prev, q.id]);
-    onUpdate();
-    showToast('Flashcard gerado com sucesso! Já agendado na sua rotina de SRS.');
-  };
-
   return (
     <div className="space-y-6">
       <ConnectionNotice status={loadStatus !== 'ok' ? loadStatus : reviewStatus} />
@@ -309,7 +299,7 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
             Diagnóstico e Correção de Falhas Clínicas
           </h1>
           <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-            Seus erros são seu maior ativo de aprendizagem. Compreenda a causa raiz de cada resposta incorreta, converta pontos cegos em flashcards de repetição e estude a teoria correspondente na Biblioteca Médica.
+            Seus erros são seu maior ativo de aprendizagem. Compreenda a causa raiz de cada resposta incorreta, converta pontos cegos em revisão e estude a teoria correspondente na Biblioteca Médica.
           </p>
         </div>
 
@@ -626,7 +616,6 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
             const userNote = log?.userNotes || '';
             const isEditingThis = editingNoteId === question.id;
             const review = reviews[question.id];
-            const hasFlashcardCreated = createdFlashcardQuestionIds.includes(question.id);
             // P10: o trecho do material a que a questão está ligada (a seção), mostrado ao lado do erro.
             const linkedSection = question.compendiumSectionId
               ? comp?.sections.find((sec) => sec.id === question.compendiumSectionId)
@@ -791,7 +780,7 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
                   )}
                 </div>
 
-                {/* ── BARRA DE AÇÕES CONECTADAS (BIBLIOTECA, FLASHCARDS, REFAZER) ── */}
+                {/* ── BARRA DE AÇÕES CONECTADAS (BIBLIOTECA, DOMINADA, REFAZER) ── */}
                 <div className="pt-2 flex flex-wrap items-center justify-between gap-2.5">
                   <div className="flex flex-wrap items-center gap-2">
                     {/* Ação 1: Estudar Teoria na Biblioteca */}
@@ -810,26 +799,10 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
                       </button>
                     )}
 
-                    {/* Ação 2: Criar / Praticar Flashcard deste Erro */}
-                    <button
-                      type="button"
-                      onClick={() => handleCreateFlashcard(question)}
-                      disabled={hasFlashcardCreated}
-                      className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                        hasFlashcardCreated
-                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800'
-                          : 'bg-white dark:bg-[#142038] hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#243452] hover:border-indigo-300'
-                      }`}
-                    >
-                      <Layers className="w-3.5 h-3.5 text-indigo-500" />
-                      <span>
-                        {hasFlashcardCreated ? 'Flashcard no SRS ✓' : 'Criar Flashcard deste Erro'}
-                      </span>
-                    </button>
                   </div>
 
                   <div className="flex items-center gap-2 self-end sm:self-auto">
-                    {/* Ação 3: Marcar como Dominada ou Reabrir */}
+                    {/* Ação 2: Marcar como Dominada ou Reabrir */}
                     <button
                       type="button"
                       onClick={() => handleToggleResolved(question.id, !isResolved)}
@@ -843,7 +816,7 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
                       <span>{isResolved ? 'Reabrir Erro' : 'Marcar como Dominada'}</span>
                     </button>
 
-                    {/* Ação 4: Refazer Questão */}
+                    {/* Ação 3: Refazer Questão */}
                     <button
                       type="button"
                       onClick={() => onOpenQuestion(question.id)}

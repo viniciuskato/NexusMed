@@ -17,12 +17,10 @@ import {
 import { Question, QuestionAnswerRecord, QuestionReviewResult, Discipline, Theme, QuestionReactionValue, Compendium } from '../../types';
 import { parseInline } from '../common/SafeMarkdown';
 import { bookmarksRepository } from '../../repositories/BookmarksRepository';
-import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
-import { CriarCartao } from '../flashcards/CriarCartao';
 import { answersRepository } from '../../repositories/AnswersRepository';
 import { questionsRepository } from '../../repositories/QuestionsRepository';
 import { questionReactionsRepository } from '../../repositories/QuestionReactionsRepository';
-import { GamificationService, CELEBRATION_STREAK_LENGTH } from '../../services/gamification';
+import { triggerCelebration, CELEBRATION_STREAK_LENGTH } from '../../services/celebracao';
 import { ContextualFeedbackPopover } from '../feedback/ContextualFeedbackPopover';
 import { SeloDaQuestao, useSeloDaQuestao } from '../material/SeloDeRevisao';
 import { ReportarErroDaQuestao } from '../material/ReportarErroDoMaterial';
@@ -296,7 +294,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     }
 
     if (streak > 0 && streak % CELEBRATION_STREAK_LENGTH === 0) {
-      GamificationService.triggerCelebration();
+      triggerCelebration();
     }
   }, [question.disciplineId]);
 
@@ -332,13 +330,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
     if (!isCorrect) {
       setShowErrorTagger(true);
-      // Só nasce depois que o servidor confirmou o erro. A RPC dedicada de
-      // criação converge concorrência/replay para um único card.
-      try {
-        await flashcardsRepository.createFlashcardFromQuestion(question, review);
-      } catch {
-        // A fila resiliente mantém a criação pendente quando a rede cai.
-      }
       showToast('Resposta incorreta. Questão catalogada automaticamente no seu Caderno de Erros!');
     } else {
       showToast('Resposta correta! Excelente raciocínio clínico.');
@@ -348,7 +339,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         // Celebração é opcional: sem rede para ler o histórico (45-G), só não celebra.
       }
     }
-  }, [errorReason, onAnswerRecorded, question, showToast, checkStreakCelebration]);
+  }, [errorReason, onAnswerRecorded, showToast, checkStreakCelebration]);
 
   const applyCorrectionFailure = useCallback(() => {
     setIsCorrectionPending(false);
@@ -872,21 +863,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             )}
           </div>
 
-          {/* CARD-1: o cartão que o próprio usuário escreve, ligado a esta questão (também em questão acertada). */}
-          <div className="flex justify-end">
-            <CriarCartao
-              origem={{
-                disciplineId: question.disciplineId,
-                themeId: question.themeId,
-                materialId: question.compendiumRefId || undefined,
-                sectionId: question.compendiumSectionId || undefined,
-                questionId: question.id,
-                tags: [discipline?.name, theme?.name].filter((t): t is string => Boolean(t)),
-              }}
-              onCriado={() => showToast('Cartão criado')}
-            />
-          </div>
-
           {/* Vínculo de Conteúdo Teórico da Biblioteca */}
           <div>
             {hasValidMaterial ? (
@@ -915,7 +891,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             <div className="p-3 rounded-xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-800/60 text-xs text-rose-900 dark:text-rose-200 flex items-center gap-2.5">
               <Tag className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
               <span>
-                Esta questão foi catalogada automaticamente no seu <strong>Caderno de Erros</strong> e os flashcards de revisão periódica (SRS) já foram agendados.
+                Esta questão foi catalogada automaticamente no seu <strong>Caderno de Erros</strong>.
               </span>
             </div>
           )}

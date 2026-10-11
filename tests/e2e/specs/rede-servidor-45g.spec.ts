@@ -12,7 +12,7 @@ import { createTestUser, deleteTestUser, getSeedIds, psqlLocal, type CreatedTest
 //   volta — sem depender do evento `online` do navegador, que não dispara
 //   quando o servidor está fora com a rede do aparelho de pé.
 // - Revisão do #93: a falha de carga nunca deixa na tela o estado de outro
-//   usuário, nem faz o pack temático salvo ser julgado "despublicado".
+//   usuário. (O caso do pack do Estudo Temático saiu com a tela, na CORTE-1.)
 //
 // Cada teste abre um contexto de navegador novo (é o "aparelho novo"). Rede
 // simulada com `page.route` na API REST (nunca `context.setOffline`, que
@@ -37,11 +37,6 @@ async function logout(page: Page) {
 async function openQuestionsBank(page: Page) {
   await page.locator('#dock-nav-resources').click();
   await page.locator('#dock-resources-questions').click();
-}
-
-async function openFlashcards(page: Page) {
-  await page.locator('#dock-nav-resources').click();
-  await page.locator('#dock-resources-flashcards').click();
 }
 
 async function openSeedMaterial(page: Page) {
@@ -80,7 +75,6 @@ test.describe('45-G — sem rede a tela avisa; com rede o estado é o do servido
     for (const u of [user, ...extraUsers.splice(0)]) {
       psqlLocal(`delete from public.bookmarks where user_id = '${u.id}';`);
       psqlLocal(`delete from public.reading_progress where user_id = '${u.id}';`);
-      psqlLocal(`delete from public.flashcards where user_id = '${u.id}';`);
       await deleteTestUser(u.id);
     }
   });
@@ -156,11 +150,8 @@ test.describe('45-G — sem rede a tela avisa; com rede o estado é o do servido
   });
 
   test('troca de conta com a carga da nova falhando: nada da conta anterior aparece', async ({ page }) => {
-    const { disciplineId, themeId } = getSeedIds();
-    psqlLocal(
-      `insert into public.flashcards (user_id, discipline_id, theme_id, front, back, difficulty, is_custom) ` +
-        `values ('${user.id}', '${disciplineId}', '${themeId}', 'CARD-DA-CONTA-A-45G', 'verso', 'medio', true);`
-    );
+    const { questionId } = getSeedIds();
+    psqlLocal(`insert into public.bookmarks (user_id, question_id) values ('${user.id}', '${questionId}');`);
     const other = await createTestUser({
       emailLocalPart: `rede45g-b-${Date.now()}`,
       password: 'senha-teste-123',
@@ -170,34 +161,15 @@ test.describe('45-G — sem rede a tela avisa; com rede o estado é o do servido
     extraUsers.push(other);
 
     await login(page, user);
-    await openFlashcards(page);
-    await expect(page.getByText('CARD-DA-CONTA-A-45G').first()).toBeVisible({ timeout: 15_000 });
+    await openQuestionsBank(page);
+    await expect(page.locator(`#question-${questionId} svg.fill-rose-500`)).toBeVisible({ timeout: 15_000 }); // favorito da conta A
     await logout(page);
 
     // Erro transitório logo depois do login de B: a carga do app falha.
     await setRestReachable(page, false, '**/rest/v1/materials**');
     await login(page, other);
     await expect(offlineNotice(page)).toHaveCount(1, { timeout: 15_000 });
-    await openFlashcards(page);
-    await expect(page.getByText('CARD-DA-CONTA-A-45G')).toHaveCount(0);
-  });
-
-  test('reload com a carga falhando não dá o pack temático salvo como despublicado; ele volta quando a conexão volta', async ({ page }) => {
-    const { materialId } = getSeedIds();
-    await login(page, user);
-    await page.locator('#nav-thematic-study').click();
-    await page.locator(`[data-pack-card-id="pack-${materialId}"] button`).click();
-    await expect(page.locator('#thematic-pack-view')).toHaveAttribute('data-pack-id', `pack-${materialId}`);
-
-    await setRestReachable(page, false, '**/rest/v1/materials**');
-    await page.reload();
-    await expect(offlineNotice(page)).toHaveCount(1, { timeout: 20_000 });
-    await expect(page.locator('#thematic-invalid-pack-notice')).toHaveCount(0);
-
-    await setRestReachable(page, true, '**/rest/v1/materials**');
-    await expect(page.locator('#thematic-pack-view')).toHaveAttribute('data-pack-id', `pack-${materialId}`, {
-      timeout: 20_000,
-    });
-    await expect(page.locator('#thematic-invalid-pack-notice')).toHaveCount(0);
+    await openQuestionsBank(page);
+    await expect(page.locator(`#question-${questionId}`)).toHaveCount(0);
   });
 });

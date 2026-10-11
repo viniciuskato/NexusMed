@@ -1,22 +1,18 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import type { Compendium, Flashcard, LastReadingSession, Question, QuestionAnswerRecord } from '../../src/types';
+import type { Compendium, LastReadingSession, Question, QuestionAnswerRecord } from '../../src/types';
 
-// 43-E: a tela "Hoje" — continuar lendo, testar o que li, cards para hoje e o
-// aviso de "tudo feito"; e o que ela nunca finge quando a carga falha.
+// 43-E: a tela "Hoje" — continuar lendo, testar o que li e o aviso de "tudo
+// feito"; e o que ela nunca finge quando a carga falha. CORTE-1 (D-14): sem cards.
 
 const getLeituras = vi.fn();
 const getAnswers = vi.fn();
-const getFlashcards = vi.fn();
 vi.mock('../../src/repositories/LeiturasRepository', () => ({
   leiturasRepository: { getLeituras: () => getLeituras() },
 }));
 vi.mock('../../src/repositories/AnswersRepository', () => ({
   answersRepository: { getAnswers: () => getAnswers() },
-}));
-vi.mock('../../src/repositories/FlashcardsRepository', () => ({
-  flashcardsRepository: { getFlashcards: () => getFlashcards() },
 }));
 
 const { HojeView } = await import('../../src/components/hoje/HojeView');
@@ -50,24 +46,6 @@ const q = (id: string, links: string[]): Question => ({
   highYieldSummary: '',
   tags: [],
 });
-const card = (id: string, vencido: boolean): Flashcard => ({
-  id,
-  disciplineId: 'd',
-  themeId: 't',
-  front: `frente ${id}`,
-  back: `verso ${id}`,
-  mechanismHighlight: '',
-  tags: [],
-  difficulty: 'medio',
-  srs: {
-    intervalDays: 6,
-    repetitionCount: 2,
-    easeFactor: 2.5,
-    nextDueDate: new Date(Date.now() + (vencido ? -1 : 10) * 24 * 60 * 60 * 1000).toISOString(),
-    state: 'review',
-    reviewHistory: [],
-  },
-});
 const resposta = (questionId: string, timestamp: string): QuestionAnswerRecord => ({
   questionId,
   selectedOption: 'A',
@@ -86,7 +64,6 @@ function renderHoje(props: Partial<React.ComponentProps<typeof HojeView>> = {}) 
   const handlers = {
     onResumeReading: vi.fn(),
     onTestarOQueLi: vi.fn(),
-    onStartReview: vi.fn(),
     onOpenLibrary: vi.fn(),
   };
   render(
@@ -106,14 +83,12 @@ function renderHoje(props: Partial<React.ComponentProps<typeof HojeView>> = {}) 
 beforeEach(() => {
   getLeituras.mockReset().mockResolvedValue([]);
   getAnswers.mockReset().mockResolvedValue({});
-  getFlashcards.mockReset().mockResolvedValue([]);
 });
 afterEach(cleanup);
 
 describe('HojeView (43-E)', () => {
-  it('mostra as três frentes do dia: continuar lendo, testar o que li e os cards para hoje', async () => {
+  it('mostra as duas frentes do dia: continuar lendo e testar o que li, sem cards', async () => {
     getLeituras.mockResolvedValue([{ materialId: 'a', secoesLidas: 1, ultimaLeitura: agora }]);
-    getFlashcards.mockResolvedValue([card('c1', true), card('c2', true), card('c3', true), card('c4', false)]);
     renderHoje();
 
     // Continuar lendo: o último material, na seção onde parou.
@@ -125,9 +100,9 @@ describe('HojeView (43-E)', () => {
     const testar = await screen.findByRole('region', { name: 'Testar o que li' });
     expect(within(testar).getByText('2 questões dos materiais que você leu hoje')).toBeTruthy();
 
-    // Cards para hoje: 3 vencidos (o quarto só vence daqui a dias).
-    const cards = screen.getByRole('region', { name: 'Cards para hoje' });
-    expect(within(cards).getByText('3 cards para hoje')).toBeTruthy();
+    // CORTE-1: nada de cards vencidos nesta tela.
+    expect(screen.queryByRole('region', { name: /Cards/ })).toBeNull();
+    expect(screen.queryByText(/\bcards?\b/i)).toBeNull();
 
     expect(screen.queryByText(/Tudo feito/)).toBeNull();
   });
@@ -145,32 +120,19 @@ describe('HojeView (43-E)', () => {
     expect(h.onTestarOQueLi).toHaveBeenCalledTimes(1);
   });
 
-  it('o botão dos cards abre a revisão só com os cards vencidos', async () => {
-    getFlashcards.mockResolvedValue([card('c1', true), card('c2', false), card('c3', true)]);
-    const h = renderHoje();
-    fireEvent.click(await screen.findByRole('button', { name: 'Revisar 2 cards' }));
-    expect(h.onStartReview).toHaveBeenCalledTimes(1);
-    expect(h.onStartReview.mock.calls[0][0].map((c: Flashcard) => c.id)).toEqual(['c1', 'c3']);
-  });
-
-  it('usa o singular com um card e uma questão', async () => {
+  it('usa o singular com uma questão', async () => {
     getLeituras.mockResolvedValue([{ materialId: 'b', secoesLidas: 1, ultimaLeitura: agora }]);
-    getFlashcards.mockResolvedValue([card('c1', true)]);
     renderHoje();
     expect(await screen.findByText('1 questão dos materiais que você leu hoje')).toBeTruthy();
-    expect(screen.getByText('1 card para hoje')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Revisar 1 card' })).toBeTruthy();
   });
 
   it('com tudo feito no dia, a tela diz isso e some com os botões de tarefa', async () => {
     getLeituras.mockResolvedValue([{ materialId: 'a', secoesLidas: 1, ultimaLeitura: agora }]);
     getAnswers.mockResolvedValue({ '1': resposta('1', agora), '2': resposta('2', agora) });
-    getFlashcards.mockResolvedValue([card('c1', false)]);
     renderHoje();
 
     expect(await screen.findByText('Tudo feito por hoje')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Testar o que li' })).toBeNull();
-    expect(screen.queryByRole('button', { name: /Revisar \d+ card/ })).toBeNull();
     // A leitura continua disponível: retomar não é pendência.
     expect(screen.getByRole('button', { name: 'Continuar lendo' })).toBeTruthy();
   });
@@ -189,7 +151,7 @@ describe('HojeView (43-E)', () => {
     expect(await screen.findByText('Tudo feito por hoje')).toBeTruthy();
   });
 
-  it('sem nada lido, sem cards e sem sessão de leitura: diz que está tudo feito e oferece a biblioteca', async () => {
+  it('sem nada lido e sem sessão de leitura: diz que está tudo feito e oferece a biblioteca', async () => {
     const h = renderHoje({ lastReadingSession: null });
     expect(await screen.findByText('Tudo feito por hoje')).toBeTruthy();
     expect(screen.queryByRole('region', { name: 'Continuar lendo' })).toBeNull();
@@ -223,8 +185,8 @@ describe('HojeView (43-E)', () => {
     expect(screen.getByRole('button', { name: 'Continuar lendo' })).toBeTruthy();
   });
 
-  it('falha em qualquer das três cargas: não mostra parte do dia como se fosse o dia inteiro', async () => {
-    getFlashcards.mockRejectedValue(new TypeError('Failed to fetch'));
+  it('falha em qualquer das cargas: não mostra parte do dia como se fosse o dia inteiro', async () => {
+    getAnswers.mockRejectedValue(new TypeError('Failed to fetch'));
     getLeituras.mockResolvedValue([{ materialId: 'a', secoesLidas: 1, ultimaLeitura: agora }]);
     renderHoje();
     expect(await screen.findByText(/Sem conexão/)).toBeTruthy();
@@ -237,8 +199,8 @@ describe('HojeView (43-E)', () => {
     getLeituras.mockResolvedValue([{ materialId: 'a', secoesLidas: 1, ultimaLeitura: agora }]);
     renderHoje({ questions: [], compendiums: [], lastReadingSession: null, dataReady: false, dataStatus: 'error' });
     expect(await screen.findByText(/Não foi possível carregar/)).toBeTruthy();
-    await waitFor(() => expect(getFlashcards).toHaveBeenCalled());
-    // Dá tempo de as três cargas da própria tela terminarem.
+    await waitFor(() => expect(getAnswers).toHaveBeenCalled());
+    // Dá tempo de as cargas da própria tela terminarem.
     await new Promise((r) => setTimeout(r, 20));
     expect(screen.queryByText(/Tudo feito/)).toBeNull();
     expect(screen.queryByRole('region', { name: 'Testar o que li' })).toBeNull();
@@ -252,11 +214,10 @@ describe('HojeView (43-E)', () => {
       lastReadingSession: null,
       onResumeReading: vi.fn(),
       onTestarOQueLi: vi.fn(),
-      onStartReview: vi.fn(),
       onOpenLibrary: vi.fn(),
     };
     const { rerender } = render(<HojeView {...props} dataReady={false} dataStatus="ok" />);
-    await waitFor(() => expect(getFlashcards).toHaveBeenCalled());
+    await waitFor(() => expect(getAnswers).toHaveBeenCalled());
     await new Promise((r) => setTimeout(r, 20));
     expect(screen.getByText(/Carregando/)).toBeTruthy();
     expect(screen.queryByText(/Tudo feito/)).toBeNull();

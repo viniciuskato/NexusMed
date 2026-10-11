@@ -3,9 +3,6 @@ import {
   createTestUser,
   deleteTestUser,
   getSeedIds,
-  insertFlashcardForUser,
-  countFlashcardReviews,
-  getFlashcardSrsState,
   countQuestionReactions,
   countNotesForMaterial,
   getNoteText,
@@ -14,12 +11,13 @@ import {
   type CreatedTestUser,
 } from '../fixtures/localSupabase';
 
-// Prompt 13-B — lacunas 1 (reação/nota/progresso), 2 (SRS de flashcard) e 3
-// (simulado) deixadas pelo 13-A. Reaproveita login/seletores já provados nas
-// specs existentes (auth-gates/isolation/offline-queue/question-answer-
-// rehydration) — nenhum helper de navegação novo além do estritamente
-// necessário para alcançar Flashcards/Simulados/Compêndio, que a suíte
-// anterior não exercitava.
+// Prompt 13-B — lacunas 1 (reação/nota/progresso) e 3 (simulado) deixadas pelo
+// 13-A. Reaproveita login/seletores já provados nas specs existentes
+// (auth-gates/isolation/offline-queue/question-answer-rehydration) — nenhum
+// helper de navegação novo além do estritamente necessário para alcançar
+// Simulados/Compêndio, que a suíte anterior não exercitava. (A lacuna 2, a
+// revisão de flashcard, saiu com a tela de cartões na CORTE-1, D-14; o RPC
+// segue coberto no pgTAP.)
 
 async function login(page: Page, user: CreatedTestUser) {
   await page.goto('/');
@@ -50,66 +48,14 @@ async function secondDeviceLoggedIn(browser: Browser, user: CreatedTestUser): Pr
   return page;
 }
 
-// Prompt 22-A: o dock passou a ter Início / Estudo Temático / Recursos, e os
-// três acervos (Biblioteca, Questões, Cards) ficam dentro de "Recursos".
-async function goToResource(page: Page, id: 'compendiums' | 'questions' | 'flashcards') {
+// Prompt 22-A: os acervos (Biblioteca, Questões) ficam dentro de "Recursos".
+async function goToResource(page: Page, id: 'compendiums' | 'questions') {
   await page.locator('#dock-nav-resources').click();
   await page.locator(`#dock-resources-${id}`).click();
 }
 
 async function goToQuestionsBank(page: Page) {
   await goToResource(page, 'questions');
-}
-
-/**
- * CORREÇÃO PÓS-13-B: esta função existia porque `reviewFlashcard` antes
- * dependia de encontrar o card no cache LOCAL (`localStorage`) para decidir
- * se chamava a RPC — e um flashcard inserido direto no servidor (como aqui,
- * via `insertFlashcardForUser`) nunca caía nesse cache, então a revisão era
- * descartada em silêncio SEMPRE, não só no teste. A suposição de que "todo
- * flashcard passa por `saveFlashcard` antes" estava errada para conteúdo
- * real (carregado direto no Supabase, nunca via `saveFlashcard` local) — é
- * o caso comum em produção, não uma exceção. `reviewFlashcard` foi corrigido
- * para não depender mais disso (ver `FlashcardsRepository.ts`); o teste
- * `flashcard que NUNCA passou por saveFlashcard local...` abaixo prova o
- * caminho real sem esta função. Mantida aqui só para os testes de
- * concorrência entre dois dispositivos, onde pré-popular o cache elimina uma
- * variável irrelevante ao que eles medem (o lock de linha da RPC).
- */
-async function seedLocalFlashcardCache(
-  page: Page,
-  userId: string,
-  flashcardId: string,
-  seed: ReturnType<typeof getSeedIds>
-) {
-  await page.evaluate(
-    ({ userId, flashcardId, disciplineId, themeId }) => {
-      const key = `synapse_${userId}_flashcards_v1`;
-      const existing = JSON.parse(localStorage.getItem(key) || '[]');
-      existing.push({
-        id: flashcardId,
-        disciplineId,
-        themeId,
-        front: 'Frente demonstrativa 13-B',
-        back: 'Verso demonstrativo 13-B',
-        mechanismHighlight: '',
-        tags: [],
-        difficulty: 'medio',
-        isCustom: true,
-        srs: {
-          intervalDays: 0,
-          repetitionCount: 0,
-          easeFactor: 2.5,
-          nextDueDate: new Date().toISOString(),
-          state: 'new',
-          reviewHistory: [],
-        },
-      });
-      localStorage.setItem(key, JSON.stringify(existing));
-    },
-    { userId, flashcardId, disciplineId: seed.disciplineId, themeId: seed.themeId }
-  );
-  await page.reload();
 }
 
 test.describe('Reação/nota/progresso de leitura — duas abas da mesma conta', () => {
@@ -212,114 +158,6 @@ test.describe('Reação/nota/progresso de leitura — duas abas da mesma conta',
     const progress = getReadingProgress(seed.materialId, user.id);
     expect(progress?.readSectionIds).toHaveLength(1); // nunca duplica a seção no array por causa da corrida
     await page2.context().close();
-  });
-});
-
-test.describe('Revisão de flashcard (SRS) — concorrência real e idempotência de retry', () => {
-  let user: CreatedTestUser;
-  let flashcardId: string;
-  let seed: ReturnType<typeof getSeedIds>;
-
-  test.beforeEach(async () => {
-    seed = getSeedIds();
-    user = await createTestUser({ emailLocalPart: `srs-${Date.now()}`, password: 'senha-teste-123', role: 'student', status: 'active' });
-    flashcardId = insertFlashcardForUser(user.id, seed);
-  });
-
-  test.afterEach(async () => {
-    await deleteTestUser(user.id);
-  });
-
-  async function openReviewSession(page: Page) {
-    await goToResource(page, 'flashcards');
-    await page.getByRole('button', { name: /Revisar .*Cards? Pendentes|Revisar Todos os Cards/ }).click();
-  }
-
-  async function flipAndRate(page: Page, ratingLabel: RegExp) {
-    await page.getByRole('button', { name: 'Revelar Resposta' }).click();
-    await page.getByRole('button', { name: ratingLabel }).click();
-  }
-
-  test('duas abas revisam o MESMO flashcard quase ao mesmo tempo: nenhuma revisão se perde (2 linhas em flashcard_reviews, SRS serializado)', async ({ page, browser }) => {
-    await login(page, user);
-    await seedLocalFlashcardCache(page, user.id, flashcardId, seed);
-    await openReviewSession(page);
-    await expect(page.getByRole('button', { name: 'Revelar Resposta' })).toBeVisible({ timeout: 15_000 });
-
-    const page2 = await secondDeviceLoggedIn(browser, user);
-    await seedLocalFlashcardCache(page2, user.id, flashcardId, seed);
-    await openReviewSession(page2);
-    await expect(page2.getByRole('button', { name: 'Revelar Resposta' })).toBeVisible({ timeout: 15_000 });
-
-    await Promise.all([
-      flipAndRate(page, /3\. Bom/),
-      flipAndRate(page2, /4\. Fácil/),
-    ]);
-
-    await expect
-      .poll(() => countFlashcardReviews(flashcardId), { timeout: 20_000 })
-      .toBe(2); // duas revisões concorrentes, nenhuma perdida por sobrescrita (lock de linha em submit_flashcard_review)
-    const srs = getFlashcardSrsState(flashcardId);
-    expect(srs.repetitionCount).toBe(2); // aplicadas em série pelo lock — nunca as duas "do zero" a partir do mesmo estado inicial
-    await page2.context().close();
-  });
-
-  test('retry de rede da MESMA revisão (queda e reconexão) não duplica em flashcard_reviews', async ({ page }) => {
-    await login(page, user);
-    await seedLocalFlashcardCache(page, user.id, flashcardId, seed);
-    await openReviewSession(page);
-    await expect(page.getByRole('button', { name: 'Revelar Resposta' })).toBeVisible({ timeout: 15_000 });
-
-    let blocking = true;
-    await page.route('**/rest/v1/rpc/submit_flashcard_review', async (route) => {
-      if (blocking) return route.abort('internetdisconnected');
-      return route.continue();
-    });
-
-    await flipAndRate(page, /3\. Bom/);
-    // A revisão local (otimista) já aconteceu; o servidor ainda não recebeu nada.
-    await page.waitForTimeout(500);
-    expect(countFlashcardReviews(flashcardId)).toBe(0);
-
-    blocking = false;
-    await page.evaluate(() => window.dispatchEvent(new Event('online')));
-
-    await expect
-      .poll(() => countFlashcardReviews(flashcardId), { timeout: 20_000, message: 'aguardando retry convergir' })
-      .toBe(1); // exatamente 1, nunca 2 — mesmo client_op_id reenviado pela fila até o servidor confirmar
-  });
-
-  test('duplo clique na nota de flashcard server-only grava uma revisão e mantém os quatro botões bloqueados durante o envio', async ({ page }) => {
-    // Regressão do achado pós-13-B: `flashcardsRepository.reviewFlashcard`
-    // dependia de encontrar o card no cache local antes de decidir chamar a
-    // RPC; um flashcard de conteúdo real (nunca criado via `saveFlashcard`
-    // no dispositivo) nunca cai nesse cache, e a revisão era descartada em
-    // silêncio. Este teste reproduz o cenário real (SEM
-    // `seedLocalFlashcardCache`) para provar que a correção não depende
-    // mais do cache estar pré-populado.
-    await login(page, user);
-    await openReviewSession(page);
-    await expect(page.getByRole('button', { name: 'Revelar Resposta' })).toBeVisible({ timeout: 15_000 });
-
-    await page.route('**/rest/v1/rpc/submit_flashcard_review', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 1_000));
-      await route.continue();
-    });
-    await page.getByRole('button', { name: 'Revelar Resposta' }).click();
-    const goodButton = page.getByRole('button', { name: /3\. Bom/ });
-    await goodButton.evaluate((element: HTMLButtonElement) => {
-      element.click();
-      element.click();
-    });
-    for (const rating of [/1\. Errei/, /2\. Difícil/, /3\. Bom/, /4\. Fácil/]) {
-      await expect(page.getByRole('button', { name: rating })).toBeDisabled();
-    }
-
-    await expect
-      .poll(() => countFlashcardReviews(flashcardId), { timeout: 20_000, message: 'revisão não foi gravada no servidor' })
-      .toBe(1);
-    const srs = getFlashcardSrsState(flashcardId);
-    expect(srs.repetitionCount).toBe(1);
   });
 });
 

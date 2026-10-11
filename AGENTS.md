@@ -8,11 +8,14 @@ entender o presente e a próxima ação em até 10 minutos lendo este arquivo
 mais a porta de entrada abaixo.
 
 **O NexusMed é o caderno digital do dono (D-13, 03/10/2026), não um produto
-comercial:** só o dono publica, o revisor de IA aconselha, e material,
-questões e flashcards dos erros se ligam pelo trecho do material
-(`docs/operacao/DECISIONS.md`, D-13). Onde um documento antigo falar em
-plataforma comercial, em envio por qualquer usuário ou em "apto" como
-portão de publicação, vale a D-13.
+comercial:** só o dono publica, o revisor de IA aconselha, e material e
+questões se ligam pelo trecho do material (`docs/operacao/DECISIONS.md`, D-13).
+Desde 11/10/2026 (D-14) os cartões (flashcards), o Estudo Temático e
+XP/nível/ofensiva estão fora da tela (os dados ficam no banco, e o usuário
+leva os cartões para o Anki), e o ciclo é material ⇄ questões de residência ⇄
+caderno de erros. Onde um documento antigo falar em plataforma comercial, em
+envio por qualquer usuário, em "apto" como portão de publicação ou em
+flashcards na tela, vale a D-13 e, depois dela, a D-14.
 
 ## Leia primeiro, nesta ordem
 
@@ -73,15 +76,17 @@ O caderno de estudos médicos do dono (NexusMed/SynapseMed — o nome de marca
 para residência médica, com amigos aprovados lendo e estudando (D-13,
 03/10/2026; **não é produto comercial** — regra que existia só por isso,
 como a proibição de imagens, deixou de valer). Material (compêndios),
-banco de questões comentadas, flashcards com SRS, simulados e caderno de
-erros formam um só ciclo, ligado pelo trecho (seção) do material: o erro
-leva ao trecho, o trecho ao card, o card à revisão na seção. **Só o dono
+banco de questões comentadas, simulados e caderno de erros formam um só
+ciclo, ligado pelo trecho (seção) do material: o erro leva ao trecho e o
+trecho às questões (D-14, 11/10/2026: cartões fora da tela desde então; os
+dados seguem no banco e o usuário os leva para o Anki em "Baixar meus
+cartões para o Anki", no menu da conta). **Só o dono
 publica** (envio de material e de questões é só do admin; envios antigos de
 outros usuários ficam guardados) e o revisor de IA **aconselha**: o parecer
 aparece ao lado do envio, o dono publica com qualquer parecer, e o selo
 "Revisado por IA" só aparece com "apto". Já no ar: PRs #107 a #112 (admin
 publica sem "apto", revisor local, "Publicar" do admin, padrão v3 com
-figuras, cadeia erro → trecho → card, conta e sessão). Produção real, em
+figuras, cadeia erro → trecho, conta e sessão). Produção real, em
 uso por um grupo fechado (não é protótipo).
 
 - **Produzir conteúdo (compêndio) do zero até publicado** — Parte 1
@@ -112,8 +117,6 @@ uso por um grupo fechado (não é protótipo).
   Supabase configurado.
 - `src/repositories/Supabase*Repository.ts` — implementação real contra
   o Supabase, é o que efetivamente importa em produção.
-- `src/services/gamification.ts` — XP/nível/ofensiva calculados a partir
-  de dados reais sincronizados.
 - `supabase/migrations/*.sql` — schema, RLS, RPCs. RLS é a linha de
   defesa real (não o frontend) — qualquer tabela nova precisa de policy
   explícita ou fica inacessível/exposta por padrão do Postgres.
@@ -240,7 +243,8 @@ seção "Armadilhas já descobertas".
     `material-figures`, imutável; o leitor e a checagem do padrão leem o bloco
     pelo mesmo módulo (`src/utils/figuraDoMaterial.ts`) — não crie uma
     segunda leitura.
-20. **Card de flashcard com seção:** `create_flashcard_from_question` tem 12
+20. (Tela retirada pela D-14, 11/10/2026; dados e RPCs seguem no banco.)
+    **Card de flashcard com seção:** `create_flashcard_from_question` tem 12
     parâmetros (o último, `p_material_section_id`) e o card de seção nasce
     por `create_flashcard_from_section`, nunca por `upsert` direto. O revisor
     local agendado roda do checkout principal: não trocar de branch lá.
@@ -305,9 +309,11 @@ seção "Armadilhas já descobertas".
     que agora também registra versão de cada seção que muda (`changed_by` é o
     admin): E2E que aplica atualização apaga o material ANTES do usuário (item 18).
 
-23. **Cartão escrito pelo usuário (CARD-1, 05/10/2026) não é o cartão automático.**
-    "Criar cartão" (`src/components/flashcards/CriarCartao.tsx`, na seção da
-    leitura e na questão já respondida) grava `flashcards.is_written = true` pela
+23. (Tela retirada pela D-14, 11/10/2026; dados e RPCs seguem no banco.)
+    **Cartão escrito pelo usuário (CARD-1, 05/10/2026) não é o cartão automático.**
+    "Criar cartão" (componente removido pela D-14, antes em
+    `src/components/flashcards/CriarCartao.tsx`, na seção da leitura e na
+    questão já respondida) gravava `flashcards.is_written = true` pela
     RPC `create_written_flashcard` (idempotente pelo id, que também é o
     `client_op_id` da operação `flashcard_create_written` da fila): pode haver
     vários por seção ou questão, e a questão fica em `question_origin_id`. Os
@@ -316,9 +322,8 @@ seção "Armadilhas já descobertas".
     (`not is_written`), então todo código que procura "o cartão do erro" ou "o
     cartão da seção" tem de ignorar o escrito (`!card.isWritten` no cliente,
     `and not is_written` no SQL, e `ON CONFLICT ... where not is_written` no
-    índice parcial). Conta de "cartões de erro" por `questionOriginId` (painel)
-    e `app.reconcile_duplicate_flashcards_45a` (execução única da 45-A) não
-    distinguem o escrito: não os rode/consulte sem esse filtro. pgTAP que cria
+    índice parcial). `app.reconcile_duplicate_flashcards_45a` (execução única da
+    45-A) não distingue o cartão escrito: não a rode sem esse filtro. pgTAP que cria
     cartões escritos apaga os seus no fim (a reconciliação da 45-A agrupa todos).
 
 ## Convenções de trabalho

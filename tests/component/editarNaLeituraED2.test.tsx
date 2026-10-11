@@ -95,7 +95,6 @@ function abrirLeitor(material: Compendium = compendium, extras: { onSectionSaved
       onBack={vi.fn()}
       onOpenQuestionsForTheme={vi.fn()}
       onOpenQuestionsForMaterial={vi.fn()}
-      onOpenFlashcardsForTheme={vi.fn()}
       {...extras}
     />
   );
