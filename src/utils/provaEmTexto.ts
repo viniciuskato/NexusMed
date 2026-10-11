@@ -540,11 +540,11 @@ export interface QuestaoLida {
   leitura: LeituraDaQuestao;
 }
 
-// Resíduo de marcador no meio de um campo: "(A)" ou "A)" (A–J, depois de início ou espaço), "QUESTÃO 32" /
-// "Questão32", ou "Resposta:", "Gabarito:", "Alternativa correta:" (não depois do artigo: "assinale a
-// alternativa correta:" é enunciado comum).
+// Resíduo de marcador no meio de um campo: "(A)" ou "A)" (A–F, depois de início ou espaço; I, V e X ficam de
+// fora para afirmativas em romano "I) … VI)" não bloquearem), "QUESTÃO 32" / "Questão32", ou "Resposta:",
+// "Gabarito:", "Alternativa correta:" (não depois do artigo: "assinale a alternativa correta:" é enunciado comum).
 const RESIDUO_DE_MARCADOR =
-  /(?<!\S)\(?[A-Ja-j]\)|(?:QUEST[ÃA]O|Quest[ãa]o)\s*\d+|(?<!(?:^|\s)[Aa]\s)(?:(?:Resposta|RESPOSTA|Gabarito|GABARITO)(?:\s+(?:correta|CORRETA|oficial|OFICIAL))?|Alternativa correta|ALTERNATIVA CORRETA)\s*:/;
+  /(?<!\S)\(?[A-Fa-f]\)|(?:QUEST[ÃA]O|Quest[ãa]o)\s*\d+|(?<!(?:^|\s)[Aa]\s)(?:(?:Resposta|RESPOSTA|Gabarito|GABARITO)(?:\s+(?:correta|CORRETA|oficial|OFICIAL))?|Alternativa correta|ALTERNATIVA CORRETA)\s*:/;
 
 /** "(A)" → "(X)", "a)" → "x)", "A -" → "X -": o estilo do marcador, sem a letra. */
 function estiloDoMarcador(marcador: string): string {

@@ -679,6 +679,28 @@ describe('conferirLeitura — uma regra por teste', () => {
     expect(questoes[0].erros).toEqual([`${DUVIDOSA}sobrou "a)" no meio do enunciado.`]);
   });
 
+  it('(b) afirmativas em romano "I) … VI)" no enunciado não bloqueiam: a questão sai Pronta e correta', () => {
+    const { questoes } = ler(
+      `1. Analise as afirmativas:\nI) Afirmativa um.\nII) Afirmativa dois.\nIII) Afirmativa três.\nIV) Afirmativa quatro.\nV) Afirmativa cinco.\nVI) Afirmativa seis.\nEstão corretas:\n(A) I e II\n(B) I e III\n(C) II e IV\n(D) III e V\n(E) todas\n\nGabarito\n1-B`
+    );
+    expect(questoes.map((q) => [q.numero, estado(q)])).toEqual([
+      [
+        1,
+        {
+          enunciado:
+            'Analise as afirmativas: I) Afirmativa um. II) Afirmativa dois. III) Afirmativa três. IV) Afirmativa quatro. V) Afirmativa cinco. VI) Afirmativa seis. Estão corretas:',
+          alts: ['A=I e II', 'B=I e III', 'C=II e IV', 'D=III e V', 'E=todas'],
+          gab: 'B',
+        },
+      ],
+    ]);
+  });
+
+  it('(b) "E)" residual no enunciado continua bloqueando (o resíduo é só de A a F)', () => {
+    const { questoes } = ler(`1. Pergunta com sobra E) no meio.\n(A) um\n(B) dois\nResposta: A`);
+    expect(questoes[0].erros).toEqual([`${DUVIDOSA}sobrou "E)" no meio do enunciado.`]);
+  });
+
   it('(b) "QUESTÃO32" (sem espaço) no meio de uma alternativa bloqueia', () => {
     const { questoes } = ler(`QUESTÃO 31\nPaciente.\n(A) IAM\n(B) TEP\nQUESTÃO32\nCriança.\nResposta: A`);
     expect(questoes[0].erros).toEqual([`${DUVIDOSA}sobrou "QUESTÃO32" no meio da alternativa B.`]);

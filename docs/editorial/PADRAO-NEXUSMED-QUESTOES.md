@@ -413,8 +413,9 @@ quando:
 - as letras das alternativas não seguem de A em diante, ou a mesma
   questão mistura jeitos de marcar (`a)` numas, `(A)` noutras);
 - sobrou no meio do enunciado, de uma alternativa ou do comentário algo
-  que parece marcador: `(A)` ou `A)` (letras A a J, depois de um
-  espaço), `Questão 32` (com ou sem espaço) ou `Resposta:`, `Gabarito:`,
+  que parece marcador: `(A)` ou `A)` (letras A a F, depois de um
+  espaço; afirmativas em romano, `I)`, `II)`, `IV)`, não contam),
+  `Questão 32` (com ou sem espaço) ou `Resposta:`, `Gabarito:`,
   `Alternativa correta:`;
 - uma linha que começa com número (`11 - `, `2. `, `3) `) foi juntada a
   uma alternativa ou ao comentário, mesmo quando era só a continuação
