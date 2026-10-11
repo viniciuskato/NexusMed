@@ -32,11 +32,19 @@ import { BancaPerformanceRadar } from './BancaPerformanceRadar';
 import { DailyHandoffModal } from '../common/DailyHandoffModal';
 import { useServerLoad } from '../../hooks/useServerLoad';
 import { ConnectionNotice } from '../common/ConnectionNotice';
+import {
+  errosDasQuestoes,
+  respostasDasQuestoes,
+  TEXTO_SEM_QUESTOES_DE_RESIDENCIA,
+} from '../../utils/questoesDeResidencia';
 
 interface DesempenhoViewProps {
   disciplines: Discipline[];
   themes: Theme[];
+  /** Só questões de residência (RESID-1, D-14): quem monta a lista é o App. */
   questions: Question[];
+  /** Os dados deste usuário já vieram do servidor (padrão: sim); sem isso, lista vazia pode ser carga que falhou. */
+  dadosProntos?: boolean;
   compendiums: Compendium[];
   onSelectView: (view: string) => void;
   onOpenCompendium: (compendiumId?: string, sectionId?: string, originQuestionId?: string) => void;
@@ -53,6 +61,7 @@ export const DesempenhoView: React.FC<DesempenhoViewProps> = ({
   disciplines,
   themes,
   questions,
+  dadosProntos = true,
   compendiums,
   onSelectView,
   onOpenCompendium,
@@ -83,8 +92,8 @@ export const DesempenhoView: React.FC<DesempenhoViewProps> = ({
   };
 
   // Persistence data
-  const [answers, setAnswers] = useState<Record<string, QuestionAnswerRecord>>({});
-  const [errorLogs, setErrorLogs] = useState<ErrorLogItem[]>([]);
+  const [todasAsRespostas, setTodasAsRespostas] = useState<Record<string, QuestionAnswerRecord>>({});
+  const [todosOsErros, setTodosOsErros] = useState<ErrorLogItem[]>([]);
   const [showDailyHandoffModal, setShowDailyHandoffModal] = useState(false);
 
   // Do servidor (45-G, D-2): sem rede, o que já está na tela fica e o aviso aparece.
@@ -94,10 +103,16 @@ export const DesempenhoView: React.FC<DesempenhoViewProps> = ({
       errorNotebookRepository.getErrorLogs(),
     ]);
     return () => {
-      setAnswers(nextAnswers);
-      setErrorLogs(nextErrorLogs);
+      setTodasAsRespostas(nextAnswers);
+      setTodosOsErros(nextErrorLogs);
     };
   });
+
+  // D-14: resposta e erro de questão que não é de residência (estudo, autoral)
+  // não entram em nenhuma conta desta tela.
+  const answers = useMemo(() => respostasDasQuestoes(todasAsRespostas, questions), [todasAsRespostas, questions]);
+  const errorLogs = useMemo(() => errosDasQuestoes(todosOsErros, questions), [todosOsErros, questions]);
+  const semQuestoesDeResidencia = dadosProntos && questions.length === 0;
 
   const reloadData = async () => {
     await reload();
@@ -292,6 +307,16 @@ export const DesempenhoView: React.FC<DesempenhoViewProps> = ({
           onUpdate={reloadData}
           onSwitchToOverview={() => handleSwitchTab('overview')}
         />
+      ) : semQuestoesDeResidencia ? (
+        <div
+          id="desempenho-sem-residencia"
+          className="bg-white dark:bg-[#0F172A] rounded-3xl border border-slate-200/90 dark:border-[#243452] p-10 text-center space-y-2 elev-xs"
+        >
+          <HelpCircle className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600" aria-hidden="true" />
+          <p role="status" className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+            {TEXTO_SEM_QUESTOES_DE_RESIDENCIA}
+          </p>
+        </div>
       ) : (
         <>
       {/* ── 2. Card de Missão do Dia: Ação Cirúrgica Imediata ── */}

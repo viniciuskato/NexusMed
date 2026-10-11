@@ -7,6 +7,7 @@ import { useScrollMemory } from '../../hooks/useScrollMemory';
 import { useServerLoad } from '../../hooks/useServerLoad';
 import { ConnectionNotice } from '../common/ConnectionNotice';
 import { acertosPorDisciplina, materiaisEmAndamento } from './painelDados';
+import { respostasDasQuestoes, TEXTO_SEM_QUESTOES_DE_RESIDENCIA } from '../../utils/questoesDeResidencia';
 
 // PAINEL-1 (04/10/2026) — o painel enxuto: só o que importa hoje. Três blocos,
 // nesta ordem: "Hoje" (questões), "Acertos por disciplina" (gráfico) e "Continue
@@ -16,7 +17,10 @@ import { acertosPorDisciplina, materiaisEmAndamento } from './painelDados';
 
 interface DashboardViewProps {
   disciplines: Discipline[];
+  /** Só questões de residência (RESID-1, D-14): quem monta a lista é o App. */
   questions: Question[];
+  /** Os dados deste usuário já vieram do servidor (padrão: sim); sem isso, lista vazia pode ser carga que falhou. */
+  dadosProntos?: boolean;
   compendiums: Compendium[];
   lastReadingSession: LastReadingSession | null;
   onSelectView: (view: string) => void;
@@ -34,6 +38,7 @@ const secondaryButtonClass =
 export const DashboardView: React.FC<DashboardViewProps> = ({
   disciplines,
   questions,
+  dadosProntos = true,
   compendiums,
   lastReadingSession,
   onSelectView,
@@ -58,7 +63,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     };
   });
 
-  const acertos = useMemo(() => acertosPorDisciplina(disciplines, questions, answers), [disciplines, questions, answers]);
+  // Resposta antiga a questão de fora da residência não entra em conta nenhuma.
+  const acertos = useMemo(
+    () => acertosPorDisciplina(disciplines, questions, respostasDasQuestoes(answers, questions)),
+    [disciplines, questions, answers]
+  );
+  const semQuestoesDeResidencia = dadosProntos && questions.length === 0;
   const emAndamento = useMemo(
     () => materiaisEmAndamento(compendiums, readingProgress, lastReadingSession),
     [compendiums, readingProgress, lastReadingSession]
@@ -101,7 +111,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <p role="status" className="text-sm text-slate-500 dark:text-slate-400">
               Carregando…
             </p>
-          ) : !carregado ? null : acertos.length === 0 ? (
+          ) : !carregado ? null : semQuestoesDeResidencia ? (
+            <p id="painel-sem-residencia" className="text-sm text-slate-600 dark:text-slate-300">
+              {TEXTO_SEM_QUESTOES_DE_RESIDENCIA}
+            </p>
+          ) : acertos.length === 0 ? (
             <div className="space-y-3">
               <p className="text-sm text-slate-600 dark:text-slate-300">Nenhuma questão respondida ainda</p>
               <button type="button" onClick={() => onSelectView('questions')} className={secondaryButtonClass}>

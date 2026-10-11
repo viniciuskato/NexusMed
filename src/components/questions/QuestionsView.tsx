@@ -21,9 +21,16 @@ import { usePersistedState } from '../../hooks/usePersistedState';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
 import { useServerLoad } from '../../hooks/useServerLoad';
 import { ConnectionNotice } from '../common/ConnectionNotice';
+import { respostasDasQuestoes, TEXTO_SEM_QUESTOES_DE_RESIDENCIA } from '../../utils/questoesDeResidencia';
 
 interface QuestionsViewProps {
+  /** Só questões de residência (RESID-1, D-14): quem monta a lista é o App. */
   questions: Question[];
+  /**
+   * Os dados deste usuário já vieram do servidor. Sem isso, a lista vazia pode
+   * ser só uma carga que falhou, e "não há questões" seria falso. Padrão: sim.
+   */
+  dadosProntos?: boolean;
   disciplines: Discipline[];
   themes: Theme[];
   compendiums?: Compendium[];
@@ -59,6 +66,7 @@ interface QuestionsViewProps {
 
 export const QuestionsView: React.FC<QuestionsViewProps> = ({
   questions,
+  dadosProntos = true,
   disciplines,
   themes,
   compendiums,
@@ -211,7 +219,29 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
     scopeQuestionIds,
   ]);
 
-  const mistakesCount = (Object.values(answers) as QuestionAnswerRecord[]).filter((a) => !a.isCorrect).length;
+  // Resposta a questão que não está na lista (estudo, autoral, despublicada) não conta.
+  const mistakesCount = (Object.values(respostasDasQuestoes(answers, questions)) as QuestionAnswerRecord[]).filter(
+    (a) => !a.isCorrect
+  ).length;
+
+  // D-14: sem nenhuma questão de residência publicada não há o que filtrar nem simular.
+  if (questions.length === 0 && dadosProntos) {
+    return (
+      <div className="w-full max-w-[1600px] mx-auto space-y-6">
+        <ConnectionNotice status={loadStatus} />
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">Questões</h1>
+        <div
+          id="questions-sem-residencia"
+          className="bg-white dark:bg-[#0F172A] rounded-3xl border border-slate-200 dark:border-[#243452] p-12 text-center text-slate-500 dark:text-slate-400 space-y-2"
+        >
+          <HelpCircle className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600" aria-hidden="true" />
+          <p role="status" className="font-semibold text-sm text-slate-800 dark:text-slate-200">
+            {TEXTO_SEM_QUESTOES_DE_RESIDENCIA}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-[1600px] mx-auto space-y-6">

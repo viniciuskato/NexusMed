@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import {
   ShieldAlert,
 } from 'lucide-react';
@@ -21,6 +21,7 @@ import { simuladosRepository } from './repositories/SimuladosRepository';
 import { feedbackRepository } from './repositories/FeedbackRepository';
 import { questionReactionsRepository } from './repositories/QuestionReactionsRepository';
 import { buildSimuladoSelection, SimuladoSelectionResult } from './services/simuladoSelection';
+import { respostasDasQuestoes, soQuestoesDeResidencia } from './utils/questoesDeResidencia';
 import { questionMatchesMaterialScope } from './utils/questionMaterials';
 import { jaEntrouNestaAba, marcarEntradaNestaAba } from './utils/navEntrada';
 
@@ -293,13 +294,18 @@ function AuthenticatedApp() {
     disciplines,
     themes,
     compendiums,
-    questions,
+    questions: todasAsQuestoes,
     answers,
     loading: dataLoading,
     ready: dataReady,
     status: dataStatus,
     refresh,
   } = useAppData(user?.id ?? null);
+
+  // RESID-1 (D-14): as telas de estudo só veem questões de residência (banca e
+  // ano de prova reais). O filtro é este, num ponto só; a Área Editorial
+  // (admin) continua com `todasAsQuestoes`, inclusive rascunhos e autorais.
+  const questions = useMemo(() => soQuestoesDeResidencia(todasAsQuestoes), [todasAsQuestoes]);
 
   // Nunca lança: as telas chamam isto como `onUpdate` depois de gravar.
   const refreshData = useCallback(async () => {
@@ -482,7 +488,10 @@ function AuthenticatedApp() {
   const isAdmin = profile?.role === 'admin' && profile?.status === 'active';
 
   // Calculate badges
-  const errorCount = (Object.values(answers) as QuestionAnswerRecord[]).filter((a) => !a.isCorrect).length;
+  // Só respostas a questões de residência contam (a resposta antiga a questão de estudo não entra em conta nenhuma).
+  const errorCount = (Object.values(respostasDasQuestoes(answers, questions)) as QuestionAnswerRecord[]).filter(
+    (a) => !a.isCorrect
+  ).length;
 
   // Navigators
   const handleOpenCompendium = (compendiumId?: string, sectionId?: string, originQuestionId?: string) => {
@@ -521,7 +530,7 @@ function AuthenticatedApp() {
   // ainda não o tem: recarrega antes de abrir.
   // 44-H2: "Abrir as questões publicadas" a partir de um envio de questões.
   const handleAbrirQuestoesPublicadas = async (questionIds: string[]) => {
-    if (!questionIds.every((id) => questions.some((q) => q.id === id))) await refreshData();
+    if (!questionIds.every((id) => todasAsQuestoes.some((q) => q.id === id))) await refreshData();
     handleStartTestarOQueLi(questionIds);
   };
 
@@ -683,6 +692,7 @@ function AuthenticatedApp() {
             <DashboardView
               disciplines={disciplines}
               questions={questions}
+              dadosProntos={dataReady}
               compendiums={compendiums}
               lastReadingSession={lastReadingSession}
               onSelectView={handleSelectView}
@@ -695,6 +705,7 @@ function AuthenticatedApp() {
               disciplines={disciplines}
               themes={themes}
               questions={questions}
+              dadosProntos={dataReady}
               compendiums={compendiums}
               onSelectView={handleSelectView}
               onOpenCompendium={handleOpenCompendium}
@@ -779,6 +790,7 @@ function AuthenticatedApp() {
           {activeView === 'questions' && (
             <QuestionsView
               questions={questions}
+              dadosProntos={dataReady}
               disciplines={disciplines}
               themes={themes}
               compendiums={compendiums}
@@ -832,6 +844,7 @@ function AuthenticatedApp() {
               disciplines={disciplines}
               themes={themes}
               questions={questions}
+              dadosProntos={dataReady}
               compendiums={compendiums}
               onSelectView={handleSelectView}
               onOpenCompendium={handleOpenCompendium}
@@ -892,7 +905,7 @@ function AuthenticatedApp() {
               <AdminCMSView
                 disciplines={disciplines}
                 themes={themes}
-                questions={questions}
+                questions={todasAsQuestoes}
                 compendiums={compendiums}
                 onRefreshData={refreshData}
                 onOpenCompendium={(compendiumId) => handleOpenCompendium(compendiumId)}
