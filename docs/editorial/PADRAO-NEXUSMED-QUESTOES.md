@@ -289,6 +289,153 @@ comando, exige acesso de desenvolvedor e Supabase local), não um fluxo
 editorial self-service. Para o caso comum (um lote levantado numa
 sessão de estudo), "Importar questões" é o caminho certo.
 
+### Colar o texto da prova
+
+Para uma prova de residência que você tem como texto (copiado do PDF da
+prova), o mesmo botão **"Importar questões"** tem a opção **"Colar
+texto"**: você cola a prova inteira, o NexusMed separa questão por
+questão (enunciado, alternativas e gabarito) e mostra a prévia de
+sempre antes de gravar qualquer coisa. Só texto: PDF e imagem não são
+lidos. Cada questão nasce **rascunho**, como em todo import.
+
+**Banca / instituição e Ano são obrigatórios** e valem para a prova
+inteira (preencha com a banca e o ano reais). Sem eles, o botão "Ler
+texto e ver a prévia" fica desligado e a tela escreve o motivo. A banca
+não pode começar com "NexusMed": questão autoral não é questão de
+residência e não aparece nas telas de estudo.
+
+O que o NexusMed reconhece, sempre **no começo da linha**:
+
+- **Início de questão:** `1.`, `1)`, `01 -`, `Questão 1` ou `QUESTÃO 01`.
+  Tudo entre esse início e a primeira alternativa é o enunciado: as
+  quebras de linha do PDF dentro de um parágrafo são juntadas, e a linha
+  em branco entre parágrafos é mantida. O número sozinho na linha (`31`,
+  como sai de algumas caixas de PDF) não é lido: numere como `31.` ou
+  `Questão 31`.
+- **Alternativas**, de A em diante e em sequência, sem limite de
+  quantidade: `A)`, `A.`, `(A)`, `a)` ou `A -`. `A)`, `(A)` e `a)` valem
+  sempre; `A.` e `A -` também aparecem em frases comuns (uma linha
+  quebrada que comece com `B. pertussis` não é a alternativa B), então
+  só valem na lista que já usa esse estilo ou quando a alternativa
+  anterior terminou com ponto final; na dúvida, a linha fica no texto da
+  alternativa anterior e a prévia avisa.
+- **Gabarito**, de um destes dois jeitos:
+  - em cada questão: `Resposta: B`, `Gabarito: B` ou
+    `Alternativa correta: B`;
+  - em bloco, no fim da prova: uma linha que seja só o título
+    (`Gabarito` ou `Respostas`, com ou sem `:`) e, abaixo, os pares
+    `1-B`, `1 B`, `1) B` ou `01. B`, um por linha ou vários na mesma linha
+    separados por vírgula ou espaço. O título e os pares também podem vir
+    na mesma linha (`Gabarito: 1-B 2-C`), desde que ela não tenha mais
+    nada; se tiver, nenhum par dela vale e a prévia aponta essa linha
+    como a causa das questões "Sem gabarito". Só **letra maiúscula** vale como
+    resposta. Uma linha do bloco que tenha qualquer coisa além de pares
+    (por exemplo, `Recursos de 10 a 15 de março`) não é lida: nenhum par
+    dela é aproveitado, a prévia mostra a linha e as questões que
+    dependiam dela ficam "Sem gabarito". Uma nova questão numerada depois
+    do título encerra o bloco.
+- **Questão anulada:** no gabarito, `ANULADA`, `*` ou `X`, ou uma linha
+  do bloco como `Questões 1 e 2 anuladas` (só números separados por
+  vírgula ou `e`). Ela aparece na prévia marcada como **Anulada** e não é
+  importada.
+- **Comentário** (opcional): uma linha que comece com `Comentário:`,
+  até a próxima questão. Vira o comentário geral do rascunho.
+
+Exemplo (3 questões, com 4, 5 e 4 alternativas; gabaritos B e A, e a
+terceira anulada):
+
+```text
+PROVA DE RESIDÊNCIA - EXEMPLO
+
+1. Homem de 58 anos, tabagista, com tosse crônica
+e dispneia aos esforços. A espirometria mostra VEF1/CVF de 0,62.
+Qual o diagnóstico mais provável?
+A) Asma
+B) DPOC
+C) Fibrose pulmonar
+D) Sarcoidose
+2. Qual o antibiótico de escolha para pneumonia adquirida
+na comunidade, leve, em adulto previamente hígido?
+A) Amoxicilina
+B) Gentamicina
+C) Vancomicina
+D) Meropenem
+E) Linezolida
+3. Em relação à hipertensão arterial sistêmica, é correto afirmar:
+A) A meta é sempre abaixo de 100x60
+B) O IECA é contraindicado na gestação
+C) Tiazídicos podem causar hipocalemia
+D) Betabloqueador é primeira linha em todos
+
+Gabarito
+1-B
+2-A
+3-ANULADA
+```
+
+**Na prévia** cada questão mostra banca e ano, o enunciado, as
+alternativas com a correta marcada e os avisos e erros:
+
+- **Disciplina e Tema** se escolhem na prévia, questão por questão, ou
+  de uma vez para todas em **"Aplicar a todas"**.
+- **Erro que bloqueia** a questão (ela não é gravada, e as outras
+  seguem): **"Sem gabarito"**, gabarito que não é uma das alternativas,
+  menos de 2 alternativas, enunciado vazio, anulada e **"Numeração
+  ambígua — confira o texto"** (número repetido ou fora de ordem: ficam
+  bloqueadas as questões com o número e a que vem logo antes, porque
+  uma delas pode ter sido cortada ao meio) e **"Leitura duvidosa —
+  confira o texto"**, com o motivo (veja a conferência, abaixo).
+- **Aviso** (não bloqueia): numeração pulada (por exemplo, da questão 2
+  para a 5), linha do gabarito que não se entendeu, linha lida como
+  continuação de uma alternativa e o lembrete de que o rascunho ainda não
+  tem explicações por alternativa, comentário e pérola (obrigatórios
+  antes de publicar, Passo 3).
+- **"Já existe"**: se o enunciado (sem diferenciar maiúsculas nem espaços
+  repetidos), a banca e o ano são iguais aos de uma questão que já está
+  no sistema, a questão vem desmarcada. Marque-a se quiser importar mesmo
+  assim. A mesma coisa vale para a questão repetida dentro do próprio
+  texto colado: a segunda vem desmarcada como **"Repetida neste texto"**.
+
+Cuidados com o texto do PDF: um número no começo da linha só abre uma
+questão nova quando a questão anterior já tem 2 alternativas e o número
+é o seguinte (ou, se a numeração não segue, quando logo abaixo vem a
+alternativa A). Por isso `1. Fumo` e `2. Álcool` dentro do enunciado, ou
+`2 - 3 tomadas` no meio de uma alternativa, ficam no texto da questão.
+Quando mesmo assim o texto engana o NexusMed, o resultado é sempre uma
+questão bloqueada com o motivo na linha, nunca um gabarito gravado em
+silêncio: confira a prévia e corrija o texto.
+
+**A conferência.** Depois de separar as questões, o NexusMed confere o
+resultado de cada uma, sem tentar adivinhar de novo. A questão fica
+bloqueada com **"Leitura duvidosa — confira o texto:"** e o motivo
+quando:
+
+- as letras das alternativas não seguem de A em diante, ou a mesma
+  questão mistura jeitos de marcar (`a)` numas, `(A)` noutras);
+- sobrou no meio do enunciado, de uma alternativa ou do comentário algo
+  que parece marcador: `(A)` ou `A)` (letras A a F, depois de um
+  espaço; afirmativas em romano, `I)`, `II)`, `IV)`, não contam),
+  `Questão 32` (com ou sem espaço) ou `Resposta:`, `Gabarito:`,
+  `Alternativa correta:`;
+- uma linha que começa com número (`11 - `, `2. `, `3) `) foi juntada a
+  uma alternativa ou ao comentário, mesmo quando era só a continuação
+  do texto (como `2 - 3 tomadas`);
+- a questão tem dois gabaritos diferentes (duas linhas de resposta, ou
+  a da questão diferente da do bloco do fim);
+- a questão seguinte começou só com o número (`12.`, e não `Questão 12`)
+  e ficou bloqueada: o falso começo dela pode ter cortado as
+  alternativas desta. Uma seguinte só anulada não conta.
+
+Ela bloqueia de propósito mais do que o necessário: uma questão boa
+bloqueada se resolve corrigindo o texto e colando de novo; uma questão
+gravada errada, não.
+
+Uma prova que recomeça a numeração (duas seções de 1 a 50) fica bloqueada por numeração repetida:
+cole uma seção por vez. Texto que
+já esteja no formato `.md` deste guia (blocos `## Questão N`) também pode
+ser colado: vale o que o arquivo diz, e a banca e o ano preenchidos
+entram só nas questões que não trazem os seus.
+
 ---
 
 ## Passo 2 — Revisão e atestação (obrigatória, por questão)
