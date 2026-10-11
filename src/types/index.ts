@@ -254,18 +254,6 @@ export interface Flashcard {
   bibliographicSources?: { sourceId: string; citationText: string; url?: string; verificacao?: string }[];
 }
 
-export type AppView =
-  | 'dashboard'
-  | 'thematic-study'
-  | 'compendiums'
-  | 'compendium_reader'
-  | 'questions'
-  | 'simulado_active'
-  | 'flashcards'
-  | 'flashcard_reviewer'
-  | 'caderno_erros'
-  | 'admin';
-
 export interface QuestionAnswerRecord {
   questionId: string;
   selectedOption: string;
@@ -345,15 +333,6 @@ export interface ErrorLogItem {
   errorReason: 'lacuna_teorica' | 'pegadinha' | 'falta_atencao' | 'tempo_esgotado' | 'raciocinio_clinico';
   userNotes: string;
   resolved: boolean;
-}
-
-export interface UserStats {
-  totalAnswered: number;
-  totalCorrect: number;
-  streakDays: number;
-  lastActiveDate: string;
-  cardsReviewedToday: number;
-  compendiumsReadCount: number;
 }
 
 export type FeedbackType = 'sugestao' | 'problema' | 'elogio';

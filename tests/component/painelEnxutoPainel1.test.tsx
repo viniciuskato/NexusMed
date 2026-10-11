@@ -1,10 +1,11 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import type { Compendium, Discipline, Flashcard, LastReadingSession, Question, QuestionAnswerRecord } from '../../src/types';
+import type { Compendium, Discipline, LastReadingSession, Question, QuestionAnswerRecord } from '../../src/types';
 
 // PAINEL-1 — o painel enxuto (3 blocos), os estados vazios e a tela "Meu desempenho"
-// com tudo o que saiu dele.
+// com tudo o que saiu dele. CORTE-1 (D-14): sem cartões, nível/XP, ofensiva, desafios nem conquistas em nenhuma
+// das duas telas.
 
 const getAnswers = vi.fn();
 const getReadingProgress = vi.fn();
@@ -44,32 +45,17 @@ const resposta = (questionId: string, isCorrect: boolean, timestamp = new Date()
 });
 const material = (id: string, title: string, secoes: string[] = []): Compendium =>
   ({ id, title, sections: secoes.map((s) => ({ id: s, title: `Seção ${s}` })) }) as unknown as Compendium;
-const cartao = (id: string, vencido: boolean): Flashcard =>
-  ({
-    id,
-    tags: [],
-    srs: {
-      intervalDays: 1,
-      repetitionCount: 1,
-      easeFactor: 2.5,
-      nextDueDate: new Date(Date.now() + (vencido ? -1 : 10) * 86_400_000).toISOString(),
-      state: 'review',
-      reviewHistory: [],
-    },
-  }) as unknown as Flashcard;
-
 const disciplinas = [disciplina('cm', 'Clínica Médica'), disciplina('pe', 'Pediatria'), disciplina('ci', 'Cirurgia')];
 const questoes = [questao('1', 'cm'), questao('2', 'cm'), questao('3', 'pe'), questao('4', 'pe'), questao('5', 'ci')];
 const materiais = [material('a', 'Penicilinas', ['s1', 's2']), material('b', 'Cefalosporinas'), material('c', 'Macrolídeos'), material('d', 'Quinolonas'), material('e', 'Lido por inteiro')];
 
 function renderPainel(props: Partial<React.ComponentProps<typeof DashboardView>> = {}) {
-  const handlers = { onSelectView: vi.fn(), onOpenCompendium: vi.fn(), onStartSRS: vi.fn() };
+  const handlers = { onSelectView: vi.fn(), onOpenCompendium: vi.fn() };
   render(
     <DashboardView
       disciplines={disciplinas}
       questions={questoes}
       compendiums={materiais}
-      flashcards={[]}
       lastReadingSession={null}
       {...handlers}
       {...props}
@@ -87,8 +73,6 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('Painel enxuto (PAINEL-1)', () => {
-  const cincoCartoes = [cartao('1', true), cartao('2', true), cartao('3', true), cartao('4', false), cartao('5', false)];
-
   async function renderComDados(extra: Partial<React.ComponentProps<typeof DashboardView>> = {}) {
     getAnswers.mockResolvedValue({
       '1': resposta('1', true),
@@ -103,7 +87,7 @@ describe('Painel enxuto (PAINEL-1)', () => {
       d: { readSectionIds: ['x'], percent: 10 },
       e: { readSectionIds: ['x'], percent: 100 },
     });
-    const handlers = renderPainel({ flashcards: cincoCartoes, ...extra });
+    const handlers = renderPainel({ ...extra });
     await screen.findByRole('list', { name: /Percentual de acerto/ });
     return handlers;
   }
@@ -128,6 +112,8 @@ describe('Painel enxuto (PAINEL-1)', () => {
       /Desafios do Dia/,
       /Circuito de Flashcards/,
       /Medalhas|Conquistas/,
+      /cartões|cartão|flashcard/i,
+      /dias seguidos|ofensiva|sequência/i,
       /Caderno de Erros/,
       /Visão Geral & Desempenho/,
     ]) {
@@ -137,27 +123,17 @@ describe('Painel enxuto (PAINEL-1)', () => {
     expect(screen.getByRole('button', { name: 'Ver meu desempenho' })).toBeTruthy();
   });
 
-  it('Hoje: 3 cartões vencidos de 5 mostram "3", e os botões levam aos mesmos destinos de sempre', async () => {
-    const { onSelectView, onStartSRS } = await renderComDados();
+  it('Hoje: só o atalho das questões e o link do desempenho, que levam aos mesmos destinos de sempre', async () => {
+    const { onSelectView } = await renderComDados();
     const hoje = screen.getByRole('region', { name: 'Hoje' });
-    expect(within(hoje).getByText('3').textContent).toBe('3');
-    expect(hoje.querySelector('#painel-cartoes-numero')?.textContent).toBe('3');
-    expect(within(hoje).getByText('cartões para revisar')).toBeTruthy();
+    expect(within(hoje).getAllByRole('button').map((b) => b.textContent)).toEqual(['Fazer questões']);
+    expect(hoje.querySelector('#painel-cartoes-numero')).toBeNull();
+    expect(hoje.querySelector('#painel-sequencia-numero')).toBeNull();
 
-    fireEvent.click(within(hoje).getByRole('button', { name: 'Revisar cartões' }));
-    expect(onStartSRS).toHaveBeenCalledTimes(1);
     fireEvent.click(within(hoje).getByRole('button', { name: 'Fazer questões' }));
     expect(onSelectView).toHaveBeenCalledWith('questions');
     fireEvent.click(screen.getByRole('button', { name: 'Ver meu desempenho' }));
     expect(onSelectView).toHaveBeenCalledWith('desempenho');
-  });
-
-  it('Hoje: a sequência de dias vem da atividade real (respostas de hoje e de ontem = 2 dias)', async () => {
-    const ontem = new Date(Date.now() - 86_400_000).toISOString();
-    getAnswers.mockResolvedValue({ '1': resposta('1', true), '2': resposta('2', true, ontem) });
-    renderPainel();
-    await waitFor(() => expect(document.getElementById('painel-sequencia-numero')?.textContent).toBe('2'));
-    expect(screen.getByText('dias seguidos')).toBeTruthy();
   });
 
   it('Acertos por disciplina: barras da menor para a maior, só disciplinas com resposta, com o número em cada barra', async () => {
@@ -191,18 +167,12 @@ describe('Painel enxuto (PAINEL-1)', () => {
     const { onSelectView } = renderPainel({ disciplines: [], questions: [], compendiums: [] });
     await screen.findByText('Nenhum material em andamento');
     expect(screen.getByText('Nenhuma questão respondida ainda')).toBeTruthy();
-    expect(screen.getByText('Nenhum cartão para hoje')).toBeTruthy();
-    expect(document.getElementById('painel-cartoes-numero')?.textContent).toBe('0');
-    expect(screen.getByText('Estude hoje para começar')).toBeTruthy();
     expect(document.querySelectorAll('#painel-view section')).toHaveLength(3);
 
     fireEvent.click(screen.getByRole('button', { name: 'Abrir biblioteca' }));
     expect(onSelectView).toHaveBeenCalledWith('compendiums');
     fireEvent.click(screen.getByRole('button', { name: 'Responder questões' }));
     expect(onSelectView).toHaveBeenCalledWith('questions');
-    fireEvent.click(screen.getByRole('button', { name: 'Abrir cartões' }));
-    expect(onSelectView).toHaveBeenCalledWith('flashcards');
-    expect(screen.queryByRole('button', { name: 'Revisar cartões' })).toBeNull();
   });
 
   it('se a carga falha, o painel avisa e não afirma que não há questão nem material', async () => {
@@ -211,7 +181,6 @@ describe('Painel enxuto (PAINEL-1)', () => {
     await waitFor(() => expect(screen.getByText(/Sem conexão/)).toBeTruthy());
     expect(screen.queryByText('Nenhuma questão respondida ainda')).toBeNull();
     expect(screen.queryByText('Nenhum material em andamento')).toBeNull();
-    expect(document.getElementById('painel-sequencia-numero')?.textContent).toBe('—');
   });
 });
 
@@ -221,7 +190,6 @@ describe('Meu desempenho (PAINEL-1)', () => {
       onSelectView: vi.fn(),
       onOpenCompendium: vi.fn(),
       onOpenQuestion: vi.fn(),
-      onStartSRS: vi.fn(),
       onTestarOQueLi: vi.fn(),
     };
     render(
@@ -230,7 +198,6 @@ describe('Meu desempenho (PAINEL-1)', () => {
         themes={[]}
         questions={questoes}
         compendiums={materiais}
-        flashcards={[cartao('1', true)]}
         {...handlers}
         {...props}
       />
@@ -238,25 +205,29 @@ describe('Meu desempenho (PAINEL-1)', () => {
     return handlers;
   }
 
-  it('reúne o que saiu do painel: nível/XP, KPIs, missão, perfil, banca, especialidades, radar, desafios, SRS e conquistas', async () => {
+  it('reúne o que saiu do painel: KPIs, missão, perfil, banca, especialidades e radar; sem nível/XP, ofensiva, desafios, cartões nem conquistas', async () => {
     getAnswers.mockResolvedValue({ '1': resposta('1', false), '3': resposta('3', true) });
     renderDesempenho();
     expect(screen.getByRole('heading', { level: 1, name: 'Meu desempenho' })).toBeTruthy();
     await screen.findByText('Desempenho por Especialidade Médica');
-    for (const texto of [
-      /Progresso do Nível/,
-      /XP Acumulado/,
-      /Acurácia Geral/,
-      /Ofensiva de Estudo/,
-      /Missão Prioritária de Hoje/,
-      /Radar de Vulnerabilidades/,
-      /Desafios do Dia/,
-      /Circuito de Flashcards/,
-      /Medalhas & Conquistas/,
-    ]) {
+    for (const texto of [/Acurácia Geral/, /Missão Prioritária de Hoje/, /Radar de Vulnerabilidades/]) {
       expect(screen.getAllByText(texto).length, String(texto)).toBeGreaterThan(0);
     }
     expect(screen.getByRole('button', { name: /Caderno de Erros & Metacognição/ })).toBeTruthy();
+
+    for (const fora of [
+      /Progresso do Nível/,
+      /Nível \d/,
+      /\bXP\b/,
+      /Ofensiva|ofensiva/,
+      /Desafios do Dia/,
+      /Circuito de Flashcards/,
+      /Medalhas|Conquistas/,
+      /[Ff]lashcard|[Cc]ard(s|ão|ões)? para hoje|Revisão Espaçada/,
+    ]) {
+      expect(screen.queryByText(fora), String(fora)).toBeNull();
+    }
+    expect(screen.queryByRole('button', { name: /Flashcards|cartões|SRS/i })).toBeNull();
   });
 
   it('o caderno de erros continua a um clique, dentro de Meu desempenho', async () => {

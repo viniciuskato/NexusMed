@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { FakePostgrestState } from './helpers/fakePostgrest';
-import type { Compendium, Discipline, Question, Theme } from '../../src/types';
+import type { Question } from '../../src/types';
 
 // ============================================================================
 // Unidade 43-B — questão cobre um ou vários materiais.
@@ -9,8 +9,7 @@ import type { Compendium, Discipline, Question, Theme } from '../../src/types';
 //   material da questão (cartão, caderno de erros, flashcard).
 // - Gravação: a coluna antiga não é mais escrita; vínculo pela RPC; a
 //   importação leva os materiais do lote.
-// - Estudante: o recorte por material e os pacotes do Estudo Temático
-//   consideram todos os vínculos.
+// - Estudante: o recorte por material considera todos os vínculos.
 // ============================================================================
 
 const state = vi.hoisted(() => ({ tables: {}, requests: [] }) as FakePostgrestState);
@@ -54,8 +53,7 @@ vi.mock('../../src/lib/supabaseClient', async () => {
 });
 
 import { SupabaseQuestionsRepository } from '../../src/repositories/SupabaseQuestionsRepository';
-import { buildThematicStudyData, packIdForCompendium, SCOPE_UNLINKED } from '../../src/services/thematicPacks';
-import { questionMatchesMaterialScope } from '../../src/utils/questionMaterials';
+import { questionMatchesMaterialScope, SCOPE_UNLINKED } from '../../src/utils/questionMaterials';
 
 const pad = (n: number) => String(n).padStart(5, '0');
 
@@ -160,34 +158,5 @@ describe('recorte por material (questões a partir de um material)', () => {
   it('sem a lista de vínculos (modo local), vale o compendiumRefId', () => {
     expect(questionMatchesMaterialScope(legacyOnly, 'mat-a')).toBe(true);
     expect(questionMatchesMaterialScope(legacyOnly, SCOPE_UNLINKED)).toBe(false);
-  });
-});
-
-describe('Estudo Temático — questão em cada pacote que ela cobra', () => {
-  const discipline: Discipline = { id: 'd', name: 'Farmacologia', code: 'F', icon: 'pill', description: '', cycle: 'clinico', color: '#000' };
-  const theme: Theme = { id: 't', disciplineId: 'd', name: 'Antimicrobianos', description: '', highYield: false, order: 1 };
-  const comp = (id: string): Compendium => ({
-    id, disciplineId: 'd', themeId: 't', title: id, subtitle: '', estimatedReadTimeMinutes: 10,
-    lastUpdated: '', author: '', sections: [], references: [],
-  });
-
-  it('aparece no pacote de cada material vinculado, e só link desconhecido vira referência inválida', () => {
-    const data = buildThematicStudyData({
-      disciplines: [discipline],
-      themes: [theme],
-      compendiums: [comp('mat-a'), comp('mat-b')],
-      questions: [
-        { ...baseQuestion, id: 'q-dois', materialLinks: [{ materialId: 'mat-a' }, { materialId: 'mat-b' }] },
-        { ...baseQuestion, id: 'q-meio', materialLinks: [{ materialId: 'mat-a' }, { materialId: 'sumiu' }] },
-        { ...baseQuestion, id: 'q-orfa', materialLinks: [{ materialId: 'sumiu' }] },
-      ],
-      flashcards: [],
-      answers: {},
-    });
-    const pack = (id: string) => data.groups.flatMap((g) => g.packs).find((p) => p.id === packIdForCompendium(id))!;
-    expect(pack('mat-a').questions.map((q) => q.id).sort()).toEqual(['q-dois', 'q-meio']);
-    expect(pack('mat-b').questions.map((q) => q.id)).toEqual(['q-dois']);
-    expect(data.invalidRefQuestions.map((q) => q.id)).toEqual(['q-orfa']);
-    expect(data.totals.linkedQuestions).toBe(2); // q-dois conta uma vez só
   });
 });

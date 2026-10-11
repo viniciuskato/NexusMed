@@ -32,7 +32,7 @@ import {
   EyeOff,
   Inbox,
 } from 'lucide-react';
-import { Discipline, Theme, Question, QuestionMaterialLink, Compendium, Flashcard, CompendiumSection, UserFeedback } from '../../types';
+import { Discipline, Theme, Question, QuestionMaterialLink, Compendium, CompendiumSection, UserFeedback } from '../../types';
 import { QuestionMaterialLinksEditor } from './QuestionMaterialLinksEditor';
 import { questionMaterialIds } from '../../utils/questionMaterials';
 import { MaterialNavigationFields } from './MaterialNavigationFields';
@@ -47,7 +47,6 @@ import {
 import { getBreadcrumbTrail, breadcrumbLabel } from '../../utils/materialTree';
 import { formStateFromCompendium, compendiumFromFormState, linkedReferencesThatWillBeLost } from '../../utils/compendiumForm';
 import { StorageService } from '../../services/storage';
-import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { materialsRepository } from '../../repositories/MaterialsRepository';
 import { questionsRepository } from '../../repositories/QuestionsRepository';
 import { feedbackRepository } from '../../repositories/FeedbackRepository';
@@ -81,7 +80,6 @@ interface AdminCMSViewProps {
   themes: Theme[];
   questions: Question[];
   compendiums: Compendium[];
-  flashcards: Flashcard[];
   onRefreshData: () => void | Promise<void>;
   // Abre o compêndio no leitor real (mesmo em rascunho) — usado pelo botão
   // "Visualizar" da revisão editorial: sem isso, o revisor só tem o form de
@@ -95,13 +93,14 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
   themes,
   questions,
   compendiums,
-  flashcards,
   onRefreshData,
   onOpenCompendium,
 }) => {
-  const [activeTab, setActiveTab] = usePersistedState<
-    'compendiums' | 'questions' | 'flashcards' | 'users' | 'feedback' | 'envios' | 'erros' | 'database'
+  const [abaSalva, setActiveTab] = usePersistedState<
+    'compendiums' | 'questions' | 'users' | 'feedback' | 'envios' | 'erros' | 'database'
   >('admin_active_tab', 'compendiums');
+  // A aba "Flashcards SRS" saiu (CORTE-1, D-14): quem a deixou salva volta para Conteúdos.
+  const activeTab = (abaSalva as string) === 'flashcards' ? 'compendiums' : abaSalva;
   useScrollMemory(`admin:${activeTab}`);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [highlightedQuestionId, setHighlightedQuestionId] = useState<string | null>(null);
@@ -833,7 +832,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
             Gestão de Conteúdo Médico
           </h1>
           <p className="text-stone-600 dark:text-slate-400 text-xs sm:text-sm">
-            Crie e gerencie conteúdos de área, mecanismos fisiopatológicos, questões comentadas e flashcards com repetição espaçada.
+            Crie e gerencie conteúdos de área, mecanismos fisiopatológicos e questões comentadas.
           </p>
         </div>
 
@@ -870,18 +869,6 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
         >
           <HelpCircle className="w-4 h-4" />
           <span>Questões Comentadas ({questions.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('flashcards')}
-          className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
-            activeTab === 'flashcards'
-              ? 'bg-slate-900 text-white dark:bg-teal-600 dark:text-white elev-xs font-bold'
-              : 'bg-stone-100 dark:bg-[#142038] text-stone-600 dark:text-slate-300 hover:bg-stone-200 dark:hover:bg-[#1A2845]'
-          }`}
-        >
-          <Layers className="w-4 h-4" />
-          <span>Flashcards SRS ({flashcards.length})</span>
         </button>
 
         <button
@@ -2284,51 +2271,6 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
                 </div>
               )}
             </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════ */}
-      {/* ── TAB: FLASHCARDS SRS ───────────────────────────────────── */}
-      {/* ══════════════════════════════════════════════════════════════ */}
-      {activeTab === 'flashcards' && (
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-[#0F172A] p-4 rounded-xl border border-stone-200 dark:border-[#243452] elev-xs flex items-center justify-between">
-            <div>
-              <h3 className="font-serif-reading text-base font-bold text-stone-900 dark:text-slate-100">
-                Flashcards SRS no Sistema
-              </h3>
-              <p className="text-[11px] text-stone-500 dark:text-slate-400">
-                Cartões indexados para repetição espaçada SM-2 vinculados à base conceitual
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-[#0F172A] rounded-xl border border-stone-200 dark:border-[#243452] divide-y divide-stone-100 dark:divide-stone-800 overflow-hidden elev-xs">
-            {flashcards.map((fc) => (
-              <div key={fc.id} className="p-4 flex items-center justify-between gap-4 text-xs">
-                <div className="space-y-1">
-                  <span className="font-bold text-stone-900 dark:text-slate-100">{fc.front}</span>
-                  <p className="text-stone-500 dark:text-slate-400 line-clamp-1">{parseInline(fc.back)}</p>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-amber-50 dark:bg-teal-950/60 text-amber-900 dark:text-teal-400 font-bold border border-amber-200 dark:border-teal-500/40">
-                    Repetições: {fc.srs.repetitionCount}
-                  </span>
-                  <button
-                    onClick={async () => {
-                      await flashcardsRepository.deleteFlashcard(fc.id);
-                      onRefreshData();
-                      showToast('Flashcard removido.');
-                    }}
-                    className="p-1.5 rounded-lg text-stone-400 hover:text-rose-600 transition-colors"
-                    title="Excluir flashcard"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
             ))}
           </div>
         </div>

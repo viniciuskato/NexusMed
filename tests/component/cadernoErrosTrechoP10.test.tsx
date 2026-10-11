@@ -21,9 +21,6 @@ vi.mock('../../src/repositories/AnswersRepository', () => ({
 vi.mock('../../src/repositories/ErrorNotebookRepository', () => ({
   errorNotebookRepository: { getErrorLogs: vi.fn(async () => []), updateErrorLog: vi.fn() },
 }));
-vi.mock('../../src/repositories/FlashcardsRepository', () => ({
-  flashcardsRepository: { createFlashcardFromQuestion: vi.fn() },
-}));
 vi.mock('../../src/repositories/QuestionsRepository', () => ({
   questionsRepository: {
     getQuestionReview: vi.fn(async (id: string) => ({ questionId: id, isCorrect: false, options: [], highYieldSummary: 'Pérola' })),
@@ -108,5 +105,14 @@ describe('IntegratedCadernoErros — trecho da seção ao lado do erro (P10)', (
     await screen.findByText('Enunciado q-mat');
     expect(screen.queryByTestId('trecho-do-erro-q-mat')).toBeNull();
     expect(screen.getAllByTestId(/^trecho-do-erro-/)).toHaveLength(1);
+  });
+
+  it('CORTE-1: o erro não oferece criar flashcard nem fala de repetição espaçada', async () => {
+    renderCaderno();
+    await screen.findByText('Enunciado q-mat');
+    expect(screen.queryByRole('button', { name: /flashcard|cartão/i })).toBeNull();
+    expect(document.body.textContent).not.toMatch(/flashcard|SRS|repetição espaçada/i);
+    // As outras ações do erro seguem ali.
+    expect(screen.getAllByRole('button', { name: /Estudar Teoria na Biblioteca/ }).length).toBeGreaterThan(0);
   });
 });

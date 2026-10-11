@@ -31,7 +31,7 @@ async function receivesTapAtCenter(target: Locator): Promise<boolean> {
   });
 }
 
-const RESOURCE_ITEMS = ['#dock-resources-compendiums', '#dock-resources-questions', '#dock-resources-flashcards'];
+const RESOURCE_ITEMS = ['#dock-resources-compendiums', '#dock-resources-questions', '#dock-resources-desempenho'];
 
 async function expectEveryResourceItemReceivesTap(page: Page) {
   await page.locator('#dock-nav-resources').click();

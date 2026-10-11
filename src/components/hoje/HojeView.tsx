@@ -1,10 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowRight, BookOpen, BookOpenCheck, Brain, CheckCircle2, Library } from 'lucide-react';
-import type { Compendium, Flashcard, LastReadingSession, Question, QuestionAnswerRecord } from '../../types';
+import { ArrowRight, BookOpen, BookOpenCheck, CheckCircle2, Library } from 'lucide-react';
+import type { Compendium, LastReadingSession, Question, QuestionAnswerRecord } from '../../types';
 import { answersRepository } from '../../repositories/AnswersRepository';
-import { flashcardsRepository } from '../../repositories/FlashcardsRepository';
 import { leiturasRepository } from '../../repositories/LeiturasRepository';
-import { isCardDueToday } from '../../services/srsAlgorithm';
 import { retomadaDeLeitura, testePendenteHoje } from '../../services/hoje';
 import type { LeituraDeMaterial } from '../../services/testarOQueLi';
 import { useServerLoad } from '../../hooks/useServerLoad';
@@ -12,10 +10,10 @@ import { ConnectionNotice } from '../common/ConnectionNotice';
 import type { LoadStatus } from '../../services/connectivity';
 
 // 43-E — tela "Hoje": a porta de entrada diária. Reúne o que já existe: continuar
-// lendo, testar o que li (43-C) e os cards vencidos. Sem meta, estatística nem
-// pontuação.
+// lendo e testar o que li (43-C). Sem meta, estatística nem pontuação. (Os cards
+// vencidos saíram na CORTE-1, D-14.)
 //
-// O que depende do servidor (leituras, respostas, cards) é carregado junto, do
+// O que depende do servidor (leituras e respostas) é carregado junto, do
 // servidor e a cada vez que a tela abre (45-G, D-2): numa falha o aviso aparece
 // e nada é mostrado pela metade — em especial, "tudo feito" só aparece com o dia
 // inteiro carregado, nunca porque a carga falhou. O "Continuar lendo" vem da
@@ -35,14 +33,12 @@ export interface HojeViewProps {
   dataStatus: LoadStatus;
   onResumeReading: (compendiumId: string, sectionId?: string) => void;
   onTestarOQueLi: () => void;
-  onStartReview: (cards: Flashcard[]) => void;
   onOpenLibrary: () => void;
 }
 
 interface DadosDoDia {
   leituras: LeituraDeMaterial[];
   answers: Record<string, QuestionAnswerRecord>;
-  flashcards: Flashcard[];
 }
 
 const cardClass =
@@ -60,18 +56,13 @@ export const HojeView: React.FC<HojeViewProps> = ({
   dataStatus,
   onResumeReading,
   onTestarOQueLi,
-  onStartReview,
   onOpenLibrary,
 }) => {
   const [dados, setDados] = useState<DadosDoDia | null>(null);
 
   const { status } = useServerLoad(async () => {
-    const [leituras, answers, flashcards] = await Promise.all([
-      leiturasRepository.getLeituras(),
-      answersRepository.getAnswers(),
-      flashcardsRepository.getFlashcards(),
-    ]);
-    return () => setDados({ leituras, answers, flashcards });
+    const [leituras, answers] = await Promise.all([leiturasRepository.getLeituras(), answersRepository.getAnswers()]);
+    return () => setDados({ leituras, answers });
   });
 
   const retomada = useMemo(() => retomadaDeLeitura(lastReadingSession, compendiums), [lastReadingSession, compendiums]);
@@ -88,10 +79,9 @@ export const HojeView: React.FC<HojeViewProps> = ({
         : [],
     [dados, dataReady, questions, compendiums]
   );
-  const cardsDeHoje = useMemo(() => (dados ? dados.flashcards.filter((fc) => isCardDueToday(fc)) : []), [dados]);
 
   const carregado = dados !== null && dataReady;
-  const tudoFeito = carregado && pendentes.length === 0 && cardsDeHoje.length === 0;
+  const tudoFeito = carregado && pendentes.length === 0;
 
   return (
     <div id="hoje-view" className="w-full max-w-3xl mx-auto space-y-5 pb-12">
@@ -161,28 +151,6 @@ export const HojeView: React.FC<HojeViewProps> = ({
         </section>
       )}
 
-      {cardsDeHoje.length > 0 && (
-        <section aria-labelledby="hoje-cards-titulo" className={cardClass}>
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 shrink-0 rounded-xl bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 flex items-center justify-center border border-indigo-500/25">
-              <Brain className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <h2 id="hoje-cards-titulo" className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Cards para hoje
-              </h2>
-              <p className="text-base font-bold text-slate-900 dark:text-slate-100">
-                {plural(cardsDeHoje.length, 'card', 'cards')} para hoje
-              </p>
-            </div>
-          </div>
-          <button type="button" id="hoje-revisar-cards" onClick={() => onStartReview(cardsDeHoje)} className={primaryButtonClass}>
-            <span>Revisar {plural(cardsDeHoje.length, 'card', 'cards')}</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </section>
-      )}
-
       {tudoFeito && (
         <section aria-labelledby="hoje-feito-titulo" className={cardClass}>
           <div className="flex items-start gap-3">
@@ -194,7 +162,7 @@ export const HojeView: React.FC<HojeViewProps> = ({
                 Tudo feito por hoje
               </h2>
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                Nenhum card para revisar e nenhum teste pendente da sua leitura de hoje.
+                Nenhum teste pendente da sua leitura de hoje.
               </p>
             </div>
           </div>

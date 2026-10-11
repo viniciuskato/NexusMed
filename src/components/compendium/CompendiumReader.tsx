@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   Clock,
   HelpCircle,
-  Layers,
   Lightbulb,
   AlertTriangle,
   AlertCircle,
@@ -30,7 +29,6 @@ import { Compendium, Discipline, Theme } from '../../types';
 import { StorageService } from '../../services/storage';
 import { bookmarksRepository } from '../../repositories/BookmarksRepository';
 import { notesRepository, type RemovedSectionNote } from '../../repositories/NotesRepository';
-import { CriarCartao } from '../flashcards/CriarCartao';
 import { readingProgressRepository } from '../../repositories/ReadingProgressRepository';
 import { SafeMarkdown, parseInline } from '../common/SafeMarkdown';
 import { ContextualFeedbackPopover } from '../feedback/ContextualFeedbackPopover';
@@ -64,7 +62,6 @@ interface CompendiumReaderProps {
   onOpenQuestionsForMaterial: (compendiumId: string, themeId: string) => void;
   /** Abre "Testar o que li" — questões dos materiais lidos hoje (43-C). */
   onTestarOQueLi?: () => void;
-  onOpenFlashcardsForTheme: (themeId: string) => void;
   targetSectionId?: string;
   /**
    * Chamado uma vez, logo depois de consumir um targetSectionId (pulo
@@ -101,7 +98,6 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
   onOpenQuestionsForTheme,
   onOpenQuestionsForMaterial,
   onTestarOQueLi,
-  onOpenFlashcardsForTheme,
   targetSectionId,
   onSectionJumpHandled,
   returnToQuestionsContext,
@@ -892,17 +888,6 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
 
                     {/* Section actions belong after the section has been read */}
                     <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
-                      <CriarCartao
-                        origem={{
-                          disciplineId: compendium.disciplineId,
-                          themeId: compendium.themeId,
-                          materialId: compendium.id,
-                          sectionId: sec.id,
-                          tags: [discipline?.name, theme?.name].filter((t): t is string => Boolean(t)),
-                        }}
-                        onCriado={() => showToast('Cartão criado')}
-                      />
-
                       <button
                         type="button"
                         aria-pressed={isRead}
@@ -936,18 +921,10 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
               Fixação e Retenção Ativa
             </h3>
             <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-0.5">
-              Consolide os conceitos deste material resolvendo questões e revisando flashcards.
+              Consolide os conceitos deste material resolvendo questões.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => onOpenFlashcardsForTheme(compendium.themeId)}
-              className="px-3 py-1.5 rounded-lg border border-[#E2E8F0] dark:border-[#263244] hover:bg-slate-50 dark:hover:bg-[#182235] text-[#172033] dark:text-[#E5E7EB] text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
-            >
-              <Layers className="w-3.5 h-3.5 text-[#0F766E] dark:text-[#14B8A6]" />
-              <span>Flashcards</span>
-            </button>
-
             {onTestarOQueLi && (
               <button
                 type="button"
@@ -1145,7 +1122,7 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
             </div>
           </div>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            Consolide o que você acabou de ler resolvendo questões de prova com comentários detalhados sobre {theme?.name || compendium.title} ou revisando os flashcards de repetição espaçada.
+            Consolide o que você acabou de ler resolvendo questões de prova com comentários detalhados sobre {theme?.name || compendium.title}.
           </p>
           <div className="flex flex-wrap items-center gap-2.5 pt-2">
             <button
@@ -1155,14 +1132,6 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
             >
               <HelpCircle className="w-4 h-4" />
               <span>Resolver Questões deste Tema</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenFlashcardsForTheme(compendium.themeId)}
-              className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <Layers className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-              <span>Revisar Flashcards</span>
             </button>
             <button
               type="button"

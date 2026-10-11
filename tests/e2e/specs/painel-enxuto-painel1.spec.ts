@@ -7,7 +7,6 @@ import {
   deleteE2EMaterials,
   getLocalConfig,
   getSeedIds,
-  insertFlashcardForUser,
   insertPublishedMaterial,
   psqlLocal,
   runCleanup,
@@ -17,7 +16,8 @@ import {
 
 // PAINEL-1, contra o Supabase local de verdade: o painel ("Início") tem só três blocos — Hoje, Acertos por
 // disciplina e Continue lendo —, cabe em 360px sem rolagem lateral, e o resto do painel antigo vive em
-// "Meu desempenho", a um clique (link do fim do painel e menu Recursos).
+// "Meu desempenho", a um clique (link do fim do painel e menu Recursos). CORTE-1 (D-14): sem cartões, sequência
+// de dias, nível/XP, desafios nem conquistas em nenhuma das duas telas.
 
 const STEM = 'e2e-painel1-questao';
 
@@ -115,7 +115,7 @@ test.describe('PAINEL-1 — painel enxuto e "Meu desempenho"', () => {
 
       await expect(secoes(page)).toHaveCount(3);
       await expect(secoes(page).locator('h2')).toHaveText(['Hoje', 'Acertos por disciplina', 'Continue lendo']);
-      await expect(page.getByText('Nenhum cartão para hoje')).toBeVisible();
+      await expect(page.getByText(/cartões?|dias seguidos/i)).toHaveCount(0);
       await expect(page.getByText('Nenhuma questão respondida ainda')).toBeVisible();
       await expect(page.getByText('Nenhum material em andamento')).toBeVisible();
       await expect(page.getByRole('button', { name: 'Abrir biblioteca' })).toBeVisible();
@@ -131,7 +131,7 @@ test.describe('PAINEL-1 — painel enxuto e "Meu desempenho"', () => {
     }
   });
 
-  test('com dados: cartões vencidos, sequência, acertos por disciplina e material em andamento vêm do servidor', async ({ page }, testInfo) => {
+  test('com dados: acertos por disciplina e material em andamento vêm do servidor', async ({ page }, testInfo) => {
     const seed = getSeedIds();
     const t = `${Date.now()}`;
     const titulo = `${MATERIAL_PREFIX}painel1-${t}`;
@@ -145,11 +145,6 @@ test.describe('PAINEL-1 — painel enxuto e "Meu desempenho"', () => {
       `insert into public.reading_progress (user_id, material_id, read_section_ids, percent, updated_at) ` +
         `values ('${student.id}', '${materialId}', '{}', 40, now());`
     );
-    insertFlashcardForUser(student.id, seed, { materialId: null, isCustom: false, front: 'Card PAINEL-1' });
-    insertFlashcardForUser(student.id, seed, { materialId: null, isCustom: false, front: 'Card PAINEL-1 b' });
-    cleanup.push(() => {
-      psqlLocal(`delete from public.flashcards where user_id = '${student.id}';`);
-    });
     await responder(student, questionId, certaId);
     const disciplina = psqlLocal(`select name from public.disciplines where id = '${seed.disciplineId}';`).split('\n')[0].trim();
 
@@ -158,9 +153,10 @@ test.describe('PAINEL-1 — painel enxuto e "Meu desempenho"', () => {
     await expect(page.locator('#painel-view')).toBeVisible();
     await expect(secoes(page)).toHaveCount(3);
 
-    // Hoje: 2 cartões vencidos e a sequência de hoje (1 dia).
-    await expect(page.locator('#painel-cartoes-numero')).toHaveText('2');
-    await expect(page.locator('#painel-sequencia-numero')).toHaveText('1');
+    // Hoje: só o atalho das questões (sem cartões nem sequência de dias).
+    await expect(page.locator('#painel-cartoes-numero')).toHaveCount(0);
+    await expect(page.locator('#painel-sequencia-numero')).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Hoje' }).getByRole('button', { name: 'Fazer questões' })).toBeVisible();
     // Acertos: a disciplina do seed, 1 de 1 = 100%.
     const grafico = page.locator('#painel-acertos-grafico');
     await expect(grafico.getByRole('listitem')).toHaveCount(1);
@@ -199,9 +195,13 @@ test.describe('PAINEL-1 — painel enxuto e "Meu desempenho"', () => {
     await page.getByRole('button', { name: 'Ver meu desempenho' }).click();
     await expect(page).toHaveURL(/#\/desempenho$/);
     await expect(page.getByRole('heading', { name: 'Meu desempenho', level: 1 })).toBeVisible();
-    for (const texto of ['Desempenho por Especialidade Médica', 'Radar de Vulnerabilidades', 'Desafios do Dia', 'Circuito de Flashcards', 'Medalhas & Conquistas']) {
+    for (const texto of ['Desempenho por Especialidade Médica', 'Radar de Vulnerabilidades']) {
       await expect(page.getByText(texto, { exact: true }).first()).toBeVisible();
     }
+    for (const fora of ['Desafios do Dia', 'Circuito de Flashcards', 'Medalhas & Conquistas', 'Ofensiva de Estudo']) {
+      await expect(page.getByText(fora)).toHaveCount(0);
+    }
+    await expect(page.getByText(/\bXP\b|Progresso do Nível/)).toHaveCount(0);
     await expect(page.getByText('Acurácia Geral')).toBeVisible();
     await expect(page.getByText('Missão Prioritária de Hoje')).toBeVisible();
     await page.getByRole('button', { name: /Caderno de Erros & Metacognição/ }).click();

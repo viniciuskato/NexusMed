@@ -46,10 +46,8 @@ function renderModal(overrides: Partial<React.ComponentProps<typeof GlobalSearch
     onClose: vi.fn(),
     disciplines,
     questions: [],
-    flashcards: [],
     onNavigateToCompendium: vi.fn(),
     onNavigateToQuestion: vi.fn(),
-    onNavigateToFlashcards: vi.fn(),
     ...overrides,
   };
   render(<GlobalSearchModal {...props} />);

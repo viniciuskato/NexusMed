@@ -1,9 +1,8 @@
-import type { Compendium, Discipline, Flashcard, LastReadingSession, Question, QuestionAnswerRecord } from '../../types';
-import { isCardDueToday } from '../../services/srsAlgorithm';
+import type { Compendium, Discipline, LastReadingSession, Question, QuestionAnswerRecord } from '../../types';
 
 // PAINEL-1 — contas do painel enxuto e do "Meu desempenho". Só combina o que o
-// app já calcula (cartões vencidos, respostas, progresso de leitura); nada é
-// inventado nem tem dado de exemplo.
+// app já calcula (respostas, progresso de leitura); nada é inventado nem tem
+// dado de exemplo. (As contas de cartões saíram na CORTE-1, D-14.)
 
 export interface AcertoDeDisciplina {
   disciplineId: string;
@@ -94,28 +93,4 @@ export function materiaisEmAndamento(
       return b.percentual - a.percentual || a.titulo.localeCompare(b.titulo, 'pt-BR');
     })
     .slice(0, limite);
-}
-
-/** Cartões que vencem hoje (a mesma regra da revisão). */
-export function cartoesParaHoje(flashcards: Flashcard[], agora: Date = new Date()): Flashcard[] {
-  return flashcards.filter((fc) => isCardDueToday(fc, agora));
-}
-
-export interface ResumoDoBaralho {
-  total: number;
-  due: number;
-  reviewedToday: number;
-  /** Cartões nascidos de um erro. Cartão escrito pelo usuário não conta, mesmo com questão de origem. */
-  errorLinked: number;
-  mastered: number;
-  inProgress: number;
-}
-
-export function resumoDoBaralho(flashcards: Flashcard[], due: number, reviewedToday: number): ResumoDoBaralho {
-  const total = flashcards.length;
-  const errorLinked = flashcards.filter(
-    (fc) => (Boolean(fc.questionOriginId) && !fc.isWritten) || fc.id.startsWith('err-') || fc.tags?.includes('erro')
-  ).length;
-  const mastered = flashcards.filter((fc) => (fc.srs?.intervalDays ?? 0) >= 21).length;
-  return { total, due, reviewedToday, errorLinked, mastered, inProgress: total - mastered };
 }

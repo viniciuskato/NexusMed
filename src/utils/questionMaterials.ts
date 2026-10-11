@@ -5,8 +5,8 @@ import type { Question } from '../types';
 // (que é só o primeiro, para quem abre um material só).
 
 /**
- * Escopo "sem material" aceito por QuestionsView/FlashcardsView no lugar de um
- * id de compêndio (reexportado por thematicPacks). Prefixado com `__` para
+ * Escopo "sem material" aceito por QuestionsView no lugar de um
+ * id de compêndio. Prefixado com `__` para
  * nunca colidir com um id real (uuid).
  */
 export const SCOPE_UNLINKED = '__sem-material__';

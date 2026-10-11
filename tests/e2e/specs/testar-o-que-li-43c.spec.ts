@@ -13,8 +13,8 @@ import {
 
 // Unidade 43-C, contra o Supabase local de verdade: "Testar o que li" mostra
 // os materiais lidos hoje (marcados), a contagem antes de começar, só inclui a
-// questão que cobra vários materiais com todos marcados, errar gera flashcard,
-// e sem questão a tela diz isso e oferece o tema.
+// questão que cobra vários materiais com todos marcados, errar não gera cartão
+// (CORTE-1, D-14), e sem questão a tela diz isso e oferece o tema.
 
 const STEM_PREFIX = 'e2e-43c-';
 
@@ -84,7 +84,7 @@ test.describe('43-C — Testar o que li', () => {
     await runCleanup(fns);
   });
 
-  test('pelo leitor: lidos hoje marcados, contagem, desmarcar e errar gera flashcard', async ({ page }) => {
+  test('pelo leitor: lidos hoje marcados, contagem, desmarcar e errar não gera cartão', async ({ page }) => {
     const t = `${Date.now()}`;
     const titleA = `${MATERIAL_PREFIX}43c-A-${t}`;
     const titleB = `${MATERIAL_PREFIX}43c-B-${t}`;
@@ -144,15 +144,18 @@ test.describe('43-C — Testar o que li', () => {
     const card = page.locator('[data-answer-origin]').first();
     await expect(card).toContainText(`${STEM_PREFIX}cobra só A`);
 
-    // Errar gera flashcard, como em qualquer questão.
+    // Errar vai para o caderno de erros e não gera cartão (os cartões saíram do app na CORTE-1).
     await card.getByText('Errada', { exact: true }).first().click();
     await card.getByRole('button', { name: 'Confirmar Resposta' }).click();
     await expect(card).toHaveAttribute('data-answer-origin', 'session', { timeout: 15_000 });
     await expect
       .poll(() =>
-        psqlLocal(`select count(*) from public.flashcards where user_id = '${student.id}' and question_origin_id = '${soA}';`)
+        psqlLocal(`select count(*) from public.question_attempts where user_id = '${student.id}' and question_id = '${soA}';`)
       )
       .toBe('1');
+    expect(
+      psqlLocal(`select count(*) from public.flashcards where user_id = '${student.id}' and question_origin_id = '${soA}';`)
+    ).toBe('0');
   });
 
   test('pelo painel: sem questões para o que leu, diz isso e oferece o tema', async ({ page }) => {
@@ -188,7 +191,7 @@ test.describe('43-C — Testar o que li', () => {
     await expect(page.getByText('Exibindo')).toContainText(`${doTema} questões`);
   });
 
-  test('bloco "Fixação e Retenção Ativa": botões cabem no card em desktop e em 360px', async ({ page }) => {
+  test('bloco "Fixação e Retenção Ativa": botões cabem no card em desktop e em 360px, sem flashcards', async ({ page }) => {
     const t = `${Date.now()}`;
     const title = `${MATERIAL_PREFIX}43c-viewport-${t}`;
     insertPublishedMaterial(`43c-viewport-${t}`);
@@ -208,22 +211,20 @@ test.describe('43-C — Testar o que li', () => {
     const heading = page.getByRole('heading', { name: 'Fixação e Retenção Ativa' });
     await expect(heading).toBeVisible();
     const card = heading.locator('xpath=../..');
-    const flashcards = card.getByRole('button', { name: 'Flashcards', exact: true });
+    await expect(card.getByRole('button', { name: /Flashcards/ })).toHaveCount(0);
     const testar = card.getByRole('button', { name: 'Testar o que li' });
     const resolver = card.getByRole('button', { name: 'Resolver questões' });
 
     // Desktop ('Desktop Chrome', o único project deste arquivo de config):
-    // os três botões continuam na mesma linha, com o mesmo topo.
-    const topFlashcards = (await flashcards.boundingBox())!.y;
+    // os dois botões continuam na mesma linha, com o mesmo topo.
     const topTestar = (await testar.boundingBox())!.y;
     const topResolver = (await resolver.boundingBox())!.y;
-    expect(Math.abs(topTestar - topFlashcards)).toBeLessThanOrEqual(2);
-    expect(Math.abs(topResolver - topFlashcards)).toBeLessThanOrEqual(2);
+    expect(Math.abs(topResolver - topTestar)).toBeLessThanOrEqual(2);
 
     // 360px: nenhum botão passa da borda direita do card nem da janela.
     await page.setViewportSize({ width: 360, height: 800 });
     const cardBox = (await card.boundingBox())!;
-    for (const button of [flashcards, testar, resolver]) {
+    for (const button of [testar, resolver]) {
       const box = (await button.boundingBox())!;
       expect(box.x + box.width).toBeLessThanOrEqual(cardBox.x + cardBox.width + 0.5);
       expect(box.x + box.width).toBeLessThanOrEqual(360);

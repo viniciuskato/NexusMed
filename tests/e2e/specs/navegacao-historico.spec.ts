@@ -35,16 +35,17 @@ test.describe('Navegação pelo histórico do navegador', () => {
     // Desde a 43-E o app abre em "Hoje".
     await expect(page).toHaveURL(/#\/today$/);
 
-    await page.locator('#nav-thematic-study').click();
-    await expect(page.locator('#thematic-study-view')).toBeVisible();
-    await expect(page).toHaveURL(/#\/thematic-study$/);
+    await page.locator('#nav-resources').click();
+    await page.locator('#nav-resources-desempenho').click();
+    await expect(page.locator('#desempenho-titulo')).toBeVisible();
+    await expect(page).toHaveURL(/#\/desempenho$/);
 
     await page.locator('#nav-dashboard').click();
     await expect(page.locator('#nav-dashboard')).toHaveAttribute('aria-current', 'page');
 
     await page.goBack();
-    await expect(page.locator('#thematic-study-view')).toBeVisible();
-    await expect(page.locator('#nav-thematic-study')).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#desempenho-titulo')).toBeVisible();
+    await expect(page).toHaveURL(/#\/desempenho$/);
 
     await page.goForward();
     await expect(page.locator('#nav-dashboard')).toHaveAttribute('aria-current', 'page');
@@ -59,8 +60,25 @@ test.describe('Navegação pelo histórico do navegador', () => {
     });
     cleanup.push(() => deleteTestUser(student.id));
 
-    await login(page, student, '/#/thematic-study');
-    await expect(page.locator('#thematic-study-view')).toBeVisible();
-    await expect(page.locator('#nav-thematic-study')).toHaveAttribute('aria-current', 'page');
+    await login(page, student, '/#/desempenho');
+    await expect(page.locator('#desempenho-titulo')).toBeVisible();
   });
+
+  // CORTE-1 (D-14): as telas de cartões e do Estudo Temático saíram; um link salvo para elas cai na tela inicial.
+  for (const tela of ['thematic-study', 'flashcards', 'flashcard-session']) {
+    test(`link salvo para #/${tela} (tela que saiu do app) cai na tela inicial, sem erro`, async ({ page }) => {
+      const student = await createTestUser({
+        emailLocalPart: `nav-tela-removida-${tela}-${Date.now()}`,
+        password: 'senha-teste-123',
+        role: 'student',
+        status: 'active',
+      });
+      cleanup.push(() => deleteTestUser(student.id));
+
+      await login(page, student, `/#/${tela}`);
+      await expect(page.locator('#hoje-view')).toBeVisible();
+      await expect(page).toHaveURL(/#\/today$/);
+      await expect(page.locator('#app-load-error')).toHaveCount(0);
+    });
+  }
 });

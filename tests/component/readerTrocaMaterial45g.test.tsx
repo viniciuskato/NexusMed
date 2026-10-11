@@ -90,7 +90,6 @@ function renderReader(c: Compendium) {
       onBack={() => {}}
       onOpenQuestionsForTheme={() => {}}
       onOpenQuestionsForMaterial={() => {}}
-      onOpenFlashcardsForTheme={() => {}}
     />
   );
 }

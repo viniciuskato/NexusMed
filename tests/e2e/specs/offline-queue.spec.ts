@@ -19,7 +19,7 @@ async function login(page: Page, user: CreatedTestUser) {
 
 async function goToQuestionsBank(page: Page) {
   // Prompt 22-A: "Questões" passou a ficar dentro do agrupador "Recursos" do
-  // dock (Início / Estudo Temático / Recursos).
+  // dock (Hoje / Início / Recursos).
   await page.locator('#dock-nav-resources').click();
   await page.locator('#dock-resources-questions').click();
 }
@@ -52,7 +52,7 @@ test.describe('Fila offline / reconexão / idempotência', () => {
     await deleteTestUser(user.id);
   });
 
-  test('duplo clique offline mantém correção pendente sem efeitos falsos e reconecta com exatamente 1 tentativa/card', async ({ page }) => {
+  test('duplo clique offline mantém correção pendente sem efeitos falsos e reconecta com exatamente 1 tentativa e nenhum card (CORTE-1: errar não gera mais cartão)', async ({ page }) => {
     test.setTimeout(75_000);
     await login(page, user);
 
@@ -100,17 +100,16 @@ test.describe('Fila offline / reconexão / idempotência', () => {
       .poll(() => countAttemptsForUser(user.id), { timeout: 20_000, message: 'aguardando sincronização convergir' })
       .toBe(1);
     await expect(card).toHaveAttribute('data-answer-origin', 'session', { timeout: 10_000 });
-    await expect
-      .poll(() => countQuestionFlashcardsForUser(user.id), { timeout: 20_000, message: 'aguardando card do erro confirmado convergir' })
-      .toBe(1);
+    // CORTE-1 (D-14): a resposta errada confirmada vai para o caderno de erros e não gera cartão.
+    expect(countQuestionFlashcardsForUser(user.id)).toBe(0);
 
     // Reenviar o mesmo client_op_id (reload dispara reconciliação de novo)
-    // nunca duplica nem a tentativa nem o flashcard derivado.
+    // nunca duplica a tentativa nem cria cartão.
     await page.reload();
     await goToQuestionsBank(page);
     await page.waitForTimeout(2_000); // reconciliação roda em segundo plano no mount; sem sleep fixo como condição de sucesso — só dá tempo de disparar antes da assertiva abaixo
     expect(countAttemptsForUser(user.id)).toBe(1);
-    expect(countQuestionFlashcardsForUser(user.id)).toBe(1);
+    expect(countQuestionFlashcardsForUser(user.id)).toBe(0);
   });
 
   test('duas operações em sequência rápida (favoritar/desfavoritar) não perdem a segunda (regressão do bug 07-E2)', async ({ page }) => {

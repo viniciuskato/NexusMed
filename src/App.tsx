@@ -3,7 +3,6 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import {
-  Flashcard,
   SimuladoConfig,
   ThemeMode,
   MigrationSummary,
@@ -12,7 +11,6 @@ import {
 } from './types';
 import { StorageService } from './services/storage';
 import { registerSyncHandlers } from './services/syncHandlers';
-import { isCardDueToday } from './services/srsAlgorithm';
 import * as syncQueueDebug from './services/syncQueue';
 import { supabase as supabaseDebugClient } from './lib/supabaseClient';
 import { notesRepository } from './repositories/NotesRepository';
@@ -23,7 +21,6 @@ import { simuladosRepository } from './repositories/SimuladosRepository';
 import { feedbackRepository } from './repositories/FeedbackRepository';
 import { questionReactionsRepository } from './repositories/QuestionReactionsRepository';
 import { buildSimuladoSelection, SimuladoSelectionResult } from './services/simuladoSelection';
-import { packIdForCompendium, SCOPE_CUSTOM, SCOPE_UNLINKED } from './services/thematicPacks';
 import { questionMatchesMaterialScope } from './utils/questionMaterials';
 import { jaEntrouNestaAba, marcarEntradaNestaAba } from './utils/navEntrada';
 
@@ -81,7 +78,6 @@ import { DashboardView } from './components/dashboard/DashboardView';
 import { DesempenhoView } from './components/dashboard/DesempenhoView';
 import { HojeView } from './components/hoje/HojeView';
 import { CreateSimuladoModal } from './components/questions/CreateSimuladoModal';
-import { CreateFlashcardModal } from './components/flashcards/CreateFlashcardModal';
 import { ClinicalPomodoroWidget } from './components/common/ClinicalPomodoroWidget';
 import { TestarOQueLiModal } from './components/testar/TestarOQueLiModal';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
@@ -95,11 +91,8 @@ const CompendiumView = lazyWithReload(() => import('./components/compendium/Comp
 const CompendiumReader = lazyWithReload(() => import('./components/compendium/CompendiumReader').then((m) => ({ default: m.CompendiumReader })));
 const QuestionsView = lazyWithReload(() => import('./components/questions/QuestionsView').then((m) => ({ default: m.QuestionsView })));
 const SimuladoSession = lazyWithReload(() => import('./components/questions/SimuladoSession').then((m) => ({ default: m.SimuladoSession })));
-const FlashcardsView = lazyWithReload(() => import('./components/flashcards/FlashcardsView').then((m) => ({ default: m.FlashcardsView })));
-const FlashcardReviewSession = lazyWithReload(() => import('./components/flashcards/FlashcardReviewSession').then((m) => ({ default: m.FlashcardReviewSession })));
 const SimuladosView = lazyWithReload(() => import('./components/simulados/SimuladosView').then((m) => ({ default: m.SimuladosView })));
 const AdminCMSView = lazyWithReload(() => import('./components/admin/AdminCMSView').then((m) => ({ default: m.AdminCMSView })));
-const ThematicStudyView = lazyWithReload(() => import('./components/thematic/ThematicStudyView').then((m) => ({ default: m.ThematicStudyView })));
 // 44-D: "Como escrever um material" traz o padrão e os prompts como texto do
 // build; fica fora do bundle inicial.
 const EnviarMaterialView = lazyWithReload(() => import('./components/material/EnviarMaterialView').then((m) => ({ default: m.EnviarMaterialView })));
@@ -109,10 +102,11 @@ const ComoEscreverMaterialView = lazyWithReload(() => import('./components/mater
 // Views que podem ser restauradas depois de um reload (Prompt 22-A). É uma
 // lista de PERMISSÃO: qualquer outro valor salvo (inclusive um valor futuro
 // ainda não conhecido, ou lixo gravado por outra versão) cai em 'today'.
-// Sessões efêmeras ficam deliberadamente de fora — 'simulado-session',
-// 'flashcard-session' e 'compendium-reader' dependem de estado em memória
-// (fila de cards, seleção sorteada, compêndio ativo) que não sobrevive ao
-// reload; restaurá-las abriria uma tela sem o conteúdo correspondente.
+// Sessões efêmeras ficam deliberadamente de fora — 'simulado-session' e
+// 'compendium-reader' dependem de estado em memória (seleção sorteada,
+// compêndio ativo) que não sobrevive ao reload; restaurá-las abriria uma tela
+// sem o conteúdo correspondente. 'flashcards' e 'thematic-study' saíram do app
+// (CORTE-1, D-14): um link ou estado salvo que aponte para elas cai em 'today'.
 //
 // 'today' (43-E) é a tela inicial. A restauração acima vale para o RELOAD: a
 // abertura nova da aba (sem link direto) entra por 'today', ver a restauração
@@ -121,10 +115,8 @@ const PERSISTED_VIEWS = [
   'today',
   'dashboard',
   'desempenho',
-  'thematic-study',
   'compendiums',
   'questions',
-  'flashcards',
   'simulados',
   'errors',
   'como-escrever-material',
@@ -151,21 +143,12 @@ function AuthenticatedApp() {
   useEffect(() => {
     canSendRef.current = profile?.role === 'admin' && profile?.status === 'active';
   }, [profile?.role, profile?.status]);
-  // Estudo Temático: pack aberto (id derivado do compêndio). Fica aqui, e não
-  // dentro da view, porque o retorno ao pack depois de ler/responder/revisar
-  // depende dele, e porque a validação do id salvo precisa dos dados já
-  // carregados.
-  const [selectedPackId, setSelectedPackId] = useState<string | null>(null);
-  const [invalidSavedPackId, setInvalidSavedPackId] = useState<string | null>(null);
   const [navStateRestored, setNavStateRestored] = useState(false);
-  // Escopo de material aplicado a Questões/Cards quando se chega pelo pack.
+  // Escopo de material aplicado às Questões.
   const [scopeCompendiumForQuestions, setScopeCompendiumForQuestions] = useState<string | undefined>(undefined);
   // 43-C: recorte "Testar o que li" (ids escolhidos no modal).
   const [scopeQuestionIdsForQuestions, setScopeQuestionIdsForQuestions] = useState<string[] | undefined>(undefined);
   const [isTestarOpen, setIsTestarOpen] = useState(false);
-  const [scopeCompendiumForFlashcards, setScopeCompendiumForFlashcards] = useState<string | undefined>(undefined);
-  const [packReturnContext, setPackReturnContext] = useState<string | null>(null);
-  const [flashcardOriginView, setFlashcardOriginView] = useState<string>('flashcards');
 
   // Deep-link / Context State
   const [selectedCompendiumId, setSelectedCompendiumId] = useState<string | null>(null);
@@ -188,9 +171,7 @@ function AuthenticatedApp() {
   // questões elegíveis existiam, para a UI avisar quando pedir mais do que
   // o banco tem disponível.
   const [activeSimuladoSelection, setActiveSimuladoSelection] = useState<SimuladoSelectionResult | null>(null);
-  const [reviewCardsQueue, setReviewCardsQueue] = useState<Flashcard[]>([]);
   const [filterThemeForQuestions, setFilterThemeForQuestions] = useState<string | undefined>(undefined);
-  const [filterThemeForFlashcards, setFilterThemeForFlashcards] = useState<string | undefined>(undefined);
   const [focusQuestionId, setFocusQuestionId] = useState<string | undefined>(undefined);
   // "Treinar Apenas Questões Erradas" (Prompt 10-A): antes, esse botão criava
   // um SimuladoConfig (isExamMode: false) e abria <SimuladoSession>, que tem
@@ -213,18 +194,12 @@ function AuthenticatedApp() {
     // ("Como escrever questões"), com setModoDoEnvio('questoes') logo em seguida.
     if (view === 'enviar-material') setModoDoEnvio('material');
     // Navegar pelo menu principal é sempre uma saída explícita do escopo de um
-    // pack — sem isso, "Questões" no menu continuaria mostrando só as questões
+    // material — sem isso, "Questões" no menu continuaria mostrando só as questões
     // do último material aberto, sem o usuário ter pedido esse recorte.
     if (view === 'questions') {
       setScopeCompendiumForQuestions(undefined);
       setScopeQuestionIdsForQuestions(undefined);
       setFilterThemeForQuestions(undefined);
-      setPackReturnContext(null);
-    }
-    if (view === 'flashcards') {
-      setScopeCompendiumForFlashcards(undefined);
-      setFilterThemeForFlashcards(undefined);
-      setPackReturnContext(null);
     }
     // PAINEL-1: o caderno de erros e o resto do painel antigo moram em "Meu desempenho".
     if (view === 'errors') {
@@ -253,7 +228,6 @@ function AuthenticatedApp() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isCreateSimuladoOpen, setIsCreateSimuladoOpen] = useState(false);
-  const [isCreateFlashcardOpen, setIsCreateFlashcardOpen] = useState(false);
 
   // Migration State
   const [migrationSummary, setMigrationSummary] = useState<MigrationSummary | null>(null);
@@ -266,7 +240,7 @@ function AuthenticatedApp() {
   // Estado de SESSÃO deste componente raiz, que nunca desmonta entre logout
   // e login (`App()` monta `<AuthenticatedApp/>` uma única vez). Sem isto,
   // trocar de conta com a carga do usuário novo falhando deixava a tela na
-  // view (e no conteúdo em memória: fila de flashcards, seleção de simulado,
+  // view (e no conteúdo em memória: seleção de simulado,
   // compêndio aberto...) que a conta ANTERIOR tinha — o único portão antes do
   // render normal era `dataLoading`, que `useAppData` volta a `false` ao fim
   // de toda tentativa, mesmo numa carga que falhou (revisão do #93, item 2).
@@ -276,7 +250,6 @@ function AuthenticatedApp() {
     setActiveView('today');
     setDashboardTab('overview');
     setNavStateRestored(false);
-    setReviewCardsQueue([]);
     setActiveSimuladoConfig(null);
     setActiveSimuladoSelection(null);
     setSelectedCompendiumId(null);
@@ -285,17 +258,11 @@ function AuthenticatedApp() {
     setLibraryOrigin(null);
     setFocusQuestionId(undefined);
     setFilterThemeForQuestions(undefined);
-    setFilterThemeForFlashcards(undefined);
     setFilterStatusForQuestions(undefined);
     setScopeCompendiumForQuestions(undefined);
     // Recorte "Testar o que li" (43-C): escolhido a partir das leituras desta
     // conta.
     setScopeQuestionIdsForQuestions(undefined);
-    setScopeCompendiumForFlashcards(undefined);
-    setPackReturnContext(null);
-    setFlashcardOriginView('flashcards');
-    setSelectedPackId(null);
-    setInvalidSavedPackId(null);
     // "Continuar lendo" e o aviso de dados antigos são desta conta
     // especificamente — sem isto, a conta B via o card de retomada de
     // leitura e/ou o modal de migração da conta A (achado do revisor e meu,
@@ -304,13 +271,12 @@ function AuthenticatedApp() {
     // `AuthContext`), então o valor novo é o de B, não um vazio à toa.
     setLastReadingSession(StorageService.getLastReadingSession());
     setMigrationSummary(null);
-    // Modais abertos (busca, feedback, criar simulado/flashcard) não
+    // Modais abertos (busca, feedback, criar simulado) não
     // guardam dado de outra conta, mas um formulário aberto no meio da troca
     // é um estado órfão — fecha todos, como o resto da tela.
     setIsSearchOpen(false);
     setIsFeedbackOpen(false);
     setIsCreateSimuladoOpen(false);
-    setIsCreateFlashcardOpen(false);
     // O "Testar o que li" (43-C) mostra as leituras da conta que o abriu e só
     // as busca ao montar: fechá-lo o desmonta, e a próxima abertura já é da
     // conta nova.
@@ -328,9 +294,7 @@ function AuthenticatedApp() {
     themes,
     compendiums,
     questions,
-    flashcards,
     answers,
-    stats,
     loading: dataLoading,
     ready: dataReady,
     status: dataStatus,
@@ -358,13 +322,8 @@ function AuthenticatedApp() {
   // ── Restauração de navegação depois de um reload (Prompt 22-A) ─────────────
   // Só roda depois que os dados do usuário terminaram de carregar: a view é
   // validada contra a lista de permissão (e contra o papel real, no caso de
-  // 'admin'), e o pack salvo é validado contra os compêndios efetivamente
-  // disponíveis para ESTA conta agora — um material despublicado ou removido
-  // entre sessões não pode ser reaberto, e o usuário é avisado em vez de cair
-  // numa tela vazia. O estado é lido do StorageService, que já isola por UID.
-  // Espera os dados DESTE usuário terem vindo do servidor (`dataReady`): uma
-  // carga que falhou deixa a lista de compêndios vazia, e julgar o pack salvo
-  // contra ela o daria como despublicado e o apagaria (45-G, revisão do #93).
+  // 'admin'). O estado é lido do StorageService, que já isola por UID.
+  // Espera os dados DESTE usuário terem vindo do servidor (`dataReady`).
   useEffect(() => {
     if (!user?.id || dataLoading || !dataReady || navStateRestored) return;
 
@@ -385,21 +344,10 @@ function AuthenticatedApp() {
         ? savedView
         : 'today';
 
-    const savedPackId = StorageService.getUIState<string | null>('nav_thematic_pack', null);
-    const isValidPack =
-      typeof savedPackId === 'string' &&
-      compendiums.some((c) => packIdForCompendium(c.id) === savedPackId);
-
     setActiveView(restoredView);
     marcarEntradaNestaAba(user.id);
-    if (isValidPack) {
-      setSelectedPackId(savedPackId);
-    } else if (typeof savedPackId === 'string' && savedPackId !== '') {
-      setSelectedPackId(null);
-      setInvalidSavedPackId(savedPackId);
-    }
     setNavStateRestored(true);
-  }, [user?.id, dataLoading, dataReady, navStateRestored, compendiums, profile?.role, profile?.status]);
+  }, [user?.id, dataLoading, dataReady, navStateRestored, profile?.role, profile?.status]);
 
   // Persistência só começa depois da restauração — gravar antes sobrescreveria
   // o valor salvo com o 'today' do estado inicial.
@@ -444,11 +392,6 @@ function AuthenticatedApp() {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
-
-  useEffect(() => {
-    if (!navStateRestored) return;
-    StorageService.setUIState('nav_thematic_pack', selectedPackId);
-  }, [selectedPackId, navStateRestored]);
 
   // Dark Mode synchronization
   useEffect(() => {
@@ -540,7 +483,6 @@ function AuthenticatedApp() {
 
   // Calculate badges
   const errorCount = (Object.values(answers) as QuestionAnswerRecord[]).filter((a) => !a.isCorrect).length;
-  const dueCardsCount = flashcards.filter((fc) => isCardDueToday(fc)).length;
 
   // Navigators
   const handleOpenCompendium = (compendiumId?: string, sectionId?: string, originQuestionId?: string) => {
@@ -548,16 +490,13 @@ function AuthenticatedApp() {
       activeView === 'questions' ||
       activeView === 'errors' ||
       activeView === 'simulado-session' ||
-      activeView === 'thematic-study' ||
       activeView === 'admin'
     ) {
       setLibraryOrigin({
         view: activeView,
         questionId: originQuestionId,
         label:
-          activeView === 'thematic-study'
-            ? 'Retornar ao Estudo Temático'
-            : activeView === 'errors'
+          activeView === 'errors'
             ? 'Retornar ao Caderno de Erros'
             : activeView === 'simulado-session'
             ? 'Retornar ao Simulado'
@@ -620,7 +559,6 @@ function AuthenticatedApp() {
     // Recorte por tema, nunca herdado de um pack aberto antes.
     setScopeCompendiumForQuestions(undefined);
     setScopeQuestionIdsForQuestions(undefined);
-    setPackReturnContext(null);
     setActiveView('questions');
   };
 
@@ -636,12 +574,11 @@ function AuthenticatedApp() {
     setFocusQuestionId(undefined);
     setScopeCompendiumForQuestions(compendiumId);
     setScopeQuestionIdsForQuestions(undefined);
-    setPackReturnContext(null);
     setActiveView('questions');
   };
 
   // 43-C: "Testar o que li" abre a lista recortada pelas questões escolhidas
-  // no modal — a mesma tela de sempre, onde errar já gera flashcard.
+  // no modal — a mesma tela de sempre.
   const handleStartTestarOQueLi = (questionIds: string[]) => {
     setIsTestarOpen(false);
     setFilterThemeForQuestions(undefined);
@@ -649,13 +586,7 @@ function AuthenticatedApp() {
     setFocusQuestionId(undefined);
     setScopeCompendiumForQuestions(undefined);
     setScopeQuestionIdsForQuestions(questionIds);
-    setPackReturnContext(null);
     setActiveView('questions');
-  };
-
-  const handleOpenFlashcardsForTheme = (themeId: string) => {
-    setFilterThemeForFlashcards(themeId);
-    setActiveView('flashcards');
   };
 
   // Abrir uma questão ou "Treinar erradas" é saída explícita de qualquer
@@ -664,7 +595,6 @@ function AuthenticatedApp() {
   const clearQuestionsScope = () => {
     setScopeCompendiumForQuestions(undefined);
     setScopeQuestionIdsForQuestions(undefined);
-    setPackReturnContext(null);
   };
 
   const handleOpenQuestion = (questionId: string) => {
@@ -679,67 +609,6 @@ function AuthenticatedApp() {
     setFocusQuestionId(undefined);
     setFilterStatusForQuestions('incorrect');
     setActiveView('questions');
-  };
-
-  const handleStartSRS = (cards?: Flashcard[], originView?: string) => {
-    const queue = cards && cards.length > 0 ? cards : flashcards.filter((fc) => isCardDueToday(fc));
-    setReviewCardsQueue(queue.length > 0 ? queue : flashcards);
-    setFlashcardOriginView(originView ?? 'flashcards');
-    setActiveView('flashcard-session');
-  };
-
-  // ── Navegação a partir de um pack do Estudo Temático ───────────────────────
-  // Abre as telas canônicas (mesmos componentes, repositórios e gravações de
-  // sempre) recortadas pelo material do pack, com retorno explícito para cá.
-  const handleOpenPackQuestions = (packId: string, compendiumId: string) => {
-    setFilterThemeForQuestions(undefined);
-    setFocusQuestionId(undefined);
-    setScopeCompendiumForQuestions(compendiumId);
-    setScopeQuestionIdsForQuestions(undefined);
-    setPackReturnContext(packId);
-    setActiveView('questions');
-  };
-
-  const handleOpenPackFlashcards = (packId: string, compendiumId: string) => {
-    setFilterThemeForFlashcards(undefined);
-    setScopeCompendiumForFlashcards(compendiumId);
-    setPackReturnContext(packId);
-    setActiveView('flashcards');
-  };
-
-  // Conteúdo do tema sem material associado: mesmo tema, escopo "sem material"
-  // — nunca a lista inteira do tema, que reincluiria o conteúdo dos packs.
-  const handleOpenLooseThemeQuestions = (themeId: string) => {
-    setFilterThemeForQuestions(themeId);
-    setFocusQuestionId(undefined);
-    setScopeCompendiumForQuestions(SCOPE_UNLINKED);
-    setScopeQuestionIdsForQuestions(undefined);
-    setPackReturnContext(selectedPackId ?? 'lista');
-    setActiveView('questions');
-  };
-
-  const handleOpenLooseThemeFlashcards = (themeId: string) => {
-    setFilterThemeForFlashcards(themeId);
-    setScopeCompendiumForFlashcards(SCOPE_UNLINKED);
-    setPackReturnContext(selectedPackId ?? 'lista');
-    setActiveView('flashcards');
-  };
-
-  const handleOpenCustomFlashcards = () => {
-    setFilterThemeForFlashcards(undefined);
-    setScopeCompendiumForFlashcards(SCOPE_CUSTOM);
-    setPackReturnContext(selectedPackId ?? 'lista');
-    setActiveView('flashcards');
-  };
-
-  const handleReturnToThematicStudy = () => {
-    setScopeCompendiumForQuestions(undefined);
-    setScopeQuestionIdsForQuestions(undefined);
-    setScopeCompendiumForFlashcards(undefined);
-    setFilterThemeForQuestions(undefined);
-    setFilterThemeForFlashcards(undefined);
-    setPackReturnContext(null);
-    setActiveView('thematic-study');
   };
 
   const handleStartCustomSimulado = (config: SimuladoConfig) => {
@@ -767,8 +636,6 @@ function AuthenticatedApp() {
       {/* Top Application Header */}
       <Header
         onOpenSearch={() => setIsSearchOpen(true)}
-        stats={stats}
-        dueCardsCount={dueCardsCount}
         errorLogCount={errorCount}
         activeView={activeView}
         onSelectView={handleSelectView}
@@ -808,7 +675,6 @@ function AuthenticatedApp() {
               dataStatus={dataStatus}
               onResumeReading={(compendiumId, sectionId) => handleOpenCompendium(compendiumId, sectionId)}
               onTestarOQueLi={() => setIsTestarOpen(true)}
-              onStartReview={(cards) => handleStartSRS(cards, 'today')}
               onOpenLibrary={() => handleSelectView('compendiums')}
             />
           )}
@@ -818,11 +684,9 @@ function AuthenticatedApp() {
               disciplines={disciplines}
               questions={questions}
               compendiums={compendiums}
-              flashcards={flashcards}
               lastReadingSession={lastReadingSession}
               onSelectView={handleSelectView}
               onOpenCompendium={(compendiumId, sectionId) => handleOpenCompendium(compendiumId, sectionId)}
-              onStartSRS={handleStartSRS}
             />
           )}
 
@@ -832,39 +696,14 @@ function AuthenticatedApp() {
               themes={themes}
               questions={questions}
               compendiums={compendiums}
-              flashcards={flashcards}
               onSelectView={handleSelectView}
               onOpenCompendium={handleOpenCompendium}
               onOpenQuestion={handleOpenQuestion}
-              onStartSRS={handleStartSRS}
               initialTab={dashboardTab}
               onTabChange={setDashboardTab}
               onStartErrorSimulado={handleTrainMistakesUntimed}
               onTestarOQueLi={() => setIsTestarOpen(true)}
               onUpdate={refreshData}
-            />
-          )}
-
-          {activeView === 'thematic-study' && (
-            <ThematicStudyView
-              disciplines={disciplines}
-              themes={themes}
-              compendiums={compendiums}
-              questions={questions}
-              flashcards={flashcards}
-              answers={answers}
-              loading={dataLoading}
-              selectedPackId={selectedPackId}
-              onSelectPack={setSelectedPackId}
-              invalidSavedPackId={invalidSavedPackId}
-              onDismissInvalidPack={() => setInvalidSavedPackId(null)}
-              onOpenCompendium={(compendiumId, sectionId) => handleOpenCompendium(compendiumId, sectionId)}
-              onOpenPackQuestions={handleOpenPackQuestions}
-              onOpenPackFlashcards={handleOpenPackFlashcards}
-              onOpenThemeQuestions={handleOpenLooseThemeQuestions}
-              onOpenThemeFlashcards={handleOpenLooseThemeFlashcards}
-              onOpenCustomFlashcards={handleOpenCustomFlashcards}
-              onStartSRS={(cards) => handleStartSRS(cards, 'thematic-study')}
             />
           )}
 
@@ -926,7 +765,6 @@ function AuthenticatedApp() {
               onOpenQuestionsForTheme={handleOpenQuestionsForTheme}
               onOpenQuestionsForMaterial={handleOpenQuestionsForMaterial}
               onTestarOQueLi={() => setIsTestarOpen(true)}
-              onOpenFlashcardsForTheme={handleOpenFlashcardsForTheme}
               targetSectionId={selectedSectionId}
               onSectionJumpHandled={() => setSelectedSectionId(undefined)}
               returnToQuestionsContext={libraryOrigin}
@@ -951,7 +789,6 @@ function AuthenticatedApp() {
               scopeQuestionIds={scopeQuestionIdsForQuestions}
               focusQuestionId={focusQuestionId}
               initialStatusFilter={filterStatusForQuestions}
-              onReturnToThematicStudy={packReturnContext ? handleReturnToThematicStudy : undefined}
               onClearScope={clearQuestionsScope}
               returnToCompendiumContext={lastReadingSession}
               onReturnToCompendium={() => {
@@ -959,42 +796,6 @@ function AuthenticatedApp() {
                   handleOpenCompendium(lastReadingSession.compendiumId, lastReadingSession.sectionId);
                 }
               }}
-            />
-          )}
-
-          {activeView === 'flashcards' && (
-            <FlashcardsView
-              flashcards={flashcards}
-              disciplines={disciplines}
-              themes={themes}
-              compendiums={compendiums}
-              onStartReview={(cards) => handleStartSRS(cards)}
-              onOpenCreateModal={() => setIsCreateFlashcardOpen(true)}
-              onOpenCompendium={handleOpenCompendium}
-              onFlashcardUpdated={refreshData}
-              filterThemeId={filterThemeForFlashcards}
-              filterCompendiumId={scopeCompendiumForFlashcards}
-              onReturnToThematicStudy={packReturnContext ? handleReturnToThematicStudy : undefined}
-            />
-          )}
-
-          {activeView === 'flashcard-session' && (
-            <FlashcardReviewSession
-              cards={reviewCardsQueue}
-              disciplines={disciplines}
-              themes={themes}
-              compendiums={compendiums}
-              onFinishSession={() => {
-                refreshData();
-                // Volta para onde a sessão começou: o pack continua selecionado,
-                // então "Estudo Temático" reabre exatamente o mesmo pack.
-                setActiveView(
-                  flashcardOriginView === 'thematic-study' || flashcardOriginView === 'today'
-                    ? flashcardOriginView
-                    : 'flashcards'
-                );
-              }}
-              onOpenCompendium={handleOpenCompendium}
             />
           )}
 
@@ -1032,11 +833,9 @@ function AuthenticatedApp() {
               themes={themes}
               questions={questions}
               compendiums={compendiums}
-              flashcards={flashcards}
               onSelectView={handleSelectView}
               onOpenCompendium={handleOpenCompendium}
               onOpenQuestion={handleOpenQuestion}
-              onStartSRS={handleStartSRS}
               initialTab="errors"
               onTabChange={(tab) => {
                 if (tab === 'overview') setActiveView('desempenho');
@@ -1095,7 +894,6 @@ function AuthenticatedApp() {
                 themes={themes}
                 questions={questions}
                 compendiums={compendiums}
-                flashcards={flashcards}
                 onRefreshData={refreshData}
                 onOpenCompendium={(compendiumId) => handleOpenCompendium(compendiumId)}
               />
@@ -1132,7 +930,6 @@ function AuthenticatedApp() {
       <MobileBottomNav
         activeView={activeView}
         onSelectView={handleSelectView}
-        dueCardsCount={dueCardsCount}
         errorLogCount={errorCount}
         lastReadingSession={activeView === 'today' ? null : lastReadingSession}
         onResumeReading={handleResumeReading}
@@ -1148,17 +945,12 @@ function AuthenticatedApp() {
         onClose={() => setIsSearchOpen(false)}
         disciplines={disciplines}
         questions={questions}
-        flashcards={flashcards}
         onNavigateToCompendium={(cid, sid) => {
           handleOpenCompendium(cid, sid);
           setIsSearchOpen(false);
         }}
         onNavigateToQuestion={(qid) => {
           handleOpenQuestion(qid);
-          setIsSearchOpen(false);
-        }}
-        onNavigateToFlashcards={() => {
-          setActiveView('flashcards');
           setIsSearchOpen(false);
         }}
       />
@@ -1185,16 +977,6 @@ function AuthenticatedApp() {
         totalAvailableQuestions={questions.length}
         mistakesCount={errorCount}
         onStartSimulado={handleStartCustomSimulado}
-      />
-
-      <CreateFlashcardModal
-        isOpen={isCreateFlashcardOpen}
-        onClose={() => setIsCreateFlashcardOpen(false)}
-        disciplines={disciplines}
-        themes={themes}
-        onFlashcardCreated={() => {
-          refreshData();
-        }}
       />
 
       <FeedbackModal

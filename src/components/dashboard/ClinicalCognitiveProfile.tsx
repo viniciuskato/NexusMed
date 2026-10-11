@@ -76,7 +76,7 @@ export const ClinicalCognitiveProfile: React.FC<ClinicalCognitiveProfileProps> =
           guidelineKnowledge,
           consistency,
         },
-        prescription: 'Seu patamar é competitivo para as instituições mais disputadas do país. Mantenha o giro de flashcards de SRS ativos para não perder detalhes de condutas raras e treine simulados cronometrados sob pressão de tempo.',
+        prescription: 'Seu patamar é competitivo para as instituições mais disputadas do país. Revise com regularidade os detalhes de condutas raras e treine simulados cronometrados sob pressão de tempo.',
       };
     }
 

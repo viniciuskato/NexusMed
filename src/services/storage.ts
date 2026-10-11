@@ -7,7 +7,6 @@ import {
   Flashcard,
   QuestionAnswerRecord,
   SimuladoSessionData,
-  UserStats,
   ErrorLogItem,
   ThemeMode,
   MigrationSummary,
@@ -28,7 +27,6 @@ import { onActiveUserChanged } from './syncQueue';
 import { recoverLegacyLocalProgress } from './legacyRecovery';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 import { getOptionalErrorMessage } from '../utils/errorMessage';
-import { diaLocal } from '../utils/diaLocal';
 import { textoDoFlashcardDoErro } from '../utils/flashcardDoErro';
 
 // Conteúdo de demonstração (mockData) só existe no modo local, sem Supabase.
@@ -525,34 +523,6 @@ export const StorageService = {
   },
   setUIState<T>(key: string, value: T): void {
     setItem(getUserKey(`synapse_ui_${key}_v1`), value);
-  },
-
-  // --- Aggregated Stats (Calculado dinamicamente em memória - sem criação de chaves extras) ---
-  getStats(): UserStats {
-    return this.getUserStats();
-  },
-  getUserStats(): UserStats {
-    const answers = Object.values(this.getAnswers()) as QuestionAnswerRecord[];
-    const totalAnswered = answers.length;
-    const totalCorrect = answers.filter((a) => a.isCorrect).length;
-    const cards = this.getFlashcards();
-    const todayStr = diaLocal(new Date());
-    const reviewedToday = cards.reduce((acc, c) => {
-      const todayCount = (c.srs?.reviewHistory || []).filter((h) => h?.date && diaLocal(h.date) === todayStr).length;
-      return acc + (todayCount > 0 ? 1 : 0);
-    }, 0);
-
-    const readingProgress = this.getReadingProgress() as Record<string, { readSectionIds: string[]; percent: number }>;
-    const compendiumsReadCount = Object.values(readingProgress).filter((p) => p && p.percent >= 80).length;
-
-    return {
-      totalAnswered,
-      totalCorrect,
-      streakDays: totalAnswered > 0 ? 4 : 1,
-      lastActiveDate: new Date().toISOString(),
-      cardsReviewedToday: reviewedToday,
-      compendiumsReadCount,
-    };
   },
 
   // --- Aliases for CMS / Simulados ---

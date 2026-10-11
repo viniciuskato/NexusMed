@@ -281,7 +281,7 @@ export function getSeedIds(): SeedIds {
   return cachedSeedIds;
 }
 
-// ── Helpers do Prompt 22-A (Estudo Temático) ────────────────────────────────
+// ── Helpers do Prompt 22-A (materiais de teste) ────────────────────────────────
 // Materiais são conteúdo GLOBAL (não pertencem a um usuário): tudo criado aqui
 // usa o prefixo abaixo no título e é removido no `finally` de cada teste.
 export const MATERIAL_PREFIX = 'e2e-22a-';
@@ -391,40 +391,6 @@ export function vincularRevisaoDeIaAoMaterial(materialId: string, autorId: strin
 /** Despublica um material por SQL direto (para provar que o estudante deixa de vê-lo). */
 export function unpublishMaterialDirect(materialId: string): void {
   psqlLocal(`update public.materials set status = 'draft' where id = '${materialId}';`);
-}
-
-/** Cria um flashcard PRÓPRIO do usuário de teste (com flashcard_srs_state inicial) para exercitar submit_flashcard_review em concorrência real. */
-export function insertFlashcardForUser(
-  userId: string,
-  seed: SeedIds = getSeedIds(),
-  options: { materialId?: string | null; isCustom?: boolean; front?: string } = {}
-): string {
-  // `psql -t -A` suprime cabeçalho mas NÃO suprime a tag de conclusão
-  // ("INSERT 0 1") quando a instrução tem `returning` — fica numa segunda
-  // linha da mesma saída. Só a primeira linha é o valor retornado.
-  const front = options.front ?? 'Frente demonstrativa 13-B';
-  const materialValue = options.materialId ? `'${options.materialId}'` : 'null';
-  const isCustom = options.isCustom ?? true;
-  const insertOutput = psqlLocal(
-    `insert into public.flashcards (user_id, discipline_id, theme_id, material_id, is_custom, front, back, difficulty) ` +
-      `values ('${userId}', '${seed.disciplineId}', '${seed.themeId}', ${materialValue}, ${isCustom}, '${front}', 'Verso demonstrativo', 'medio') ` +
-      `returning id;`
-  );
-  const flashcardId = insertOutput.split('\n')[0].trim();
-  psqlLocal(`insert into public.flashcard_srs_state (flashcard_id) values ('${flashcardId}');`);
-  return flashcardId;
-}
-
-export function countFlashcardReviews(flashcardId: string): number {
-  return Number(psqlLocal(`select count(*) from public.flashcard_reviews where flashcard_id = '${flashcardId}';`));
-}
-
-export function getFlashcardSrsState(flashcardId: string): { repetitionCount: number; intervalDays: number } {
-  const row = psqlLocal(
-    `select repetition_count, interval_days from public.flashcard_srs_state where flashcard_id = '${flashcardId}';`
-  );
-  const [repetitionCount, intervalDays] = row.split('|').map(Number);
-  return { repetitionCount, intervalDays };
 }
 
 export function countQuestionReactions(userId: string, questionId: string): number {

@@ -126,7 +126,7 @@ export const LegacyRecoveryDialog: React.FC<LegacyRecoveryDialogProps> = ({ user
                 <button
                   type="button"
                   onClick={() => resolveAmbiguousSubmitAsNew(userId, item.questionId)}
-                  title="Entra no seu histórico normalmente e pode afetar XP e o caderno de erros"
+                  title="Entra no seu histórico normalmente e pode afetar o caderno de erros"
                   className="min-h-9 px-3 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold"
                 >
                   Enviar como nova tentativa
@@ -140,7 +140,7 @@ export const LegacyRecoveryDialog: React.FC<LegacyRecoveryDialogProps> = ({ user
                 </button>
               </div>
               <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">
-                Enviar como nova tentativa entra no seu histórico e pode afetar XP e o caderno de erros. Se preferir não decidir agora,
+                Enviar como nova tentativa entra no seu histórico e pode afetar o caderno de erros. Se preferir não decidir agora,
                 fechar esta janela mantém a pendência para depois — nada é perdido.
               </p>
             </li>

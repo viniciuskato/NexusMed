@@ -6,7 +6,6 @@ import {
   BookOpen,
   HelpCircle,
   Layers,
-  Compass,
   Database,
   ArrowRight,
 } from 'lucide-react';
@@ -16,7 +15,6 @@ import { LastReadingSession } from '../../types';
 interface MobileBottomNavProps {
   activeView: string;
   onSelectView: (view: string) => void;
-  dueCardsCount?: number;
   errorLogCount?: number;
   lastReadingSession?: LastReadingSession | null;
   onResumeReading?: () => void;
@@ -29,7 +27,6 @@ interface MobileBottomNavProps {
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   activeView,
   onSelectView,
-  dueCardsCount = 0,
   lastReadingSession,
   onResumeReading,
 }) => {
@@ -46,21 +43,14 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [resourcesOpen]);
 
-  // Prompt 22-A: a barra passa a ter três destinos principais — Início, Estudo
-  // Temático e Recursos —, e Recursos agrupa os três acervos que antes ocupavam
-  // um botão cada (Biblioteca, Questões, Cards), sem removê-los da navegação.
+  // Prompt 22-A: a barra tem poucos destinos principais, e Recursos agrupa os
+  // acervos que antes ocupavam um botão cada (Biblioteca, Questões). Cartões e
+  // Estudo Temático saíram na CORTE-1 (D-14).
   const resourceItems = [
-    { id: 'compendiums', label: 'Biblioteca', icon: BookOpen, activeAlso: ['compendium-reader'], badge: null as number | null },
-    { id: 'questions', label: 'Questões', icon: HelpCircle, activeAlso: ['simulados', 'simulado-session'], badge: null as number | null },
-    {
-      id: 'flashcards',
-      label: 'Cards',
-      icon: Layers,
-      activeAlso: ['flashcard-session'],
-      badge: dueCardsCount > 0 ? dueCardsCount : null,
-    },
+    { id: 'compendiums', label: 'Biblioteca', icon: BookOpen, activeAlso: ['compendium-reader'] },
+    { id: 'questions', label: 'Questões', icon: HelpCircle, activeAlso: ['simulados', 'simulado-session'] },
     // PAINEL-1: "Meu desempenho" (e, nele, o caderno de erros) a um clique do dock.
-    { id: 'desempenho', label: 'Desempenho', icon: BarChart3, activeAlso: ['errors'], badge: null as number | null },
+    { id: 'desempenho', label: 'Desempenho', icon: BarChart3, activeAlso: ['errors'] },
   ];
   const isResourceActive = resourceItems.some(
     (item) => activeView === item.id || item.activeAlso.includes(activeView)
@@ -71,32 +61,18 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       id: 'today',
       label: 'Hoje',
       icon: CalendarCheck,
-      badge: null as number | null,
-      badgeColor: '',
       isActive: activeView === 'today',
     },
     {
       id: 'dashboard',
       label: 'Início',
       icon: LayoutDashboard,
-      badge: null as number | null,
-      badgeColor: '',
       isActive: activeView === 'dashboard',
-    },
-    {
-      id: 'thematic-study',
-      label: 'Temático',
-      icon: Compass,
-      badge: null as number | null,
-      badgeColor: '',
-      isActive: activeView === 'thematic-study',
     },
     {
       id: 'resources',
       label: 'Recursos',
       icon: Layers,
-      badge: dueCardsCount > 0 ? dueCardsCount : null,
-      badgeColor: 'bg-teal-600 text-white',
       isActive: isResourceActive,
     },
     ...(isAdmin
@@ -105,8 +81,6 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             id: 'admin',
             label: 'CMS',
             icon: Database,
-            badge: null as number | null,
-            badgeColor: '',
             isActive: activeView === 'admin',
           },
         ]
@@ -137,7 +111,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         </button>
       )}
 
-      {/* Menu de Recursos (Biblioteca, Questões, Cards) */}
+      {/* Menu de Recursos (Biblioteca, Questões, Meu desempenho) */}
       {resourcesOpen && (
         <>
           <div
@@ -174,11 +148,6 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 >
                   <div className="relative">
                     <Icon className="w-4 h-4" />
-                    {item.badge !== null && (
-                      <span className="absolute -top-1.5 -right-2.5 px-1 text-[9px] font-bold rounded-full bg-teal-600 text-white min-w-[14px] h-[14px] flex items-center justify-center">
-                        {item.badge > 99 ? '99+' : item.badge}
-                      </span>
-                    )}
                   </div>
                   <span className="text-[10px] mt-0.5 tracking-tight">{item.label}</span>
                 </button>
@@ -227,13 +196,6 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                     isActive ? 'scale-110 text-teal-600 dark:text-teal-400' : ''
                   }`}
                 />
-                {item.badge !== null && item.badge !== undefined && (
-                  <span
-                    className={`absolute -top-1.5 -right-2.5 px-1 text-[9px] font-bold rounded-full ${item.badgeColor} min-w-[14px] h-[14px] flex items-center justify-center shadow-xs`}
-                  >
-                    {typeof item.badge === 'number' && item.badge > 99 ? '99+' : item.badge}
-                  </span>
-                )}
               </div>
               <span className="text-[10px] sm:text-[11px] mt-0.5 tracking-tight truncate">
                 {item.label}

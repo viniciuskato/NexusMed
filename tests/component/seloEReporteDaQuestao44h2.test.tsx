@@ -34,8 +34,8 @@ vi.mock('../../src/repositories/QuestionReactionsRepository', () => ({
 vi.mock('../../src/repositories/FlashcardsRepository', () => ({
   flashcardsRepository: { createFlashcardFromQuestion: vi.fn().mockResolvedValue(undefined) },
 }));
-vi.mock('../../src/services/gamification', () => ({
-  GamificationService: { triggerCelebration: vi.fn() },
+vi.mock('../../src/services/celebracao', () => ({
+  triggerCelebration: vi.fn(),
   CELEBRATION_STREAK_LENGTH: 5,
 }));
 

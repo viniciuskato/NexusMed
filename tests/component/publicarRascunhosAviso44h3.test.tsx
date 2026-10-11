@@ -53,7 +53,6 @@ const renderAdmin = () =>
       themes={[theme]}
       questions={[questao]}
       compendiums={[material]}
-      flashcards={[]}
       onRefreshData={vi.fn()}
       onOpenCompendium={vi.fn()}
     />,

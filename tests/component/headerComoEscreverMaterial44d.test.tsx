@@ -31,8 +31,6 @@ function renderHeader(onSelectView = vi.fn(), activeView = 'dashboard') {
   render(
     <Header
       onOpenSearch={vi.fn()}
-      stats={{ streakDays: 0 } as never}
-      dueCardsCount={0}
       activeView={activeView}
       onSelectView={onSelectView}
       theme={'light' as never}

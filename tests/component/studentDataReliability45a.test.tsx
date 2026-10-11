@@ -1,12 +1,11 @@
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Flashcard, Question, QuestionReviewResult } from '../../src/types';
+import type { Question, QuestionReviewResult } from '../../src/types';
 
 const recordAnswerMock = vi.fn();
 const subscribeToCorrectionMock = vi.fn();
 const createFlashcardMock = vi.fn();
-const reviewFlashcardMock = vi.fn();
 
 vi.mock('../../src/components/feedback/ContextualFeedbackPopover', () => ({
   ContextualFeedbackPopover: () => null,
@@ -40,17 +39,15 @@ vi.mock('../../src/repositories/QuestionReactionsRepository', () => ({
 vi.mock('../../src/repositories/FlashcardsRepository', () => ({
   flashcardsRepository: {
     createFlashcardFromQuestion: (...args: unknown[]) => createFlashcardMock(...args),
-    reviewFlashcard: (...args: unknown[]) => reviewFlashcardMock(...args),
   },
 }));
-vi.mock('../../src/services/gamification', () => ({
-  GamificationService: { triggerCelebration: vi.fn() },
+vi.mock('../../src/services/celebracao', () => ({
+  triggerCelebration: vi.fn(),
   CELEBRATION_STREAK_LENGTH: 5,
 }));
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }));
 
 const { QuestionCard } = await import('../../src/components/questions/QuestionCard');
-const { FlashcardReviewSession } = await import('../../src/components/flashcards/FlashcardReviewSession');
 
 const question: Question = {
   id: 'q-45a',
@@ -84,25 +81,6 @@ const incorrectReview: QuestionReviewResult = {
   references: [],
 };
 
-const flashcard: Flashcard = {
-  id: 'fc-45a',
-  disciplineId: 'disc-1',
-  themeId: 'theme-1',
-  front: 'Frente',
-  back: 'Verso',
-  mechanismHighlight: '',
-  tags: [],
-  difficulty: 'medio',
-  srs: {
-    intervalDays: 0,
-    repetitionCount: 0,
-    easeFactor: 2.5,
-    nextDueDate: '2026-09-24',
-    state: 'new',
-    reviewHistory: [],
-  },
-};
-
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -133,7 +111,7 @@ describe('45-A parte 2 — confirmação de resposta', () => {
     });
   });
 
-  it('mostra correção pendente sem marcar erro nem criar flashcard; aplica o resultado quando a mesma operação sincroniza', async () => {
+  it('mostra correção pendente sem marcar erro; aplica o resultado quando a mesma operação sincroniza, sem criar cartão', async () => {
     let onCorrection!: (outcome: { status: 'confirmed'; review: QuestionReviewResult }) => void;
     subscribeToCorrectionMock.mockImplementation((_opId: string, callback: typeof onCorrection) => {
       onCorrection = callback;
@@ -163,9 +141,12 @@ describe('45-A parte 2 — confirmação de resposta', () => {
     await act(async () => onCorrection({ status: 'confirmed', review: incorrectReview }));
 
     await waitFor(() => expect(screen.getByText(/Resposta incorreta/i)).toBeTruthy());
-    expect(createFlashcardMock).toHaveBeenCalledTimes(1);
-    // P6: o card do erro recebe a revisão confirmada pelo servidor (dela sai o verso, também para quem não é admin).
-    expect(createFlashcardMock).toHaveBeenCalledWith(question, incorrectReview);
+    // CORTE-1 (D-14): errar não gera mais cartão; o erro vai para o caderno e só. A questão respondida não oferece
+    // "Criar cartão" nem fala de flashcards ou repetição espaçada.
+    expect(createFlashcardMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /Criar cartão/ })).toBeNull();
+    expect(screen.getAllByText(/catalogada automaticamente no seu/).length).toBeGreaterThan(0);
+    expect(document.body.textContent).not.toMatch(/flashcard|cartão|SRS|repetição espaçada/i);
     expect(onAnswerRecorded).toHaveBeenCalledTimes(1);
   });
 
@@ -220,33 +201,5 @@ describe('45-A parte 2 — confirmação de resposta', () => {
       expect((screen.getByRole('button', { name: 'Confirmar Resposta' }) as HTMLButtonElement).disabled).toBe(false);
     });
     expect(screen.getByText(/não foi possível confirmar a resposta/i)).toBeTruthy();
-  });
-});
-
-describe('45-A parte 2 — nota do flashcard', () => {
-  it('bloqueia clique duplo e desativa as quatro notas enquanto a revisão grava', async () => {
-    let resolveReview!: (value: Flashcard) => void;
-    reviewFlashcardMock.mockReturnValue(new Promise((resolve) => { resolveReview = resolve; }));
-
-    render(
-      <FlashcardReviewSession
-        cards={[flashcard]}
-        disciplines={[]}
-        themes={[]}
-        onFinishSession={vi.fn()}
-        onOpenCompendium={vi.fn()}
-      />
-    );
-    fireEvent.click(screen.getByRole('button', { name: /Revelar Resposta/ }));
-    const rating = screen.getByRole('button', { name: /3\. Bom/ });
-    fireEvent.click(rating);
-    fireEvent.click(rating);
-
-    expect(reviewFlashcardMock).toHaveBeenCalledTimes(1);
-    for (const label of [/1\. Errei/, /2\. Difícil/, /3\. Bom/, /4\. Fácil/]) {
-      expect((screen.getByRole('button', { name: label }) as HTMLButtonElement).disabled).toBe(true);
-    }
-
-    await act(async () => resolveReview(flashcard));
   });
 });

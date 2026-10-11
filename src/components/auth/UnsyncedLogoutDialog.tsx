@@ -40,7 +40,7 @@ export const UnsyncedLogoutDialog: React.FC<UnsyncedLogoutDialogProps> = ({ coun
               Ainda há coisa por enviar
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              {alteracoes} (respostas, anotações, cards...) ainda não {count === 1 ? 'chegou' : 'chegaram'} ao servidor — não deu para
+              {alteracoes} (respostas, anotações...) ainda não {count === 1 ? 'chegou' : 'chegaram'} ao servidor — não deu para
               enviar agora. Ao sair, os dados desta conta são apagados deste aparelho. O que você quer fazer com isso?
             </p>
           </div>

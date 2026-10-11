@@ -15,7 +15,7 @@ import { bookmarksRepository } from '../../repositories/BookmarksRepository';
 import { answersRepository } from '../../repositories/AnswersRepository';
 import { questionReactionsRepository } from '../../repositories/QuestionReactionsRepository';
 import { QuestionCard } from './QuestionCard';
-import { SCOPE_UNLINKED } from '../../services/thematicPacks';
+import { SCOPE_UNLINKED } from '../../utils/questionMaterials';
 import { questionMatchesMaterialScope } from '../../utils/questionMaterials';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
@@ -34,8 +34,8 @@ interface QuestionsViewProps {
    * Escopo de material (Prompt 22-A): id de um compêndio — mostra só as questões
    * que o cobram (um dos `materialLinks`, 43-B) — ou `SCOPE_UNLINKED`, que
    * mostra só as questões SEM material. Diferente dos filtros da
-   * barra, este recorte vem da navegação (pack do Estudo Temático) e não é
-   * persistido: sair pelo menu principal o descarta.
+   * barra, este recorte vem da navegação (ex.: "Resolver questões" de um
+   * material) e não é persistido: sair pelo menu principal o descarta.
    */
   filterCompendiumId?: string;
   /**
@@ -43,8 +43,6 @@ interface QuestionsViewProps {
    * Como o recorte por material, vem da navegação e é o filtro mais forte.
    */
   scopeQuestionIds?: string[];
-  /** Presente quando se chegou aqui por um pack — mostra o retorno explícito. */
-  onReturnToThematicStudy?: () => void;
   /** Sai do recorte por material (43-B) ou do "Testar o que li" (43-C). */
   onClearScope?: () => void;
   focusQuestionId?: string;
@@ -69,7 +67,6 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
   filterThemeId,
   filterCompendiumId,
   scopeQuestionIds,
-  onReturnToThematicStudy,
   onClearScope,
   focusQuestionId,
   initialStatusFilter,
@@ -219,32 +216,8 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
   return (
     <div className="w-full max-w-[1600px] mx-auto space-y-6">
       <ConnectionNotice status={loadStatus} />
-      {/* ── Retorno ao pack do Estudo Temático ─────────────────────── */}
-      {onReturnToThematicStudy && (
-        <div
-          id="questions-return-to-pack"
-          className="p-3 sm:px-4 sm:py-2.5 rounded-2xl bg-slate-900/5 dark:bg-teal-950/40 border border-slate-300 dark:border-teal-800/50 elev-xs flex items-center justify-between gap-3"
-        >
-          <p className="text-xs text-slate-700 dark:text-slate-200 min-w-0">
-            <span className="font-bold">Escopo do Estudo Temático:</span>{' '}
-            {filterCompendiumId === SCOPE_UNLINKED
-              ? 'questões do tema sem material associado'
-              : 'questões que referenciam o material do pack'}
-            .
-          </p>
-          <button
-            type="button"
-            onClick={onReturnToThematicStudy}
-            className="px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-teal-600 hover:bg-slate-800 dark:hover:bg-teal-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Voltar ao Estudo Temático</span>
-          </button>
-        </div>
-      )}
-
-      {/* ── Recorte por material fora do Estudo Temático (43-B) ────── */}
-      {materialScope && !onReturnToThematicStudy && (
+      {/* ── Recorte por material (43-B) ────────────────────────────── */}
+      {materialScope && (
         <div
           id="questions-material-scope"
           className="p-3 sm:px-4 sm:py-2.5 rounded-2xl bg-slate-900/5 dark:bg-teal-950/40 border border-slate-300 dark:border-teal-800/50 elev-xs flex items-center justify-between gap-3"
@@ -318,7 +291,7 @@ export const QuestionsView: React.FC<QuestionsViewProps> = ({
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-[11px] font-semibold border border-teal-400/30">
               <HelpCircle className="w-3.5 h-3.5" />
-              <span>+35 XP por acerto · Justificativa comentada</span>
+              <span>Justificativa comentada</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">
               Banco de Questões Médicas

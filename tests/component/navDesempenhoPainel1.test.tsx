@@ -31,8 +31,6 @@ describe('PAINEL-1 — menu leva a "Meu desempenho"', () => {
     render(
       <Header
         onOpenSearch={vi.fn()}
-        stats={{ streakDays: 0 } as never}
-        dueCardsCount={0}
         activeView="dashboard"
         onSelectView={onSelectView}
         theme={'light' as never}

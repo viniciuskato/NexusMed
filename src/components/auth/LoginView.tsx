@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   BookOpen,
   HelpCircle,
-  Layers,
   ShieldCheck,
   AlertCircle,
   Sparkles,
@@ -154,11 +153,11 @@ export const LoginView: React.FC = () => {
             </div>
 
             <h1 className="text-3xl lg:text-4xl font-serif-reading font-bold text-slate-900 dark:text-white leading-tight mb-4">
-              Aprofundamento clínico com rigor fisiopatológico e repetição espaçada.
+              Aprofundamento clínico com rigor fisiopatológico e questões de residência.
             </h1>
             <p className="text-base text-slate-600 dark:text-slate-300 leading-relaxed mb-8">
               Uma plataforma integrada de ensino médico que une compêndios editoriais aprofundados,
-              banco de questões comentadas alternativa por alternativa e algoritmo SRS SM-2.
+              banco de questões comentadas alternativa por alternativa.
             </p>
           </div>
 
@@ -183,17 +182,6 @@ export const LoginView: React.FC = () => {
                 Comentários detalhados, categorização de causas de erro e ancoragem direta na teoria.
               </p>
             </div>
-
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 elev-xs">
-              <div className="flex items-center gap-2.5 text-teal-700 dark:text-teal-400 font-semibold text-sm mb-1.5">
-                <Layers className="w-4 h-4" />
-                <span>Flashcards SRS (SM-2)</span>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal">
-                Retenção de longo prazo com curvas de esquecimento adaptadas ao seu ritmo de estudo.
-              </p>
-            </div>
-
           </div>
         </div>
 
@@ -276,7 +264,7 @@ export const LoginView: React.FC = () => {
                 <span>Modo Local / Demonstração Ativo</span>
               </div>
               <p className="leading-relaxed text-teal-800 dark:text-teal-300">
-                O aplicativo está pronto para uso offline/local com todas as matérias, questões comentadas e flashcards carregados. Você pode clicar no botão rápido abaixo ou entrar com qualquer e-mail.
+                O aplicativo está pronto para uso offline/local com todas as matérias, questões comentadas carregados. Você pode clicar no botão rápido abaixo ou entrar com qualquer e-mail.
               </p>
             </div>
           )}

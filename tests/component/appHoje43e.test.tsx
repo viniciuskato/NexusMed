@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import type { Compendium, Flashcard, Question } from '../../src/types';
+import type { Compendium, Question } from '../../src/types';
 import { jaEntrouNestaAba, marcarEntradaNestaAba } from '../../src/utils/navEntrada';
 
 // jsdom não tem ResizeObserver (usado pelo Header real) — stub mínimo.
@@ -13,7 +13,7 @@ import { jaEntrouNestaAba, marcarEntradaNestaAba } from '../../src/utils/navEntr
 
 // 43-E: a tela "Hoje" no App — é a entrada do estudante ativo, sem tirar do
 // reload a restauração da última tela (22-A), acessível pelo menu e ligada às
-// telas de sempre (leitor, "Testar o que li", revisão de cards).
+// telas de sempre (leitor, "Testar o que li"). CORTE-1 (D-14): sem cards.
 
 const authState: { user: { id: string } | null } = { user: { id: 'user-a' } };
 vi.mock('../../src/contexts/AuthContext', () => ({
@@ -75,9 +75,7 @@ vi.mock('../../src/hooks/useAppData', () => ({
     themes,
     compendiums,
     questions,
-    flashcards: [],
     answers: {},
-    stats: { xp: 0, level: 1, streak: 0 },
     loading: false,
     ready: Boolean(userId),
     status: 'ok',
@@ -85,27 +83,12 @@ vi.mock('../../src/hooks/useAppData', () => ({
   }),
 }));
 
-// O que a tela "Hoje" lê do servidor: leu o material hoje, tem 2 cards vencidos.
-const cardVencido = (id: string): Flashcard => ({
-  id,
-  disciplineId: 'd1',
-  themeId: 't1',
-  front: `frente ${id}`,
-  back: '',
-  mechanismHighlight: '',
-  tags: [],
-  difficulty: 'medio',
-  srs: { intervalDays: 1, repetitionCount: 1, easeFactor: 2.5, nextDueDate: '2020-01-01T00:00:00.000Z', state: 'review', reviewHistory: [] },
-});
 vi.mock('../../src/repositories/LeiturasRepository', () => ({
   leiturasRepository: {
     getLeituras: async () => [{ materialId: 'mat-1', secoesLidas: 1, ultimaLeitura: new Date().toISOString() }],
   },
 }));
 vi.mock('../../src/repositories/AnswersRepository', () => ({ answersRepository: { getAnswers: async () => ({}) } }));
-vi.mock('../../src/repositories/FlashcardsRepository', () => ({
-  flashcardsRepository: { getFlashcards: async () => [cardVencido('c1'), cardVencido('c2')] },
-}));
 
 // Telas de sempre, reduzidas ao que o teste precisa ver.
 vi.mock('../../src/components/dashboard/DashboardView', () => ({
@@ -117,16 +100,6 @@ vi.mock('../../src/components/questions/QuestionsView', () => ({
 vi.mock('../../src/components/compendium/CompendiumReader', () => ({
   CompendiumReader: ({ compendium, targetSectionId }: { compendium: Compendium; targetSectionId?: string }) => (
     <div data-testid="leitor">{`${compendium.id}|${targetSectionId ?? ''}`}</div>
-  ),
-}));
-vi.mock('../../src/components/flashcards/FlashcardReviewSession', () => ({
-  FlashcardReviewSession: ({ cards, onFinishSession }: { cards: Flashcard[]; onFinishSession: () => void }) => (
-    <div data-testid="revisao">
-      <span>{cards.map((c) => c.id).join(',')}</span>
-      <button type="button" onClick={onFinishSession}>
-        encerrar-revisao
-      </button>
-    </div>
   ),
 }));
 vi.mock('../../src/components/testar/TestarOQueLiModal', () => ({
@@ -282,15 +255,47 @@ describe('43-E — Hoje liga às telas de sempre', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Testar o que li' }));
     expect(screen.getByRole('dialog', { name: 'Testar o que li' })).toBeTruthy();
   });
+});
 
-  it('"Revisar N cards" abre a revisão com os cards vencidos e, ao terminar, volta para Hoje', async () => {
+describe('CORTE-1 — as telas de cartões e do Estudo Temático não abrem mais', () => {
+  it.each(['flashcards', 'flashcard-session', 'thematic-study'])(
+    'link direto #/%s cai na tela inicial, sem erro',
+    async (tela) => {
+      window.history.replaceState(null, '', `#/${tela}`);
+      render(<App />);
+      expect(await screen.findByRole('heading', { name: 'Hoje', level: 1 })).toBeTruthy();
+      await waitFor(() => expect(window.location.hash).toBe('#/today'));
+      expect(screen.queryByText(/algo deu errado|erro inesperado/i)).toBeNull();
+    }
+  );
+
+  it.each(['flashcards', 'thematic-study'])(
+    'recarregar com "%s" salvo como última tela cai na tela inicial, sem erro',
+    async (tela) => {
+      ui['nav_active_view'] = tela;
+      marcarEntradaNestaAba('user-a');
+      render(<App />);
+      expect(await screen.findByRole('heading', { name: 'Hoje', level: 1 })).toBeTruthy();
+      expect(screen.queryByText(/algo deu errado|erro inesperado/i)).toBeNull();
+    }
+  );
+
+  it('o menu não tem mais Estudo Temático nem Cards, nem no topo nem no dock', async () => {
     render(<App />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Revisar 2 cards' }));
-    const revisao = await screen.findByTestId('revisao');
-    expect(within(revisao).getByText('c1,c2')).toBeTruthy();
+    await screen.findByRole('heading', { name: 'Hoje', level: 1 });
+    expect(document.getElementById('nav-thematic-study')).toBeNull();
+    expect(document.getElementById('dock-nav-thematic-study')).toBeNull();
+    fireEvent.click(document.getElementById('nav-resources') as HTMLElement);
+    expect(document.getElementById('nav-resources-flashcards')).toBeNull();
+    fireEvent.click(document.getElementById('dock-nav-resources') as HTMLElement);
+    expect(document.getElementById('dock-resources-flashcards')).toBeNull();
+    expect(screen.queryByText(/Estudo Temático|Temático/)).toBeNull();
+    expect(screen.queryByText(/^Cards$/)).toBeNull();
+  });
 
-    fireEvent.click(within(revisao).getByRole('button', { name: 'encerrar-revisao' }));
-    expect(await screen.findByRole('heading', { name: 'Hoje', level: 1 })).toBeTruthy();
-    expect(screen.queryByTestId('revisao')).toBeNull();
+  it('"Hoje" não fala de cards nem de pontos', async () => {
+    render(<App />);
+    await screen.findByRole('button', { name: 'Continuar lendo' });
+    expect(screen.queryByText(/card|cartão|cartões|XP|ofensiva/i)).toBeNull();
   });
 });

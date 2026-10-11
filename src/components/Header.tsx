@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
-  Compass,
   LayoutDashboard,
   BarChart3,
   CalendarCheck,
   BookOpen,
   HelpCircle,
   Layers,
-  Flame,
   Sun,
   Moon,
   LogOut,
@@ -20,15 +18,14 @@ import {
   FileQuestion,
   Upload,
 } from 'lucide-react';
-import { UserStats, ThemeMode } from '../types';
+import { ThemeMode } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { SyncStatusIndicator } from './common/SyncStatusIndicator';
 import { Logo } from './common/Logo';
+import { BaixarCartoesAnki } from './conta/BaixarCartoesAnki';
 
 interface HeaderProps {
   onOpenSearch: () => void;
-  stats: UserStats;
-  dueCardsCount: number;
   errorLogCount?: number;
   activeView: string;
   onSelectView: (view: string) => void;
@@ -39,7 +36,6 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenSearch,
-  stats,
   activeView,
   onSelectView,
   theme,
@@ -81,14 +77,13 @@ export const Header: React.FC<HeaderProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [resourcesOpen]);
 
-  // Navegação principal (Prompt 22-A): Início, Estudo Temático e Recursos —
-  // desde a 43-E, com "Hoje" antes de Início, que é a tela inicial —
-  // este último agrupando os três acervos (Biblioteca, Questões, Cards) e, desde
-  // o PAINEL-1, "Meu desempenho".
+  // Navegação principal (Prompt 22-A): Início e Recursos — desde a 43-E, com
+  // "Hoje" antes de Início, que é a tela inicial —, este último agrupando os
+  // acervos (Biblioteca, Questões) e, desde o PAINEL-1, "Meu desempenho".
+  // Cartões e Estudo Temático saíram na CORTE-1 (D-14).
   const resourceItems = [
     { id: 'compendiums', label: 'Biblioteca', icon: BookOpen, activeAlso: ['compendium-reader'] },
     { id: 'questions', label: 'Questões', icon: HelpCircle, activeAlso: ['simulados', 'simulado-session'] },
-    { id: 'flashcards', label: 'Cards', icon: Layers, activeAlso: ['flashcard-session'] },
     // PAINEL-1: tudo o que saiu do painel (e o caderno de erros) fica a um clique daqui.
     { id: 'desempenho', label: 'Meu desempenho', icon: BarChart3, activeAlso: ['errors'] },
   ];
@@ -165,17 +160,6 @@ export const Header: React.FC<HeaderProps> = ({
             <span>Início</span>
           </button>
 
-          <button
-            type="button"
-            id="nav-thematic-study"
-            onClick={() => onSelectView('thematic-study')}
-            aria-current={activeView === 'thematic-study' ? 'page' : undefined}
-            className={navButtonClass(activeView === 'thematic-study')}
-          >
-            <Compass className="w-3.5 h-3.5" />
-            <span>Estudo Temático</span>
-          </button>
-
           <div className="relative">
             <button
               type="button"
@@ -233,7 +217,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </nav>
 
-        {/* Right: Quick Search, Streak, Theme Toggle, Profile */}
+        {/* Right: Quick Search, Theme Toggle, Profile */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Quick Search Button (Desktop) */}
           <button
@@ -262,15 +246,6 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           <SyncStatusIndicator />
-
-          {/* Gamified Streak Flame Badge */}
-          <div
-            className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold shadow-2xs shrink-0"
-            title={`${stats.streakDays} dias seguidos de estudo`}
-          >
-            <Flame className="w-4 h-4 fill-amber-500 text-amber-500 animate-flame shrink-0" />
-            <span className="tabular-nums">{stats.streakDays}d</span>
-          </div>
 
           {/* Direct Feedback / Report Error Button */}
           {onOpenFeedback && (
@@ -448,6 +423,8 @@ export const Header: React.FC<HeaderProps> = ({
                       <span>Enviar feedback</span>
                     </button>
                   )}
+
+                  <BaixarCartoesAnki />
 
                   <button
                     type="button"
