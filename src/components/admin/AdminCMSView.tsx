@@ -1824,6 +1824,7 @@ export const AdminCMSView: React.FC<AdminCMSViewProps> = ({
               disciplines={disciplines}
               themes={themes}
               compendiums={compendiums}
+              existingQuestions={questions}
               onClose={() => setIsImportQuestionsOpen(false)}
               onImported={onRefreshData}
             />

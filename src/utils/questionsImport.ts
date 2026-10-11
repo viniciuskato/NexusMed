@@ -75,11 +75,11 @@ import {
 const VALID_CYCLES: MedicalCycle[] = ['basico', 'clinico', 'internato_residencia'];
 const VALID_DIFFICULTIES: DifficultyLevel[] = ['facil', 'medio', 'dificil'];
 
-const DEFAULT_CYCLE: MedicalCycle = 'internato_residencia';
-const DEFAULT_DIFFICULTY: DifficultyLevel = 'medio';
-const DEFAULT_TAGS = ['Admin', 'CMS', 'Custom'];
-const DEFAULT_GENERAL_COMMENTARY = 'Comentário cadastrado via Painel Administrativo.';
-const DEFAULT_HIGH_YIELD_SUMMARY = 'Conceito chave adicionado pelo autor.';
+export const DEFAULT_CYCLE: MedicalCycle = 'internato_residencia';
+export const DEFAULT_DIFFICULTY: DifficultyLevel = 'medio';
+export const DEFAULT_TAGS = ['Admin', 'CMS', 'Custom'];
+export const DEFAULT_GENERAL_COMMENTARY = 'Comentário cadastrado via Painel Administrativo.';
+export const DEFAULT_HIGH_YIELD_SUMMARY = 'Conceito chave adicionado pelo autor.';
 
 function stripAccents(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -157,6 +157,8 @@ export interface QuestionImportPreview {
   missingFields: string[];
   /** Torna esta linha impossível de importar, mesmo com disciplina/tema escolhidos manualmente. */
   blockingErrors: string[];
+  /** IMPORT-2: a prova de texto colado marca a questão anulada no gabarito (ela também leva um erro que bloqueia). */
+  anulada?: boolean;
 }
 
 export interface QuestionsImportSuccess {

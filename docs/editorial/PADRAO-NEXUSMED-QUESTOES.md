@@ -289,6 +289,96 @@ comando, exige acesso de desenvolvedor e Supabase local), não um fluxo
 editorial self-service. Para o caso comum (um lote levantado numa
 sessão de estudo), "Importar questões" é o caminho certo.
 
+### Colar o texto da prova
+
+Para uma prova de residência que você tem como texto (copiado do PDF da
+prova), o mesmo botão **"Importar questões"** tem a opção **"Colar
+texto"**: você cola a prova inteira, o NexusMed separa questão por
+questão (enunciado, alternativas e gabarito) e mostra a prévia de
+sempre antes de gravar qualquer coisa. Só texto: PDF e imagem não são
+lidos. Cada questão nasce **rascunho**, como em todo import.
+
+**Banca / instituição e Ano são obrigatórios** e valem para a prova
+inteira (preencha com a banca e o ano reais). Sem eles, o botão "Ler
+texto e ver a prévia" fica desligado e a tela escreve o motivo. A banca
+não pode começar com "NexusMed": questão autoral não é questão de
+residência e não aparece nas telas de estudo.
+
+O que o NexusMed reconhece, sempre **no começo da linha**:
+
+- **Início de questão:** `1.`, `1)`, `01 -`, `Questão 1` ou `QUESTÃO 01`.
+  Tudo entre esse início e a primeira alternativa é o enunciado: as
+  quebras de linha do PDF dentro de um parágrafo são juntadas, e a linha
+  em branco entre parágrafos é mantida.
+- **Alternativas**, de A em diante e em sequência, sem limite de
+  quantidade: `A)`, `A.`, `(A)`, `a)` ou `A -`.
+- **Gabarito**, de um destes dois jeitos:
+  - em cada questão: `Resposta: B`, `Gabarito: B` ou
+    `Alternativa correta: B`;
+  - em bloco, no fim da prova: uma linha só com `Gabarito` e, abaixo (ou
+    na mesma linha, separados por vírgula ou espaço), os pares `1-B`,
+    `1 B`, `1) B` ou `01. B`.
+- **Questão anulada:** no gabarito, `ANULADA`, `*` ou `X`. Ela aparece
+  na prévia marcada como **Anulada** e não é importada.
+- **Comentário** (opcional): uma linha que comece com `Comentário:`,
+  até a próxima questão. Vira o comentário geral do rascunho.
+
+Exemplo (3 questões, com 4, 5 e 4 alternativas; gabaritos B e A, e a
+terceira anulada):
+
+```text
+PROVA DE RESIDÊNCIA - EXEMPLO
+
+1. Homem de 58 anos, tabagista, com tosse crônica
+e dispneia aos esforços. A espirometria mostra VEF1/CVF de 0,62.
+Qual o diagnóstico mais provável?
+A) Asma
+B) DPOC
+C) Fibrose pulmonar
+D) Sarcoidose
+2. Qual o antibiótico de escolha para pneumonia adquirida
+na comunidade, leve, em adulto previamente hígido?
+A) Amoxicilina
+B) Gentamicina
+C) Vancomicina
+D) Meropenem
+E) Linezolida
+3. Em relação à hipertensão arterial sistêmica, é correto afirmar:
+A) A meta é sempre abaixo de 100x60
+B) O IECA é contraindicado na gestação
+C) Tiazídicos podem causar hipocalemia
+D) Betabloqueador é primeira linha em todos
+
+Gabarito
+1-B
+2-A
+3-ANULADA
+```
+
+**Na prévia** cada questão mostra banca e ano, o enunciado, as
+alternativas com a correta marcada e os avisos e erros:
+
+- **Disciplina e Tema** se escolhem na prévia, questão por questão, ou
+  de uma vez para todas em **"Aplicar a todas"**.
+- **Erro que bloqueia** a questão (ela não é gravada, e as outras
+  seguem): **"Sem gabarito"**, gabarito que não é uma das alternativas,
+  menos de 2 alternativas, enunciado vazio, anulada.
+- **Aviso** (não bloqueia): numeração pulada ou repetida (por exemplo, da
+  questão 2 para a 5), linha do gabarito que não se entendeu e o lembrete
+  de que o rascunho ainda não tem explicações por alternativa, comentário
+  e pérola (obrigatórios antes de publicar, Passo 3).
+- **"Já existe"**: se o enunciado (sem diferenciar maiúsculas nem espaços
+  repetidos), a banca e o ano são iguais aos de uma questão que já está
+  no sistema, a questão vem desmarcada. Marque-a se quiser importar mesmo
+  assim.
+
+Cuidados com o texto do PDF: um item de lista no enunciado que comece com
+número e ponto (`1. Fumo`) só é entendido como parte do enunciado quando
+o número não é o da próxima questão; prefira conferir a prévia. Texto que
+já esteja no formato `.md` deste guia (blocos `## Questão N`) também pode
+ser colado: vale o que o arquivo diz, e a banca e o ano preenchidos
+entram só nas questões que não trazem os seus.
+
 ---
 
 ## Passo 2 — Revisão e atestação (obrigatória, por questão)
