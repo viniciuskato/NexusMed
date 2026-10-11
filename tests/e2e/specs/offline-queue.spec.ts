@@ -20,8 +20,7 @@ async function login(page: Page, user: CreatedTestUser) {
 async function goToQuestionsBank(page: Page) {
   // Prompt 22-A: "Questões" passou a ficar dentro do agrupador "Recursos" do
   // dock (Hoje / Início / Recursos).
-  await page.locator('#dock-nav-resources').click();
-  await page.locator('#dock-resources-questions').click();
+  await page.locator('#dock-nav-questions').click();
 }
 
 function countAttemptsForUser(userId: string): number {

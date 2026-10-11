@@ -4,7 +4,8 @@ import { createTestUser, deleteTestUser, runCleanup, type CreatedTestUser } from
 // Unidade 45-J — o "Plantão de Foco" não cobre o menu inferior em tela estreita.
 //
 // Em ~390px o widget flutuante do Plantão de Foco ficava por cima do menu
-// "Recursos" do dock inferior: o clique em "Biblioteca" caía no widget e não
+// "Recursos" do dock inferior (hoje, desde a PAINEL-2, os botões Início, Biblioteca e Questões do
+// próprio dock): o clique em "Biblioteca" caía no widget e não
 // chegava ao destino (achado ao escrever o E2E da Fase 3 da taxonomia, que
 // até aqui contornava reduzindo o viewport só depois de navegar).
 //
@@ -31,12 +32,10 @@ async function receivesTapAtCenter(target: Locator): Promise<boolean> {
   });
 }
 
-const RESOURCE_ITEMS = ['#dock-resources-compendiums', '#dock-resources-questions', '#dock-resources-desempenho'];
+const DOCK_ITEMS = ['#dock-nav-dashboard', '#dock-nav-compendiums', '#dock-nav-questions'];
 
-async function expectEveryResourceItemReceivesTap(page: Page) {
-  await page.locator('#dock-nav-resources').click();
-  await expect(page.locator('#dock-resources-menu')).toBeVisible();
-  for (const selector of RESOURCE_ITEMS) {
+async function expectEveryDockItemReceivesTap(page: Page) {
+  for (const selector of DOCK_ITEMS) {
     expect(await receivesTapAtCenter(page.locator(selector)), `${selector} coberto por outro elemento`).toBe(true);
   }
 }
@@ -63,7 +62,7 @@ test.describe('45-J — Plantão de Foco e menu inferior em tela estreita', () =
     return user;
   }
 
-  test('nenhum item do menu Recursos fica coberto, com o widget fechado ou aberto, e o widget segue alcançável', async ({
+  test('nenhum botão do dock fica coberto, com o widget fechado ou aberto, e o widget segue alcançável', async ({
     page,
   }) => {
     const user = await setupStudent('e2e-45j-dock');
@@ -72,24 +71,19 @@ test.describe('45-J — Plantão de Foco e menu inferior em tela estreita', () =
     const widget = page.getByRole('complementary', { name: 'Plantão de Foco' });
     await expect(widget).toBeVisible();
 
-    // Widget fechado (estado inicial): os três itens recebem o toque, e o
+    // Widget fechado (estado inicial): os três botões recebem o toque, e o
     // clique em "Biblioteca" chega ao destino.
-    await expectEveryResourceItemReceivesTap(page);
-    await page.locator('#dock-resources-compendiums').click();
+    await expectEveryDockItemReceivesTap(page);
+    await page.locator('#dock-nav-compendiums').click();
     await expect(page.getByRole('button', { name: 'Modo árvore' })).toBeVisible();
 
-    // Com o menu fechado, o widget é alcançável e abre.
+    // O widget é alcançável e abre.
     const openWidget = page.getByTitle('Abrir Plantão de Foco Clínico (Pomodoro)');
     expect(await receivesTapAtCenter(openWidget), 'widget fechado coberto por outro elemento').toBe(true);
     await openWidget.click();
     await expect(page.getByRole('heading', { name: 'Plantão de Foco Clínico' })).toBeVisible();
 
-    // Widget aberto: o menu continua por cima dele.
-    await expectEveryResourceItemReceivesTap(page);
-    await page.keyboard.press('Escape');
-    await expect(page.locator('#dock-resources-menu')).toHaveCount(0);
-
-    // Menu fechado de novo: os controles do widget aberto voltam a ser alcançáveis.
+    // Widget aberto: o dock continua por cima dele, e os controles do widget seguem alcançáveis.
     const closeWidget = widget.getByTitle('Fechar');
     expect(await receivesTapAtCenter(closeWidget), 'controle do widget aberto coberto').toBe(true);
     await closeWidget.click();

@@ -51,8 +51,7 @@ test.describe('Recuperação quando o arquivo de uma tela sumiu depois de um dep
       await route.continue();
     });
 
-    await page.locator('#nav-resources').click();
-    await page.locator('#nav-resources-questions').click();
+    await page.locator('#nav-questions').click();
 
     await expect(page.getByRole('heading', { name: 'Banco de Questões Médicas' })).toBeVisible({ timeout: 20_000 });
     await expect(page).toHaveURL(/#\/questions$/);
@@ -69,8 +68,7 @@ test.describe('Recuperação quando o arquivo de uma tela sumiu depois de um dep
     });
     await page.route(CHUNK_TELA_QUESTOES, (route) => route.fulfill({ status: 404, body: 'not found' }));
 
-    await page.locator('#nav-resources').click();
-    await page.locator('#nav-resources-questions').click();
+    await page.locator('#nav-questions').click();
 
     await expect(page.locator('#app-load-error')).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('#btn-app-load-error-reload')).toBeVisible();

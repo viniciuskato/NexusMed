@@ -35,6 +35,7 @@ import { ConnectionNotice } from '../common/ConnectionNotice';
 import { LoadStatus, loadStatusOf } from '../../services/connectivity';
 import { useAutoRetry } from '../../hooks/useAutoRetry';
 import { errosDasQuestoes, respostasDasQuestoes } from '../../utils/questoesDeResidencia';
+import { useScrollMemory } from '../../hooks/useScrollMemory';
 
 interface IntegratedCadernoErrosProps {
   /** Só questões de residência (RESID-1, D-14): quem monta a lista é o App. */
@@ -60,6 +61,7 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
   onUpdate,
   onSwitchToOverview,
 }) => {
+  useScrollMemory('errors');
   const [selectedReason, setSelectedReason] = useState<string>('all');
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'pending' | 'resolved'>('all');
@@ -298,7 +300,7 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
         <div className="max-w-2xl space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 text-xs font-semibold border border-rose-400/30">
             <BookMarked className="w-3.5 h-3.5" />
-            <span>Caderno de Erros & Metacognição Integrado ao Início</span>
+            <span>Caderno de Erros</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
             Diagnóstico e Correção de Falhas Clínicas
@@ -314,10 +316,10 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
               type="button"
               onClick={onSwitchToOverview}
               className="px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-              title="Voltar para a Visão Geral do Dashboard"
+              title="Voltar para o Início"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Visão Geral</span>
+              <span>Início</span>
             </button>
           )}
           <button

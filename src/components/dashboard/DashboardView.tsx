@@ -1,19 +1,29 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowRight, BookOpen, ChevronRight, HelpCircle, Library } from 'lucide-react';
+import { AlertTriangle, ArrowRight, BookOpen, BookOpenCheck, HelpCircle, Timer } from 'lucide-react';
 import type { Compendium, Discipline, LastReadingSession, Question, QuestionAnswerRecord } from '../../types';
 import { answersRepository } from '../../repositories/AnswersRepository';
 import { readingProgressRepository } from '../../repositories/ReadingProgressRepository';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
 import { useServerLoad } from '../../hooks/useServerLoad';
 import { ConnectionNotice } from '../common/ConnectionNotice';
-import { acertosPorDisciplina, materiaisEmAndamento } from './painelDados';
-import { respostasDasQuestoes, TEXTO_SEM_QUESTOES_DE_RESIDENCIA } from '../../utils/questoesDeResidencia';
+import { retomadaDeLeitura } from '../../services/hoje';
+import { respostasDasQuestoes } from '../../utils/questoesDeResidencia';
+import { MinhaLeituraBloco } from './MinhaLeituraBloco';
+import { QuestoesDeResidenciaBloco } from './QuestoesDeResidenciaBloco';
+import { cardClass, primaryButtonClass, secondaryButtonClass, titleClass } from './painelEstilos';
 
-// PAINEL-1 (04/10/2026) — o painel enxuto: só o que importa hoje. Três blocos,
-// nesta ordem: "Hoje" (questões), "Acertos por disciplina" (gráfico) e "Continue
-// lendo" (materiais em andamento). O resto vive em "Meu desempenho"
-// (`DesempenhoView`), a um clique daqui. Cartões, nível/XP e sequência saíram na
-// CORTE-1 (D-14); o painel será refeito na PAINEL-2.
+// PAINEL-2 (11/10/2026, D-14) — o Início: a única tela de entrada do app. Cinco
+// blocos, nesta ordem: "Continuar lendo", "Minha leitura" (o que já li e o que
+// falta), "Questões de residência" (o acerto em números e gráficos simples),
+// "Erros para revisar" e os atalhos. Substitui "Hoje", o painel enxuto e "Meu
+// desempenho" (PAINEL-1), que deixaram de ser telas. O caderno de erros segue
+// como tela própria, a um botão daqui.
+//
+// O que depende do servidor (respostas e leitura) vem junto e a cada abertura
+// (45-G, D-2): numa falha o aviso "sem conexão" aparece e nenhum bloco afirma
+// número nenhum — em especial "0", que seria falso. Materiais e questões vêm do
+// App (`useAppData`): enquanto `dadosProntos` for falso, as listas vazias são
+// falta de dado, não ausência de conteúdo.
 
 interface DashboardViewProps {
   disciplines: Discipline[];
@@ -25,15 +35,13 @@ interface DashboardViewProps {
   lastReadingSession: LastReadingSession | null;
   onSelectView: (view: string) => void;
   onOpenCompendium: (compendiumId?: string, sectionId?: string) => void;
+  /** Abre "Testar o que li" (43-C). */
+  onTestarOQueLi?: () => void;
+  /** Só o admin recebe: abre a Área Editorial na aba de questões, para importar. */
+  onImportarQuestoes?: () => void;
 }
 
-const cardClass =
-  'rounded-3xl border border-slate-200/90 dark:border-[#243452] bg-white dark:bg-[#0F172A] p-5 sm:p-6 elev-sm space-y-4';
-const titleClass = 'text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300';
-const primaryButtonClass =
-  'min-h-12 px-5 py-3 rounded-2xl bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white font-bold text-base elev-xs transition-colors flex items-center justify-center gap-2 cursor-pointer w-full';
-const secondaryButtonClass =
-  'min-h-12 px-5 py-3 rounded-2xl border border-slate-300 dark:border-[#243452] hover:bg-slate-50 dark:hover:bg-[#182235] text-slate-800 dark:text-slate-100 font-bold text-base transition-colors flex items-center justify-center gap-2 cursor-pointer w-full';
+const plural = (n: number, singular: string, pluralForm: string) => (n === 1 ? `1 ${singular}` : `${n} ${pluralForm}`);
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
   disciplines,
@@ -43,174 +51,145 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   lastReadingSession,
   onSelectView,
   onOpenCompendium,
+  onTestarOQueLi,
+  onImportarQuestoes,
 }) => {
   useScrollMemory('dashboard');
 
-  const [answers, setAnswers] = useState<Record<string, QuestionAnswerRecord>>({});
-  const [readingProgress, setReadingProgress] = useState<Record<string, { readSectionIds: string[]; percent: number }>>({});
+  const [respostas, setRespostas] = useState<Record<string, QuestionAnswerRecord>>({});
+  const [progresso, setProgresso] = useState<Record<string, { readSectionIds: string[]; percent: number }>>({});
   const [carregado, setCarregado] = useState(false);
 
-  // Do servidor (45-G, D-2): sem rede, o aviso aparece e nada é dado como "vazio".
   const { status } = useServerLoad(async () => {
     const [nextAnswers, nextProgress] = await Promise.all([
       answersRepository.getAnswers(),
       readingProgressRepository.getReadingProgress(),
     ]);
     return () => {
-      setAnswers(nextAnswers);
-      setReadingProgress(nextProgress);
+      setRespostas(nextAnswers);
+      setProgresso(nextProgress);
       setCarregado(true);
     };
   });
 
   // Resposta antiga a questão de fora da residência não entra em conta nenhuma.
-  const acertos = useMemo(
-    () => acertosPorDisciplina(disciplines, questions, respostasDasQuestoes(answers, questions)),
-    [disciplines, questions, answers]
-  );
-  const semQuestoesDeResidencia = dadosProntos && questions.length === 0;
-  const emAndamento = useMemo(
-    () => materiaisEmAndamento(compendiums, readingProgress, lastReadingSession),
-    [compendiums, readingProgress, lastReadingSession]
+  const respostasDeResidencia = useMemo(() => respostasDasQuestoes(respostas, questions), [respostas, questions]);
+  const erros = useMemo(
+    () => Object.values(respostasDeResidencia).filter((r) => !r.isCorrect).length,
+    [respostasDeResidencia]
   );
 
-  const carregando = !carregado && status === 'ok';
+  // O "Continuar lendo" vem da sessão de leitura guardada neste aparelho: não espera a rede.
+  const retomada = useMemo(() => retomadaDeLeitura(lastReadingSession, compendiums), [lastReadingSession, compendiums]);
+
+  // Só com tudo carregado se afirma um número; senão a tela espera (ou avisa da conexão).
+  const pronto = carregado && dadosProntos;
+  const esperando = !pronto && status === 'ok';
 
   return (
-    <div id="painel-view" className="w-full max-w-5xl mx-auto space-y-5 pb-12">
+    <div id="painel-view" className="w-full max-w-4xl mx-auto space-y-5 pb-12">
       <ConnectionNotice status={status} />
 
       <h1 className="text-2xl sm:text-3xl font-serif-reading font-bold tracking-tight text-slate-900 dark:text-white">Início</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-        {/* ── (a) Hoje ── */}
-        <section aria-labelledby="painel-hoje-titulo" data-painel-bloco="hoje" className={`${cardClass} lg:col-span-2`}>
-          <h2 id="painel-hoje-titulo" className={titleClass}>
-            Hoje
-          </h2>
-          <div className="grid grid-cols-1 gap-4">
-            <div className="rounded-2xl bg-slate-50 dark:bg-[#142038] border border-slate-200/80 dark:border-[#243452] p-4 flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <HelpCircle className="w-6 h-6 shrink-0 text-teal-700 dark:text-teal-300" aria-hidden="true" />
-                <p className="text-base font-bold text-slate-900 dark:text-slate-100">Questões</p>
-              </div>
-              <button type="button" id="painel-fazer-questoes" onClick={() => onSelectView('questions')} className={`${primaryButtonClass} mt-auto`}>
-                <span>Fazer questões</span>
-                <ArrowRight className="w-4 h-4" aria-hidden="true" />
-              </button>
+      {/* ── 1. Continuar lendo ── */}
+      {retomada && (
+        <section aria-labelledby="painel-continuar-titulo" data-painel-bloco="continuar" className={cardClass}>
+          <div className="flex items-start gap-3">
+            <BookOpen className="w-6 h-6 shrink-0 text-teal-700 dark:text-teal-300" aria-hidden="true" />
+            <div className="min-w-0">
+              <h2 id="painel-continuar-titulo" className={titleClass}>
+                Continuar lendo
+              </h2>
+              <p className="text-base font-bold text-slate-900 dark:text-slate-100 break-words">{retomada.compendiumTitle}</p>
+              {retomada.sectionTitle && (
+                <p className="text-sm text-slate-600 dark:text-slate-300 break-words">Você parou em: {retomada.sectionTitle}</p>
+              )}
             </div>
           </div>
+          <button
+            type="button"
+            id="painel-continuar-lendo"
+            onClick={() => onOpenCompendium(retomada.compendiumId, retomada.sectionId)}
+            className={primaryButtonClass}
+          >
+            <span>Continuar de onde parei</span>
+            <ArrowRight className="w-4 h-4" aria-hidden="true" />
+          </button>
         </section>
+      )}
 
-        {/* ── (b) Acertos por disciplina ── */}
-        <section aria-labelledby="painel-acertos-titulo" data-painel-bloco="acertos" className={cardClass}>
-          <h2 id="painel-acertos-titulo" className={titleClass}>
-            Acertos por disciplina
-          </h2>
-          {carregando ? (
-            <p role="status" className="text-sm text-slate-500 dark:text-slate-400">
-              Carregando…
-            </p>
-          ) : !carregado ? null : semQuestoesDeResidencia ? (
-            <p id="painel-sem-residencia" className="text-sm text-slate-600 dark:text-slate-300">
-              {TEXTO_SEM_QUESTOES_DE_RESIDENCIA}
-            </p>
-          ) : acertos.length === 0 ? (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-600 dark:text-slate-300">Nenhuma questão respondida ainda</p>
-              <button type="button" onClick={() => onSelectView('questions')} className={secondaryButtonClass}>
-                <span>Responder questões</span>
-              </button>
+      {/* ── 2. Minha leitura ── */}
+      <MinhaLeituraBloco
+        pronto={pronto}
+        esperando={esperando}
+        disciplines={disciplines}
+        compendiums={compendiums}
+        readingProgress={progresso}
+        onOpenCompendium={(id) => onOpenCompendium(id)}
+        onAbrirBiblioteca={() => onSelectView('compendiums')}
+      />
+
+      {/* ── 3. Questões de residência ── */}
+      <QuestoesDeResidenciaBloco
+        pronto={pronto}
+        esperando={esperando}
+        disciplines={disciplines}
+        questions={questions}
+        answers={respostasDeResidencia}
+        onFazerQuestoes={() => onSelectView('questions')}
+        onImportarQuestoes={onImportarQuestoes}
+      />
+
+      {/* ── 4. Erros para revisar ── */}
+      <section aria-labelledby="painel-erros-titulo" data-painel-bloco="erros" className={cardClass}>
+        <h2 id="painel-erros-titulo" className={titleClass}>
+          Erros para revisar
+        </h2>
+        {esperando ? (
+          <p role="status" className="text-sm text-slate-500 dark:text-slate-400">
+            Carregando…
+          </p>
+        ) : !pronto ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400">Os erros aparecem quando a conexão voltar.</p>
+        ) : (
+          <>
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-6 h-6 shrink-0 text-rose-600 dark:text-rose-400" aria-hidden="true" />
+              <p id="painel-erros-total" className="text-base font-bold text-slate-900 dark:text-slate-100">
+                {erros === 0 ? 'Nenhum erro para revisar.' : `${plural(erros, 'erro', 'erros')} em questões de residência`}
+              </p>
             </div>
-          ) : (
-            <ul id="painel-acertos-grafico" className="space-y-3" aria-label="Percentual de acerto por disciplina, da menor para a maior">
-              {acertos.map((item) => (
-                <li
-                  key={item.disciplineId}
-                  className="space-y-1"
-                  title={`${item.nome}: ${item.percentual}% de acerto em ${item.respondidas} ${item.respondidas === 1 ? 'questão respondida' : 'questões respondidas'}`}
-                >
-                  <div className="flex items-baseline justify-between gap-3 text-sm">
-                    <span className="min-w-0 truncate font-semibold text-slate-800 dark:text-slate-100">{item.nome}</span>
-                    <span className="shrink-0 font-black tabular-nums text-slate-900 dark:text-slate-100">{item.percentual}%</span>
-                  </div>
-                  <div className="h-3 w-full rounded-r-full bg-slate-200 dark:bg-slate-800 overflow-hidden" aria-hidden="true">
-                    <div
-                      data-barra-acerto={item.disciplineId}
-                      className="h-full rounded-r-full bg-teal-600 dark:bg-teal-400"
-                      style={{ width: `${Math.max(item.percentual, 1)}%` }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+            <button type="button" id="painel-abrir-caderno" onClick={() => onSelectView('errors')} className={secondaryButtonClass}>
+              <span>Abrir caderno de erros</span>
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            </button>
+          </>
+        )}
+      </section>
 
-        {/* ── (c) Continue lendo ── */}
-        <section aria-labelledby="painel-leitura-titulo" data-painel-bloco="leitura" className={cardClass}>
-          <h2 id="painel-leitura-titulo" className={titleClass}>
-            Continue lendo
-          </h2>
-          {carregando ? (
-            <p role="status" className="text-sm text-slate-500 dark:text-slate-400">
-              Carregando…
-            </p>
-          ) : !carregado ? null : emAndamento.length === 0 ? (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-600 dark:text-slate-300">Nenhum material em andamento</p>
-              <button type="button" onClick={() => onSelectView('compendiums')} className={secondaryButtonClass}>
-                <Library className="w-4 h-4" aria-hidden="true" />
-                <span>Abrir biblioteca</span>
-              </button>
-            </div>
-          ) : (
-            <ul className="space-y-3">
-              {emAndamento.map((material) => (
-                <li key={material.compendiumId}>
-                  <button
-                    type="button"
-                    data-material-em-andamento={material.compendiumId}
-                    onClick={() => onOpenCompendium(material.compendiumId, material.sectionId)}
-                    className="w-full text-left rounded-2xl border border-slate-200/80 dark:border-[#243452] bg-slate-50 dark:bg-[#142038] hover:border-teal-500/60 p-4 space-y-2 cursor-pointer transition-colors"
-                  >
-                    <span className="flex items-center gap-3">
-                      <BookOpen className="w-5 h-5 shrink-0 text-teal-700 dark:text-teal-300" aria-hidden="true" />
-                      <span className="min-w-0 flex-1 font-bold text-slate-900 dark:text-slate-100 break-words">{material.titulo}</span>
-                      <ChevronRight className="w-4 h-4 shrink-0 text-slate-400" aria-hidden="true" />
-                    </span>
-                    <span className="flex items-center gap-3">
-                      <span
-                        className="h-2.5 flex-1 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden"
-                        role="progressbar"
-                        aria-label={`Progresso de leitura de ${material.titulo}`}
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                        aria-valuenow={material.percentual}
-                      >
-                        <span className="block h-full rounded-full bg-teal-600 dark:bg-teal-400" style={{ width: `${material.percentual}%` }} />
-                      </span>
-                      <span className="shrink-0 text-sm font-black tabular-nums text-slate-800 dark:text-slate-100">{material.percentual}%</span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+      {/* ── 5. Atalhos ── */}
+      <section aria-labelledby="painel-atalhos-titulo" data-painel-bloco="atalhos" className={cardClass}>
+        <h2 id="painel-atalhos-titulo" className={titleClass}>
+          Atalhos
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {onTestarOQueLi && (
+            <button type="button" id="painel-testar-o-que-li" onClick={onTestarOQueLi} className={secondaryButtonClass}>
+              <BookOpenCheck className="w-4 h-4" aria-hidden="true" />
+              <span>Testar o que li</span>
+            </button>
           )}
-        </section>
-      </div>
-
-      <div className="flex justify-center pt-1">
-        <button
-          type="button"
-          id="painel-ver-desempenho"
-          onClick={() => onSelectView('desempenho')}
-          className="min-h-11 px-4 py-2 rounded-2xl text-sm font-bold text-teal-800 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/30 flex items-center gap-1.5 cursor-pointer"
-        >
-          <span>Ver meu desempenho</span>
-          <ChevronRight className="w-4 h-4" aria-hidden="true" />
-        </button>
-      </div>
+          <button type="button" id="painel-fazer-questoes" onClick={() => onSelectView('questions')} className={secondaryButtonClass}>
+            <HelpCircle className="w-4 h-4" aria-hidden="true" />
+            <span>Fazer questões</span>
+          </button>
+          <button type="button" id="painel-simulado" onClick={() => onSelectView('simulados')} className={secondaryButtonClass}>
+            <Timer className="w-4 h-4" aria-hidden="true" />
+            <span>Simulado</span>
+          </button>
+        </div>
+      </section>
     </div>
   );
 };

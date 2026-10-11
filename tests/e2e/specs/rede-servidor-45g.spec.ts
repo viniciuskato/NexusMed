@@ -35,13 +35,11 @@ async function logout(page: Page) {
 }
 
 async function openQuestionsBank(page: Page) {
-  await page.locator('#dock-nav-resources').click();
-  await page.locator('#dock-resources-questions').click();
+  await page.locator('#dock-nav-questions').click();
 }
 
 async function openSeedMaterial(page: Page) {
-  await page.locator('#dock-nav-resources').click();
-  await page.locator('#dock-resources-compendiums').click();
+  await page.locator('#dock-nav-compendiums').click();
   await page.getByRole('button', { name: 'Modo árvore' }).click();
   await page.getByRole('button', { name: SEED_MATERIAL_TITLE, exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Fisiopatologia Básica' }).first()).toBeVisible({ timeout: 15_000 });

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { acertosPorDisciplina, materiaisEmAndamento } from '../../src/components/dashboard/painelDados';
-import type { Compendium, Discipline, Question, QuestionAnswerRecord } from '../../src/types';
+import { acertosPorDisciplina } from '../../src/components/dashboard/painelDados';
+import type { Discipline, Question, QuestionAnswerRecord } from '../../src/types';
 
-// PAINEL-1 — as contas do painel enxuto e do "Meu desempenho".
+// PAINEL-1 — a conta de acertos por disciplina (hoje no Início; ver painelDadosPainel2.test.ts para o resto).
 
 const disc = (id: string, name: string): Discipline => ({ id, name }) as Discipline;
 const q = (id: string, disciplineId: string): Question => ({ id, disciplineId }) as Question;
@@ -13,8 +13,6 @@ const resp = (questionId: string, isCorrect: boolean): QuestionAnswerRecord => (
   timestamp: new Date().toISOString(),
   timeSpentSeconds: 1,
 });
-const material = (id: string, title: string, secoes: string[] = []): Compendium =>
-  ({ id, title, sections: secoes.map((s) => ({ id: s, title: s })) }) as unknown as Compendium;
 describe('acertosPorDisciplina', () => {
   const disciplinas = [disc('cm', 'Clínica Médica'), disc('pe', 'Pediatria'), disc('gi', 'Ginecologia'), disc('ci', 'Cirurgia')];
   const questoes = [q('1', 'cm'), q('2', 'cm'), q('3', 'cm'), q('4', 'pe'), q('5', 'pe'), q('6', 'gi'), q('7', 'ci')];
@@ -47,46 +45,5 @@ describe('acertosPorDisciplina', () => {
     const respostas = { '1': resp('1', true), '2': resp('2', true), '4': resp('4', true), '6': resp('6', true) };
     const lista = acertosPorDisciplina(disciplinas, questoes, respostas);
     expect(lista.map((i) => i.nome)).toEqual(['Clínica Médica', 'Ginecologia', 'Pediatria']);
-  });
-});
-
-describe('materiaisEmAndamento', () => {
-  const materiais = [
-    material('a', 'Alfa', ['a1', 'a2']),
-    material('b', 'Beta'),
-    material('c', 'Gama'),
-    material('d', 'Delta'),
-    material('e', 'Épsilon'),
-  ];
-  const progresso = {
-    a: { readSectionIds: ['a1'], percent: 50 },
-    b: { readSectionIds: ['x'], percent: 80 },
-    c: { readSectionIds: [], percent: 0 },
-    d: { readSectionIds: ['x', 'y'], percent: 100 },
-    e: { readSectionIds: ['x'], percent: 20 },
-    removido: { readSectionIds: ['x'], percent: 30 },
-  };
-
-  it('só leitura iniciada e não concluída, do mais adiantado para o menos, no máximo 3; material que não existe mais não entra', () => {
-    const lista = materiaisEmAndamento(materiais, progresso, null);
-    expect(lista.map((m) => [m.titulo, m.percentual])).toEqual([
-      ['Beta', 80],
-      ['Alfa', 50],
-      ['Épsilon', 20],
-    ]);
-  });
-
-  it('o material da última sessão vem primeiro, na seção onde parou (se ela ainda existe)', () => {
-    const sessao = { compendiumId: 'a', sectionId: 'a2', compendiumTitle: 'Alfa', updatedAt: 1 };
-    const lista = materiaisEmAndamento(materiais, progresso, sessao);
-    expect(lista[0]).toMatchObject({ compendiumId: 'a', sectionId: 'a2' });
-    expect(lista.map((m) => m.compendiumId)).toEqual(['a', 'b', 'e']);
-
-    const secaoQueSumiu = materiaisEmAndamento(materiais, progresso, { ...sessao, sectionId: 'sumiu' });
-    expect(secaoQueSumiu[0].sectionId).toBeUndefined();
-  });
-
-  it('sem progresso nenhum, a lista é vazia', () => {
-    expect(materiaisEmAndamento(materiais, {}, null)).toEqual([]);
   });
 });

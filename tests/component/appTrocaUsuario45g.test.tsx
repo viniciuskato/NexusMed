@@ -74,12 +74,9 @@ vi.mock('../../src/hooks/useAppData', () => ({
   },
 }));
 
-// DashboardView real arrasta uma árvore grande de widgets — só precisamos de
-// um jeito de trocar de tela, exatamente como o botão real faz.
+// DashboardView real arrasta uma árvore grande de widgets — a conta B cai no Início, aqui reduzido.
 vi.mock('../../src/components/dashboard/DashboardView', () => ({
-  DashboardView: ({ onSelectView }: { onSelectView: (view: string) => void }) => (
-    <button onClick={() => onSelectView('questions')}>abrir-questoes-teste</button>
-  ),
+  DashboardView: () => <div data-testid="tela-inicio">inicio</div>,
 }));
 vi.mock('../../src/components/questions/QuestionsView', () => ({
   QuestionsView: () => <div data-testid="tela-questoes">DA CONTA A</div>,
@@ -128,8 +125,9 @@ const { default: App } = await import('../../src/App');
 
 beforeEach(() => {
   authState.user = { id: 'user-a' };
-  // Desde a 43-E o app abre em "Hoje"; este teste parte do Início (link direto).
-  window.history.replaceState(null, '', '#/dashboard');
+  // O Início (PAINEL-2) tem o próprio "Continuar lendo" e esconde a pílula "Retomar" do dock;
+  // este teste parte das Questões (link direto), onde a pílula aparece.
+  window.history.replaceState(null, '', '#/questions');
 });
 afterEach(() => {
   cleanup();
@@ -140,12 +138,10 @@ describe('45-G — troca de usuário com a carga do novo falhando', () => {
     const view = render(<App />);
 
     // Conta A: "continuar lendo" e o aviso de dados antigos aparecem sozinhos
-    // (efeito de carregamento), abre a tela de questões e deixa um
-    // modal aberto (busca).
+    // (efeito de carregamento), na tela de questões, e deixa um modal aberto (busca).
     await waitFor(() => expect(screen.getByText('Histórico Local Encontrado')).toBeTruthy());
     expect(screen.getByTitle(/Retomar leitura: Material da conta A/)).toBeTruthy();
 
-    fireEvent.click(screen.getByText('abrir-questoes-teste'));
     await screen.findByTestId('tela-questoes');
     expect(screen.getByText('DA CONTA A')).toBeTruthy();
 

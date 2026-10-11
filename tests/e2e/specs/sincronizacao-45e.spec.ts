@@ -27,8 +27,7 @@ async function login(page: Page, user: CreatedTestUser) {
 }
 
 async function openFirstQuestion(page: Page) {
-  await page.locator('#dock-nav-resources').click();
-  await page.locator('#dock-resources-questions').click();
+  await page.locator('#dock-nav-questions').click();
   const card = page.locator('[data-answer-origin]').first();
   await expect(card).toBeVisible({ timeout: 15_000 });
   return card;

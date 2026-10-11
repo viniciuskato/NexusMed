@@ -33,7 +33,6 @@ vi.mock('../../src/utils/exportarMaterial', async (importOriginal) => ({
 
 const { Header } = await import('../../src/components/Header');
 const { MobileBottomNav } = await import('../../src/components/navigation/MobileBottomNav');
-const { DailyHandoffModal } = await import('../../src/components/common/DailyHandoffModal');
 
 const cartao = (id: string, front: string, back: string): Flashcard =>
   ({
@@ -71,19 +70,12 @@ function renderHeader(activeView = 'dashboard') {
 }
 
 describe('CORTE-1 — menu do topo', () => {
-  it('lista exatamente Hoje, Início e Recursos; Recursos tem Biblioteca, Questões e Meu desempenho', () => {
+  it('lista exatamente Início, Biblioteca e Questões (PAINEL-2: sem Hoje, sem Meu desempenho, sem menu Recursos)', () => {
     renderHeader();
     const nav = screen.getByRole('navigation', { name: 'Navegação principal' });
-    expect(within(nav).getAllByRole('button').map((b) => b.textContent?.trim())).toEqual(['Hoje', 'Início', 'Recursos']);
+    expect(within(nav).getAllByRole('button').map((b) => b.textContent?.trim())).toEqual(['Início', 'Biblioteca', 'Questões']);
     expect(document.getElementById('nav-thematic-study')).toBeNull();
-
-    fireEvent.click(document.getElementById('nav-resources') as HTMLElement);
-    const menu = screen.getByRole('menu', { name: 'Recursos' });
-    expect(within(menu).getAllByRole('menuitem').map((b) => b.textContent?.trim())).toEqual([
-      'Biblioteca',
-      'Questões',
-      'Meu desempenho',
-    ]);
+    expect(document.getElementById('nav-resources')).toBeNull();
   });
 
   it('não há mais a ofensiva (chama e "Nd") no cabeçalho', () => {
@@ -94,25 +86,19 @@ describe('CORTE-1 — menu do topo', () => {
 });
 
 describe('CORTE-1 — dock do celular', () => {
-  it('lista exatamente Hoje, Início e Recursos (e CMS para o admin); Recursos tem Biblioteca, Questões e Desempenho', () => {
+  it('lista exatamente Início, Biblioteca e Questões (e CMS para o admin), sem menu Recursos', () => {
     const { unmount } = render(<MobileBottomNav activeView="dashboard" onSelectView={vi.fn()} />);
     const dock = screen.getByRole('navigation', { name: 'Navegação Principal' });
-    expect(within(dock).getAllByRole('button').map((b) => b.textContent?.trim())).toEqual(['Hoje', 'Início', 'Recursos']);
+    expect(within(dock).getAllByRole('button').map((b) => b.textContent?.trim())).toEqual(['Início', 'Biblioteca', 'Questões']);
     expect(document.getElementById('dock-nav-thematic-study')).toBeNull();
-    fireEvent.click(document.getElementById('dock-nav-resources') as HTMLElement);
-    const menu = screen.getByRole('menu');
-    expect(within(menu).getAllByRole('menuitem').map((b) => b.textContent?.trim())).toEqual([
-      'Biblioteca',
-      'Questões',
-      'Desempenho',
-    ]);
+    expect(document.getElementById('dock-nav-resources')).toBeNull();
     unmount();
 
     auth.role = 'admin';
     render(<MobileBottomNav activeView="dashboard" onSelectView={vi.fn()} />);
     expect(
       within(screen.getByRole('navigation', { name: 'Navegação Principal' })).getAllByRole('button').map((b) => b.textContent?.trim())
-    ).toEqual(['Hoje', 'Início', 'Recursos', 'CMS']);
+    ).toEqual(['Início', 'Biblioteca', 'Questões', 'CMS']);
   });
 });
 
@@ -176,26 +162,5 @@ describe('CORTE-1 — "Baixar meus cartões para o Anki" no menu da conta', () =
     await waitFor(() => expect(baixar).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(avisoDaConta().textContent).toMatch(/1 cartão no arquivo/));
     expect(document.querySelector('[role="menu"] [role="status"]')).toBeNull();
-  });
-});
-
-describe('CORTE-1 — Passagem de Plantão', () => {
-  it('não mostra nem copia ofensiva/streak, e não manda revisar flashcards', () => {
-    const agora = new Date().toISOString();
-    render(
-      <DailyHandoffModal
-        isOpen
-        onClose={vi.fn()}
-        questions={[{ id: 'q1', themeId: 't1', disciplineId: 'd1' } as never]}
-        disciplines={[{ id: 'd1', name: 'Clínica' } as never]}
-        themes={[{ id: 't1', name: 'Tema Um' } as never]}
-        answers={{ q1: { questionId: 'q1', selectedOption: 'B', isCorrect: false, timestamp: agora, timeSpentSeconds: 5 } }}
-        errorLogs={[]}
-      />
-    );
-    const modal = screen.getByRole('dialog');
-    expect(within(modal).getByText(/Médico: Fulana/)).toBeTruthy();
-    expect(modal.textContent).toMatch(/Tema Um/);
-    expect(modal.textContent).not.toMatch(/streak|ofensiva|flashcard|SRS/i);
   });
 });

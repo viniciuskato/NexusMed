@@ -14,10 +14,10 @@ import {
   type CreatedTestUser,
 } from '../fixtures/localSupabase';
 
-// PAINEL-1, contra o Supabase local de verdade: o painel ("Início") tem só três blocos — Hoje, Acertos por
-// disciplina e Continue lendo —, cabe em 360px sem rolagem lateral, e o resto do painel antigo vive em
-// "Meu desempenho", a um clique (link do fim do painel e menu Recursos). CORTE-1 (D-14): sem cartões, sequência
-// de dias, nível/XP, desafios nem conquistas em nenhuma das duas telas.
+// PAINEL-1, reescrito na PAINEL-2 (D-14), contra o Supabase local de verdade: o Início é o painel único — "Continuar
+// lendo", "Minha leitura", "Questões de residência", "Erros para revisar" e os atalhos —, cabe em 360px e em 1280px
+// sem rolagem lateral, e o caderno de erros fica a um botão dele. Sem cartões, sequência de dias, nível/XP, desafios,
+// conquistas, Missão nem Passagem de Plantão.
 
 const STEM = 'e2e-painel1-questao';
 
@@ -29,12 +29,12 @@ async function login(page: Page, user: CreatedTestUser) {
   await expect(page.locator('#btn-user-profile-menu')).toBeVisible({ timeout: 20_000 });
 }
 
-/** Questão publicada no tema do seed. Gabarito: A. Devolve as ids da questão e das alternativas. */
-function inserirQuestao(): { questionId: string; certaId: string; erradaId: string } {
+/** Questão publicada no tema do seed (banca "E2E", 2026: conta como de residência). Gabarito: A. */
+function inserirQuestao(sufixo: string): { questionId: string; certaId: string; erradaId: string } {
   const seed = getSeedIds();
   const questionId = psqlLocal(
     `insert into public.questions (discipline_id, theme_id, cycle, difficulty, institution, year, clinical_vignette, question_stem, tags) ` +
-      `values ('${seed.disciplineId}', '${seed.themeId}', 'clinico', 'medio', 'E2E', 2026, 'Vinheta PAINEL-1.', '${STEM}', array['e2e']) returning id;`
+      `values ('${seed.disciplineId}', '${seed.themeId}', 'clinico', 'medio', 'E2E', 2026, 'Vinheta PAINEL-2.', '${STEM}-${sufixo}', array['e2e']) returning id;`
   )
     .split('\n')[0]
     .trim();
@@ -52,36 +52,38 @@ function inserirQuestao(): { questionId: string; certaId: string; erradaId: stri
 }
 
 function apagarQuestoes(): void {
-  psqlLocal(`update public.questions set status = 'draft' where question_stem = '${STEM}' and status = 'published';`);
-  psqlLocal(`delete from public.questions where question_stem = '${STEM}';`);
+  psqlLocal(`update public.questions set status = 'draft' where question_stem like '${STEM}%' and status = 'published';`);
+  psqlLocal(`delete from public.questions where question_stem like '${STEM}%';`);
 }
 
-async function responder(user: CreatedTestUser, questionId: string, alternativaId: string) {
+async function responder(user: CreatedTestUser, respostas: { questionId: string; alternativaId: string }[]) {
   const cfg = getLocalConfig();
   const client = createClient(cfg.apiUrl, cfg.anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const { error: loginError } = await client.auth.signInWithPassword({ email: user.email, password: user.password });
   expect(loginError).toBeNull();
-  const { error } = await client.rpc('submit_question_attempt', {
-    p_question_id: questionId,
-    p_selected_option_id: alternativaId,
-    p_time_spent_seconds: 9,
-    p_error_reason: null,
-    p_user_notes: null,
-    p_answer_mode: null,
-    p_answer_strategy: null,
-    p_client_op_id: randomUUID(),
-  });
-  expect(error).toBeNull();
+  for (const { questionId, alternativaId } of respostas) {
+    const { error } = await client.rpc('submit_question_attempt', {
+      p_question_id: questionId,
+      p_selected_option_id: alternativaId,
+      p_time_spent_seconds: 9,
+      p_error_reason: null,
+      p_user_notes: null,
+      p_answer_mode: null,
+      p_answer_strategy: null,
+      p_client_op_id: randomUUID(),
+    });
+    expect(error).toBeNull();
+  }
 }
 
-const secoes = (page: Page) => page.locator('#painel-view section');
+const bloco = (page: Page, nome: string) => page.locator(`#painel-view [data-painel-bloco="${nome}"]`);
 const semRolagemLateral = (page: Page) =>
   page.evaluate(() => ({
     pagina: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     corpo: document.body.scrollWidth - document.body.clientWidth,
   }));
 
-test.describe('PAINEL-1 — painel enxuto e "Meu desempenho"', () => {
+test.describe('PAINEL-2 — o Início (painel único)', () => {
   let cleanup: (() => Promise<void> | void)[] = [];
 
   test.afterEach(async () => {
@@ -101,7 +103,7 @@ test.describe('PAINEL-1 — painel enxuto e "Meu desempenho"', () => {
     return user;
   }
 
-  test('usuário novo: três blocos com estados vazios curtos, sem rolagem lateral em 360px e em 1280px', async ({ page }, testInfo) => {
+  test('usuário novo: blocos na ordem, estados vazios curtos e sem rolagem lateral em 360px e em 1280px', async ({ page }, testInfo) => {
     const student = await criarEstudante('novo');
     await login(page, student);
 
@@ -112,118 +114,116 @@ test.describe('PAINEL-1 — painel enxuto e "Meu desempenho"', () => {
       await page.setViewportSize({ width: largura, height: altura });
       await page.locator(largura === 360 ? '#dock-nav-dashboard' : '#nav-dashboard').click();
       await expect(page.locator('#painel-view')).toBeVisible();
+      await expect(page.locator('#painel-leitura-total')).toBeVisible();
 
-      await expect(secoes(page)).toHaveCount(3);
-      await expect(secoes(page).locator('h2')).toHaveText(['Hoje', 'Acertos por disciplina', 'Continue lendo']);
-      await expect(page.getByText(/cartões?|dias seguidos/i)).toHaveCount(0);
-      await expect(page.getByText('Nenhuma questão respondida ainda')).toBeVisible();
-      await expect(page.getByText('Nenhum material em andamento')).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Abrir biblioteca' })).toBeVisible();
+      // Sem leitura aberta não há "Continuar lendo".
+      await expect(page.locator('#painel-view [data-painel-bloco]')).toHaveCount(4);
+      await expect(page.locator('#painel-view [data-painel-bloco] h2')).toHaveText([
+        'Minha leitura',
+        'Questões de residência',
+        'Erros para revisar',
+        'Atalhos',
+      ]);
+      await expect(page.getByText(/(?<!\p{L})(cartões|cartão)(?!\p{L})|dias seguidos|Missão|Passagem de Plant|Acurácia/iu)).toHaveCount(0);
+      await expect(page.locator('#painel-leitura-total')).toHaveText(/^Você leu 0 de \d+ partes?$/);
+      await expect(bloco(page, 'questoes')).toContainText(/Nenhuma questão respondida ainda|Ainda não há questões de residência publicadas\./);
+      await expect(page.locator('#painel-erros-total')).toHaveText('Nenhum erro para revisar.');
+      await expect(page.getByRole('button', { name: 'Abrir caderno de erros' })).toBeVisible();
 
       const sobra = await semRolagemLateral(page);
       expect(sobra.pagina, `rolagem lateral da página em ${largura}px`).toBeLessThanOrEqual(0);
       expect(sobra.corpo, `rolagem lateral do corpo em ${largura}px`).toBeLessThanOrEqual(0);
 
-      await testInfo.attach(`painel-vazio-${largura}`, {
+      await testInfo.attach(`inicio-vazio-${largura}`, {
         body: await page.screenshot({ fullPage: true }),
         contentType: 'image/png',
       });
     }
   });
 
-  test('com dados: acertos por disciplina e material em andamento vêm do servidor', async ({ page }, testInfo) => {
+  test('com dados: leitura, acerto geral, por disciplina, por banca, evolução e erros vêm do servidor; o caderno de erros abre pelo botão', async ({
+    page,
+  }, testInfo) => {
     const seed = getSeedIds();
     const t = `${Date.now()}`;
-    const titulo = `${MATERIAL_PREFIX}painel1-${t}`;
-    const materialId = insertPublishedMaterial(`painel1-${t}`);
+    const titulo = `${MATERIAL_PREFIX}painel2-${t}`;
+    const materialId = insertPublishedMaterial(`painel2-${t}`);
     cleanup.push(() => apagarQuestoes());
     cleanup.push(() => deleteE2EMaterials());
-    const { questionId, certaId } = inserirQuestao();
+    // O material tem 2 seções e 1 lida: "Lendo — 50%".
+    psqlLocal(
+      `insert into public.material_sections (material_id, sort_order, title, mechanism_tag, content, key_takeaways) ` +
+        `values ('${materialId}', 2, 'Segunda seção de teste', 'Fisiopatologia', 'Conteúdo de teste.', array['ponto']);`
+    );
+    const certa = inserirQuestao('certa');
+    const errada = inserirQuestao('errada');
 
     const student = await criarEstudante('dados');
     psqlLocal(
       `insert into public.reading_progress (user_id, material_id, read_section_ids, percent, updated_at) ` +
-        `values ('${student.id}', '${materialId}', '{}', 40, now());`
+        `select '${student.id}', '${materialId}', array[(select id from public.material_sections where material_id = '${materialId}' order by sort_order limit 1)], 50, now();`
     );
-    await responder(student, questionId, certaId);
+    // 1 certa e 1 errada: 50% de acerto, 2 respondidas, 1 erro.
+    await responder(student, [
+      { questionId: certa.questionId, alternativaId: certa.certaId },
+      { questionId: errada.questionId, alternativaId: errada.erradaId },
+    ]);
     const disciplina = psqlLocal(`select name from public.disciplines where id = '${seed.disciplineId}';`).split('\n')[0].trim();
 
     await login(page, student);
-    await page.locator('#nav-dashboard').click();
     await expect(page.locator('#painel-view')).toBeVisible();
-    await expect(secoes(page)).toHaveCount(3);
 
-    // Hoje: só o atalho das questões (sem cartões nem sequência de dias).
-    await expect(page.locator('#painel-cartoes-numero')).toHaveCount(0);
-    await expect(page.locator('#painel-sequencia-numero')).toHaveCount(0);
-    await expect(page.getByRole('region', { name: 'Hoje' }).getByRole('button', { name: 'Fazer questões' })).toBeVisible();
-    // Acertos: a disciplina do seed, 1 de 1 = 100%.
-    const grafico = page.locator('#painel-acertos-grafico');
-    await expect(grafico.getByRole('listitem')).toHaveCount(1);
-    await expect(grafico).toContainText(disciplina);
-    await expect(grafico).toContainText('100%');
-    // Continue lendo: o material com 40%.
-    const leitura = page.getByRole('region', { name: 'Continue lendo' });
-    await expect(leitura.getByRole('button', { name: new RegExp(titulo) })).toBeVisible();
-    await expect(leitura.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '40');
+    // Minha leitura: o material com 1 de 2 seções.
+    const linha = page.locator('[data-material-leitura]').filter({ hasText: titulo });
+    await expect(linha).toContainText('Lendo — 50%');
+    await expect(page.locator('#painel-leitura-total')).toHaveText(/^Você leu \d+ de \d+ partes?$/);
+    // O filtro "Falta ler" mantém o que está em andamento.
+    await bloco(page, 'leitura').getByRole('button', { name: 'Falta ler' }).click();
+    await expect(linha).toBeVisible();
+    await bloco(page, 'leitura').getByRole('button', { name: 'Todos' }).click();
 
-    await testInfo.attach('painel-com-dados-1280', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
+    // Questões de residência: 2 respondidas, 50%, na banca E2E e na disciplina do seed.
+    await expect(page.locator('#painel-acerto-geral')).toHaveText('50%');
+    await expect(page.locator('#painel-respondidas')).toHaveText('2 respondidas');
+    await expect(page.locator('#painel-acertos-disciplina').getByRole('listitem')).toHaveCount(1);
+    await expect(page.locator('#painel-acertos-disciplina')).toContainText(disciplina);
+    await expect(page.locator('#painel-acertos-disciplina')).toContainText('50%');
+    await expect(page.locator('#painel-acertos-banca').getByRole('listitem')).toHaveCount(1);
+    await expect(page.locator('#painel-acertos-banca')).toContainText('E2E');
+    await expect(page.locator('#painel-acertos-banca')).toContainText('2 respondidas');
+    // Evolução: 8 semanas, só a atual (a última) tem resposta; as outras 7 aparecem vazias, não como 0%.
+    const semanas = page.locator('#painel-evolucao [data-semana]');
+    await expect(semanas).toHaveCount(8);
+    await expect(semanas.last()).toHaveAttribute('aria-label', /50% de acerto em 2 respondidas/);
+    await expect(page.locator('#painel-evolucao [data-semana-vazia]')).toHaveCount(7);
+
+    // Erros para revisar: 1.
+    await expect(page.locator('#painel-erros-total')).toHaveText('1 erro em questões de residência');
+
+    await testInfo.attach('inicio-com-dados-1280', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
     await page.setViewportSize({ width: 360, height: 740 });
     const sobra = await semRolagemLateral(page);
     expect(sobra.pagina).toBeLessThanOrEqual(0);
     expect(sobra.corpo).toBeLessThanOrEqual(0);
-    await testInfo.attach('painel-com-dados-360', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
+    await testInfo.attach('inicio-com-dados-360', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
     await page.setViewportSize({ width: 1280, height: 800 });
 
     // Escuro: a mesma tela, só para conferir o contraste (o tema é a classe `dark` na raiz).
     await page.evaluate(() => document.documentElement.classList.add('dark'));
     await page.waitForTimeout(600); // as cores têm transição
-    await testInfo.attach('painel-com-dados-1280-escuro', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
+    await testInfo.attach('inicio-com-dados-1280-escuro', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
     await page.evaluate(() => document.documentElement.classList.remove('dark'));
 
-    // O clique no material abre o leitor.
-    await leitura.getByRole('button', { name: new RegExp(titulo) }).click();
-    await expect(page.getByText('Seção de teste 22-A').first()).toBeVisible({ timeout: 15_000 });
-  });
-
-  test('"Meu desempenho" abre pelo link do painel e pelo menu, e traz o caderno de erros a um clique', async ({ page }) => {
-    const student = await criarEstudante('desempenho');
-    await login(page, student);
-
-    // Pelo link do fim do painel.
-    await page.locator('#nav-dashboard').click();
-    await page.getByRole('button', { name: 'Ver meu desempenho' }).click();
-    await expect(page).toHaveURL(/#\/desempenho$/);
-    await expect(page.getByRole('heading', { name: 'Meu desempenho', level: 1 })).toBeVisible();
-    for (const texto of ['Desempenho por Especialidade Médica', 'Radar de Vulnerabilidades']) {
-      await expect(page.getByText(texto, { exact: true }).first()).toBeVisible();
-    }
-    for (const fora of ['Desafios do Dia', 'Circuito de Flashcards', 'Medalhas & Conquistas', 'Ofensiva de Estudo']) {
-      await expect(page.getByText(fora)).toHaveCount(0);
-    }
-    await expect(page.getByText(/\bXP\b|Progresso do Nível/)).toHaveCount(0);
-    await expect(page.getByText('Acurácia Geral')).toBeVisible();
-    await expect(page.getByText('Missão Prioritária de Hoje')).toBeVisible();
-    await page.getByRole('button', { name: /Caderno de Erros & Metacognição/ }).click();
+    // O botão do caderno de erros abre a tela própria, que continua com o Início marcado no menu e volta por "Início".
+    await page.getByRole('button', { name: 'Abrir caderno de erros' }).click();
+    await expect(page).toHaveURL(/#\/errors$/);
     await expect(page.getByText('Caderno de Erros').first()).toBeVisible();
+    await expect(page.locator('#nav-dashboard')).toHaveAttribute('aria-current', 'page');
+    await page.getByRole('button', { name: 'Início', exact: true }).first().click();
+    await expect(page.locator('#painel-view')).toBeVisible();
 
-    // Pelo menu (desktop): Recursos → Meu desempenho.
-    await page.locator('#nav-today').click();
-    await expect(page.locator('#hoje-view')).toBeVisible();
-    await page.locator('#nav-resources').click();
-    await page.locator('#nav-resources-desempenho').click();
-    await expect(page.getByRole('heading', { name: 'Meu desempenho', level: 1 })).toBeVisible();
-    await expect(page.locator('#nav-resources')).toHaveClass(/teal/);
-
-    // Pelo menu (celular).
-    await page.setViewportSize({ width: 360, height: 740 });
-    await page.locator('#dock-nav-today').click();
-    await expect(page.locator('#hoje-view')).toBeVisible();
-    await page.locator('#dock-nav-resources').click();
-    await page.locator('#dock-resources-desempenho').click();
-    await expect(page.getByRole('heading', { name: 'Meu desempenho', level: 1 })).toBeVisible();
-    const dock = (await page.locator('#mobile-floating-dock').boundingBox())!;
-    expect(dock.x).toBeGreaterThanOrEqual(0);
-    expect(dock.x + dock.width).toBeLessThanOrEqual(360);
+    // O clique no material abre o leitor.
+    await linha.click();
+    await expect(page.getByText('Seção de teste 22-A').first()).toBeVisible({ timeout: 15_000 });
   });
 });

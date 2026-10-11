@@ -27,13 +27,11 @@ async function login(page: Page, user: CreatedTestUser) {
 }
 
 async function abrirMaterial(page: Page, title: string) {
-  const desktopTrigger = page.locator('#nav-resources');
+  const desktopTrigger = page.locator('#nav-compendiums');
   if (await desktopTrigger.isVisible()) {
     await desktopTrigger.click();
-    await page.locator('#nav-resources-compendiums').click();
   } else {
-    await page.locator('#dock-nav-resources').click();
-    await page.locator('#dock-resources-compendiums').click();
+    await page.locator('#dock-nav-compendiums').click();
   }
   await page.getByRole('button', { name: 'Modo árvore' }).click();
   await page.getByRole('button', { name: title, exact: true }).first().click();
@@ -174,11 +172,8 @@ test.describe('43-C — Testar o que li', () => {
     registrarLeitura(student.id, matD, 'now()');
 
     await login(page, student);
-    // O app abre em "Hoje" (43-E), que só oferece o teste quando há questão para
-    // o que foi lido; este cenário parte do botão de "Meu desempenho" (PAINEL-1: saiu do Início).
-    await page.locator('#nav-resources').click();
-    await page.locator('#nav-resources-desempenho').click();
-    await page.getByRole('button', { name: 'Testar o que li' }).click();
+    // O app abre no Início (PAINEL-2), que tem o atalho "Testar o que li".
+    await page.locator('#painel-testar-o-que-li').click();
     const modal = page.getByRole('dialog', { name: 'Testar o que li' });
     await expect(modal.getByRole('checkbox', { name: titleD })).toBeChecked();
     await expect(modal.getByText(/Nenhuma questão cobra os materiais marcados/)).toBeVisible();

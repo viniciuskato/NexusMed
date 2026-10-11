@@ -131,21 +131,18 @@ vi.mock('../../src/components/questions/QuestionsView', () => ({
   ),
 }));
 vi.mock('../../src/components/dashboard/DashboardView', () => ({
-  DashboardView: ({ questions }: { questions: Question[] }) => <div data-testid="inicio-questoes">{ids(questions)}</div>,
-}));
-vi.mock('../../src/components/dashboard/DesempenhoView', () => ({
-  DesempenhoView: ({ questions }: { questions: Question[] }) => (
-    <div data-testid="desempenho-questoes">{ids(questions)}</div>
-  ),
-}));
-vi.mock('../../src/components/hoje/HojeView', () => ({
-  HojeView: ({ questions, onTestarOQueLi }: { questions: Question[]; onTestarOQueLi: () => void }) => (
+  DashboardView: ({ questions, onTestarOQueLi }: { questions: Question[]; onTestarOQueLi: () => void }) => (
     <div>
-      <div data-testid="hoje-questoes">{ids(questions)}</div>
+      <div data-testid="inicio-questoes">{ids(questions)}</div>
       <button type="button" onClick={onTestarOQueLi}>
         abrir-testar
       </button>
     </div>
+  ),
+}));
+vi.mock('../../src/components/dashboard/IntegratedCadernoErros', () => ({
+  IntegratedCadernoErros: ({ questions }: { questions: Question[] }) => (
+    <div data-testid="caderno-questoes">{ids(questions)}</div>
   ),
 }));
 vi.mock('../../src/components/testar/TestarOQueLiModal', () => ({
@@ -250,24 +247,19 @@ describe('RESID-1 — telas de estudo só com questões de residência', () => {
     expect((await screen.findByTestId('lista-de-questoes')).textContent).toBe('r1,r2,r3');
   });
 
-  it('Início, Meu desempenho e Hoje recebem as mesmas 3', async () => {
+  it('Início e Caderno de erros recebem as mesmas 3', async () => {
     window.history.replaceState(null, '', '#/dashboard');
     const { unmount } = render(<App />);
     expect((await screen.findByTestId('inicio-questoes')).textContent).toBe('r1,r2,r3');
     unmount();
 
-    window.history.replaceState(null, '', '#/desempenho');
-    const segunda = render(<App />);
-    expect((await screen.findByTestId('desempenho-questoes')).textContent).toBe('r1,r2,r3');
-    segunda.unmount();
-
-    window.history.replaceState(null, '', '#/today');
+    window.history.replaceState(null, '', '#/errors');
     render(<App />);
-    expect((await screen.findByTestId('hoje-questoes')).textContent).toBe('r1,r2,r3');
+    expect((await screen.findByTestId('caderno-questoes')).textContent).toBe('r1,r2,r3');
   });
 
   it('"Testar o que li" recebe as 3', async () => {
-    window.history.replaceState(null, '', '#/today');
+    window.history.replaceState(null, '', '#/dashboard');
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: 'abrir-testar' }));
     expect((await screen.findByTestId('testar-questoes')).textContent).toBe('r1,r2,r3');
@@ -310,9 +302,9 @@ describe('RESID-1 — telas de estudo só com questões de residência', () => {
   });
 
   it('busca global: só 3 resultados de questão', async () => {
-    window.history.replaceState(null, '', '#/today');
+    window.history.replaceState(null, '', '#/dashboard');
     render(<App />);
-    await screen.findByTestId('hoje-questoes');
+    await screen.findByTestId('inicio-questoes');
     fireEvent.click(screen.getAllByTitle(/Buscar compêndios, questões ou temas/)[0]);
     const campo = await screen.findByRole('textbox');
     fireEvent.change(campo, { target: { value: 'Enunciado' } });
