@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Timer,
   Plus,
@@ -10,14 +10,23 @@ import {
   Zap,
   Target,
 } from 'lucide-react';
-import { SimuladoSessionData, Discipline, Theme, SimuladoConfig } from '../../types';
+import { SimuladoSessionData, Discipline, Theme, SimuladoConfig, Question, QuestionAnswerRecord } from '../../types';
 import { simuladosRepository } from '../../repositories/SimuladosRepository';
 import { useServerLoad } from '../../hooks/useServerLoad';
 import { ConnectionNotice } from '../common/ConnectionNotice';
+import { sessoesDeResidencia, TEXTO_SEM_QUESTOES_DE_RESIDENCIA } from '../../utils/questoesDeResidencia';
 
 interface SimuladosViewProps {
   disciplines: Discipline[];
   themes: Theme[];
+  /** Só questões de residência (RESID-1, D-14): quem monta a lista é o App. */
+  questions: Question[];
+  /** Respostas do usuário, para recalcular o aproveitamento de simulado misto. */
+  answers: Record<string, QuestionAnswerRecord>;
+  /** Os dados deste usuário já vieram do servidor (padrão: sim); sem isso, lista vazia pode ser carga que falhou. */
+  dadosProntos?: boolean;
+  /** Recado de um simulado que não abriu por não ter nenhuma questão. */
+  aviso?: string | null;
   onOpenCreateModal: () => void;
   onStartCustomSimulado: (config: SimuladoConfig) => void;
   onUpdate: () => void;
@@ -25,10 +34,19 @@ interface SimuladosViewProps {
 
 export const SimuladosView: React.FC<SimuladosViewProps> = ({
   disciplines,
+  questions,
+  answers,
+  dadosProntos = true,
+  aviso,
   onOpenCreateModal,
   onStartCustomSimulado,
 }) => {
   const [history, setHistory] = useState<SimuladoSessionData[]>([]);
+  // D-14: o histórico só mostra o que é de residência (nota recalculada se a sessão é mista).
+  const sessoes = useMemo(() => sessoesDeResidencia(history, questions, answers), [history, questions, answers]);
+  const semQuestoesDeResidencia = dadosProntos && questions.length === 0;
+  // Sem os dados do servidor não se sabe o que é de residência: o histórico espera.
+  const historicoPronto = dadosProntos || questions.length > 0;
 
   // Do servidor (45-G, D-2): sem rede, o que já está na tela fica e o aviso aparece.
   const { status: loadStatus } = useServerLoad(async () => {
@@ -86,6 +104,15 @@ export const SimuladosView: React.FC<SimuladosViewProps> = ({
   return (
     <div className="space-y-6">
       <ConnectionNotice status={loadStatus} />
+      {aviso && (
+        <div
+          id="simulados-aviso"
+          role="alert"
+          className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-semibold"
+        >
+          {aviso}
+        </div>
+      )}
       {/* View Header */}
       <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 rounded-3xl p-6 sm:p-8 text-white elev-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="max-w-2xl space-y-2">
@@ -101,16 +128,31 @@ export const SimuladosView: React.FC<SimuladosViewProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={onOpenCreateModal}
-          className="px-6 py-3.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs elev-lg shadow-teal-500/20 transition-all flex items-center justify-center gap-2 shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Criar Simulado Personalizado</span>
-        </button>
+        {!semQuestoesDeResidencia && (
+          <button
+            onClick={onOpenCreateModal}
+            className="px-6 py-3.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs elev-lg shadow-teal-500/20 transition-all flex items-center justify-center gap-2 shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Criar Simulado Personalizado</span>
+          </button>
+        )}
       </div>
 
+      {semQuestoesDeResidencia && (
+        <div
+          id="simulados-sem-residencia"
+          className="bg-white dark:bg-[#0F172A] rounded-3xl border border-slate-200/90 dark:border-[#243452] p-10 text-center space-y-2 elev-xs"
+        >
+          <Timer className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600" aria-hidden="true" />
+          <p role="status" className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+            {TEXTO_SEM_QUESTOES_DE_RESIDENCIA}
+          </p>
+        </div>
+      )}
+
       {/* Quick Presets Grid */}
+      {!semQuestoesDeResidencia && (
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Preset 1 */}
         <button
@@ -190,18 +232,20 @@ export const SimuladosView: React.FC<SimuladosViewProps> = ({
           </span>
         </button>
       </div>
+      )}
 
       {/* History of Completed Exams */}
+      {historicoPronto && (
       <div className="bg-white dark:bg-[#0F172A] rounded-3xl border border-slate-200/90 dark:border-[#243452] p-6 elev-xs space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <Award className="w-5 h-5 text-teal-600 dark:text-teal-400" />
             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Histórico de Simulados Realizados</h2>
           </div>
-          <span className="text-xs text-slate-400 dark:text-slate-500">{history.length} provas arquivadas</span>
+          <span className="text-xs text-slate-400 dark:text-slate-500">{sessoes.length} provas arquivadas</span>
         </div>
 
-        {history.length === 0 ? (
+        {sessoes.length === 0 ? (
           <div className="py-8 text-center text-slate-400 dark:text-slate-500 text-xs space-y-1">
             <Timer className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600" />
             <p className="font-semibold text-slate-600 dark:text-slate-400">Nenhum simulado finalizado ainda.</p>
@@ -209,9 +253,7 @@ export const SimuladosView: React.FC<SimuladosViewProps> = ({
           </div>
         ) : (
           <div className="space-y-3">
-            {history.map((session) => {
-              const totalQ = session.questionIds.length;
-              const score = session.score || 0;
+            {sessoes.map(({ sessao: session, totalQuestoes: totalQ, aproveitamento: score }) => {
               const minutes = Math.floor(session.totalTimeSeconds / 60);
               const seconds = session.totalTimeSeconds % 60;
 
@@ -275,6 +317,7 @@ export const SimuladosView: React.FC<SimuladosViewProps> = ({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 };

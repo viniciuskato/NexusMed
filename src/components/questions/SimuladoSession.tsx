@@ -242,6 +242,8 @@ export const SimuladoSession: React.FC<SimuladoSessionProps> = ({
   // Grava a prova: tentativas (o servidor corrige cada uma), nota, sessão e,
   // só depois de tudo gravado, apaga o rascunho local.
   const finishExam = useCallback(async () => {
+    // Defesa (RESID-1): sessão sem questão nunca é gravada. O App já não abre uma assim.
+    if (questions.length === 0) return;
     const totalTimeSpent = config.isExamMode
       ? config.timeLimitMinutes * 60 - secondsRemaining
       : elapsedStudySeconds;

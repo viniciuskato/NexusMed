@@ -1,4 +1,4 @@
-import type { ErrorLogItem, Question, QuestionAnswerRecord } from '../types';
+import type { ErrorLogItem, Question, QuestionAnswerRecord, SimuladoSessionData } from '../types';
 
 // RESID-1 (D-14, 11/10/2026) — nas telas de estudo só aparecem, e só contam no
 // desempenho, as questões de residência: as que têm banca/instituição e ano de
@@ -51,6 +51,41 @@ export function respostasDasQuestoes(
 export function errosDasQuestoes(errorLogs: ErrorLogItem[], questions: Pick<Question, 'id'>[]): ErrorLogItem[] {
   const ids = new Set(questions.map((q) => q.id));
   return errorLogs.filter((log) => ids.has(log.questionId));
+}
+
+/** Sessão do histórico de simulados, só com a parte de residência. */
+export interface SessaoDeResidencia {
+  sessao: SimuladoSessionData;
+  /** Quantas questões da sessão são de residência. */
+  totalQuestoes: number;
+  /** Aproveitamento em %, sobre as questões de residência da sessão. */
+  aproveitamento: number;
+}
+
+/**
+ * Histórico de simulados só com o que é de residência: a sessão sem nenhuma
+ * questão de residência some. Sessão toda de residência mantém a nota gravada.
+ * Sessão mista tem a nota recalculada pelas respostas (a sessão não guarda o
+ * acerto por questão): acertos entre as questões de residência dela, sem
+ * resposta contando como erro, sobre o total dessas questões.
+ */
+export function sessoesDeResidencia(
+  history: SimuladoSessionData[],
+  questions: Pick<Question, 'id'>[],
+  answers: Record<string, QuestionAnswerRecord>
+): SessaoDeResidencia[] {
+  const ids = new Set(questions.map((q) => q.id));
+  const lista: SessaoDeResidencia[] = [];
+  for (const sessao of history) {
+    const dentro = sessao.questionIds.filter((id) => ids.has(id));
+    if (dentro.length === 0) continue;
+    const aproveitamento =
+      dentro.length === sessao.questionIds.length
+        ? sessao.score || 0
+        : Math.round((dentro.filter((id) => answers[id]?.isCorrect).length / dentro.length) * 100);
+    lista.push({ sessao, totalQuestoes: dentro.length, aproveitamento });
+  }
+  return lista;
 }
 
 /** Texto do estado vazio das telas de estudo (D-14). */

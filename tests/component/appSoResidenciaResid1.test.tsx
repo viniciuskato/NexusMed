@@ -108,6 +108,13 @@ vi.mock('../../src/repositories/LeiturasRepository', () => ({
   },
 }));
 vi.mock('../../src/repositories/AnswersRepository', () => ({ answersRepository: { getAnswers: async () => ({}) } }));
+const saveSimuladoSession = vi.hoisted(() => vi.fn());
+vi.mock('../../src/repositories/SimuladosRepository', () => ({
+  simuladosRepository: {
+    getSimuladoHistory: async () => [],
+    saveSimuladoSession: (...a: unknown[]) => saveSimuladoSession(...a),
+  },
+}));
 vi.mock('../../src/repositories/MaterialSearchRepository', () => ({ searchMaterials: async () => [] }));
 
 const ids = (lista: Question[]) => lista.map((x) => x.id).join(',');
@@ -175,6 +182,22 @@ vi.mock('../../src/components/questions/CreateSimuladoModal', () => ({
           }
         >
           iniciar-simulado
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            onStartSimulado({
+              id: 'sim-vazio',
+              disciplineIds: ['disciplina-que-nao-existe'],
+              themeIds: [],
+              difficulties: [],
+              cycles: [],
+              onlyMistakes: false,
+              questionCount: 20,
+            } as unknown as SimuladoConfig)
+          }
+        >
+          iniciar-simulado-vazio
         </button>
       </div>
     ) : null,
@@ -261,6 +284,29 @@ describe('RESID-1 — telas de estudo só com questões de residência', () => {
     fireEvent.click(screen.getByRole('button', { name: 'iniciar-simulado' }));
     const sessaoDoSimulado = await screen.findByTestId('sessao-simulado');
     expect(sessaoDoSimulado.textContent?.split(',').sort().join(',')).toBe('r1,r2,r3');
+  });
+
+  it('simulado sem nenhuma questão elegível não abre a sessão nem grava nada, e a tela Simulados avisa', async () => {
+    saveSimuladoSession.mockClear();
+    window.history.replaceState(null, '', '#/questions');
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'abrir-simulado' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'iniciar-simulado-vazio' }));
+    expect((await screen.findByRole('alert')).textContent).toContain('Nenhuma questão de residência corresponde');
+    expect(screen.queryByTestId('sessao-simulado')).toBeNull();
+    expect(saveSimuladoSession).not.toHaveBeenCalled();
+  });
+
+  it('sem nenhuma questão de residência: Simulados mostra o texto, sem presets, e o simulado não abre', async () => {
+    dados.questions = [q('e1', '', 0), q('a1', 'NexusMed (questão autoral)', 2024)];
+    saveSimuladoSession.mockClear();
+    window.history.replaceState(null, '', '#/simulados');
+    render(<App />);
+    expect(await screen.findByText('Ainda não há questões de residência publicadas.')).toBeTruthy();
+    expect(screen.queryByText('Iniciar Agora')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Criar Simulado Personalizado/ })).toBeNull();
+    expect(screen.queryByTestId('sessao-simulado')).toBeNull();
+    expect(saveSimuladoSession).not.toHaveBeenCalled();
   });
 
   it('busca global: só 3 resultados de questão', async () => {

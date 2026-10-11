@@ -21,7 +21,11 @@ import { simuladosRepository } from './repositories/SimuladosRepository';
 import { feedbackRepository } from './repositories/FeedbackRepository';
 import { questionReactionsRepository } from './repositories/QuestionReactionsRepository';
 import { buildSimuladoSelection, SimuladoSelectionResult } from './services/simuladoSelection';
-import { respostasDasQuestoes, soQuestoesDeResidencia } from './utils/questoesDeResidencia';
+import {
+  respostasDasQuestoes,
+  soQuestoesDeResidencia,
+  TEXTO_SEM_QUESTOES_DE_RESIDENCIA,
+} from './utils/questoesDeResidencia';
 import { questionMatchesMaterialScope } from './utils/questionMaterials';
 import { jaEntrouNestaAba, marcarEntradaNestaAba } from './utils/navEntrada';
 
@@ -172,6 +176,8 @@ function AuthenticatedApp() {
   // questões elegíveis existiam, para a UI avisar quando pedir mais do que
   // o banco tem disponível.
   const [activeSimuladoSelection, setActiveSimuladoSelection] = useState<SimuladoSelectionResult | null>(null);
+  // RESID-1: recado de um simulado que não abriu por não ter nenhuma questão de residência elegível.
+  const [avisoSimuladoVazio, setAvisoSimuladoVazio] = useState<string | null>(null);
   const [filterThemeForQuestions, setFilterThemeForQuestions] = useState<string | undefined>(undefined);
   const [focusQuestionId, setFocusQuestionId] = useState<string | undefined>(undefined);
   // "Treinar Apenas Questões Erradas" (Prompt 10-A): antes, esse botão criava
@@ -253,6 +259,7 @@ function AuthenticatedApp() {
     setNavStateRestored(false);
     setActiveSimuladoConfig(null);
     setActiveSimuladoSelection(null);
+    setAvisoSimuladoVazio(null);
     setSelectedCompendiumId(null);
     setSelectedSectionId(undefined);
     setLibraryLastView('list');
@@ -629,6 +636,20 @@ function AuthenticatedApp() {
     // render), preservando a mesma seleção/ordem enquanto esta sessão
     // permanecer montada.
     const selection = buildSimuladoSelection(questions, config, answers);
+    // D-14: sem nenhuma questão de residência elegível não se abre sessão (e, portanto, nada é gravado).
+    if (selection.selected.length === 0) {
+      setActiveSimuladoConfig(null);
+      setActiveSimuladoSelection(null);
+      setIsCreateSimuladoOpen(false);
+      setAvisoSimuladoVazio(
+        questions.length === 0
+          ? TEXTO_SEM_QUESTOES_DE_RESIDENCIA
+          : 'Nenhuma questão de residência corresponde a este simulado. Ajuste os filtros ou escolha outro.'
+      );
+      setActiveView('simulados');
+      return;
+    }
+    setAvisoSimuladoVazio(null);
     setActiveSimuladoConfig(config);
     setActiveSimuladoSelection(selection);
     setIsCreateSimuladoOpen(false);
@@ -815,6 +836,10 @@ function AuthenticatedApp() {
             <SimuladosView
               disciplines={disciplines}
               themes={themes}
+              questions={questions}
+              answers={answers}
+              dadosProntos={dataReady}
+              aviso={avisoSimuladoVazio}
               onOpenCreateModal={() => setIsCreateSimuladoOpen(true)}
               onStartCustomSimulado={handleStartCustomSimulado}
               onUpdate={refreshData}

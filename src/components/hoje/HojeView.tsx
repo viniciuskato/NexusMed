@@ -8,6 +8,7 @@ import type { LeituraDeMaterial } from '../../services/testarOQueLi';
 import { useServerLoad } from '../../hooks/useServerLoad';
 import { ConnectionNotice } from '../common/ConnectionNotice';
 import type { LoadStatus } from '../../services/connectivity';
+import { TEXTO_SEM_QUESTOES_DE_RESIDENCIA } from '../../utils/questoesDeResidencia';
 
 // 43-E — tela "Hoje": a porta de entrada diária. Reúne o que já existe: continuar
 // lendo e testar o que li (43-C). Sem meta, estatística nem pontuação. (Os cards
@@ -81,7 +82,9 @@ export const HojeView: React.FC<HojeViewProps> = ({
   );
 
   const carregado = dados !== null && dataReady;
-  const tudoFeito = carregado && pendentes.length === 0;
+  // D-14: sem nenhuma questão de residência publicada não há o que testar; "tudo feito" seria falso.
+  const semQuestoesDeResidencia = carregado && questions.length === 0;
+  const tudoFeito = carregado && !semQuestoesDeResidencia && pendentes.length === 0;
 
   return (
     <div id="hoje-view" className="w-full max-w-3xl mx-auto space-y-5 pb-12">
@@ -148,6 +151,24 @@ export const HojeView: React.FC<HojeViewProps> = ({
             <span>Testar o que li</span>
             <ArrowRight className="w-4 h-4" />
           </button>
+        </section>
+      )}
+
+      {semQuestoesDeResidencia && (
+        <section aria-labelledby="hoje-sem-residencia-titulo" id="hoje-sem-residencia" className={cardClass}>
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 shrink-0 rounded-xl bg-slate-500/10 text-slate-600 dark:text-slate-300 flex items-center justify-center border border-slate-400/25">
+              <BookOpenCheck className="w-5 h-5" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <h2 id="hoje-sem-residencia-titulo" className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Testar o que li
+              </h2>
+              <p role="status" className="text-base font-bold text-slate-900 dark:text-slate-100">
+                {TEXTO_SEM_QUESTOES_DE_RESIDENCIA}
+              </p>
+            </div>
+          </div>
         </section>
       )}
 
