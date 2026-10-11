@@ -33,6 +33,7 @@ vi.mock('../../src/utils/exportarMaterial', async (importOriginal) => ({
 
 const { Header } = await import('../../src/components/Header');
 const { MobileBottomNav } = await import('../../src/components/navigation/MobileBottomNav');
+const { DailyHandoffModal } = await import('../../src/components/common/DailyHandoffModal');
 
 const cartao = (id: string, front: string, back: string): Flashcard =>
   ({
@@ -168,5 +169,26 @@ describe('CORTE-1 — "Baixar meus cartões para o Anki" no menu da conta', () =
     expect(getFlashcards).toHaveBeenCalledTimes(1);
     resolver([cartao('1', 'F', 'V')]);
     await waitFor(() => expect(baixar).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe('CORTE-1 — Passagem de Plantão', () => {
+  it('não mostra nem copia ofensiva/streak, e não manda revisar flashcards', () => {
+    const agora = new Date().toISOString();
+    render(
+      <DailyHandoffModal
+        isOpen
+        onClose={vi.fn()}
+        questions={[{ id: 'q1', themeId: 't1', disciplineId: 'd1' } as never]}
+        disciplines={[{ id: 'd1', name: 'Clínica' } as never]}
+        themes={[{ id: 't1', name: 'Tema Um' } as never]}
+        answers={{ q1: { questionId: 'q1', selectedOption: 'B', isCorrect: false, timestamp: agora, timeSpentSeconds: 5 } }}
+        errorLogs={[]}
+      />
+    );
+    const modal = screen.getByRole('dialog');
+    expect(within(modal).getByText(/Médico: Fulana/)).toBeTruthy();
+    expect(modal.textContent).toMatch(/Tema Um/);
+    expect(modal.textContent).not.toMatch(/streak|ofensiva|flashcard|SRS/i);
   });
 });
