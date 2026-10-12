@@ -39,6 +39,7 @@ import { ConnectionNotice } from '../common/ConnectionNotice';
 import { MaterialBreadcrumb, MaterialChildrenCards, MaterialLinkBoxes } from './MaterialNavigation';
 import { SeloDeRevisao } from '../material/SeloDeRevisao';
 import { DatasDoMaterial, SeloDesatualizado } from '../material/DatasDoMaterial';
+import { ResumoDasFontes, SeloSemFonte } from '../material/FonteDoMaterial';
 import { ReportarErroDoMaterial } from '../material/ReportarErroDoMaterial';
 import { AtualizarMaterial } from '../material/AtualizarMaterial';
 import { EdicaoDaSecao } from './EdicaoDaSecao';
@@ -732,6 +733,8 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
             <span>{authorDisplay}</span>
             <DatasDoMaterial compendium={compendium} className="contents" separador="•" comSeparadorInicial />
             <SeloDesatualizado compendium={compendium} ehAdmin={ehAdmin} />
+            {/* EVID-1: em quantas referências o material se baseia e quantas partes têm citação (todo mundo vê). */}
+            <ResumoDasFontes secoes={secoes} totalDeReferencias={compendium.references?.length ?? 0} separador="•" comSeparadorInicial />
           </div>
 
           {/* Tags */}
@@ -814,9 +817,13 @@ export const CompendiumReader: React.FC<CompendiumReaderProps> = ({
                     </div>
 
                     {/* Section Title */}
-                    <h2 className="text-xl sm:text-2xl font-bold text-[#172033] dark:text-[#E5E7EB] mb-4">
-                      {sec.title}
-                    </h2>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-4">
+                      <h2 className="text-xl sm:text-2xl font-bold text-[#172033] dark:text-[#E5E7EB]">
+                        {sec.title}
+                      </h2>
+                      {/* EVID-1: só o admin vê, e só nas partes que não citam nenhuma referência. */}
+                      <SeloSemFonte secao={sec} ehAdmin={ehAdmin} />
+                    </div>
 
                     {/* Section Content with Safe Markdown (no dangerouslySetInnerHTML) */}
                     <div className="text-[17px] leading-[1.7] text-[#172033] dark:text-[#E5E7EB]">

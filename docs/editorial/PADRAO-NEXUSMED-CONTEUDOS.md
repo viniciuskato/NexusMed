@@ -401,6 +401,13 @@ de dois ou três, de bom senso).
   está preservada. Há redução harmônica dos volumes [1](#ref-1)[4](#ref-4).`
   Cite mais de uma vez no mesmo trecho só quando frases vizinhas vêm de
   fontes realmente diferentes.
+- **Toda seção cita ao menos uma referência.** O material é baseado em
+  evidências: uma seção sem nenhuma citação `[N](#ref-N)` (no texto, nos
+  Pontos-Chave, na Pérola ou no Alerta) não tem fonte que quem lê possa
+  conferir. Cite a referência que sustenta a seção; se não há fonte para o que
+  a seção afirma, use `LACUNA_DOCUMENTAL` em vez de afirmar sem fonte. Quem lê o
+  material vê em quantas partes há citação, e quem publica vê quais partes
+  estão sem fonte.
 - **Toda tabela precisa de uma frase de abertura citada, logo acima dela**,
   terminada pela citação e seguida de uma linha em branco. A plataforma
   transforma essa citação na legenda "Fonte: [N]" da tabela. Não repita a
@@ -692,8 +699,8 @@ Estrutura e tom:
 
 Citações, figuras e formato, no arquivo inteiro:
 - [ ] Toda citação no formato `[N](#ref-N)`, com N certo? Nenhum `[N]` solto?
-- [ ] Toda referência citada pelo menos uma vez? Toda tabela numerada, com
-  frase de abertura citada?
+- [ ] Toda referência citada pelo menos uma vez? Toda seção com ao menos uma
+  citação? Toda tabela numerada, com frase de abertura citada?
 - [ ] Referências ordenadas em ponto de entrada, aprofundamento e consulta
   especializada, cada uma com `[Camada — tipo de evidência]`?
 - [ ] Toda figura com `figura:PENDENTE`, texto alternativo, legenda numerada,
@@ -934,6 +941,15 @@ material ganha a estrutura de um bom caderno. O que muda em relação à v2:
   "cai em prova" sem base);
 - o tempo de leitura vai de 8 a 60 minutos (era 8 a 25): o caderno tem materiais longos;
 - a linha de metadado passa a ser `**Versão do padrão:** 3`.
+
+**Regra mecânica acrescentada em 11/10/2026, sem subir a versão.** A checagem do
+padrão passou a apontar a seção que não cita nenhuma referência (seção 1.5:
+"Toda seção cita ao menos uma referência"), para que a biblioteca seja toda
+baseada em evidências. A versão continua 3: subir a versão marcaria como
+"Desatualizado" todos os materiais já publicados, e esta regra orienta quem
+escreve e quem publica sem exigir que o que está no ar seja refeito. Como a
+checagem não bloqueia a publicação, o material que ainda tem seção sem fonte
+continua no ar, com a parte apontada para o dono completar.
 
 **Materiais da v2 não precisam ser refeitos para continuar no ar:** o que foi
 publicado segue como está. Para reenviar um material antigo (por exemplo, para

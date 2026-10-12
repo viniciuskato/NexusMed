@@ -6,6 +6,7 @@ import {
   formatarChecagemDetalhada,
   formatarResumoDaChecagem,
   REGRAS_DO_PADRAO,
+  secaoCitaReferencia,
   situacaoDaChecagem,
   type RegraDoPadraoId,
 } from '../../src/utils/compendiumStandardCheck';
@@ -75,7 +76,7 @@ describe('checagem do padrão — base', () => {
   it('a lista de regras cobre todos os ids, sem repetição', () => {
     const ids = REGRAS_DO_PADRAO.map((r) => r.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toHaveLength(23);
+    expect(ids).toHaveLength(24);
   });
 
   it('cada pendência traz seção, linha e o que corrigir', () => {
@@ -469,5 +470,57 @@ describe('checagem do padrão — bloco Atualização (P9)', () => {
     for (const rotulo of ['Cuidado', 'Raciocínio', 'Não confundir', 'Aprofundar', 'Essencial']) {
       expect(regras(com(`> **${rotulo}:** texto sem ano.`)), rotulo).toEqual([]);
     }
+  });
+});
+
+describe('checagem do padrão — fonte em cada parte (EVID-1)', () => {
+  const quatroSecoes = (corpos: string[]) =>
+    `# Cefalosporinas\n\n**Subtítulo:** Espectro e uso\n**Disciplina:** Farmacologia\n**Tema:** Clínica\n**Tempo estimado de leitura:** 12 minutos\n**Versão do padrão:** 3\n\n` +
+    corpos.map((c, k) => `### Parte ${k + 1}\n**Tag de Mecanismo:** Espectro\n\n${c}\n`).join('\n') +
+    `\n### Palavras-chave\n\`C3G\`\n\n### Referências Bibliográficas\n1. Fonte 1. [Livro-texto]\n2. Fonte 2. [Livro-texto]\n`;
+  const semFonte = (texto: string) => checarMaterialMarkdown(texto).pendencias.filter((p) => p.regra === 'secao-sem-citacao');
+
+  it('todas as seções citam: nenhuma pendência de fonte', () => {
+    const texto = quatroSecoes(['A [1](#ref-1).', 'B [2](#ref-2).', 'C [1](#ref-1)[2](#ref-2).', 'D [2](#ref-2).']);
+    expect(semFonte(texto)).toEqual([]);
+    expect(checarMaterialMarkdown(texto).pendencias).toEqual([]);
+  });
+
+  it('2 de 4 seções sem citação: exatamente 2 pendências, com o título de cada uma', () => {
+    const texto = quatroSecoes(['A [1](#ref-1).', 'Sem fonte aqui.', 'C [2](#ref-2).', 'Nem aqui.']);
+    const pendencias = semFonte(texto);
+    expect(pendencias.map((p) => p.mensagem)).toEqual([
+      'A parte "Parte 2" não cita nenhuma referência.',
+      'A parte "Parte 4" não cita nenhuma referência.',
+    ]);
+    expect(pendencias.map((p) => p.secao)).toEqual(['Parte 2', 'Parte 4']);
+    expect(texto.split('\n')[pendencias[0].linha - 1]).toBe('### Parte 2');
+  });
+
+  it('a citação só nos Pontos-Chave, na Pérola ou no Alerta conta como fonte da seção', () => {
+    const texto = quatroSecoes([
+      'Texto sem citação.\n\n**Pontos-Chave:**\n- Ponto [1](#ref-1)',
+      'Texto sem citação.\n\n> **Pérola Clínica:** pérola [2](#ref-2).',
+      'Texto sem citação.\n\n> **Alerta de Armadilha:** alerta [1](#ref-1).',
+      'Texto sem citação, só [3] solto e [1](#ref-2).',
+    ]);
+    expect(semFonte(texto).map((p) => p.secao)).toEqual(['Parte 4']);
+  });
+
+  it('citação malformada não conta como fonte', () => {
+    const texto = quatroSecoes(['A [1] solto.', 'B [2](#ref-2).', 'C [1](#ref-1).', 'D [1](#ref-1).']);
+    expect(semFonte(texto).map((p) => p.secao)).toEqual(['Parte 1']);
+  });
+
+  it('o conteúdo guardado usa a mesma conferência: qualquer campo de texto da seção vale', () => {
+    expect(secaoCitaReferencia({ content: 'Texto [1](#ref-1).', keyTakeaways: [] })).toBe(true);
+    expect(secaoCitaReferencia({ content: 'Texto.', keyTakeaways: ['Ponto [2](#ref-2)'] })).toBe(true);
+    expect(secaoCitaReferencia({ content: 'Texto.', keyTakeaways: [], clinicalPearl: 'Pérola [1](#ref-1)' })).toBe(true);
+    expect(secaoCitaReferencia({ content: 'Texto.', keyTakeaways: [], warningAlert: 'Alerta [1](#ref-1)' })).toBe(true);
+    expect(secaoCitaReferencia({ content: 'Texto.', keyTakeaways: [], examConsensus: 'Consenso [3](#ref-3)' })).toBe(true);
+    expect(secaoCitaReferencia({ content: 'Texto [1] solto e [2](#ref-3).', keyTakeaways: ['Ponto'] })).toBe(false);
+    expect(secaoCitaReferencia({ content: '', keyTakeaways: [] })).toBe(false);
+    // Sem estado entre chamadas (a expressão de citação é global).
+    expect([1, 2, 3].map(() => secaoCitaReferencia({ content: 'A [1](#ref-1).', keyTakeaways: [] }))).toEqual([true, true, true]);
   });
 });
