@@ -36,6 +36,7 @@ import { LoadStatus, loadStatusOf } from '../../services/connectivity';
 import { useAutoRetry } from '../../hooks/useAutoRetry';
 import { errosDasQuestoes, respostasDasQuestoes } from '../../utils/questoesDeResidencia';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
+import { contagemDosErros } from '../../utils/errosDoCaderno';
 
 interface IntegratedCadernoErrosProps {
   /** Só questões de residência (RESID-1, D-14): quem monta a lista é o App. */
@@ -192,8 +193,8 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
 
   // Métricas do Caderno
   const metrics = useMemo(() => {
-    const total = allMistakes.length;
-    let resolved = 0;
+    // A conta de total/dominadas/pendentes é a mesma do Início ("Erros para revisar"): uma só função.
+    const { total, dominados: resolved, pendentes: pending } = contagemDosErros(answers, questions, errorLogs);
     let notesCount = 0;
     const reasonCounts: Record<string, number> = {
       lacuna_teorica: 0,
@@ -205,7 +206,6 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
 
     for (const m of allMistakes) {
       const log = errorLogsByQuestion[m.question.id];
-      if (log?.resolved) resolved++;
       if (log?.userNotes && log.userNotes.trim().length > 0) notesCount++;
       const r = log?.errorReason || m.answer.errorReason || 'lacuna_teorica';
       if (reasonCounts[r] !== undefined) {
@@ -218,12 +218,12 @@ export const IntegratedCadernoErros: React.FC<IntegratedCadernoErrosProps> = ({
     return {
       total,
       resolved,
-      pending: total - resolved,
+      pending,
       notesCount,
       resolutionRate: total > 0 ? Math.round((resolved / total) * 100) : 0,
       reasonCounts,
     };
-  }, [allMistakes, errorLogsByQuestion]);
+  }, [allMistakes, errorLogsByQuestion, answers, questions, errorLogs]);
 
   const reasonConfig: Record<string, { label: string; desc: string; color: string; badge: string }> = {
     lacuna_teorica: {

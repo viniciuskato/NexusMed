@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { HelpCircle, Upload } from 'lucide-react';
-import type { Discipline, Question, QuestionAnswerRecord } from '../../types';
+import type { Discipline, Question, QuestionAnswerRecord, QuestionAttemptSummary } from '../../types';
 import { TEXTO_SEM_QUESTOES_DE_RESIDENCIA } from '../../utils/questoesDeResidencia';
 import { acertoGeral, acertosPorBanca, acertosPorDisciplina, evolucaoSemanal } from './painelDados';
 import { cardClass, secondaryButtonClass, subtitleClass, titleClass } from './painelEstilos';
@@ -16,7 +16,10 @@ interface QuestoesDeResidenciaBlocoProps {
   esperando: boolean;
   disciplines: Discipline[];
   questions: Question[];
+  /** A última resposta de cada questão: acerto geral, por disciplina e por banca. */
   answers: Record<string, QuestionAnswerRecord>;
+  /** Todas as tentativas (só de questões de residência): a evolução semanal. */
+  attempts: QuestionAttemptSummary[];
   onFazerQuestoes: () => void;
   /** Só o admin recebe. */
   onImportarQuestoes?: () => void;
@@ -30,13 +33,14 @@ export const QuestoesDeResidenciaBloco: React.FC<QuestoesDeResidenciaBlocoProps>
   disciplines,
   questions,
   answers,
+  attempts,
   onFazerQuestoes,
   onImportarQuestoes,
 }) => {
   const geral = useMemo(() => acertoGeral(answers), [answers]);
   const porDisciplina = useMemo(() => acertosPorDisciplina(disciplines, questions, answers), [disciplines, questions, answers]);
   const porBanca = useMemo(() => acertosPorBanca(questions, answers), [questions, answers]);
-  const semanas = useMemo(() => evolucaoSemanal(answers), [answers]);
+  const semanas = useMemo(() => evolucaoSemanal(attempts), [attempts]);
 
   return (
     <section aria-labelledby="painel-questoes-titulo" data-painel-bloco="questoes" className={cardClass}>

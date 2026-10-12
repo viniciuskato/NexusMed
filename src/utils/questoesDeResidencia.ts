@@ -1,4 +1,4 @@
-import type { ErrorLogItem, Question, QuestionAnswerRecord, SimuladoSessionData } from '../types';
+import type { ErrorLogItem, Question, QuestionAnswerRecord, QuestionAttemptSummary, SimuladoSessionData } from '../types';
 
 // RESID-1 (D-14, 11/10/2026) — nas telas de estudo só aparecem, e só contam no
 // desempenho, as questões de residência: as que têm banca/instituição e ano de
@@ -45,6 +45,15 @@ export function respostasDasQuestoes(
     if (ids.has(resposta.questionId)) resultado[chave] = resposta;
   }
   return resultado;
+}
+
+/** Tentativas (o histórico inteiro) só das questões dadas: a mesma regra de `respostasDasQuestoes`. */
+export function tentativasDasQuestoes(
+  tentativas: QuestionAttemptSummary[],
+  questions: Pick<Question, 'id'>[]
+): QuestionAttemptSummary[] {
+  const ids = new Set(questions.map((q) => q.id));
+  return tentativas.filter((t) => ids.has(t.questionId));
 }
 
 /** Entradas do caderno de erros que são das questões dadas. */

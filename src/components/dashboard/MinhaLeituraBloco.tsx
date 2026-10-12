@@ -21,6 +21,9 @@ interface MinhaLeituraBlocoProps {
 
 type Filtro = 'todos' | 'falta';
 
+/** Quantos materiais a lista mostra de início: o acervo inteiro empurraria o resto do Início para baixo no celular. */
+export const MATERIAIS_NA_LISTA = 5;
+
 function textoDoEstado(material: LeituraDoMaterial): string {
   if (material.estado === 'lido') return 'Lido';
   if (material.estado === 'lendo') return `Lendo — ${material.percentual}%`;
@@ -42,17 +45,31 @@ export const MinhaLeituraBloco: React.FC<MinhaLeituraBlocoProps> = ({
   onOpenCompendium,
   onAbrirBiblioteca,
 }) => {
-  const [filtro, setFiltro] = useState<Filtro>('todos');
+  const [filtro, setFiltro] = useState<Filtro>('falta');
+  const [verTodos, setVerTodos] = useState(false);
   const leitura = useMemo(
     () => (pronto ? minhaLeitura(disciplines, compendiums, readingProgress) : null),
     [pronto, disciplines, compendiums, readingProgress]
+  );
+  // Os materiais do filtro, na ordem das disciplinas; a lista mostra os primeiros, a menos que se peça "Ver todos".
+  const listados = useMemo(
+    () =>
+      (leitura?.disciplinas ?? []).flatMap((d) => d.materiais.filter((m) => filtro === 'todos' || m.estado !== 'lido')),
+    [leitura, filtro]
+  );
+  const mostrados = useMemo(
+    () => new Set((verTodos ? listados : listados.slice(0, MATERIAIS_NA_LISTA)).map((m) => m.compendiumId)),
+    [listados, verTodos]
   );
 
   const botaoFiltro = (valor: Filtro, texto: string) => (
     <button
       type="button"
       aria-pressed={filtro === valor}
-      onClick={() => setFiltro(valor)}
+      onClick={() => {
+        setFiltro(valor);
+        setVerTodos(false);
+      }}
       className={`min-h-11 px-4 py-2 rounded-xl text-sm font-bold border cursor-pointer transition-colors ${
         filtro === valor
           ? 'bg-teal-600/15 dark:bg-teal-400/20 text-teal-900 dark:text-teal-100 border-teal-600/40 dark:border-teal-400/50'
@@ -134,7 +151,7 @@ export const MinhaLeituraBloco: React.FC<MinhaLeituraBlocoProps> = ({
             </div>
 
             {leitura.disciplinas.map((disciplina) => {
-              const materiais = disciplina.materiais.filter((m) => filtro === 'todos' || m.estado !== 'lido');
+              const materiais = disciplina.materiais.filter((m) => mostrados.has(m.compendiumId));
               if (materiais.length === 0) return null;
               return (
                 <div key={disciplina.disciplineId} data-leitura-grupo={disciplina.disciplineId} className="space-y-2">
@@ -162,6 +179,18 @@ export const MinhaLeituraBloco: React.FC<MinhaLeituraBlocoProps> = ({
                 </div>
               );
             })}
+
+            {listados.length > MATERIAIS_NA_LISTA && (
+              <button
+                type="button"
+                id="painel-leitura-ver-todos"
+                aria-expanded={verTodos}
+                onClick={() => setVerTodos((aberto) => !aberto)}
+                className={secondaryButtonClass}
+              >
+                <span>{verTodos ? 'Mostrar menos' : `Ver todos (${listados.length})`}</span>
+              </button>
+            )}
 
             {filtro === 'falta' && leitura.disciplinas.every((d) => d.materiais.every((m) => m.estado === 'lido')) && (
               <p id="painel-leitura-tudo-lido" role="status" className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">

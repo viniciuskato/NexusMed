@@ -1,13 +1,23 @@
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, BookOpen, BookOpenCheck, HelpCircle, Timer } from 'lucide-react';
-import type { Compendium, Discipline, LastReadingSession, Question, QuestionAnswerRecord } from '../../types';
+import type {
+  Compendium,
+  Discipline,
+  ErrorLogItem,
+  LastReadingSession,
+  Question,
+  QuestionAnswerRecord,
+  QuestionAttemptSummary,
+} from '../../types';
 import { answersRepository } from '../../repositories/AnswersRepository';
 import { readingProgressRepository } from '../../repositories/ReadingProgressRepository';
+import { errorNotebookRepository } from '../../repositories/ErrorNotebookRepository';
 import { useScrollMemory } from '../../hooks/useScrollMemory';
 import { useServerLoad } from '../../hooks/useServerLoad';
 import { ConnectionNotice } from '../common/ConnectionNotice';
 import { retomadaDeLeitura } from '../../services/hoje';
-import { respostasDasQuestoes } from '../../utils/questoesDeResidencia';
+import { errosDasQuestoes, respostasDasQuestoes, tentativasDasQuestoes } from '../../utils/questoesDeResidencia';
+import { contagemDosErros } from '../../utils/errosDoCaderno';
 import { MinhaLeituraBloco } from './MinhaLeituraBloco';
 import { QuestoesDeResidenciaBloco } from './QuestoesDeResidenciaBloco';
 import { cardClass, primaryButtonClass, secondaryButtonClass, titleClass } from './painelEstilos';
@@ -58,25 +68,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const [respostas, setRespostas] = useState<Record<string, QuestionAnswerRecord>>({});
   const [progresso, setProgresso] = useState<Record<string, { readSectionIds: string[]; percent: number }>>({});
+  const [tentativas, setTentativas] = useState<QuestionAttemptSummary[]>([]);
+  const [entradasDoCaderno, setEntradasDoCaderno] = useState<ErrorLogItem[]>([]);
   const [carregado, setCarregado] = useState(false);
 
   const { status } = useServerLoad(async () => {
-    const [nextAnswers, nextProgress] = await Promise.all([
+    const [nextAnswers, nextAttempts, nextProgress, nextErrorLogs] = await Promise.all([
       answersRepository.getAnswers(),
+      answersRepository.getAttempts(),
       readingProgressRepository.getReadingProgress(),
+      errorNotebookRepository.getErrorLogs(),
     ]);
     return () => {
       setRespostas(nextAnswers);
+      setTentativas(nextAttempts);
       setProgresso(nextProgress);
+      setEntradasDoCaderno(nextErrorLogs);
       setCarregado(true);
     };
   });
 
   // Resposta antiga a questão de fora da residência não entra em conta nenhuma.
   const respostasDeResidencia = useMemo(() => respostasDasQuestoes(respostas, questions), [respostas, questions]);
+  // A evolução semanal usa todas as tentativas; o resto, a última resposta de cada questão.
+  const tentativasDeResidencia = useMemo(() => tentativasDasQuestoes(tentativas, questions), [tentativas, questions]);
+  // "Erros para revisar": só os que ainda pedem fixação, a mesma conta das "Pendentes" do Caderno de Erros.
   const erros = useMemo(
-    () => Object.values(respostasDeResidencia).filter((r) => !r.isCorrect).length,
-    [respostasDeResidencia]
+    () =>
+      contagemDosErros(respostasDeResidencia, questions, errosDasQuestoes(entradasDoCaderno, questions)).pendentes,
+    [respostasDeResidencia, questions, entradasDoCaderno]
   );
 
   // O "Continuar lendo" vem da sessão de leitura guardada neste aparelho: não espera a rede.
@@ -137,6 +157,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         disciplines={disciplines}
         questions={questions}
         answers={respostasDeResidencia}
+        attempts={tentativasDeResidencia}
         onFazerQuestoes={() => onSelectView('questions')}
         onImportarQuestoes={onImportarQuestoes}
       />
@@ -157,7 +178,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="flex items-center gap-3">
               <AlertTriangle className="w-6 h-6 shrink-0 text-rose-600 dark:text-rose-400" aria-hidden="true" />
               <p id="painel-erros-total" className="text-base font-bold text-slate-900 dark:text-slate-100">
-                {erros === 0 ? 'Nenhum erro para revisar.' : `${plural(erros, 'erro', 'erros')} em questões de residência`}
+                {erros === 0 ? 'Nenhum erro para revisar.' : `${plural(erros, 'erro', 'erros')} para revisar`}
               </p>
             </div>
             <button type="button" id="painel-abrir-caderno" onClick={() => onSelectView('errors')} className={secondaryButtonClass}>

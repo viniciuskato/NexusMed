@@ -63,6 +63,7 @@ function deleteE2EQuestions(): void {
 }
 
 const inicio = (page: Page) => page.locator('#painel-view');
+const bloco = (page: Page, nome: string) => page.locator(`#painel-view [data-painel-bloco="${nome}"]`);
 
 test.describe('43-E / PAINEL-2 — o Início é a tela de entrada', () => {
   let cleanup: (() => Promise<void> | void)[] = [];
@@ -191,7 +192,10 @@ test.describe('43-E / PAINEL-2 — o Início é a tela de entrada', () => {
 
     // O material lido aparece em "Minha leitura" como "Lido"; "Continuar lendo" só aparece depois de abrir o
     // material (a sessão de leitura é do aparelho).
+    // (A lista começa em "Falta ler", que esconde o material já lido: "Todos" o mostra.)
     const linhaDoMaterial = page.locator(`[data-material-leitura]`).filter({ hasText: titulo });
+    await expect(linhaDoMaterial).toHaveCount(0);
+    await bloco(page, 'leitura').getByRole('button', { name: 'Todos' }).click();
     await expect(linhaDoMaterial).toContainText('Lido');
     await expect(page.getByRole('region', { name: 'Continuar lendo' })).toHaveCount(0);
 

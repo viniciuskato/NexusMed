@@ -1,4 +1,4 @@
-import type { Compendium, Discipline, Question, QuestionAnswerRecord } from '../../types';
+import type { Compendium, Discipline, Question, QuestionAnswerRecord, QuestionAttemptSummary } from '../../types';
 
 // PAINEL-1/PAINEL-2 — contas do Início. Só combina o que o app já calcula
 // (respostas, progresso de leitura); nada é inventado nem tem dado de exemplo.
@@ -231,11 +231,13 @@ function diaIso(data: Date): string {
 
 /**
  * Acerto por semana (segunda a domingo, relógio local) nas últimas `semanas`
- * semanas, a atual por último. Resposta mais velha, no futuro ou com data
- * inválida fica de fora.
+ * semanas, a atual por último. Conta TODAS as tentativas, cada uma na semana em
+ * que foi feita: errar na semana 1 e acertar na semana 3 dá 0% na primeira e
+ * 100% na terceira (refazer um erro antigo não esvazia a semana passada).
+ * Tentativa mais velha, no futuro ou com data inválida fica de fora.
  */
 export function evolucaoSemanal(
-  answers: Record<string, QuestionAnswerRecord>,
+  tentativas: QuestionAttemptSummary[],
   agora: Date = new Date(),
   semanas = 8
 ): SemanaDeAcerto[] {
@@ -252,7 +254,7 @@ export function evolucaoSemanal(
     });
   }
 
-  for (const resposta of Object.values(answers)) {
+  for (const resposta of tentativas) {
     const quando = new Date(resposta.timestamp);
     if (Number.isNaN(quando.getTime())) continue;
     // Semanas inteiras entre a segunda da resposta e a segunda de agora (o round absorve a troca de horário de verão).

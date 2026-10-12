@@ -12,7 +12,9 @@ const getAnswers = vi.fn();
 const getReadingProgress = vi.fn();
 const getErrorLogs = vi.fn();
 const getQuestionReview = vi.fn();
-vi.mock('../../src/repositories/AnswersRepository', () => ({ answersRepository: { getAnswers: () => getAnswers() } }));
+vi.mock('../../src/repositories/AnswersRepository', () => ({
+  answersRepository: { getAnswers: () => getAnswers(), getAttempts: async () => [] },
+}));
 vi.mock('../../src/repositories/ReadingProgressRepository', () => ({
   readingProgressRepository: { getReadingProgress: () => getReadingProgress() },
 }));
@@ -161,7 +163,7 @@ describe('Início (RESID-1)', () => {
     // 2 acertos em 3 respondidas (e não 2 em 6): 67%, 3 respondidas, 1 erro.
     expect((await screen.findByText('67%', { selector: '#painel-acerto-geral' })).textContent).toBe('67%');
     expect(document.getElementById('painel-respondidas')?.textContent).toBe('3 respondidas');
-    expect(document.getElementById('painel-erros-total')?.textContent).toBe('1 erro em questões de residência');
+    expect(document.getElementById('painel-erros-total')?.textContent).toBe('1 erro para revisar');
   });
 
   it('sem questão de residência publicada: diz isso, em vez de "nenhuma respondida"', async () => {

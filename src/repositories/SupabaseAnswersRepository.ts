@@ -1,5 +1,6 @@
-import { QuestionAnswerRecord } from '../types';
+import { QuestionAnswerRecord, QuestionAttemptSummary } from '../types';
 import { supabase } from '../lib/supabaseClient';
+import { getStorageUser } from '../services/storage';
 import { AnswersRepository, QuestionAnswerSubmission } from './AnswersRepository';
 import { mapQuestionReviewPayload } from './questionReviewMapper';
 import { fetchAllRows } from './supabasePaging';
@@ -88,6 +89,25 @@ export class SupabaseAnswersRepository implements AnswersRepository {
       };
     }
     return result;
+  }
+
+  /**
+   * Todas as tentativas do usuário, não só a última de cada questão (PAINEL-2): a
+   * evolução semanal do Início conta cada tentativa na semana em que ela foi feita.
+   * Só do servidor, em páginas; a falha sobe para a tela ("sem conexão"). A policy
+   * `question_attempts_owner_select` já limita ao dono; o filtro por usuário daqui é
+   * um cinto a mais quando o app sabe quem está logado.
+   */
+  async getAttempts(): Promise<QuestionAttemptSummary[]> {
+    const userId = getStorageUser();
+    const rows = await fetchAllRows<Pick<QuestionAttemptRow, 'question_id' | 'is_correct' | 'answered_at'>>((from, to) => {
+      const query = supabase.from('question_attempts').select('question_id, is_correct, answered_at');
+      return (userId ? query.eq('user_id', userId) : query)
+        .order('answered_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, to);
+    });
+    return rows.map((row) => ({ questionId: row.question_id, isCorrect: row.is_correct, timestamp: row.answered_at }));
   }
 
   async recordAnswer(record: QuestionAnswerRecord): Promise<QuestionAnswerSubmission> {

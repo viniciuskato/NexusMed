@@ -5,7 +5,7 @@ import {
   evolucaoSemanal,
   minhaLeitura,
 } from '../../src/components/dashboard/painelDados';
-import type { Compendium, Discipline, Question, QuestionAnswerRecord } from '../../src/types';
+import type { Compendium, Discipline, Question, QuestionAnswerRecord, QuestionAttemptSummary } from '../../src/types';
 
 // PAINEL-2 — as contas do Início, com números calculados à mão.
 
@@ -25,6 +25,11 @@ const material = (
   }) as unknown as Compendium;
 const q = (id: string, disciplineId: string, institution: string): Question =>
   ({ id, disciplineId, institution }) as Question;
+const tentativa = (questionId: string, isCorrect: boolean, quando: Date): QuestionAttemptSummary => ({
+  questionId,
+  isCorrect,
+  timestamp: quando.toISOString(),
+});
 const resp = (questionId: string, isCorrect: boolean, quando: Date = new Date()): QuestionAnswerRecord => ({
   questionId,
   selectedOption: 'A',
@@ -159,7 +164,7 @@ describe('evolucaoSemanal', () => {
   const em = (mes: number, dia: number, hora = 10, minuto = 0) => new Date(2026, mes - 1, dia, hora, minuto);
 
   it('8 semanas, a atual por último, com os rótulos das segundas-feiras', () => {
-    const semanas = evolucaoSemanal({}, agora);
+    const semanas = evolucaoSemanal([], agora);
     expect(semanas.map((s) => s.rotulo)).toEqual(['17/08', '24/08', '31/08', '07/09', '14/09', '21/09', '28/09', '05/10']);
     expect(semanas[7].inicio).toBe('2026-10-05');
     // Sem resposta nenhuma, toda semana está vazia (nulo), nunca 0%.
@@ -167,21 +172,31 @@ describe('evolucaoSemanal', () => {
   });
 
   it('percentual por semana, semana sem resposta vazia, e o que está fora da janela não entra', () => {
-    const respostas = {
-      a: resp('a', true, em(10, 5)), // segunda 05/10 → semana atual
-      b: resp('b', false, em(10, 11, 23, 30)), // domingo 11/10 23h30 → semana atual: 1 de 2 = 50%
-      c: resp('c', true, em(9, 28, 0, 30)), // segunda 28/09 00h30 → 100%
-      d: resp('d', true, em(9, 14)),
-      e: resp('e', true, em(9, 16)),
-      f: resp('f', false, em(9, 20, 23, 59)), // 14/09: 2 de 3 = 67% (domingo 20/09 ainda é a semana de 14/09)
-      g: resp('g', false, em(8, 18)), // 17/08: 0 de 1 = 0% de verdade (respondeu e errou)
-      h: resp('h', true, em(8, 16)), // domingo 16/08: semana de 10/08, fora das 8
-      i: resp('i', true, em(10, 12)), // segunda 12/10: semana que vem, fora
-      j: { ...resp('j', true), timestamp: 'lixo' }, // data inválida: fora
-    };
+    const respostas = [
+      tentativa('a', true, em(10, 5)), // segunda 05/10 → semana atual
+      tentativa('b', false, em(10, 11, 23, 30)), // domingo 11/10 23h30 → semana atual: 1 de 2 = 50%
+      tentativa('c', true, em(9, 28, 0, 30)), // segunda 28/09 00h30 → 100%
+      tentativa('d', true, em(9, 14)),
+      tentativa('e', true, em(9, 16)),
+      tentativa('f', false, em(9, 20, 23, 59)), // 14/09: 2 de 3 = 67% (domingo 20/09 ainda é a semana de 14/09)
+      tentativa('g', false, em(8, 18)), // 17/08: 0 de 1 = 0% de verdade (respondeu e errou)
+      tentativa('h', true, em(8, 16)), // domingo 16/08: semana de 10/08, fora das 8
+      tentativa('i', true, em(10, 12)), // segunda 12/10: semana que vem, fora
+      { ...tentativa('j', true, em(10, 6)), timestamp: 'lixo' }, // data inválida: fora
+    ];
     const semanas = evolucaoSemanal(respostas, agora);
     expect(semanas.map((s) => s.percentual)).toEqual([0, null, null, null, 67, null, 100, 50]);
     expect(semanas.map((s) => s.respondidas)).toEqual([1, 0, 0, 0, 3, 0, 1, 2]);
     expect(semanas.map((s) => s.certas)).toEqual([0, 0, 0, 0, 2, 0, 1, 1]);
+  });
+
+  it('usa TODAS as tentativas: errar numa semana e acertar a mesma questão depois dá 0% numa e 100% na outra, não 100% nas duas', () => {
+    // Errou na semana de 21/09 e acertou a mesma questão na semana de 05/10.
+    const semanas = evolucaoSemanal(
+      [tentativa('q1', false, em(9, 22)), tentativa('q1', true, em(10, 6))],
+      agora
+    );
+    expect(semanas.map((s) => s.percentual)).toEqual([null, null, null, null, null, 0, null, 100]);
+    expect(semanas.map((s) => s.respondidas)).toEqual([0, 0, 0, 0, 0, 1, 0, 1]);
   });
 });

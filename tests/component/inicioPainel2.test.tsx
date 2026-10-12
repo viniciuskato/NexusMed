@@ -1,14 +1,29 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import type { Compendium, Discipline, LastReadingSession, Question, QuestionAnswerRecord } from '../../src/types';
+import type {
+  Compendium,
+  Discipline,
+  ErrorLogItem,
+  LastReadingSession,
+  Question,
+  QuestionAnswerRecord,
+  QuestionAttemptSummary,
+} from '../../src/types';
 
 // PAINEL-2 (D-14) — o Início: os cinco blocos, com números calculados à mão, os estados vazios e o
 // que acontece quando a carga falha (nenhum bloco afirma "0").
 
 const getAnswers = vi.fn();
+const getAttempts = vi.fn();
+const getErrorLogs = vi.fn();
 const getReadingProgress = vi.fn();
-vi.mock('../../src/repositories/AnswersRepository', () => ({ answersRepository: { getAnswers: () => getAnswers() } }));
+vi.mock('../../src/repositories/AnswersRepository', () => ({
+  answersRepository: { getAnswers: () => getAnswers(), getAttempts: () => getAttempts() },
+}));
+vi.mock('../../src/repositories/ErrorNotebookRepository', () => ({
+  errorNotebookRepository: { getErrorLogs: () => getErrorLogs() },
+}));
 vi.mock('../../src/repositories/ReadingProgressRepository', () => ({
   readingProgressRepository: { getReadingProgress: () => getReadingProgress() },
 }));
@@ -61,6 +76,31 @@ const respostas = {
   estudo1: resposta('estudo1', false, 10, 9),
 };
 
+// O histórico inteiro: as 7 últimas respostas acima, mais uma tentativa antiga errada de r1 (semana de 14/09, antes
+// de acertar em 06/10) e uma tentativa de questão de fora, que não entra em conta nenhuma.
+const tentativa = (questionId: string, isCorrect: boolean, mes: number, dia: number): QuestionAttemptSummary => ({
+  questionId,
+  isCorrect,
+  timestamp: new Date(2026, mes - 1, dia, 10, 0).toISOString(),
+});
+const tentativas = [
+  ...Object.values(respostas).map((r) => ({ questionId: r.questionId, isCorrect: r.isCorrect, timestamp: r.timestamp })),
+  tentativa('r1', false, 9, 15),
+];
+
+// Caderno de erros: r2 e r6 pendentes, r4 "Dominada", e uma entrada de questão de fora.
+const entrada = (questionId: string, resolved: boolean): ErrorLogItem => ({
+  id: `log-${questionId}`,
+  questionId,
+  timestamp: new Date(2026, 9, 8, 10, 0).toISOString(),
+  selectedOption: 'A',
+  correctOption: 'B',
+  errorReason: 'lacuna_teorica',
+  userNotes: '',
+  resolved,
+});
+const entradasDoCaderno = [entrada('r2', false), entrada('r4', true), entrada('r6', false), entrada('estudo1', false)];
+
 // Leitura: A 0 de 4 (0%), B 2 de 4 (50%), C 2 de 2 (100%).
 const materiais = [material('a', 'cm', 4), material('b', 'cm', 4), material('c', 'pe', 2)];
 const progresso = {
@@ -96,6 +136,8 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(AGORA);
   getAnswers.mockReset().mockResolvedValue(respostas);
+  getAttempts.mockReset().mockResolvedValue(tentativas);
+  getErrorLogs.mockReset().mockResolvedValue(entradasDoCaderno);
   getReadingProgress.mockReset().mockResolvedValue(progresso);
 });
 afterEach(() => {
@@ -170,6 +212,8 @@ describe('Início — 2. Minha leitura', () => {
         .map((b) => b.getAttribute('aria-valuenow'))
     ).toEqual(['40', '25', '100']);
 
+    // A lista começa em "Falta ler" (o que já foi lido fica escondido); "Todos" mostra os três.
+    fireEvent.click(within(bloco('leitura')).getByRole('button', { name: 'Todos' }));
     const estados = Array.from(document.querySelectorAll('[data-material-leitura]')).map((b) => [
       b.querySelector('span')?.textContent,
       b.querySelector('[data-estado-leitura]')?.textContent,
@@ -184,32 +228,64 @@ describe('Início — 2. Minha leitura', () => {
   it('cada material é um botão que o abre', async () => {
     const { onOpenCompendium } = renderInicio({ lastReadingSession: null });
     await esperarCarga();
+    fireEvent.click(within(bloco('leitura')).getByRole('button', { name: 'Todos' }));
     fireEvent.click(within(bloco('leitura')).getByRole('button', { name: /Material C/ }));
     expect(onOpenCompendium).toHaveBeenCalledWith('c');
   });
 
-  it('filtro "Falta ler" esconde o que já foi lido; "Todos" traz de volta', async () => {
+  it('o filtro começa em "Falta ler" (esconde o que já foi lido); "Todos" traz de volta', async () => {
     renderInicio({ lastReadingSession: null });
     await esperarCarga();
     const bl = bloco('leitura');
     const lista = () => Array.from(bl.querySelectorAll('[data-material-leitura]')).map((b) => b.getAttribute('data-material-leitura'));
-    expect(lista()).toEqual(['a', 'b', 'c']);
-
-    fireEvent.click(within(bl).getByRole('button', { name: 'Falta ler' }));
     expect(within(bl).getByRole('button', { name: 'Falta ler' }).getAttribute('aria-pressed')).toBe('true');
     expect(lista()).toEqual(['a', 'b']);
     // O grupo de Pediatria some junto, sem título solto.
     expect(bl.querySelector('[data-leitura-grupo="pe"]')).toBeNull();
 
     fireEvent.click(within(bl).getByRole('button', { name: 'Todos' }));
+    expect(within(bl).getByRole('button', { name: 'Todos' }).getAttribute('aria-pressed')).toBe('true');
     expect(lista()).toEqual(['a', 'b', 'c']);
+  });
+
+  it('com 8 materiais, a lista mostra 5 e "Ver todos (8)" mostra o resto; o total e as barras por disciplina ficam sempre à vista', async () => {
+    const oito = Array.from({ length: 8 }, (_, i) => material(`m${i + 1}`, 'cm', 2));
+    getReadingProgress.mockResolvedValue({});
+    renderInicio({ lastReadingSession: null, compendiums: oito });
+    const bl = bloco('leitura');
+    expect((await esperarCarga()).textContent).toBe('Você leu 0 de 16 partes');
+    const lista = () => Array.from(bl.querySelectorAll('[data-material-leitura]')).map((b) => b.getAttribute('data-material-leitura'));
+
+    expect(lista()).toEqual(['m1', 'm2', 'm3', 'm4', 'm5']);
+    expect(within(bl).getByRole('button', { name: 'Ver todos (8)' }).getAttribute('aria-expanded')).toBe('false');
+    expect(document.querySelectorAll('[data-leitura-disciplina]')).toHaveLength(1);
+    expect(within(bl).getAllByRole('progressbar').map((b) => b.getAttribute('aria-valuenow'))).toEqual(['0', '0']);
+
+    fireEvent.click(within(bl).getByRole('button', { name: 'Ver todos (8)' }));
+    expect(lista()).toHaveLength(8);
+    // O total e as barras seguem lá.
+    expect(document.getElementById('painel-leitura-total')?.textContent).toBe('Você leu 0 de 16 partes');
+    expect(document.querySelectorAll('[data-leitura-disciplina]')).toHaveLength(1);
+
+    fireEvent.click(within(bl).getByRole('button', { name: 'Mostrar menos' }));
+    expect(lista()).toHaveLength(5);
+
+    // Trocar o filtro volta a lista ao tamanho curto.
+    fireEvent.click(within(bl).getByRole('button', { name: 'Ver todos (8)' }));
+    fireEvent.click(within(bl).getByRole('button', { name: 'Todos' }));
+    expect(lista()).toHaveLength(5);
+  });
+
+  it('até 5 materiais: sem botão "Ver todos"', async () => {
+    renderInicio({ lastReadingSession: null });
+    await esperarCarga();
+    expect(screen.queryByRole('button', { name: /Ver todos/ })).toBeNull();
   });
 
   it('tudo lido: "Falta ler" avisa que não sobrou nada', async () => {
     getReadingProgress.mockResolvedValue({ c: progresso.c });
     renderInicio({ lastReadingSession: null, compendiums: [material('c', 'pe', 2)] });
     await esperarCarga();
-    fireEvent.click(screen.getByRole('button', { name: 'Falta ler' }));
     expect(screen.getByText('Você já leu todos os materiais publicados.')).toBeTruthy();
   });
 
@@ -236,7 +312,9 @@ describe('Início — 3. Questões de residência', () => {
     const porBanca = Array.from(document.querySelectorAll('[data-acerto-banca]')).map((li) => li.textContent);
     expect(porBanca).toEqual(['USP4 respondidas75%', 'ENARE3 respondidas33%']);
 
-    // Evolução: 8 semanas; 14/09 = 100% (r5), 21/09 vazia, 28/09 = 2 de 3 = 67%, 05/10 = 1 de 3 = 33%.
+    // Evolução, por TODAS as tentativas: 14/09 = r5 certa + r1 errada (antes de acertar r1 em 06/10) = 1 de 2 = 50%,
+    // 21/09 vazia, 28/09 = 2 de 3 = 67%, 05/10 = r1 certa, r2 e r6 erradas = 1 de 3 = 33% (a tentativa de questão
+    // de fora não conta). O acerto geral, acima, segue pela última resposta de cada questão.
     const semanas = Array.from(document.querySelectorAll('#painel-evolucao [data-semana]'));
     expect(semanas).toHaveLength(8);
     expect(semanas.map((li) => li.getAttribute('aria-label'))).toEqual([
@@ -244,7 +322,7 @@ describe('Início — 3. Questões de residência', () => {
       'Semana de 24/08: sem respostas',
       'Semana de 31/08: sem respostas',
       'Semana de 07/09: sem respostas',
-      'Semana de 14/09: 100% de acerto em 1 respondida',
+      'Semana de 14/09: 50% de acerto em 2 respondidas',
       'Semana de 21/09: sem respostas',
       'Semana de 28/09: 67% de acerto em 3 respondidas',
       'Semana de 05/10: 33% de acerto em 3 respondidas',
@@ -279,11 +357,12 @@ describe('Início — 3. Questões de residência', () => {
 });
 
 describe('Início — 4. Erros para revisar', () => {
-  it('conta só os erros em questões de residência (3: r2, r4, r6) e abre o caderno de erros', async () => {
+  it('conta só os erros pendentes de fixação de questões de residência (3 erros, 1 "Dominada": 2) e abre o caderno de erros', async () => {
     const { onSelectView } = renderInicio();
     await esperarCarga();
     const bl = bloco('erros');
-    expect(within(bl).getByText('3 erros em questões de residência')).toBeTruthy();
+    // Erradas de residência: r2, r4 e r6; r4 está dominada. A entrada e a resposta de questão de fora não contam.
+    expect(within(bl).getByText('2 erros para revisar')).toBeTruthy();
     fireEvent.click(within(bl).getByRole('button', { name: 'Abrir caderno de erros' }));
     expect(onSelectView).toHaveBeenCalledWith('errors');
   });
@@ -292,7 +371,14 @@ describe('Início — 4. Erros para revisar', () => {
     getAnswers.mockResolvedValue({ r1: respostas.r1, r2: respostas.r2 });
     renderInicio();
     await esperarCarga();
-    expect(within(bloco('erros')).getByText('1 erro em questões de residência')).toBeTruthy();
+    expect(within(bloco('erros')).getByText('1 erro para revisar')).toBeTruthy();
+    cleanup();
+
+    // Todos os erros dominados: nada para revisar.
+    getAnswers.mockResolvedValue({ r1: respostas.r1, r4: respostas.r4 });
+    renderInicio();
+    await esperarCarga();
+    expect(within(bloco('erros')).getByText('Nenhum erro para revisar.')).toBeTruthy();
     cleanup();
 
     getAnswers.mockResolvedValue({ r1: respostas.r1 });

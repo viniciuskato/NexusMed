@@ -92,7 +92,12 @@ vi.mock('../../src/repositories/LeiturasRepository', () => ({
     getLeituras: async () => [{ materialId: 'mat-1', secoesLidas: 1, ultimaLeitura: new Date().toISOString() }],
   },
 }));
-vi.mock('../../src/repositories/AnswersRepository', () => ({ answersRepository: { getAnswers: async () => ({}) } }));
+vi.mock('../../src/repositories/AnswersRepository', () => ({
+  answersRepository: { getAnswers: async () => ({}), getAttempts: async () => [] },
+}));
+vi.mock('../../src/repositories/ErrorNotebookRepository', () => ({
+  errorNotebookRepository: { getErrorLogs: async () => [] },
+}));
 vi.mock('../../src/repositories/ReadingProgressRepository', () => ({
   readingProgressRepository: { getReadingProgress: async () => ({}) },
 }));

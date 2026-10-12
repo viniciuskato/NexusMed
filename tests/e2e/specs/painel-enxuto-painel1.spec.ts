@@ -157,15 +157,19 @@ test.describe('PAINEL-2 — o Início (painel único)', () => {
     );
     const certa = inserirQuestao('certa');
     const errada = inserirQuestao('errada');
+    const refeita = inserirQuestao('refeita');
 
     const student = await criarEstudante('dados');
     psqlLocal(
       `insert into public.reading_progress (user_id, material_id, read_section_ids, percent, updated_at) ` +
         `select '${student.id}', '${materialId}', array[(select id from public.material_sections where material_id = '${materialId}' order by sort_order limit 1)], 50, now();`
     );
-    // 1 certa e 1 errada: 50% de acerto, 2 respondidas, 1 erro.
+    // 1 certa, 1 errada e 1 errada que foi refeita e acertada (4 tentativas no total). Pela última resposta de cada
+    // questão: 3 respondidas, 2 certas (67%), 1 erro. Pelo histórico inteiro, a semana tem 4 tentativas, 2 certas (50%).
     await responder(student, [
       { questionId: certa.questionId, alternativaId: certa.certaId },
+      { questionId: refeita.questionId, alternativaId: refeita.erradaId },
+      { questionId: refeita.questionId, alternativaId: refeita.certaId },
       { questionId: errada.questionId, alternativaId: errada.erradaId },
     ]);
     const disciplina = psqlLocal(`select name from public.disciplines where id = '${seed.disciplineId}';`).split('\n')[0].trim();
@@ -177,28 +181,29 @@ test.describe('PAINEL-2 — o Início (painel único)', () => {
     const linha = page.locator('[data-material-leitura]').filter({ hasText: titulo });
     await expect(linha).toContainText('Lendo — 50%');
     await expect(page.locator('#painel-leitura-total')).toHaveText(/^Você leu \d+ de \d+ partes?$/);
-    // O filtro "Falta ler" mantém o que está em andamento.
-    await bloco(page, 'leitura').getByRole('button', { name: 'Falta ler' }).click();
+    // O filtro começa em "Falta ler", que mantém o que está em andamento; "Todos" também o mostra.
+    await expect(bloco(page, 'leitura').getByRole('button', { name: 'Falta ler' })).toHaveAttribute('aria-pressed', 'true');
     await expect(linha).toBeVisible();
     await bloco(page, 'leitura').getByRole('button', { name: 'Todos' }).click();
+    await expect(linha).toBeVisible();
 
-    // Questões de residência: 2 respondidas, 50%, na banca E2E e na disciplina do seed.
-    await expect(page.locator('#painel-acerto-geral')).toHaveText('50%');
-    await expect(page.locator('#painel-respondidas')).toHaveText('2 respondidas');
+    // Questões de residência: 3 respondidas, 67%, na banca E2E e na disciplina do seed.
+    await expect(page.locator('#painel-acerto-geral')).toHaveText('67%');
+    await expect(page.locator('#painel-respondidas')).toHaveText('3 respondidas');
     await expect(page.locator('#painel-acertos-disciplina').getByRole('listitem')).toHaveCount(1);
     await expect(page.locator('#painel-acertos-disciplina')).toContainText(disciplina);
-    await expect(page.locator('#painel-acertos-disciplina')).toContainText('50%');
+    await expect(page.locator('#painel-acertos-disciplina')).toContainText('67%');
     await expect(page.locator('#painel-acertos-banca').getByRole('listitem')).toHaveCount(1);
     await expect(page.locator('#painel-acertos-banca')).toContainText('E2E');
-    await expect(page.locator('#painel-acertos-banca')).toContainText('2 respondidas');
-    // Evolução: 8 semanas, só a atual (a última) tem resposta; as outras 7 aparecem vazias, não como 0%.
+    await expect(page.locator('#painel-acertos-banca')).toContainText('3 respondidas');
+    // Evolução (todas as tentativas): 8 semanas, só a atual (a última) tem tentativa; as outras 7 aparecem vazias, não como 0%.
     const semanas = page.locator('#painel-evolucao [data-semana]');
     await expect(semanas).toHaveCount(8);
-    await expect(semanas.last()).toHaveAttribute('aria-label', /50% de acerto em 2 respondidas/);
+    await expect(semanas.last()).toHaveAttribute('aria-label', /50% de acerto em 4 respondidas/);
     await expect(page.locator('#painel-evolucao [data-semana-vazia]')).toHaveCount(7);
 
     // Erros para revisar: 1.
-    await expect(page.locator('#painel-erros-total')).toHaveText('1 erro em questões de residência');
+    await expect(page.locator('#painel-erros-total')).toHaveText('1 erro para revisar');
 
     await testInfo.attach('inicio-com-dados-1280', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
     await page.setViewportSize({ width: 360, height: 740 });
