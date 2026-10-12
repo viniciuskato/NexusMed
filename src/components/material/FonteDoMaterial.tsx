@@ -19,12 +19,13 @@ interface ResumoProps {
 /** "Baseado em N referências · M de K partes com citação", ou "Este material ainda não tem referências.". */
 export const ResumoDasFontes: React.FC<ResumoProps> = ({ secoes, totalDeReferencias, className, separador = '•', comSeparadorInicial = false }) => {
   const comCitacao = secoes.filter(secaoCitaReferencia).length;
+  const baseadoEm = `Baseado em ${totalDeReferencias} ${totalDeReferencias === 1 ? 'referência' : 'referências'}`;
   const texto =
     totalDeReferencias === 0
       ? 'Este material ainda não tem referências.'
-      : `Baseado em ${totalDeReferencias} ${totalDeReferencias === 1 ? 'referência' : 'referências'} · ${comCitacao} de ${secoes.length} ${
-          secoes.length === 1 ? 'parte' : 'partes'
-        } com citação`;
+      : secoes.length === 0
+        ? baseadoEm
+        : `${baseadoEm} · ${comCitacao} de ${secoes.length} ${secoes.length === 1 ? 'parte' : 'partes'} com citação`;
   return (
     <span className={className ?? 'contents'}>
       {comSeparadorInicial && <span aria-hidden="true">{separador}</span>}

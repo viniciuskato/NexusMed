@@ -256,7 +256,10 @@ Nem todo conceito pede a mesma profundidade:
 Se a fonte não cobre algo, não invente: deixe o trecho mais enxuto ou
 escreva `LACUNA_DOCUMENTAL` onde ele faltaria. Isso é aceitável em conceito
 de apoio ou menção contextual. **No conceito central, `LACUNA_DOCUMENTAL`
-significa que falta fonte** — a seção não está pronta.
+significa que falta fonte** — a seção não está pronta. Em qualquer caso,
+`LACUNA_DOCUMENTAL` marca a afirmação que ficou sem fonte, mas não substitui a
+citação: toda seção precisa de ao menos uma citação `[N](#ref-N)` de uma
+referência da lista (seção 1.5).
 
 ### Parta do porquê, não só do o quê
 
@@ -403,11 +406,14 @@ de dois ou três, de bom senso).
   fontes realmente diferentes.
 - **Toda seção cita ao menos uma referência.** O material é baseado em
   evidências: uma seção sem nenhuma citação `[N](#ref-N)` (no texto, nos
-  Pontos-Chave, na Pérola ou no Alerta) não tem fonte que quem lê possa
-  conferir. Cite a referência que sustenta a seção; se não há fonte para o que
-  a seção afirma, use `LACUNA_DOCUMENTAL` em vez de afirmar sem fonte. Quem lê o
-  material vê em quantas partes há citação, e quem publica vê quais partes
-  estão sem fonte.
+  Pontos-Chave, na Pérola ou no Alerta; a linha da Tag de Mecanismo não conta)
+  não tem fonte que quem lê possa conferir, e a plataforma não aceita o envio
+  de um arquivo com uma seção assim. Cite a referência que sustenta a seção.
+  Se não há fonte para uma afirmação, use `LACUNA_DOCUMENTAL` no lugar dela em
+  vez de afirmar sem fonte — mas `LACUNA_DOCUMENTAL` **não vale como citação**:
+  a seção continua precisando de ao menos uma citação `[N](#ref-N)` de uma
+  referência da lista. Quem lê o material vê em quantas partes há citação, e
+  quem publica vê quais partes estão sem fonte.
 - **Toda tabela precisa de uma frase de abertura citada, logo acima dela**,
   terminada pela citação e seguida de uma linha em branco. A plataforma
   transforma essa citação na legenda "Fonte: [N]" da tabela. Não repita a
@@ -946,10 +952,12 @@ material ganha a estrutura de um bom caderno. O que muda em relação à v2:
 padrão passou a apontar a seção que não cita nenhuma referência (seção 1.5:
 "Toda seção cita ao menos uma referência"), para que a biblioteca seja toda
 baseada em evidências. A versão continua 3: subir a versão marcaria como
-"Desatualizado" todos os materiais já publicados, e esta regra orienta quem
-escreve e quem publica sem exigir que o que está no ar seja refeito. Como a
-checagem não bloqueia a publicação, o material que ainda tem seção sem fonte
-continua no ar, com a parte apontada para o dono completar.
+"Desatualizado" todos os materiais já publicados, e esta regra não exige que o
+que está no ar seja refeito. A seção sem citação impede o envio do arquivo pelo
+site, inclusive o envio de uma versão nova de um material; só a importação pela
+Área Editorial mostra a pendência sem impedir. O material já publicado com
+seção sem fonte continua no ar, e o selo "Sem fonte nesta parte" aponta ao dono
+as partes a completar.
 
 **Materiais da v2 não precisam ser refeitos para continuar no ar:** o que foi
 publicado segue como está. Para reenviar um material antigo (por exemplo, para

@@ -479,6 +479,7 @@ describe('checagem do padrão — fonte em cada parte (EVID-1)', () => {
     corpos.map((c, k) => `### Parte ${k + 1}\n**Tag de Mecanismo:** Espectro\n\n${c}\n`).join('\n') +
     `\n### Palavras-chave\n\`C3G\`\n\n### Referências Bibliográficas\n1. Fonte 1. [Livro-texto]\n2. Fonte 2. [Livro-texto]\n`;
   const semFonte = (texto: string) => checarMaterialMarkdown(texto).pendencias.filter((p) => p.regra === 'secao-sem-citacao');
+  const semFonteDe = (texto: string) => semFonte(texto).map((p) => p.secao);
 
   it('todas as seções citam: nenhuma pendência de fonte', () => {
     const texto = quatroSecoes(['A [1](#ref-1).', 'B [2](#ref-2).', 'C [1](#ref-1)[2](#ref-2).', 'D [2](#ref-2).']);
@@ -522,5 +523,24 @@ describe('checagem do padrão — fonte em cada parte (EVID-1)', () => {
     expect(secaoCitaReferencia({ content: '', keyTakeaways: [] })).toBe(false);
     // Sem estado entre chamadas (a expressão de citação é global).
     expect([1, 2, 3].map(() => secaoCitaReferencia({ content: 'A [1](#ref-1).', keyTakeaways: [] }))).toEqual([true, true, true]);
+  });
+
+  it('citação só na linha da Tag de Mecanismo não conta: o arquivo e o conteúdo guardado dão o mesmo resultado', () => {
+    const texto =
+      `# Cefalosporinas\n\n**Subtítulo:** S\n**Disciplina:** Farmacologia\n**Tema:** Clínica\n**Tempo estimado de leitura:** 12 minutos\n**Versão do padrão:** 3\n\n` +
+      `### So na tag\n**Tag de Mecanismo:** Espectro [1](#ref-1)\n\nTexto sem citação.\n\n` +
+      `### No texto\n**Tag de Mecanismo:** Espectro\n\nTexto [1](#ref-1).\n\n` +
+      `### Nos pontos-chave\n**Tag de Mecanismo:** Espectro\n\nTexto sem citação.\n\n**Pontos-Chave:**\n- Ponto [2](#ref-2)\n\n` +
+      `### Na perola\n**Tag de Mecanismo:** Espectro\n\nTexto sem citação.\n\n> **Pérola Clínica:** pérola [2](#ref-2).\n\n` +
+      `### Sem nada\n**Tag de Mecanismo:** Espectro\n\nTexto sem citação.\n\n` +
+      `### Palavras-chave\n\`C3G\`\n\n### Referências Bibliográficas\n1. Fonte 1. [Livro-texto]\n2. Fonte 2. [Livro-texto]\n`;
+    const doArquivo = semFonteDe(texto);
+    expect(doArquivo).toEqual(['So na tag', 'Sem nada']);
+
+    const importacao = parseCompendiumMarkdownText(texto, [], [], []);
+    expect(importacao.ok).toBe(true);
+    if (!importacao.ok) return;
+    const doGuardado = importacao.sections.filter((sec) => !secaoCitaReferencia(sec)).map((sec) => sec.title);
+    expect(doGuardado).toEqual(doArquivo);
   });
 });

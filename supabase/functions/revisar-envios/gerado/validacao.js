@@ -160,6 +160,7 @@ var ALERT_LABEL = /^\*\*Alerta(?: de Armadilha)?:?\*\*\s*(.*)$/i;
 function blockquoteLabelText(line) {
   return line.trim().replace(/^>\s?/, "").replace(/^[^\w*]*/u, "");
 }
+var MECHANISM_TAG_LINE = /^\*\*Tag de Mecanismo:?\*\*\s*(.*)$/i;
 function extractSectionParts(rawBody) {
   const lines = rawBody.split(/\r\n|\n/);
   let mechanismTag;
@@ -170,7 +171,7 @@ function extractSectionParts(rawBody) {
     if (/^(---+|\*\*\*+)$/.test(line.trim())) lines[i2] = "";
   });
   lines.forEach((line, i2) => {
-    const m = line.trim().match(/^\*\*Tag de Mecanismo:?\*\*\s*(.*)$/i);
+    const m = line.trim().match(MECHANISM_TAG_LINE);
     if (m && !mechanismTag) {
       mechanismTag = m[1].trim() || void 0;
       lines[i2] = "";
@@ -549,11 +550,24 @@ var referenciaNaoCitada = {
     );
   }
 };
+function textoDaSecaoSemTag(secao) {
+  let tagLida = false;
+  const linhas = [];
+  for (const { linha } of secao.linhas) {
+    const m = linha.trim().match(MECHANISM_TAG_LINE);
+    if (m && !tagLida) {
+      tagLida = m[1].trim() !== "";
+      continue;
+    }
+    linhas.push(linha);
+  }
+  return linhas.join("\n");
+}
 var secaoSemCitacao = {
   id: "secao-sem-citacao",
   descricao: "Seção que não cita nenhuma referência",
   verificar(arq) {
-    return arq.secoes.filter((s) => !textoTemCitacao(s.linhas.map((l) => l.linha).join("\n"))).map(
+    return arq.secoes.filter((s) => !textoTemCitacao(textoDaSecaoSemTag(s))).map(
       (s) => pendencia(arq, "secao-sem-citacao", s.bloco.headerLine, `A parte "${s.bloco.headerText}" não cita nenhuma referência.`)
     );
   }

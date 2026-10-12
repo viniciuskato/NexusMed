@@ -6,6 +6,7 @@ import {
   extractMetadata,
   extractNumberedList,
   extractSectionParts,
+  MECHANISM_TAG_LINE,
   METADATA_LABELS,
   normalize,
   parseCompendiumMarkdownText,
@@ -318,14 +319,33 @@ const referenciaNaoCitada: RegraDoPadrao = {
   },
 };
 
+/**
+ * O texto da seção sem a linha da Tag de Mecanismo: a importação a guarda como campo à parte e o leitor a mostra como
+ * texto puro, então uma citação ali não é citação. Faz a mesma escolha do importador (a primeira Tag com valor), para o
+ * arquivo e o conteúdo guardado darem o mesmo resultado.
+ */
+function textoDaSecaoSemTag(secao: SecaoDeConteudo): string {
+  let tagLida = false;
+  const linhas: string[] = [];
+  for (const { linha } of secao.linhas) {
+    const m = linha.trim().match(MECHANISM_TAG_LINE);
+    if (m && !tagLida) {
+      tagLida = m[1].trim() !== '';
+      continue;
+    }
+    linhas.push(linha);
+  }
+  return linhas.join('\n');
+}
+
 const secaoSemCitacao: RegraDoPadrao = {
   id: 'secao-sem-citacao',
   descricao: 'Seção que não cita nenhuma referência',
   verificar(arq) {
-    // Toda a seção conta (texto, Pontos-Chave, Pérola, Alerta): é o mesmo conjunto de campos que `secaoCitaReferencia`
-    // confere no conteúdo guardado.
+    // Toda a seção conta (texto, Pontos-Chave, Pérola, Alerta), menos a Tag de Mecanismo: é o mesmo conjunto de campos
+    // que `secaoCitaReferencia` confere no conteúdo guardado, que não inclui a tag.
     return arq.secoes
-      .filter((s) => !textoTemCitacao(s.linhas.map((l) => l.linha).join('\n')))
+      .filter((s) => !textoTemCitacao(textoDaSecaoSemTag(s)))
       .map((s) =>
         pendencia(arq, 'secao-sem-citacao', s.bloco.headerLine, `A parte "${s.bloco.headerText}" não cita nenhuma referência.`)
       );

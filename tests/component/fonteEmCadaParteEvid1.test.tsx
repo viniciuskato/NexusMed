@@ -110,6 +110,11 @@ describe('EVID-1 — resumo das fontes no topo da leitura', () => {
     expect((await screen.findByTestId('base-de-evidencias')).textContent).toBe('Este material ainda não tem referências.');
   });
 
+  it('material com referências e nenhuma seção: só "Baseado em N referências"', async () => {
+    leitor(material({ sections: [] }));
+    expect((await screen.findByTestId('base-de-evidencias')).textContent).toBe('Baseado em 4 referências');
+  });
+
   it('o singular não vira "1 referências"', async () => {
     leitor(material({ references: ['Fonte 1.'], sections: [material().sections[0]] }));
     expect((await screen.findByTestId('base-de-evidencias')).textContent).toBe('Baseado em 1 referência · 1 de 1 parte com citação');

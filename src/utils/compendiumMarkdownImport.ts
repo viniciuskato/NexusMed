@@ -167,6 +167,9 @@ export interface SectionParts extends Omit<ExtractedSection, 'title' | 'content'
   contentLines: string[];
 }
 
+/** Linha "**Tag de Mecanismo:** valor" (a checagem do padrão a reconhece pelo mesmo desenho). */
+export const MECHANISM_TAG_LINE = /^\*\*Tag de Mecanismo:?\*\*\s*(.*)$/i;
+
 /**
  * Separa do corpo da seção o que vira campo próprio (Tag de Mecanismo,
  * Pontos-Chave, Pérola, Alerta). As linhas ficam na posição original, para a
@@ -186,7 +189,7 @@ export function extractSectionParts(rawBody: string): SectionParts {
 
   // Tag de Mecanismo: linha isolada "**Tag de Mecanismo:** valor".
   lines.forEach((line, i) => {
-    const m = line.trim().match(/^\*\*Tag de Mecanismo:?\*\*\s*(.*)$/i);
+    const m = line.trim().match(MECHANISM_TAG_LINE);
     if (m && !mechanismTag) {
       mechanismTag = m[1].trim() || undefined;
       lines[i] = '';
