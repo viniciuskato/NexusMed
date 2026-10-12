@@ -160,6 +160,7 @@ var ALERT_LABEL = /^\*\*Alerta(?: de Armadilha)?:?\*\*\s*(.*)$/i;
 function blockquoteLabelText(line) {
   return line.trim().replace(/^>\s?/, "").replace(/^[^\w*]*/u, "");
 }
+var MECHANISM_TAG_LINE = /^\*\*Tag de Mecanismo:?\*\*\s*(.*)$/i;
 function extractSectionParts(rawBody) {
   const lines = rawBody.split(/\r\n|\n/);
   let mechanismTag;
@@ -170,7 +171,7 @@ function extractSectionParts(rawBody) {
     if (/^(---+|\*\*\*+)$/.test(line.trim())) lines[i2] = "";
   });
   lines.forEach((line, i2) => {
-    const m = line.trim().match(/^\*\*Tag de Mecanismo:?\*\*\s*(.*)$/i);
+    const m = line.trim().match(MECHANISM_TAG_LINE);
     if (m && !mechanismTag) {
       mechanismTag = m[1].trim() || void 0;
       lines[i2] = "";
@@ -454,6 +455,10 @@ function lerArquivoDeMaterial(texto) {
     citadas
   };
 }
+function textoTemCitacao(texto) {
+  for (const m of texto.matchAll(CITACAO_VALIDA)) if (m[1] === m[2] && Number(m[1]) >= 1) return true;
+  return false;
+}
 function trecho(s, max = 60) {
   const t = s.trim();
   return t.length > max ? `${t.slice(0, max - 1)}…` : t;
@@ -542,6 +547,28 @@ var referenciaNaoCitada = {
     }
     return linhasDosItens.map((i, k) => ({ i, n: k + 1 })).filter(({ n }) => !arq.citadas.has(n)).map(
       ({ i, n }) => pendencia(arq, "referencia-nao-citada", i, `A referência ${n} nunca é citada no texto. Cite-a onde ela sustenta uma afirmação, ou retire-a da lista.`)
+    );
+  }
+};
+function textoDaSecaoSemTag(secao) {
+  let tagLida = false;
+  const linhas = [];
+  for (const { linha } of secao.linhas) {
+    const m = linha.trim().match(MECHANISM_TAG_LINE);
+    if (m && !tagLida) {
+      tagLida = m[1].trim() !== "";
+      continue;
+    }
+    linhas.push(linha);
+  }
+  return linhas.join("\n");
+}
+var secaoSemCitacao = {
+  id: "secao-sem-citacao",
+  descricao: "Seção que não cita nenhuma referência",
+  verificar(arq) {
+    return arq.secoes.filter((s) => !textoTemCitacao(textoDaSecaoSemTag(s))).map(
+      (s) => pendencia(arq, "secao-sem-citacao", s.bloco.headerLine, `A parte "${s.bloco.headerText}" não cita nenhuma referência.`)
     );
   }
 };
@@ -1104,6 +1131,7 @@ var REGRAS_DO_PADRAO = [
   citacaoMalformada,
   citacaoSemReferencia,
   referenciaNaoCitada,
+  secaoSemCitacao,
   tabelaSemAberturaCitada,
   latex,
   comparadorAscii,

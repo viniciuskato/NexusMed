@@ -6,6 +6,7 @@ import {
   extractMetadata,
   extractNumberedList,
   extractSectionParts,
+  MECHANISM_TAG_LINE,
   METADATA_LABELS,
   normalize,
   parseCompendiumMarkdownText,
@@ -44,6 +45,7 @@ export type RegraDoPadraoId =
   | 'citacao-malformada'
   | 'citacao-sem-referencia'
   | 'referencia-nao-citada'
+  | 'secao-sem-citacao'
   | 'tabela-sem-abertura-citada'
   | 'latex'
   | 'comparador-ascii'
@@ -168,6 +170,35 @@ export function lerArquivoDeMaterial(texto: string): ArquivoDeMaterial {
   };
 }
 
+/**
+ * O texto tem ao menos uma citação válida `[N](#ref-N)` (N igual nos dois lugares, a partir de 1)? Uma só leitura de
+ * "o que é citação" para o arquivo `.md` e para o conteúdo guardado; citação malformada ou com números diferentes não
+ * conta (a regra `citacao-malformada` a aponta).
+ */
+export function textoTemCitacao(texto: string): boolean {
+  for (const m of texto.matchAll(CITACAO_VALIDA)) if (m[1] === m[2] && Number(m[1]) >= 1) return true;
+  return false;
+}
+
+/** Os campos de texto de uma seção guardada (a mesma seção que o importador monta a partir do arquivo). */
+export interface TextoDaSecao {
+  content: string;
+  keyTakeaways: string[];
+  clinicalPearl?: string | null;
+  warningAlert?: string | null;
+  examConsensus?: string | null;
+}
+
+/**
+ * A seção guardada cita ao menos uma referência em algum campo de texto (conteúdo, pontos-chave, pérola, alerta ou
+ * consenso)? É a regra `secao-sem-citacao` aplicada ao conteúdo que está no ar, pela mesma leitura da citação.
+ */
+export function secaoCitaReferencia(secao: TextoDaSecao): boolean {
+  return textoTemCitacao(
+    [secao.content, ...secao.keyTakeaways, secao.clinicalPearl, secao.warningAlert, secao.examConsensus].filter((t) => typeof t === 'string').join('\n')
+  );
+}
+
 function trecho(s: string, max = 60): string {
   const t = s.trim();
   return t.length > max ? `${t.slice(0, max - 1)}…` : t;
@@ -284,6 +315,39 @@ const referenciaNaoCitada: RegraDoPadrao = {
       .filter(({ n }) => !arq.citadas.has(n))
       .map(({ i, n }) =>
         pendencia(arq, 'referencia-nao-citada', i, `A referência ${n} nunca é citada no texto. Cite-a onde ela sustenta uma afirmação, ou retire-a da lista.`)
+      );
+  },
+};
+
+/**
+ * O texto da seção sem a linha da Tag de Mecanismo: a importação a guarda como campo à parte e o leitor a mostra como
+ * texto puro, então uma citação ali não é citação. Faz a mesma escolha do importador (a primeira Tag com valor), para o
+ * arquivo e o conteúdo guardado darem o mesmo resultado.
+ */
+function textoDaSecaoSemTag(secao: SecaoDeConteudo): string {
+  let tagLida = false;
+  const linhas: string[] = [];
+  for (const { linha } of secao.linhas) {
+    const m = linha.trim().match(MECHANISM_TAG_LINE);
+    if (m && !tagLida) {
+      tagLida = m[1].trim() !== '';
+      continue;
+    }
+    linhas.push(linha);
+  }
+  return linhas.join('\n');
+}
+
+const secaoSemCitacao: RegraDoPadrao = {
+  id: 'secao-sem-citacao',
+  descricao: 'Seção que não cita nenhuma referência',
+  verificar(arq) {
+    // Toda a seção conta (texto, Pontos-Chave, Pérola, Alerta), menos a Tag de Mecanismo: é o mesmo conjunto de campos
+    // que `secaoCitaReferencia` confere no conteúdo guardado, que não inclui a tag.
+    return arq.secoes
+      .filter((s) => !textoTemCitacao(textoDaSecaoSemTag(s)))
+      .map((s) =>
+        pendencia(arq, 'secao-sem-citacao', s.bloco.headerLine, `A parte "${s.bloco.headerText}" não cita nenhuma referência.`)
       );
   },
 };
@@ -914,6 +978,7 @@ export const REGRAS_DO_PADRAO: readonly RegraDoPadrao[] = [
   citacaoMalformada,
   citacaoSemReferencia,
   referenciaNaoCitada,
+  secaoSemCitacao,
   tabelaSemAberturaCitada,
   latex,
   comparadorAscii,
