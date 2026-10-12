@@ -454,6 +454,10 @@ function lerArquivoDeMaterial(texto) {
     citadas
   };
 }
+function textoTemCitacao(texto) {
+  for (const m of texto.matchAll(CITACAO_VALIDA)) if (m[1] === m[2] && Number(m[1]) >= 1) return true;
+  return false;
+}
 function trecho(s, max = 60) {
   const t = s.trim();
   return t.length > max ? `${t.slice(0, max - 1)}…` : t;
@@ -542,6 +546,15 @@ var referenciaNaoCitada = {
     }
     return linhasDosItens.map((i, k) => ({ i, n: k + 1 })).filter(({ n }) => !arq.citadas.has(n)).map(
       ({ i, n }) => pendencia(arq, "referencia-nao-citada", i, `A referência ${n} nunca é citada no texto. Cite-a onde ela sustenta uma afirmação, ou retire-a da lista.`)
+    );
+  }
+};
+var secaoSemCitacao = {
+  id: "secao-sem-citacao",
+  descricao: "Seção que não cita nenhuma referência",
+  verificar(arq) {
+    return arq.secoes.filter((s) => !textoTemCitacao(s.linhas.map((l) => l.linha).join("\n"))).map(
+      (s) => pendencia(arq, "secao-sem-citacao", s.bloco.headerLine, `A parte "${s.bloco.headerText}" não cita nenhuma referência.`)
     );
   }
 };
@@ -1104,6 +1117,7 @@ var REGRAS_DO_PADRAO = [
   citacaoMalformada,
   citacaoSemReferencia,
   referenciaNaoCitada,
+  secaoSemCitacao,
   tabelaSemAberturaCitada,
   latex,
   comparadorAscii,

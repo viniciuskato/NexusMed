@@ -243,6 +243,10 @@ seção "Armadilhas já descobertas".
     `material-figures`, imutável; o leitor e a checagem do padrão leem o bloco
     pelo mesmo módulo (`src/utils/figuraDoMaterial.ts`) — não crie uma
     segunda leitura.
+    Regra nova na checagem ou mudança na Parte 1 do padrão exige
+    `npm run gerar:revisor` no mesmo PR (os arquivos de
+    `supabase/functions/revisar-envios/gerado/` derivam deles;
+    `revisorMontagem44f.test.ts` reprova se ficarem velhos).
 20. (Tela retirada pela D-14, 11/10/2026; dados e RPCs seguem no banco.)
     **Card de flashcard com seção:** `create_flashcard_from_question` tem 12
     parâmetros (o último, `p_material_section_id`) e o card de seção nasce
