@@ -2,11 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
   LayoutDashboard,
-  BarChart3,
-  CalendarCheck,
   BookOpen,
   HelpCircle,
-  Layers,
   Sun,
   Moon,
   LogOut,
@@ -61,7 +58,6 @@ export const Header: React.FC<HeaderProps> = ({
     const t = setTimeout(() => setAvisoDaConta(''), 8000);
     return () => clearTimeout(t);
   }, [avisoDaConta]);
-  const [resourcesOpen, setResourcesOpen] = useState(false);
 
   // Fechar o menu de usuário com a tecla Escape
   useEffect(() => {
@@ -75,28 +71,15 @@ export const Header: React.FC<HeaderProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [userDropdownOpen]);
 
-  useEffect(() => {
-    if (!resourcesOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setResourcesOpen(false);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [resourcesOpen]);
-
-  // Navegação principal (Prompt 22-A): Início e Recursos — desde a 43-E, com
-  // "Hoje" antes de Início, que é a tela inicial —, este último agrupando os
-  // acervos (Biblioteca, Questões) e, desde o PAINEL-1, "Meu desempenho".
-  // Cartões e Estudo Temático saíram na CORTE-1 (D-14).
-  const resourceItems = [
+  // Navegação principal (PAINEL-2, D-14): Início (a tela de entrada, com o
+  // desempenho e o caminho para o caderno de erros), Biblioteca e Questões, com
+  // os Simulados dentro de Questões. "Hoje", "Meu desempenho" e o menu "Recursos"
+  // saíram.
+  const navItems = [
+    { id: 'dashboard', label: 'Início', icon: LayoutDashboard, activeAlso: ['errors'] },
     { id: 'compendiums', label: 'Biblioteca', icon: BookOpen, activeAlso: ['compendium-reader'] },
     { id: 'questions', label: 'Questões', icon: HelpCircle, activeAlso: ['simulados', 'simulado-session'] },
-    // PAINEL-1: tudo o que saiu do painel (e o caderno de erros) fica a um clique daqui.
-    { id: 'desempenho', label: 'Meu desempenho', icon: BarChart3, activeAlso: ['errors'] },
   ];
-  const isResourceActive = resourceItems.some(
-    (item) => activeView === item.id || item.activeAlso.includes(activeView)
-  );
   const navButtonClass = (active: boolean) =>
     `min-h-11 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border ${
       active
@@ -122,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Left: Brand Identity */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
           <button
-            onClick={() => onSelectView('today')}
+            onClick={() => onSelectView('dashboard')}
             className="min-h-11 flex items-center gap-1.5 sm:gap-2.5 text-left group focus:outline-hidden cursor-pointer min-w-0"
           >
             <Logo className="w-8 h-8 rounded-xl elev-sm shadow-teal-600/30 group-hover:scale-105 transition-transform shrink-0" />
@@ -140,88 +123,24 @@ export const Header: React.FC<HeaderProps> = ({
           aria-label="Navegação principal"
           className="hidden md:flex items-center gap-1 min-w-0"
         >
-          {/* Só a partir de xl: a barra já não cabe entre md e lg (medido em
-              768–900px sem este item), e o dock, presente em toda largura,
-              também leva a Hoje (43-E). */}
-          <div className="hidden xl:flex">
-            <button
-              type="button"
-              id="nav-today"
-              onClick={() => onSelectView('today')}
-              aria-current={activeView === 'today' ? 'page' : undefined}
-              className={navButtonClass(activeView === 'today')}
-            >
-              <CalendarCheck className="w-3.5 h-3.5" />
-              <span>Hoje</span>
-            </button>
-          </div>
-
-          <button
-            type="button"
-            id="nav-dashboard"
-            onClick={() => onSelectView('dashboard')}
-            aria-current={activeView === 'dashboard' ? 'page' : undefined}
-            className={navButtonClass(activeView === 'dashboard')}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" />
-            <span>Início</span>
-          </button>
-
-          <div className="relative">
-            <button
-              type="button"
-              id="nav-resources"
-              onClick={() => setResourcesOpen((prev) => !prev)}
-              aria-haspopup="menu"
-              aria-expanded={resourcesOpen}
-              aria-controls="nav-resources-menu"
-              className={navButtonClass(isResourceActive)}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Recursos</span>
-              <ChevronDown
-                className={`w-3.5 h-3.5 transition-transform ${resourcesOpen ? 'rotate-180' : ''}`}
-                aria-hidden="true"
-              />
-            </button>
-
-            {resourcesOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setResourcesOpen(false)}
-                  aria-hidden="true"
-                />
-                <div
-                  id="nav-resources-menu"
-                  role="menu"
-                  aria-orientation="vertical"
-                  aria-labelledby="nav-resources"
-                  className="absolute left-0 mt-2 w-52 rounded-xl bg-white dark:bg-[#111827] border border-[#E2E8F0] dark:border-[#263244] elev-lg py-2 z-50"
-                >
-                  {resourceItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        role="menuitem"
-                        id={`nav-resources-${item.id}`}
-                        onClick={() => {
-                          setResourcesOpen(false);
-                          onSelectView(item.id);
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs text-[#172033] dark:text-[#E5E7EB] hover:bg-slate-100 dark:hover:bg-[#182235] flex items-center gap-2 cursor-pointer"
-                      >
-                        <Icon className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
-                        <span>{item.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const ativo = activeView === item.id || item.activeAlso.includes(activeView);
+            return (
+              <button
+                key={item.id}
+                type="button"
+                id={`nav-${item.id}`}
+                onClick={() => onSelectView(item.id)}
+                aria-current={ativo ? 'page' : undefined}
+                className={navButtonClass(ativo)}
+              >
+                {/* Sem ícone abaixo de xl: com três botões a barra não cabia a 768px (PAINEL-2). */}
+                <Icon className="hidden xl:block w-3.5 h-3.5" aria-hidden="true" />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
         </nav>
 
         {/* Right: Quick Search, Theme Toggle, Profile */}
@@ -237,7 +156,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden xl:inline text-slate-700 dark:text-slate-200 font-semibold">
               Buscar
             </span>
-            <kbd className="hidden md:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-[#0F172A] border border-slate-300/80 dark:border-[#243452] rounded-md">
+            <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-[#0F172A] border border-slate-300/80 dark:border-[#243452] rounded-md">
               Ctrl K
             </kbd>
           </button>
@@ -311,7 +230,7 @@ export const Header: React.FC<HeaderProps> = ({
                   {initials || <UserIcon className="w-3.5 h-3.5" />}
                 </div>
               )}
-              <span className="hidden md:inline text-xs font-medium text-[#172033] dark:text-[#E5E7EB] max-w-[100px] truncate">
+              <span className="hidden lg:inline text-xs font-medium text-[#172033] dark:text-[#E5E7EB] max-w-[100px] truncate">
                 {displayName}
               </span>
               <ChevronDown

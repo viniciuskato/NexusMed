@@ -59,7 +59,7 @@ vi.mock('../../src/hooks/useAppData', () => ({
   }),
 }));
 
-// 43-E: a tela inicial agora é "Hoje", que lê estas três cargas do servidor.
+// 43-E / PAINEL-2: a tela inicial é o "Início", que lê estas cargas do servidor.
 vi.mock('../../src/repositories/LeiturasRepository', () => ({ leiturasRepository: { getLeituras: async () => [] } }));
 vi.mock('../../src/repositories/AnswersRepository', () => ({ answersRepository: { getAnswers: async () => ({}) } }));
 vi.mock('../../src/repositories/FlashcardsRepository', () => ({
@@ -118,7 +118,7 @@ describe('44-D — "Como escrever um material" no app', () => {
   it('admin ativo abre a página pelo menu do usuário', async () => {
     authState.profile = { role: 'admin', status: 'active' };
     render(<App />);
-    await screen.findByRole('heading', { level: 1, name: 'Hoje' });
+    await screen.findByRole('heading', { level: 1, name: 'Início' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Como escrever um material' }));
@@ -134,7 +134,7 @@ describe('44-D — "Como escrever um material" no app', () => {
   it('44-E: admin ativo abre "Enviar material" pelo menu, e a página de instruções leva até ela', async () => {
     authState.profile = { role: 'admin', status: 'active' };
     render(<App />);
-    await screen.findByRole('heading', { level: 1, name: 'Hoje' });
+    await screen.findByRole('heading', { level: 1, name: 'Início' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Enviar material' }));
@@ -151,7 +151,7 @@ describe('44-D — "Como escrever um material" no app', () => {
 
   it('P6: estudante ativo não vê o menu de envio e não abre as telas de envio, nem pelo endereço direto', async () => {
     render(<App />);
-    await screen.findByRole('heading', { level: 1, name: 'Hoje' });
+    await screen.findByRole('heading', { level: 1, name: 'Início' });
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
     expect(screen.queryByRole('menuitem', { name: 'Como escrever um material' })).toBeNull();
     expect(screen.queryByRole('menuitem', { name: 'Como escrever questões' })).toBeNull();
@@ -161,7 +161,7 @@ describe('44-D — "Como escrever um material" no app', () => {
     for (const rota of ['enviar-material', 'como-escrever-material', 'como-escrever-questoes']) {
       window.location.hash = `#/${rota}`;
       render(<App />);
-      await screen.findByRole('heading', { level: 1, name: 'Hoje' });
+      await screen.findByRole('heading', { level: 1, name: 'Início' });
       expect(screen.queryByRole('heading', { level: 1, name: 'Enviar material' })).toBeNull();
       expect(screen.queryByRole('heading', { level: 1, name: 'Como escrever um material' })).toBeNull();
       expect(screen.queryByRole('heading', { level: 1, name: 'Como escrever questões' })).toBeNull();

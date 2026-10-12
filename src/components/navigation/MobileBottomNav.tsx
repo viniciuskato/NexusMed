@@ -1,14 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import {
-  LayoutDashboard,
-  BarChart3,
-  CalendarCheck,
-  BookOpen,
-  HelpCircle,
-  Layers,
-  Database,
-  ArrowRight,
-} from 'lucide-react';
+import React from 'react';
+import { LayoutDashboard, BookOpen, HelpCircle, Database, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { LastReadingSession } from '../../types';
 
@@ -32,48 +23,29 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 }) => {
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
-  const [resourcesOpen, setResourcesOpen] = useState(false);
 
-  useEffect(() => {
-    if (!resourcesOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setResourcesOpen(false);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [resourcesOpen]);
-
-  // Prompt 22-A: a barra tem poucos destinos principais, e Recursos agrupa os
-  // acervos que antes ocupavam um botão cada (Biblioteca, Questões). Cartões e
-  // Estudo Temático saíram na CORTE-1 (D-14).
-  const resourceItems = [
-    { id: 'compendiums', label: 'Biblioteca', icon: BookOpen, activeAlso: ['compendium-reader'] },
-    { id: 'questions', label: 'Questões', icon: HelpCircle, activeAlso: ['simulados', 'simulado-session'] },
-    // PAINEL-1: "Meu desempenho" (e, nele, o caderno de erros) a um clique do dock.
-    { id: 'desempenho', label: 'Desempenho', icon: BarChart3, activeAlso: ['errors'] },
-  ];
-  const isResourceActive = resourceItems.some(
-    (item) => activeView === item.id || item.activeAlso.includes(activeView)
-  );
-
+  // PAINEL-2 (D-14): três destinos — Início (a tela de entrada, com o desempenho e o
+  // caminho para o caderno de erros), Biblioteca e Questões (com os Simulados
+  // dentro) — e, para o admin, o CMS. "Hoje", "Meu desempenho" e o menu "Recursos"
+  // saíram.
   const navItems = [
-    {
-      id: 'today',
-      label: 'Hoje',
-      icon: CalendarCheck,
-      isActive: activeView === 'today',
-    },
     {
       id: 'dashboard',
       label: 'Início',
       icon: LayoutDashboard,
-      isActive: activeView === 'dashboard',
+      isActive: activeView === 'dashboard' || activeView === 'errors',
     },
     {
-      id: 'resources',
-      label: 'Recursos',
-      icon: Layers,
-      isActive: isResourceActive,
+      id: 'compendiums',
+      label: 'Biblioteca',
+      icon: BookOpen,
+      isActive: activeView === 'compendiums' || activeView === 'compendium-reader',
+    },
+    {
+      id: 'questions',
+      label: 'Questões',
+      icon: HelpCircle,
+      isActive: ['questions', 'simulados', 'simulado-session'].includes(activeView),
     },
     ...(isAdmin
       ? [
@@ -111,52 +83,6 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         </button>
       )}
 
-      {/* Menu de Recursos (Biblioteca, Questões, Meu desempenho) */}
-      {resourcesOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-30"
-            onClick={() => setResourcesOpen(false)}
-            aria-hidden="true"
-          />
-          <div
-            id="dock-resources-menu"
-            role="menu"
-            aria-orientation="vertical"
-            aria-labelledby="dock-nav-resources"
-            className="pointer-events-auto z-40 flex items-center gap-1 px-2 py-1.5 rounded-2xl bg-white/98 dark:bg-[#0A1220]/98 backdrop-blur-2xl border border-slate-300/90 dark:border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.22)]"
-          >
-            {resourceItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeView === item.id || item.activeAlso.includes(activeView);
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="menuitem"
-                  id={`dock-resources-${item.id}`}
-                  aria-label={item.id === 'desempenho' ? 'Meu desempenho' : undefined}
-                  onClick={() => {
-                    setResourcesOpen(false);
-                    onSelectView(item.id);
-                  }}
-                  className={`relative flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all cursor-pointer min-w-[56px] ${
-                    isActive
-                      ? 'bg-teal-600/15 dark:bg-teal-400/20 text-teal-950 dark:text-teal-100 font-bold border border-teal-600/40 dark:border-teal-400/50 shadow-2xs'
-                      : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 border border-transparent font-medium'
-                  }`}
-                >
-                  <div className="relative">
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <span className="text-[10px] mt-0.5 tracking-tight">{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-
       {/* Dock Flutuante Transparente Unificado */}
       <nav
         id="mobile-floating-dock"
@@ -172,18 +98,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               key={item.id}
               type="button"
               id={`dock-nav-${item.id}`}
-              onClick={() => {
-                if (item.id === 'resources') {
-                  setResourcesOpen((prev) => !prev);
-                  return;
-                }
-                setResourcesOpen(false);
-                onSelectView(item.id);
-              }}
-              aria-haspopup={item.id === 'resources' ? 'menu' : undefined}
-              aria-expanded={item.id === 'resources' ? resourcesOpen : undefined}
-              aria-controls={item.id === 'resources' ? 'dock-resources-menu' : undefined}
-              aria-current={item.id !== 'resources' && isActive ? 'page' : undefined}
+              onClick={() => onSelectView(item.id)}
+              aria-current={isActive ? 'page' : undefined}
               className={`relative flex flex-col items-center justify-center py-1.5 px-3 sm:px-4 rounded-xl transition-all cursor-pointer min-w-[56px] sm:min-w-[64px] ${
                 isActive
                   ? 'bg-teal-600/15 dark:bg-teal-400/20 text-teal-950 dark:text-teal-100 font-bold border border-teal-600/40 dark:border-teal-400/50 shadow-xs'

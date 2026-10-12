@@ -12,7 +12,9 @@ const getAnswers = vi.fn();
 const getReadingProgress = vi.fn();
 const getErrorLogs = vi.fn();
 const getQuestionReview = vi.fn();
-vi.mock('../../src/repositories/AnswersRepository', () => ({ answersRepository: { getAnswers: () => getAnswers() } }));
+vi.mock('../../src/repositories/AnswersRepository', () => ({
+  answersRepository: { getAnswers: () => getAnswers(), getAttempts: async () => [] },
+}));
 vi.mock('../../src/repositories/ReadingProgressRepository', () => ({
   readingProgressRepository: { getReadingProgress: () => getReadingProgress() },
 }));
@@ -38,7 +40,6 @@ vi.mock('../../src/components/questions/QuestionCard', () => ({
 
 const { QuestionsView } = await import('../../src/components/questions/QuestionsView');
 const { DashboardView } = await import('../../src/components/dashboard/DashboardView');
-const { DesempenhoView } = await import('../../src/components/dashboard/DesempenhoView');
 const { IntegratedCadernoErros } = await import('../../src/components/dashboard/IntegratedCadernoErros');
 
 const q = (id: string, institution: string, year: number): Question =>
@@ -157,59 +158,27 @@ describe('Início (RESID-1)', () => {
     expect(item.getAttribute('title')).toContain('3 questões respondidas');
   });
 
+  it('acerto geral, respondidas e erros contam só as 3 de residência (e não as 6 gravadas)', async () => {
+    renderInicio();
+    // 2 acertos em 3 respondidas (e não 2 em 6): 67%, 3 respondidas, 1 erro.
+    expect((await screen.findByText('67%', { selector: '#painel-acerto-geral' })).textContent).toBe('67%');
+    expect(document.getElementById('painel-respondidas')?.textContent).toBe('3 respondidas');
+    expect(document.getElementById('painel-erros-total')?.textContent).toBe('1 erro para revisar');
+  });
+
   it('sem questão de residência publicada: diz isso, em vez de "nenhuma respondida"', async () => {
     renderInicio({ questions: [] });
     expect(await screen.findByText(TEXTO_VAZIO)).toBeTruthy();
     expect(screen.queryByText('Nenhuma questão respondida ainda')).toBeNull();
   });
 
-  it('carga ainda sem dados do servidor: não afirma que não há questão', async () => {
+  it('carga ainda sem dados do servidor: não afirma que não há questão nem número nenhum', async () => {
     renderInicio({ questions: [], dadosProntos: false });
-    await screen.findByText('Nenhum material em andamento');
-    expect(screen.queryByText(TEXTO_VAZIO)).toBeNull();
-  });
-});
-
-describe('Meu desempenho (RESID-1)', () => {
-  const renderDesempenho = (props: Partial<React.ComponentProps<typeof DesempenhoView>> = {}) =>
-    render(
-      <DesempenhoView
-        disciplines={disciplinas}
-        themes={[]}
-        questions={residencia}
-        compendiums={[]}
-        onSelectView={vi.fn()}
-        onOpenCompendium={vi.fn()}
-        onOpenQuestion={vi.fn()}
-        {...props}
-      />
-    );
-
-  it('acurácia, respondidas, erros e caderno contam só as 3 de residência', async () => {
-    renderDesempenho();
-    await screen.findByText('Desempenho por Especialidade Médica');
-    // 2 acertos em 3 respondidas (e não 2 em 6): 67%, 3 questões, 1 erro.
-    await waitFor(() => expect(screen.getByText('3 questões respondidas')).toBeTruthy());
-    expect(screen.getByText('2 acertos')).toBeTruthy();
-    expect(screen.getAllByText('1 erros').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('67%').length).toBeGreaterThan(0);
-    // O caderno tem 3 entradas gravadas (r2, e1, a1), só 1 é de residência.
-    expect(screen.getByRole('button', { name: /Caderno de Erros & Metacognição/ }).textContent).toContain('1');
-    expect(screen.getByRole('button', { name: /Caderno de Erros & Metacognição/ }).textContent).not.toContain('3');
-    expect(screen.getByText('3 de 3 questões respondidas (100%)', { exact: false })).toBeTruthy();
-  });
-
-  it('sem questão de residência publicada: estado vazio claro, sem zeros enganosos', async () => {
-    renderDesempenho({ questions: [] });
-    expect(await screen.findByText(TEXTO_VAZIO)).toBeTruthy();
-    expect(screen.queryByText(/Acurácia Geral/)).toBeNull();
-    expect(screen.queryByText(/Nenhuma vulnerabilidade crítica/)).toBeNull();
-  });
-
-  it('carga ainda sem dados do servidor: não afirma que não há questão', async () => {
-    renderDesempenho({ questions: [], dadosProntos: false });
     await waitFor(() => expect(getAnswers).toHaveBeenCalled());
     expect(screen.queryByText(TEXTO_VAZIO)).toBeNull();
+    expect(screen.queryByText('Nenhuma questão respondida ainda')).toBeNull();
+    expect(document.getElementById('painel-erros-total')).toBeNull();
+    expect(document.getElementById('painel-leitura-total')).toBeNull();
   });
 });
 

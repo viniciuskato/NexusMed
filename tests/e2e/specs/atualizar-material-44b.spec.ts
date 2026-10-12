@@ -30,13 +30,11 @@ async function abrirEnvio(page: Page) {
 }
 
 async function abrirArvoreDaBiblioteca(page: Page) {
-  const desktopTrigger = page.locator('#nav-resources');
+  const desktopTrigger = page.locator('#nav-compendiums');
   if (await desktopTrigger.isVisible()) {
     await desktopTrigger.click();
-    await page.locator('#nav-resources-compendiums').click();
   } else {
-    await page.locator('#dock-nav-resources').click();
-    await page.locator('#dock-resources-compendiums').click();
+    await page.locator('#dock-nav-compendiums').click();
   }
   await page.getByRole('button', { name: 'Modo árvore' }).click();
 }

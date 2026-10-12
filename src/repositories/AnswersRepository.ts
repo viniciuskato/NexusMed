@@ -1,4 +1,4 @@
-import { QuestionAnswerRecord, QuestionReviewResult, Question } from '../types';
+import { QuestionAnswerRecord, QuestionAttemptSummary, QuestionReviewResult, Question } from '../types';
 import { StorageService, getStorageUser } from '../services/storage';
 import { SupabaseAnswersRepository } from './SupabaseAnswersRepository';
 import { mapQuestionReviewPayload } from './questionReviewMapper';
@@ -10,6 +10,8 @@ import { isSupabaseConfigured } from '../lib/supabaseClient';
 
 export interface AnswersRepository {
   getAnswers(): Promise<Record<string, QuestionAnswerRecord>>;
+  /** Todas as tentativas do usuário (PAINEL-2), mais novas primeiro: a evolução ao longo do tempo precisa de todas, não só da última por questão. */
+  getAttempts(): Promise<QuestionAttemptSummary[]>;
   recordAnswer(record: QuestionAnswerRecord): Promise<QuestionAnswerSubmission>;
   subscribeToCorrection(clientOpId: string, listener: (outcome: QuestionCorrectionOutcome) => void): () => void;
 }
@@ -26,6 +28,14 @@ export type QuestionAnswerSubmission =
 class LocalStorageAnswersRepository implements AnswersRepository {
   async getAnswers(): Promise<Record<string, QuestionAnswerRecord>> {
     return StorageService.getAnswers();
+  }
+  // Sem Supabase o armazenamento local só guarda a resposta mais recente de cada questão.
+  async getAttempts(): Promise<QuestionAttemptSummary[]> {
+    return Object.values(StorageService.getAnswers()).map((a) => ({
+      questionId: a.questionId,
+      isCorrect: a.isCorrect,
+      timestamp: a.timestamp,
+    }));
   }
   async recordAnswer(record: QuestionAnswerRecord): Promise<QuestionAnswerSubmission> {
     const question: Question | undefined = StorageService.getQuestions().find(
@@ -68,6 +78,11 @@ class ResilientAnswersRepository implements AnswersRepository {
   async getAnswers(): Promise<Record<string, QuestionAnswerRecord>> {
     if (!isSupabaseConfigured) return this.local.getAnswers();
     return this.supa.getAnswers();
+  }
+
+  async getAttempts(): Promise<QuestionAttemptSummary[]> {
+    if (!isSupabaseConfigured) return this.local.getAttempts();
+    return this.supa.getAttempts();
   }
 
   async recordAnswer(record: QuestionAnswerRecord): Promise<QuestionAnswerSubmission> {

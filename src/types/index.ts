@@ -266,6 +266,16 @@ export interface QuestionAnswerRecord {
   answerStrategy?: 'recognition' | 'elimination' | 'false_confidence' | 'guess';
 }
 
+/**
+ * Uma tentativa de resposta (PAINEL-2): o histórico inteiro, não só a última por questão.
+ * Serve ao "acerto ao longo do tempo" do Início.
+ */
+export interface QuestionAttemptSummary {
+  questionId: string;
+  isCorrect: boolean;
+  timestamp: string;
+}
+
 // Gabarito de uma questão (quem está correta, explicação por alternativa),
 // obtido via RPC (submit_question_attempt ou get_question_review) — nunca
 // por SELECT direto em question_option_keys/question_answer_keys, que não

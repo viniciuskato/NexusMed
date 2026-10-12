@@ -11,11 +11,10 @@ import {
   type CreatedTestUser,
 } from '../fixtures/localSupabase';
 
-// Unidade 43-E, contra o Supabase local de verdade: a tela "Hoje" é a entrada
-// do estudante ativo (sem tirar do reload a restauração da última tela, 22-A),
-// abre pelo menu, mostra continuar lendo / testar o que li — cada um levando à
-// tela certa — e, com tudo feito no dia, diz isso. Sem rede, avisa e nunca diz
-// que está tudo feito. (Os cards para hoje saíram na CORTE-1, D-14.)
+// Unidade 43-E, ajustada na PAINEL-2 (D-14), contra o Supabase local de verdade: a antiga tela "Hoje" deixou de
+// existir e o Início é a entrada do estudante ativo (sem tirar do reload a restauração da última tela, 22-A).
+// Abre pelo menu, mostra "Continuar lendo" e o atalho "Testar o que li" — cada um levando à tela certa — e, sem
+// rede, avisa e nunca afirma número nenhum. (Os cards para hoje saíram na CORTE-1, D-14.)
 
 const STEM_PREFIX = 'e2e-43e-';
 
@@ -25,13 +24,6 @@ async function login(page: Page, user: CreatedTestUser) {
   await page.locator('#auth-password-input').fill(user.password);
   await page.locator('#btn-auth-submit').click();
   await expect(page.locator('#btn-user-profile-menu')).toBeVisible({ timeout: 20_000 });
-}
-
-async function abrirMaterial(page: Page, title: string) {
-  await page.locator('#dock-nav-resources').click();
-  await page.locator('#dock-resources-compendiums').click();
-  await page.getByRole('button', { name: 'Modo árvore' }).click();
-  await page.getByRole('button', { name: title, exact: true }).first().click();
 }
 
 /** Questão publicada no tema do seed, cobrando os materiais dados. Gabarito: A ("Certa"). */
@@ -70,10 +62,10 @@ function deleteE2EQuestions(): void {
   psqlLocal(`delete from public.questions where question_stem like '${STEM_PREFIX}%';`);
 }
 
-const hoje = (page: Page) => page.locator('#hoje-view');
-const tudoFeito = (page: Page) => page.getByText('Tudo feito por hoje');
+const inicio = (page: Page) => page.locator('#painel-view');
+const bloco = (page: Page, nome: string) => page.locator(`#painel-view [data-painel-bloco="${nome}"]`);
 
-test.describe('43-E — Tela "Hoje"', () => {
+test.describe('43-E / PAINEL-2 — o Início é a tela de entrada', () => {
   let cleanup: (() => Promise<void> | void)[] = [];
 
   test.afterEach(async () => {
@@ -93,60 +85,68 @@ test.describe('43-E — Tela "Hoje"', () => {
     return user;
   }
 
-  test('o estudante ativo que entra cai em Hoje; sem nada pendente, a tela diz que está tudo feito', async ({ page }) => {
+  test('o estudante ativo que entra cai no Início, sem "Hoje" nem "Meu desempenho" em lugar nenhum', async ({ page }) => {
     const student = await criarEstudante('entrada');
     await login(page, student);
 
-    await expect(hoje(page)).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Hoje', level: 1 })).toBeVisible();
-    await expect(page.locator('#nav-today')).toHaveAttribute('aria-current', 'page');
-    await expect(page).toHaveURL(/#\/today$/);
-    await expect(tudoFeito(page)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Testar o que li' })).toHaveCount(0);
-    await expect(page.getByText(/\bcards?\b/i)).toHaveCount(0);
+    await expect(inicio(page)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Início', level: 1 })).toBeVisible();
+    await expect(page.locator('#nav-dashboard')).toHaveAttribute('aria-current', 'page');
+    await expect(page).toHaveURL(/#\/dashboard$/);
+    await expect(page.getByRole('button', { name: 'Testar o que li' })).toBeVisible();
+    await expect(page.getByText(/(?<!\p{L})(cards?|cartões|cartão)(?!\p{L})/iu)).toHaveCount(0);
+    for (const antigo of ['#nav-today', '#nav-resources', '#dock-nav-today', '#dock-nav-resources']) {
+      await expect(page.locator(antigo)).toHaveCount(0);
+    }
+    await expect(page.getByText(/^Hoje$|Meu desempenho/)).toHaveCount(0);
   });
 
-  test('Hoje abre pelo menu (desktop e celular) e Início continua sendo outra tela', async ({ page }) => {
+  test('o menu é Início, Biblioteca e Questões (topo e celular), cabe sem rolagem lateral e o logotipo volta ao Início', async ({
+    page,
+  }) => {
     const student = await criarEstudante('menu');
     await login(page, student);
 
+    await expect(page.locator('#header-main-nav').getByRole('button')).toHaveText(['Início', 'Biblioteca', 'Questões']);
+    await expect(page.locator('#mobile-floating-dock').getByRole('button')).toHaveText(['Início', 'Biblioteca', 'Questões']);
+
+    await page.locator('#nav-questions').click();
+    await expect(page.locator('#nav-questions')).toHaveAttribute('aria-current', 'page');
+    await expect(inicio(page)).toHaveCount(0);
     await page.locator('#nav-dashboard').click();
-    await expect(hoje(page)).toHaveCount(0);
+    await expect(inicio(page)).toBeVisible();
     await expect(page.locator('#nav-dashboard')).toHaveAttribute('aria-current', 'page');
 
-    await page.locator('#nav-today').click();
-    await expect(hoje(page)).toBeVisible();
-    await expect(page.locator('#nav-dashboard')).not.toHaveAttribute('aria-current', 'page');
-
-    // O logotipo também leva a Hoje.
-    await page.locator('#nav-dashboard').click();
+    // O logotipo também leva ao Início.
+    await page.locator('#nav-compendiums').click();
+    await expect(inicio(page)).toHaveCount(0);
     await page.getByRole('button', { name: /NexusMed/ }).first().click();
-    await expect(hoje(page)).toBeVisible();
+    await expect(inicio(page)).toBeVisible();
 
-    // Notebook estreito (1024px): o item Hoje do topo só aparece a partir de
-    // 1280px para não estourar a barra (que cabia em 1024px sem ele); o dock,
-    // presente em toda largura, leva a Hoje.
-    await page.setViewportSize({ width: 1024, height: 800 });
-    await expect(page.locator('#nav-today')).toBeHidden();
-    const navExcede = await page.evaluate(() => {
-      const nav = document.getElementById('header-main-nav')!;
-      return nav.scrollWidth - nav.clientWidth;
-    });
-    expect(navExcede).toBeLessThanOrEqual(0);
-    await page.locator('#dock-nav-dashboard').click();
-    await expect(hoje(page)).toHaveCount(0);
-    await page.locator('#dock-nav-today').click();
-    await expect(hoje(page)).toBeVisible();
-    await page.setViewportSize({ width: 1280, height: 720 });
-    await expect(page.locator('#nav-today')).toBeVisible();
+    // Notebook e tablet estreitos: a barra do topo cabe na largura (sem estourar a janela).
+    for (const largura of [768, 900, 1024]) {
+      await page.setViewportSize({ width: largura, height: 800 });
+      const sobra = await page.evaluate(() => {
+        const nav = document.getElementById('header-main-nav')!;
+        const header = document.querySelector('header')!;
+        return {
+          nav: nav.scrollWidth - nav.clientWidth,
+          header: header.scrollWidth - header.clientWidth,
+          pagina: document.documentElement.scrollWidth - window.innerWidth,
+        };
+      });
+      expect(sobra.nav, `barra do topo estoura em ${largura}px`).toBeLessThanOrEqual(0);
+      expect(sobra.header, `cabeçalho estoura em ${largura}px`).toBeLessThanOrEqual(0);
+      expect(sobra.pagina, `rolagem lateral em ${largura}px`).toBeLessThanOrEqual(0);
+    }
 
-    // Celular: o dock tem Hoje e a tela cabe na largura, sem rolagem lateral.
+    // Celular: o dock tem os três botões e a tela cabe na largura, sem rolagem lateral.
     await page.setViewportSize({ width: 360, height: 740 });
+    await page.locator('#dock-nav-questions').click();
+    await expect(inicio(page)).toHaveCount(0);
     await page.locator('#dock-nav-dashboard').click();
-    await expect(hoje(page)).toHaveCount(0);
-    await page.locator('#dock-nav-today').click();
-    await expect(hoje(page)).toBeVisible();
-    await expect(page.locator('#dock-nav-today')).toHaveAttribute('aria-current', 'page');
+    await expect(inicio(page)).toBeVisible();
+    await expect(page.locator('#dock-nav-dashboard')).toHaveAttribute('aria-current', 'page');
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
     const dock = (await page.locator('#mobile-floating-dock').boundingBox())!;
@@ -154,29 +154,29 @@ test.describe('43-E — Tela "Hoje"', () => {
     expect(dock.x + dock.width).toBeLessThanOrEqual(360);
   });
 
-  test('recarregar volta à última tela (22-A); abrir de novo, em aba nova, entra por Hoje', async ({ page, context }) => {
+  test('recarregar volta à última tela (22-A); abrir de novo, em aba nova, entra pelo Início', async ({ page, context }) => {
     const student = await criarEstudante('reload');
     await login(page, student);
-    await expect(hoje(page)).toBeVisible();
+    await expect(inicio(page)).toBeVisible();
 
-    await page.locator('#nav-resources').click();
-    await page.locator('#nav-resources-desempenho').click();
-    await expect(page.locator('#desempenho-titulo')).toBeVisible();
+    await page.locator('#nav-questions').click();
+    await expect(page.getByRole('heading', { name: 'Banco de Questões Médicas' })).toBeVisible();
 
     await page.reload();
-    await expect(page.locator('#desempenho-titulo')).toBeVisible({ timeout: 20_000 });
-    await expect(hoje(page)).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Banco de Questões Médicas' })).toBeVisible({ timeout: 20_000 });
+    await expect(inicio(page)).toHaveCount(0);
 
-    // Aba nova, já autenticada, sem link direto: a última tela salva não vale,
-    // a entrada é Hoje.
+    // Aba nova, já autenticada, sem link direto: a última tela salva não vale, a entrada é o Início.
     const outraAba = await context.newPage();
     await outraAba.goto('/');
-    await expect(outraAba.locator('#hoje-view')).toBeVisible({ timeout: 20_000 });
-    await expect(outraAba.locator('#desempenho-titulo')).toHaveCount(0);
+    await expect(outraAba.locator('#painel-view')).toBeVisible({ timeout: 20_000 });
+    await expect(outraAba.getByRole('heading', { name: 'Banco de Questões Médicas' })).toHaveCount(0);
     await outraAba.close();
   });
 
-  test('leu hoje e tem questão: as duas frentes aparecem, cada botão leva à tela certa e o dia fecha', async ({ page }) => {
+  test('"Continuar lendo" e "Testar o que li": cada botão do Início leva à tela certa, e a resposta aparece em Questões de residência', async ({
+    page,
+  }) => {
     const t = `${Date.now()}`;
     const titulo = `${MATERIAL_PREFIX}43e-A-${t}`;
     const materialId = insertPublishedMaterial(`43e-A-${t}`);
@@ -188,30 +188,32 @@ test.describe('43-E — Tela "Hoje"', () => {
     registrarLeitura(student.id, materialId, 'now()');
 
     await login(page, student);
-    await expect(hoje(page)).toBeVisible();
+    await expect(inicio(page)).toBeVisible();
 
-    // Testar o que li vem do servidor; Continuar lendo só aparece depois de
-    // abrir o material (a sessão de leitura é do aparelho).
-    await expect(page.getByRole('region', { name: 'Testar o que li' })).toContainText('1 questão dos materiais que você leu hoje');
+    // O material lido aparece em "Minha leitura" como "Lido"; "Continuar lendo" só aparece depois de abrir o
+    // material (a sessão de leitura é do aparelho).
+    // (A lista começa em "Falta ler", que esconde o material já lido: "Todos" o mostra.)
+    const linhaDoMaterial = page.locator(`[data-material-leitura]`).filter({ hasText: titulo });
+    await expect(linhaDoMaterial).toHaveCount(0);
+    await bloco(page, 'leitura').getByRole('button', { name: 'Todos' }).click();
+    await expect(linhaDoMaterial).toContainText('Lido');
     await expect(page.getByRole('region', { name: 'Continuar lendo' })).toHaveCount(0);
-    await expect(tudoFeito(page)).toHaveCount(0);
 
-    // Continuar lendo: abre o material.
-    await abrirMaterial(page, titulo);
+    // Abre o material pela lista.
+    await linhaDoMaterial.click();
     // Espera o leitor montar: é ele que grava a sessão de leitura.
     await expect(page.getByRole('heading', { name: 'Seção de teste 22-A' }).first()).toBeVisible({ timeout: 15_000 });
-    await page.locator('#nav-today').click();
+    await page.locator('#nav-dashboard').click();
     const continuar = page.getByRole('region', { name: 'Continuar lendo' });
     await expect(continuar).toContainText(titulo);
     await expect(continuar).toContainText('Você parou em: Seção de teste 22-A');
-    await continuar.getByRole('button', { name: 'Continuar lendo' }).click();
-    await expect(hoje(page)).toHaveCount(0);
+    await continuar.getByRole('button', { name: 'Continuar de onde parei' }).click();
+    await expect(inicio(page)).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Seção de teste 22-A' }).first()).toBeVisible({ timeout: 15_000 });
 
-    // Testar o que li: abre o modal da 43-C com o material lido; responder certo
-    // tira o teste de Hoje (a questão foi respondida hoje).
-    await page.locator('#nav-today').click();
-    await page.getByRole('region', { name: 'Testar o que li' }).getByRole('button', { name: 'Testar o que li' }).click();
+    // Testar o que li: abre o modal da 43-C com o material lido.
+    await page.locator('#nav-dashboard').click();
+    await page.getByRole('region', { name: 'Atalhos' }).getByRole('button', { name: 'Testar o que li' }).click();
     const modal = page.getByRole('dialog', { name: 'Testar o que li' });
     await expect(modal.getByRole('checkbox', { name: titulo })).toBeChecked();
     await expect(modal.getByText('1 questão disponível')).toBeVisible();
@@ -222,45 +224,34 @@ test.describe('43-E — Tela "Hoje"', () => {
     await cartao.getByRole('button', { name: 'Confirmar Resposta' }).click();
     await expect(cartao).toHaveAttribute('data-answer-origin', 'session', { timeout: 15_000 });
 
-    // Respondida a questão, o dia está fechado: o teste sai de Hoje e a tela diz isso.
-    await page.locator('#nav-today').click();
-    await expect(page.getByRole('region', { name: 'Testar o que li' })).toHaveCount(0);
-    await expect(tudoFeito(page)).toBeVisible();
-    // Continuar lendo segue disponível: retomar não é pendência.
-    await expect(page.getByRole('region', { name: 'Continuar lendo' })).toBeVisible();
+    // De volta ao Início: a resposta certa já conta em "Questões de residência" (1 respondida, 100%).
+    await page.locator('#nav-dashboard').click();
+    await expect(page.locator('#painel-acerto-geral')).toHaveText('100%');
+    await expect(page.locator('#painel-respondidas')).toHaveText('1 respondida');
+    await expect(page.locator('#painel-erros-total')).toHaveText('Nenhum erro para revisar.');
   });
 
-  test('leitura de ontem não gera teste em Hoje', async ({ page }) => {
-    const t = `${Date.now()}`;
-    const materialId = insertPublishedMaterial(`43e-B-${t}`);
-    cleanup.push(() => deleteE2EQuestions());
-    cleanup.push(() => deleteE2EMaterials());
-    insertPublishedQuestion('cobra o material de ontem', [materialId]);
-
-    const student = await criarEstudante('ontem');
-    registrarLeitura(student.id, materialId, "now() - interval '2 days'");
-
-    await login(page, student);
-    await expect(tudoFeito(page)).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Testar o que li' })).toHaveCount(0);
-  });
-
-  test('sem conexão, Hoje avisa e não diz que está tudo feito; com a conexão de volta, carrega', async ({ page }) => {
+  test('sem conexão, o Início avisa e não afirma número nenhum; com a conexão de volta, carrega', async ({ page }) => {
+    test.setTimeout(90_000);
     const student = await criarEstudante('rede');
     await login(page, student);
-    await expect(tudoFeito(page)).toBeVisible();
+    await expect(page.locator('#painel-leitura-total')).toBeVisible();
 
-    await page.locator('#nav-dashboard').click();
+    await page.locator('#nav-questions').click();
+    await expect(page.getByRole('heading', { name: 'Banco de Questões Médicas' })).toBeVisible();
     await page.route('**/rest/v1/**', (route) => route.abort('internetdisconnected'));
-    await page.locator('#nav-today').click();
+    await page.locator('#nav-dashboard').click();
 
-    await expect(hoje(page)).toBeVisible();
-    await expect(page.getByRole('status').filter({ hasText: 'Sem conexão' })).toHaveCount(1, { timeout: 15_000 });
-    await expect(tudoFeito(page)).toHaveCount(0);
+    // O cliente do Supabase tenta algumas vezes antes de desistir: o aviso aparece depois de alguns segundos.
+    await expect(inicio(page)).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Sem conexão' })).toHaveCount(1, { timeout: 30_000 });
+    await expect(page.locator('#painel-leitura-total')).toHaveCount(0);
+    await expect(page.locator('#painel-erros-total')).toHaveCount(0);
+    await expect(page.locator('#painel-acerto-geral')).toHaveCount(0);
 
     await page.unroute('**/rest/v1/**');
     await page.getByRole('button', { name: 'Tentar agora' }).click();
-    await expect(tudoFeito(page)).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('#painel-leitura-total')).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole('status').filter({ hasText: 'Sem conexão' })).toHaveCount(0);
   });
 });

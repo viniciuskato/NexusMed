@@ -32,8 +32,7 @@ test.describe('Registro de erros do cliente', () => {
 
     await login(page, student);
     await page.route('**/assets/QuestionsView-*.js', (route) => route.fulfill({ status: 404, body: 'not found' }));
-    await page.locator('#nav-resources').click();
-    await page.locator('#nav-resources-questions').click();
+    await page.locator('#nav-questions').click();
     await expect(page.locator('#app-load-error')).toBeVisible({ timeout: 20_000 });
 
     await expect

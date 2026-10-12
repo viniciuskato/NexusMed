@@ -80,8 +80,7 @@ import { GlobalSearchModal } from './components/GlobalSearchModal';
 
 // Views
 import { DashboardView } from './components/dashboard/DashboardView';
-import { DesempenhoView } from './components/dashboard/DesempenhoView';
-import { HojeView } from './components/hoje/HojeView';
+import { IntegratedCadernoErros } from './components/dashboard/IntegratedCadernoErros';
 import { CreateSimuladoModal } from './components/questions/CreateSimuladoModal';
 import { ClinicalPomodoroWidget } from './components/common/ClinicalPomodoroWidget';
 import { TestarOQueLiModal } from './components/testar/TestarOQueLiModal';
@@ -106,20 +105,21 @@ const ComoEscreverMaterialView = lazyWithReload(() => import('./components/mater
 
 // Views que podem ser restauradas depois de um reload (Prompt 22-A). É uma
 // lista de PERMISSÃO: qualquer outro valor salvo (inclusive um valor futuro
-// ainda não conhecido, ou lixo gravado por outra versão) cai em 'today'.
+// ainda não conhecido, ou lixo gravado por outra versão) cai no Início.
 // Sessões efêmeras ficam deliberadamente de fora — 'simulado-session' e
 // 'compendium-reader' dependem de estado em memória (seleção sorteada,
 // compêndio ativo) que não sobrevive ao reload; restaurá-las abriria uma tela
 // sem o conteúdo correspondente. 'flashcards' e 'thematic-study' saíram do app
-// (CORTE-1, D-14): um link ou estado salvo que aponte para elas cai em 'today'.
+// (CORTE-1, D-14): um link ou estado salvo que aponte para elas cai no Início.
 //
-// 'today' (43-E) é a tela inicial. A restauração acima vale para o RELOAD: a
-// abertura nova da aba (sem link direto) entra por 'today', ver a restauração
-// de navegação abaixo.
+// 'dashboard' é o Início, a tela de entrada (PAINEL-2, D-14). A restauração
+// acima vale para o RELOAD: a abertura nova da aba (sem link direto) entra pelo
+// Início, ver a restauração de navegação abaixo. 'today' ("Hoje") e 'desempenho'
+// ("Meu desempenho") deixaram de ser telas: link ou estado salvo delas vira o Início.
+const VIEW_INICIAL = 'dashboard';
+const VIEWS_QUE_VIRARAM_O_INICIO: readonly string[] = ['today', 'desempenho'];
 const PERSISTED_VIEWS = [
-  'today',
   'dashboard',
-  'desempenho',
   'compendiums',
   'questions',
   'simulados',
@@ -134,15 +134,20 @@ const PERSISTED_VIEWS = [
 // que levam a elas, não existem para quem não é admin; o banco recusa o envio de qualquer forma (RLS).
 const VIEWS_DE_ENVIO: readonly string[] = ['como-escrever-material', 'como-escrever-questoes', 'enviar-material'];
 
+/** Nome de tela vindo de fora (link, estado salvo): as telas aposentadas viram o Início. */
+function viewConhecida(view: string): string {
+  return VIEWS_QUE_VIRARAM_O_INICIO.includes(view) ? VIEW_INICIAL : view;
+}
+
 function viewFromHash(): string {
-  return window.location.hash.replace(/^#\/?/, '');
+  return viewConhecida(window.location.hash.replace(/^#\/?/, ''));
 }
 
 function AuthenticatedApp() {
   const { user, profile, loading, isEmailVerified, passwordRecovery } = useAuth();
 
   // Navigation State
-  const [activeView, setActiveView] = useState<string>('today');
+  const [activeView, setActiveView] = useState<string>(VIEW_INICIAL);
   // P6: só o admin abre as telas de envio; a ref deixa o handler do histórico (sem dependências) saber.
   const canSendRef = useRef(false);
   useEffect(() => {
@@ -191,9 +196,6 @@ function AuthenticatedApp() {
     'all' | 'unanswered' | 'correct' | 'incorrect' | 'bookmarked' | undefined
   >(undefined);
 
-  // Tab interna da visão Início: Visão Geral vs Caderno de Erros integrado
-  const [dashboardTab, setDashboardTab] = useState<'overview' | 'errors'>('overview');
-
   const handleSelectView = (view: string) => {
     // P6: quem não é admin não abre as telas de envio (menu escondido; isto cobre atalhos e links).
     if (VIEWS_DE_ENVIO.includes(view) && !canSendRef.current) return;
@@ -208,14 +210,10 @@ function AuthenticatedApp() {
       setScopeQuestionIdsForQuestions(undefined);
       setFilterThemeForQuestions(undefined);
     }
-    // PAINEL-1: o caderno de erros e o resto do painel antigo moram em "Meu desempenho".
-    if (view === 'errors') {
-      setDashboardTab('errors');
-      setActiveView('desempenho');
+    // PAINEL-2: "Hoje" e "Meu desempenho" não são mais telas; quem os pede cai no Início.
+    if (VIEWS_QUE_VIRARAM_O_INICIO.includes(view)) {
+      setActiveView(VIEW_INICIAL);
       return;
-    }
-    if (view === 'desempenho') {
-      setDashboardTab('overview');
     }
     if (view === 'compendiums' && libraryLastView === 'reader' && selectedCompendiumId) {
       setActiveView('compendium-reader');
@@ -254,8 +252,7 @@ function AuthenticatedApp() {
   const [shownForUserId, setShownForUserId] = useState<string | null>(user?.id ?? null);
   if (shownForUserId !== (user?.id ?? null)) {
     setShownForUserId(user?.id ?? null);
-    setActiveView('today');
-    setDashboardTab('overview');
+    setActiveView(VIEW_INICIAL);
     setNavStateRestored(false);
     setActiveSimuladoConfig(null);
     setActiveSimuladoSelection(null);
@@ -342,20 +339,20 @@ function AuthenticatedApp() {
 
     // Link direto (#/questoes etc.) tem prioridade sobre a tela salva. Sem
     // link, quem RECARREGOU a página volta à tela salva (22-A); quem ABRIU o
-    // app agora (aba nova, primeira vez, outra conta) entra por "Hoje" (43-E).
+    // app agora (aba nova, primeira vez, outra conta) entra pelo Início (43-E, PAINEL-2).
     const hashView = viewFromHash();
     const reloaded = jaEntrouNestaAba(user.id);
     const savedView = (PERSISTED_VIEWS as readonly string[]).includes(hashView)
       ? hashView
       : reloaded
-      ? StorageService.getUIState<string>('nav_active_view', 'today')
-      : 'today';
+      ? viewConhecida(StorageService.getUIState<string>('nav_active_view', VIEW_INICIAL))
+      : VIEW_INICIAL;
     const isAllowedView = (PERSISTED_VIEWS as readonly string[]).includes(savedView);
     const canUseAdmin = profile?.role === 'admin' && profile?.status === 'active';
     const restoredView =
       isAllowedView && (savedView !== 'admin' || canUseAdmin) && (!VIEWS_DE_ENVIO.includes(savedView) || canUseAdmin)
         ? savedView
-        : 'today';
+        : VIEW_INICIAL;
 
     setActiveView(restoredView);
     marcarEntradaNestaAba(user.id);
@@ -363,12 +360,12 @@ function AuthenticatedApp() {
   }, [user?.id, dataLoading, dataReady, navStateRestored, profile?.role, profile?.status]);
 
   // Persistência só começa depois da restauração — gravar antes sobrescreveria
-  // o valor salvo com o 'today' do estado inicial.
+  // o valor salvo com o Início do estado inicial.
   useEffect(() => {
     if (!navStateRestored) return;
     StorageService.setUIState(
       'nav_active_view',
-      (PERSISTED_VIEWS as readonly string[]).includes(activeView) ? activeView : 'today'
+      (PERSISTED_VIEWS as readonly string[]).includes(activeView) ? activeView : VIEW_INICIAL
     );
   }, [activeView, navStateRestored]);
 
@@ -399,7 +396,7 @@ function AuthenticatedApp() {
       } else {
         // Entrada de sessão efêmera (via "avançar"): o estado dela não existe
         // mais — permanece na tela atual.
-        window.history.replaceState(null, '', `#/${previousViewRef.current ?? 'today'}`);
+        window.history.replaceState(null, '', `#/${previousViewRef.current ?? VIEW_INICIAL}`);
       }
     };
     window.addEventListener('popstate', onPopState);
@@ -539,6 +536,13 @@ function AuthenticatedApp() {
   const handleAbrirQuestoesPublicadas = async (questionIds: string[]) => {
     if (!questionIds.every((id) => todasAsQuestoes.some((q) => q.id === id))) await refreshData();
     handleStartTestarOQueLi(questionIds);
+  };
+
+  // PAINEL-2: o admin sem questões de residência chega à importação pelo Início: abre a Área Editorial
+  // já na aba de questões (a aba é lembrada em 'admin_active_tab', lida quando a tela monta).
+  const handleAbrirImportarQuestoes = () => {
+    StorageService.setUIState('admin_active_tab', 'questions');
+    setActiveView('admin');
   };
 
   const handleAbrirMaterialPublicado = async (materialId: string) => {
@@ -696,19 +700,6 @@ function AuthenticatedApp() {
               </div>
             }
           >
-          {activeView === 'today' && (
-            <HojeView
-              compendiums={compendiums}
-              questions={questions}
-              lastReadingSession={lastReadingSession}
-              dataReady={dataReady}
-              dataStatus={dataStatus}
-              onResumeReading={(compendiumId, sectionId) => handleOpenCompendium(compendiumId, sectionId)}
-              onTestarOQueLi={() => setIsTestarOpen(true)}
-              onOpenLibrary={() => handleSelectView('compendiums')}
-            />
-          )}
-
           {activeView === 'dashboard' && (
             <DashboardView
               disciplines={disciplines}
@@ -718,24 +709,8 @@ function AuthenticatedApp() {
               lastReadingSession={lastReadingSession}
               onSelectView={handleSelectView}
               onOpenCompendium={(compendiumId, sectionId) => handleOpenCompendium(compendiumId, sectionId)}
-            />
-          )}
-
-          {activeView === 'desempenho' && (
-            <DesempenhoView
-              disciplines={disciplines}
-              themes={themes}
-              questions={questions}
-              dadosProntos={dataReady}
-              compendiums={compendiums}
-              onSelectView={handleSelectView}
-              onOpenCompendium={handleOpenCompendium}
-              onOpenQuestion={handleOpenQuestion}
-              initialTab={dashboardTab}
-              onTabChange={setDashboardTab}
-              onStartErrorSimulado={handleTrainMistakesUntimed}
               onTestarOQueLi={() => setIsTestarOpen(true)}
-              onUpdate={refreshData}
+              onImportarQuestoes={isAdmin ? handleAbrirImportarQuestoes : undefined}
             />
           )}
 
@@ -817,6 +792,7 @@ function AuthenticatedApp() {
               compendiums={compendiums}
               onOpenCompendium={handleOpenCompendium}
               onOpenCreateSimulado={() => setIsCreateSimuladoOpen(true)}
+              onOpenSimulados={() => handleSelectView('simulados')}
               filterThemeId={filterThemeForQuestions}
               filterCompendiumId={scopeCompendiumForQuestions}
               scopeQuestionIds={scopeQuestionIdsForQuestions}
@@ -864,24 +840,18 @@ function AuthenticatedApp() {
             />
           )}
 
+          {/* PAINEL-2: o caderno de erros é tela própria, aberta pelo Início. */}
           {activeView === 'errors' && (
-            <DesempenhoView
+            <IntegratedCadernoErros
+              questions={questions}
               disciplines={disciplines}
               themes={themes}
-              questions={questions}
-              dadosProntos={dataReady}
               compendiums={compendiums}
-              onSelectView={handleSelectView}
               onOpenCompendium={handleOpenCompendium}
               onOpenQuestion={handleOpenQuestion}
-              initialTab="errors"
-              onTabChange={(tab) => {
-                if (tab === 'overview') setActiveView('desempenho');
-                setDashboardTab(tab);
-              }}
               onStartErrorSimulado={handleTrainMistakesUntimed}
-              onTestarOQueLi={() => setIsTestarOpen(true)}
               onUpdate={refreshData}
+              onSwitchToOverview={() => setActiveView(VIEW_INICIAL)}
             />
           )}
 
@@ -969,7 +939,7 @@ function AuthenticatedApp() {
         activeView={activeView}
         onSelectView={handleSelectView}
         errorLogCount={errorCount}
-        lastReadingSession={activeView === 'today' ? null : lastReadingSession}
+        lastReadingSession={activeView === VIEW_INICIAL ? null : lastReadingSession}
         onResumeReading={handleResumeReading}
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenCreateSimulado={() => setIsCreateSimuladoOpen(true)}

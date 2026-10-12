@@ -25,20 +25,16 @@ import {
 // caminho completo até a folha e volta pela trilha, sem link quebrado.
 
 /**
- * Abre a Biblioteca. No desktop ela vive no menu "Recursos" do header; no
+ * Abre a Biblioteca. No desktop ela é um botão do menu do topo; no
  * viewport de celular, no dock inferior — o teste mobile precisa do segundo
  * caminho, então detectamos qual está visível em vez de fixar um.
  */
 async function openLibrary(page: Page) {
-  const desktopTrigger = page.locator('#nav-resources');
+  const desktopTrigger = page.locator('#nav-compendiums');
   if (await desktopTrigger.isVisible()) {
     await desktopTrigger.click();
-    await expect(page.locator('#nav-resources-menu')).toBeVisible();
-    await page.locator('#nav-resources-compendiums').click();
   } else {
-    await page.locator('#dock-nav-resources').click();
-    await expect(page.locator('#dock-resources-menu')).toBeVisible();
-    await page.locator('#dock-resources-compendiums').click();
+    await page.locator('#dock-nav-compendiums').click();
   }
   await expect(page.getByRole('button', { name: 'Modo árvore' })).toBeVisible();
 }

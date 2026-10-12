@@ -73,7 +73,7 @@ vi.mock('../../src/repositories/MaterialSubmissionsRepository', () => ({
 vi.mock('../../src/repositories/QuestionSubmissionsRepository', () => ({
   questionSubmissionsRepository: { listMine: vi.fn().mockResolvedValue([]), submit: vi.fn() },
 }));
-// 43-E: a tela inicial agora é "Hoje", que lê estas três cargas do servidor.
+// 43-E / PAINEL-2: a tela inicial é o "Início", que lê estas cargas do servidor.
 vi.mock('../../src/repositories/LeiturasRepository', () => ({ leiturasRepository: { getLeituras: async () => [] } }));
 vi.mock('../../src/repositories/AnswersRepository', () => ({ answersRepository: { getAnswers: async () => ({}) } }));
 vi.mock('../../src/repositories/FlashcardsRepository', () => ({
@@ -118,7 +118,7 @@ describe('44-H1 — "Como escrever questões" no app', () => {
   it('admin ativo abre a página pelo menu do usuário (P6: só o dono envia)', async () => {
     authState.profile = { role: 'admin', status: 'active' };
     render(<App />);
-    await screen.findByRole('heading', { level: 1, name: 'Hoje' });
+    await screen.findByRole('heading', { level: 1, name: 'Início' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Como escrever questões' }));
@@ -135,7 +135,7 @@ describe('44-H1 — "Como escrever questões" no app', () => {
   it('o link da página leva a "Enviar material" já na aba de questões, e de lá volta às instruções', async () => {
     authState.profile = { role: 'admin', status: 'active' };
     render(<App />);
-    await screen.findByRole('heading', { level: 1, name: 'Hoje' });
+    await screen.findByRole('heading', { level: 1, name: 'Início' });
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Como escrever questões' }));
     await screen.findByRole('heading', { level: 1, name: 'Como escrever questões' });
@@ -152,7 +152,7 @@ describe('44-H1 — "Como escrever questões" no app', () => {
   it('o item "Enviar material" do menu abre sempre na aba Material, mesmo depois de a aba Questões ter sido aberta (44-H2)', async () => {
     authState.profile = { role: 'admin', status: 'active' };
     render(<App />);
-    await screen.findByRole('heading', { level: 1, name: 'Hoje' });
+    await screen.findByRole('heading', { level: 1, name: 'Início' });
     fireEvent.click(screen.getByRole('button', { name: 'Menu do perfil de usuário' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Como escrever questões' }));
     await screen.findByRole('heading', { level: 1, name: 'Como escrever questões' });

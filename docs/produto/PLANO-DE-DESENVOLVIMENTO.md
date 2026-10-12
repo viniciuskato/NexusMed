@@ -1547,6 +1547,7 @@ conflitam aqui. "Publicado" significa em produção
 | PAINEL-1 | Concluída; será substituída pela PAINEL-2 | #119 | — |
 | CORTE-1 | Concluída | #125 | — |
 | RESID-1 | Em revisão | — | — |
+| PAINEL-2 | Em revisão | — | — |
 | 45-A | Concluída; correções da revisão do #76 no #81 | #74, #76, #81 | 24/09 (parte 2: migration depois do merge — INC-2026-004); correções: 25/09 (INC-2026-005) |
 | 45-B | Concluída | #71 | 24/09 |
 | 45-C | Concluída (item de desempenho movido para a 46-D) | #73 | 24/09 |

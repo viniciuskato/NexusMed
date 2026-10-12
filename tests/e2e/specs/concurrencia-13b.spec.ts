@@ -48,10 +48,9 @@ async function secondDeviceLoggedIn(browser: Browser, user: CreatedTestUser): Pr
   return page;
 }
 
-// Prompt 22-A: os acervos (Biblioteca, Questões) ficam dentro de "Recursos".
+// PAINEL-2: os acervos (Biblioteca, Questões) são botões do dock.
 async function goToResource(page: Page, id: 'compendiums' | 'questions') {
-  await page.locator('#dock-nav-resources').click();
-  await page.locator(`#dock-resources-${id}`).click();
+  await page.locator(`#dock-nav-${id}`).click();
 }
 
 async function goToQuestionsBank(page: Page) {
@@ -173,10 +172,8 @@ test.describe('Simulado — rascunho local e finalização idempotente', () => {
   });
 
   async function startExpressSimulado(page: Page) {
-    // PAINEL-1: o atalho "Simulados & Provas" mora em "Meu desempenho" (Recursos → Meu desempenho).
-    await page.locator('#dock-nav-resources').click();
-    await page.locator('#dock-resources-desempenho').click();
-    await page.getByRole('button', { name: 'Simulados & Provas' }).click();
+    // PAINEL-2: o atalho "Simulado" mora no Início (a tela de entrada).
+    await page.locator('#painel-simulado').click();
     await page.getByText('Simulado Express Misto', { exact: true }).click();
     await expect(page.getByRole('button', { name: 'Finalizar Prova' })).toBeVisible({ timeout: 15_000 });
   }

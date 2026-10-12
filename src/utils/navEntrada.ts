@@ -1,15 +1,15 @@
 import { diaLocal } from './diaLocal';
 
-// 43-E — entrada na sessão do navegador. A tela "Hoje" é a porta de entrada, mas
+// 43-E — entrada na sessão do navegador. O Início é a porta de entrada (era "Hoje" até a PAINEL-2), mas
 // a restauração da última tela (22-A) existe para o reload: quem recarrega a
 // página no meio do estudo volta onde estava. `sessionStorage` separa os dois
 // casos sem tabela nem servidor — sobrevive ao reload da aba e some quando a
 // aba é fechada. Guarda o id de quem já entrou nesta aba, então outra conta na
-// mesma aba também entra por "Hoje".
+// mesma aba também entra pelo Início.
 //
 // A marca guarda também o dia local da entrada: no celular a aba sobrevive por
 // dias, e quem volta no dia seguinte está abrindo o app de novo, não
-// recarregando — entra por "Hoje". Reload no mesmo dia continua restaurando.
+// recarregando — entra pelo Início. Reload no mesmo dia continua restaurando.
 
 export const NAV_ENTRADA_KEY = 'nexusmed_nav_entrada';
 
