@@ -360,6 +360,9 @@ seção "Armadilhas já descobertas".
   [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md).
 - **Testar contra Supabase LOCAL** antes de considerar qualquer mudança
   de schema/RPC pronta. Nunca validar escrita direto no remoto.
+- **Gate local dos agentes: `npm run verificar`** (typecheck, lint, unit, pgTAP,
+  build, debug-bundle; exige o Supabase local). Saída inteira em
+  `.verificar/saida.txt`, uma linha no terminal; `verify` e o CI não mudam.
 - **Acessibilidade (desde AUD-09)**: modal novo usa `useDialogA11y`
   (`src/hooks/useDialogA11y.ts`) + `role="dialog"`, `aria-modal`,
   `aria-labelledby`; clicável novo é `<button type="button">` ou, se contiver

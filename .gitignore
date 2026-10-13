@@ -60,3 +60,6 @@ review_full.diff
 # Pasta de trabalho da produção de conteúdo: pedidos, rascunhos e fontes
 # (repositório público; fontes de livro-texto têm direito autoral — D-5)
 /docs/conteúdos/
+
+# Saída do `npm run verificar` (gate local dos agentes; saída local, não é fonte)
+/.verificar/
