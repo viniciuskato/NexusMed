@@ -37,6 +37,9 @@ git rev-parse origin/main
 - Agregador do projeto (quando disponível): `npm run verify`
   (`typecheck` → `lint` → `test` → `build`) — falha (exit 1) se o
   Supabase local não estiver de pé; não é um "pulo silencioso".
+- Gate local dos agentes: `npm -s run verificar` (typecheck, lint, unit, pgTAP,
+  build, debug-bundle; exige o Supabase local). Saída inteira em
+  `.verificar/saida.txt`, uma linha no terminal; `verify` e o CI não mudam.
 - Mudança de comportamento client-side com concorrência (fila de
   sincronização, revisão de flashcard, etc.): teste de navegador real
   (Playwright/Chromium) contra Supabase local — pgTAP prova contrato de

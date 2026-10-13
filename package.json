@@ -27,6 +27,7 @@
     "gerar:revisor": "tsx scripts/gerar-revisor.ts",
     "revisor:local": "tsx scripts/revisor-local/cli.ts",
     "test:revisor-local": "vitest run --config vitest.revisor-local.config.ts",
+    "verificar": "node scripts/verificar.mjs",
     "verify": "npm run typecheck && npm run lint && npm run test && npm run build",
     "verify:fast": "npm run typecheck && npm run lint && npm run test:unit && npm run build",
     "verify:full": "npm run verify:fast && npm run test:db && supabase db reset && npm run test:e2e"
