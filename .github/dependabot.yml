@@ -9,15 +9,20 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: deps
-    # Majors do toolchain exigem migração coordenada e são tratados em uma
-    # branch planejada. PRs isolados quebram os peer dependencies antes mesmo
-    # dos testes (ex.: ESLint + @eslint/js + plugins; TypeScript + typescript-eslint).
+    # Majors do toolchain (lint, tipos, teste e build) exigem migração
+    # coordenada e são tratados em uma branch planejada. PRs isolados quebram
+    # os peer dependencies antes mesmo dos testes (ex.: ESLint + @eslint/js +
+    # plugins; TypeScript + typescript-eslint; Vitest + @vitejs/plugin-react).
     ignore:
       - dependency-name: eslint
         update-types: ["version-update:semver-major"]
       - dependency-name: "@eslint/js"
         update-types: ["version-update:semver-major"]
       - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      - dependency-name: vitest
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitejs/plugin-react"
         update-types: ["version-update:semver-major"]
     groups:
       # minor/patch agrupados por tipo; majors não ignoradas ficam fora dos
