@@ -10,8 +10,10 @@ mudanças automáticas de alto risco.
 
 1. Atualizações `minor` e `patch` continuam sendo propostas semanalmente
    pelo Dependabot e só entram com CI verde.
-2. Majors de `eslint`, `@eslint/js` e `typescript` não são abertas
-   automaticamente. Elas exigem uma tarefa de migração planejada.
+2. Majors de `eslint`, `@eslint/js`, `typescript`, `vitest` e
+   `@vitejs/plugin-react` não são abertas automaticamente. Elas exigem uma
+   tarefa de migração planejada (no caso de `vitest` e `@vitejs/plugin-react`,
+   a migração coordenada do toolchain de teste e build).
 3. Uma migração de toolchain deve atualizar em conjunto o pacote principal,
    seus presets, parsers e plugins compatíveis.
 4. Nunca contornar `ERESOLVE` com `--force` ou `--legacy-peer-deps` para
