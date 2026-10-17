@@ -6,6 +6,15 @@
 > `docs/archive/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-10-17 — Capítulo de livro aberto na internet vale como fonte do material (D-16)
+
+Origem: decisão do dono de 17/10/2026, na rodada de correções dos agentes. À pergunta "no material do NexusMed, um capítulo de livro aberto na internet (como os do NCBI Bookshelf) pode servir de fonte?", ele escolheu "Sim, se tiver endereço fixo (NBK, DOI ou PMCID)" (resposta "1B").
+
+- No material, capítulo de livro aberto na internet, com identificador fixo (NBK, DOI ou PMCID) e link, serve como fonte, com o tipo de evidência "Capítulo de livro". Continuam fora: livro-texto pago ou sem link, apostila sem autoria e Wikipédia.
+- Vale nos prompts de criar e de revisar material e no aviso da tela "Como escrever material"; o revisor local lê o prompt de revisar pelo gerado de `npm run gerar:revisor`. O formatador segue a mesma regra.
+- As questões não mudam: continuam sem capítulo de livro.
+- Revê, só para o material, a vedação de capítulo de livro dos prompts de material e do aviso da tela.
+
 ## 2026-10-17 — Conteúdo pelo médico pesquisador e pelo formatador, no lugar do Gemini (D-15)
 
 Origem: decisão do dono de 16/10/2026, no plano do agente formatador-nexusmed: a pesquisa do conteúdo é do agente `medico-pesquisador`, a forma é do agente `formatador-nexusmed`, e o Gem deixa de ser usado. Registrada aqui pelo plano que ele aprovou em 17/10/2026 ('A').

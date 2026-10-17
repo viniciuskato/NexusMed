@@ -14,7 +14,7 @@ REGRAS
 - Se você não consegue abrir páginas da internet nesta conversa, diga isso logo no início da resposta: tudo o que dependeria da fonte fica "não conferida" e o veredito é obrigatoriamente NÃO APTO (ver a regra do veredito).
 
 REGRA DE FONTES
-- Só vale material disponível on-line; nenhum livro-texto. O item 3 da hierarquia de fontes da seção 1.4 do padrão (livros-texto) e o tipo Livro-texto entre os tipos de evidência da seção 1.7 não valem nesta produção.
+- Só vale material disponível on-line; nenhum livro-texto. Capítulo de livro só vale se estiver aberto na internet, com identificador fixo (NBK, DOI ou PMCID) e link. O item 3 da hierarquia de fontes da seção 1.4 do padrão (livros-texto) e o tipo Livro-texto entre os tipos de evidência da seção 1.7 não valem nesta produção.
 - Afirmação de alto risco (dose, corte numérico, ajuste renal ou hepático, gestação, lactação, recém-nascido, idoso, contraindicação, interação) só vale com fonte primária pública identificável (bula do profissional no Bulário Eletrônico da ANVISA, BrCAST, diretriz oficial ou de sociedade médica), citada na mesma frase. Sem ela, o certo é LACUNA_DOCUMENTAL.
 - Em tabela, a citação da frase de abertura (seção 1.5 do padrão) vale para todas as células, desde que a tabela inteira venha de uma única fonte primária pública. Célula sem citação própria nessa tabela não é achado. Tabela com dado de alto risco que misture fontes é achado do grupo 3: deve virar texto ou tabelas separadas, cada uma com a sua frase de abertura citada.
 

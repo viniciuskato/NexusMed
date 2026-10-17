@@ -281,7 +281,8 @@ export const ComoEscreverMaterialView: React.FC<ComoEscreverMaterialViewProps> =
           className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900"
         >
           No NexusMed só valem fontes disponíveis on-line: livro-texto não é aceito, mesmo que o padrão abaixo o
-          cite.
+          cite. Capítulo de livro vale se estiver aberto na internet, com identificador fixo (NBK, DOI ou PMCID) e
+          link.
         </p>
         <div
           id="como-escrever-padrao-texto"

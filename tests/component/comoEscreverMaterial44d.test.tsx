@@ -133,6 +133,7 @@ describe('44-D — página "Como escrever um material"', () => {
     const padrao = container.querySelector('#como-escrever-padrao-texto');
     expect(aviso?.textContent).toMatch(/só valem fontes disponíveis on-line/);
     expect(aviso?.textContent).toMatch(/livro-texto não é aceito, mesmo que o padrão abaixo o cite/);
+    expect(aviso?.textContent).toMatch(/Capítulo de livro vale se estiver aberto na internet, com identificador fixo \(NBK, DOI ou PMCID\) e link\./);
     // O aviso vem antes do texto do padrão.
     expect(aviso!.compareDocumentPosition(padrao!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
