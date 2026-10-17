@@ -58,7 +58,7 @@ git rev-parse origin/main
 
 ## 2.1. Checar um material antes de importar (44-C1)
 
-Todo `.md` de material que chega de fora (Gemini, pessoa) passa pela checagem
+Todo `.md` de material que chega de fora (subagentes da D-15, pessoa) passa pela checagem
 do padrão antes de ir para "Importar material" — sem login nem Supabase:
 
 ```

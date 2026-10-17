@@ -22,8 +22,8 @@ flashcards na tela, vale a D-13 e, depois dela, a D-14.
 **Papéis da D-7 (desde 28/09/2026), ainda em vigor.** Três sessões: a
 **diretoria** (a única janela do dono; revisa, mantém a fila de defeitos e é
 a mesa editorial), a **sessão de defeitos** (a única que escreve código de
-produto) e a **sessão de materiais** (o Gemini, fora
-do repositório). O congelamento de funcionalidade nova da D-7 caiu com a D-10
+produto) e a **sessão de materiais** (desde a D-15, os subagentes `medico-pesquisador` e
+`formatador-nexusmed`, que a diretoria chama). O congelamento de funcionalidade nova da D-7 caiu com a D-10
 (29/09). Papéis: [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md),
 "Modelo D-7"; decisão: `DECISIONS.md`, D-7. Desde a D-8 (28/09), numa janela só: a diretoria é o agente `dev-senior`, a
 sessão de defeitos é o subagente `dev-junior` e a revisão é do subagente
@@ -237,8 +237,8 @@ seção "Armadilhas já descobertas".
     mudança editorial sobe a versão e ganha entrada na seção 2.7; depois da
     unidade 44-C1, regra mecânica nova vem com a checagem correspondente
     (essa checagem entra como unidade do plano, D-10; até lá, a revisão
-    confere à mão). Desde 24/09 (D-5) quem escreve é o Gemini, fora do
-    repositório: o padrão é a interface entre ele e o sistema. Figuras (v3):
+    confere à mão). Desde a D-15 (17/10) quem escreve é o `medico-pesquisador` e quem põe no
+    padrão é o `formatador-nexusmed` (antes, desde a D-5, o Gemini): o padrão é a interface entre eles e o sistema. Figuras (v3):
     bloco `figura:<uuid>` (imagem + legenda + `Fonte:`), arquivo no bucket
     `material-figures`, imutável; o leitor e a checagem do padrão leem o bloco
     pelo mesmo módulo (`src/utils/figuraDoMaterial.ts`) — não crie uma
@@ -363,6 +363,8 @@ seção "Armadilhas já descobertas".
 - **Gate local dos agentes: `npm run verificar`** (typecheck, lint, unit, pgTAP,
   build, debug-bundle; exige o Supabase local). Saída inteira em
   `.verificar/saida.txt`, uma linha no terminal; `verify` e o CI não mudam.
+- **Um comando simples por chamada de ferramenta:** sem `;`, `&&`, `|` nem `cd`;
+  use `git -C <pasta>` e `npm --prefix <pasta>`. Comando composto gera pedido de permissão na janela do dono.
 - **Acessibilidade (desde AUD-09)**: modal novo usa `useDialogA11y`
   (`src/hooks/useDialogA11y.ts`) + `role="dialog"`, `aria-modal`,
   `aria-labelledby`; clicável novo é `<button type="button">` ou, se contiver
@@ -393,8 +395,8 @@ o painel legado da diretoria (histórico até 2026-09-17).
 > vale a D-8 (`docs/operacao/DECISIONS.md`).
 
 O dono fala só com a diretoria. A sessão de defeitos fala com a diretoria
-por mensagem entre sessões e pelo PR; o Gemini recebe o pedido e devolve a
-resposta pelas mãos do dono. Toda sessão de diretoria deve ler e seguir
+por mensagem entre sessões e pelo PR; o `medico-pesquisador` e o
+`formatador-nexusmed` recebem o pedido da diretoria e devolvem o `.md` a ela, sem o dono carregar texto (D-15). Toda sessão de diretoria deve ler e seguir
 [`docs/diretoria/MODELO-DIRETORIA.md`](docs/diretoria/MODELO-DIRETORIA.md)
 e consultar [`docs/archive/diretoria/registro.md`](docs/archive/diretoria/registro.md)
 para o histórico. Preserve os identificadores já emitidos ao continuar
