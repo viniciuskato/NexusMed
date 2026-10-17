@@ -18,7 +18,7 @@ Onde está cada coisa em `docs/`. Agente de IA começa pelo
 | escrever uma questão comentada | [`editorial/PADRAO-NEXUSMED-QUESTOES.md`](editorial/PADRAO-NEXUSMED-QUESTOES.md) |
 | ver o que produzir de antimicrobianos, e em que ordem | [`editorial/PLANO-ANTIMICROBIANOS.md`](editorial/PLANO-ANTIMICROBIANOS.md) |
 | ver ideias de temas para depois | [`editorial/BANCO-EDITORIAL-TEMAS-FUTUROS.md`](editorial/BANCO-EDITORIAL-TEMAS-FUTUROS.md) |
-| produzir conteúdo com o Gemini agora | `conteúdos/LEIA-ME.md` (só no seu computador) |
+| produzir conteúdo | peça à diretoria: ela chama o `medico-pesquisador` e o `formatador-nexusmed` (D-15) |
 | entender os papéis: diretoria, sessão de defeitos, sessão de materiais (D-7) e auditoria | [`diretoria/MODELO-DIRETORIA.md`](diretoria/MODELO-DIRETORIA.md) |
 | ver o que a auditoria propôs | [`diretoria/BACKLOG-ESTRATEGICO.md`](diretoria/BACKLOG-ESTRATEGICO.md) |
 | achar algo antigo | [`archive/`](archive/) |

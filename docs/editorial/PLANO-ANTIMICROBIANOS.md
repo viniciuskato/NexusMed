@@ -118,13 +118,13 @@ qualquer mudança — pode haver questões ligadas a ele.
 
 ## 5. Como pedir cada material à IA
 
-Quem escreve é o Gemini, no Gem "Redator NexusMed", que já tem o padrão; a
+Quem escreve é o `medico-pesquisador` e quem põe no padrão é o `formatador-nexusmed`, chamados pela diretoria (D-15); a
 diretoria prepara cada pedido e é a mesa editorial (D-7, 28/09). O pedido de
 cada material — o bloco da seção 6, o trecho do rascunho antigo e, do 02 em
 diante, o material aprovado do pai — fica na pasta local
-`docs/conteúdos/antimicrobianos/NN-*/`, fora do git. O passo a passo (pedir,
-levar a resposta à diretoria, corrigir, ler, importar, atestar, publicar e
-ligar questões) está em `docs/conteúdos/LEIA-ME.md`, também local. O 06 e o
+`docs/conteúdos/antimicrobianos/NN-*/`, fora do git. Desde a D-15, a
+diretoria pede o material aos agentes, corrige e deixa o arquivo na pasta; o
+dono lê, importa, atesta, publica e liga as questões. O 06 e o
 07 são irmãos, filhos do 05.
 
 **Fontes (decisão do dono, 28/09): só material on-line, nenhum livro-texto.**

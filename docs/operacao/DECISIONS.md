@@ -6,6 +6,15 @@
 > `docs/archive/diretoria/registro.md` / `docs/archive/` para o histórico
 > encerrado). Ordem cronológica, mais recente no topo.
 
+## 2026-10-17 — Conteúdo pelo médico pesquisador e pelo formatador, no lugar do Gemini (D-15)
+
+Origem: decisão do dono de 16/10/2026, no plano do agente formatador-nexusmed: a pesquisa do conteúdo é do agente `medico-pesquisador`, a forma é do agente `formatador-nexusmed`, e o Gem deixa de ser usado. Registrada aqui pelo plano que ele aprovou em 17/10/2026 ('A').
+
+- O material passa a ser pesquisado e escrito pelo `medico-pesquisador`, só a partir das fontes que ele abriu, e posto no padrão de conteúdos pelo `formatador-nexusmed`. Os dois rodam como subagentes que a diretoria chama, um material por vez, e cada etapa tem um segundo subagente, que não escreveu e roda num modelo diferente e não mais fraco: na pesquisa, ele confere as citações e os gabaritos na fonte; na forma, o formato e a fidelidade ao texto pesquisado. Eles não fazem commit nem push, não mexem no código nem no banco e gravam o `.md` em `docs/conteúdos/`, fora do git.
+- O Gemini e o Gem "Redator NexusMed" saem do fluxo, e o dono não carrega texto entre conversas.
+- Continuam: o padrão de conteúdos como interface, a checagem mecânica do padrão, a revisão médica por modelo diferente do que escreveu e o dono como o único que publica (D-13).
+- Revê a D-5 (itens 1 e 2) e a D-7 (sessão de materiais) só em quem escreve e em como o pedido chega a quem escreve.
+
 ## 2026-10-11 — Foco em residência: só questões de residência, sem flashcards, biblioteca baseada em evidências (D-14)
 
 Pedido do dono (11/10/2026): usar só questões de residência (questões de estudo ele faz direto com IA, fora do sistema); a biblioteca de conteúdos continua e é toda baseada em evidências; flashcards saem (o Anki já faz isso); um painel inicial único e intuitivo com o que leu, o que não leu e o desempenho nas questões de residência. Plano aprovado em 11/10 ('Aprovado, B').
