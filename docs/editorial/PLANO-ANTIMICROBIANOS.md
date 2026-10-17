@@ -123,7 +123,7 @@ diretoria prepara cada pedido e é a mesa editorial (D-7, 28/09). O pedido de
 cada material — o bloco da seção 6, o trecho do rascunho antigo e, do 02 em
 diante, o material aprovado do pai — fica na pasta local
 `docs/conteúdos/antimicrobianos/NN-*/`, fora do git. Desde a D-15, a
-diretoria pede o material aos agentes, corrige e deixa o arquivo na pasta; o
+diretoria pede o material aos agentes, manda corrigir e deixa o arquivo na pasta; o
 dono lê, importa, atesta, publica e liga as questões. O 06 e o
 07 são irmãos, filhos do 05.
 

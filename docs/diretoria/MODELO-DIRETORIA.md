@@ -26,7 +26,7 @@ Funcionalidade nova está congelada, salvo pedido da produção. Três sessões:
      material; a próxima ação do dono); revisa os PRs que não escreveu e põe
      o rótulo; atualiza com o `main` (merge, nunca rebase) o PR rotulado que
      ficou atrás; confere CI e deploy depois de cada merge do dono; é a mesa
-     editorial (fluxo em `docs/conteúdos/LEIA-ME.md`, local); mantém a fila de
+     editorial (fluxo da D-15: chama o `medico-pesquisador` e o `formatador-nexusmed`); mantém a fila de
      defeitos (issues) e decide defeito × evolução; leva ao dono as perguntas
      da sessão de defeitos e devolve a resposta; às segundas, o "semana"
      (materiais publicados, a fila, os defeitos `menor` para o dono aprovar
