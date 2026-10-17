@@ -26,7 +26,7 @@ Funcionalidade nova está congelada, salvo pedido da produção. Três sessões:
      material; a próxima ação do dono); revisa os PRs que não escreveu e põe
      o rótulo; atualiza com o `main` (merge, nunca rebase) o PR rotulado que
      ficou atrás; confere CI e deploy depois de cada merge do dono; é a mesa
-     editorial (fluxo em `docs/conteúdos/LEIA-ME.md`, local); mantém a fila de
+     editorial (fluxo da D-15: chama o `medico-pesquisador` e o `formatador-nexusmed`); mantém a fila de
      defeitos (issues) e decide defeito × evolução; leva ao dono as perguntas
      da sessão de defeitos e devolve a resposta; às segundas, o "semana"
      (materiais publicados, a fila, os defeitos `menor` para o dono aprovar
@@ -47,12 +47,12 @@ Funcionalidade nova está congelada, salvo pedido da produção. Três sessões:
    constrói nada novo. Fala com a diretoria por mensagem entre sessões e
    pergunta ao dono só pela diretoria. Protocolo:
    [`../operacao/EXECUTOR_PROTOCOL.md`](../operacao/EXECUTOR_PROTOCOL.md).
-3. **Sessão de materiais** — o Gemini, no Gem "Redator NexusMed", uma
-   conversa por material. Escreve cada material no padrão de conteúdos e o
-   corrige pelos achados da revisão. Sem acesso ao computador, ao
-   repositório, ao banco nem ao GitHub; não escreve questões; não decide
-   tema nem escopo. O dono leva o pedido ao Gem e traz a resposta à
-   diretoria.
+3. **Sessão de materiais** — desde a D-15 (17/10), os subagentes
+   `medico-pesquisador`, que pesquisa e escreve o material a partir das
+   fontes, e `formatador-nexusmed`, que o põe no padrão de conteúdos e o
+   corrige pelos achados da revisão, chamados pela diretoria, um material
+   por vez, cada um com um segundo subagente que confere. Não fazem commit
+   nem push nem mexem no código ou no banco; não decidem tema nem escopo.
 
 **Quem revisa quem** (sempre antes do merge; só o dono mescla):
 
@@ -60,7 +60,7 @@ Funcionalidade nova está congelada, salvo pedido da produção. Três sessões:
 |---|---|---|
 | Sessão de defeitos | Diretoria, com subagentes de contexto limpo; achado grave conferido por um segundo leitor que tenta derrubá-lo; de novo no diff das correções | Diretoria |
 | Diretoria | Sessão de defeitos, quando a diretoria pede | Sessão de defeitos |
-| Gemini (material) | Diretoria (checagem e revisão médica por subagente de contexto limpo); depois o dono, que lê o material inteiro antes de importar | Não há rótulo: o portão é a atestação humana, presa ao hash |
+| `medico-pesquisador` e `formatador-nexusmed` (material, D-15) | Diretoria (checagem e revisão médica por subagente de contexto limpo, de modelo diferente do que escreveu); depois o dono, que lê o material inteiro antes de importar | Não há rótulo: o portão é a atestação humana, presa ao hash |
 
 Só achado bloqueante impede o rótulo. Nenhuma sessão revisa o que escreveu
 nem põe rótulo em PR próprio.

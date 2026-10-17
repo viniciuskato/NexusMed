@@ -5,7 +5,7 @@
 > ferramenta. Papéis em
 > [`../diretoria/MODELO-DIRETORIA.md`](../diretoria/MODELO-DIRETORIA.md):
 > desde 2026-09-28 (D-7), a diretoria e a sessão de defeitos; a sessão de
-> materiais (o Gemini) fica fora do repositório e não segue este protocolo;
+> materiais (desde a D-15, os subagentes `medico-pesquisador` e `formatador-nexusmed`) não segue este protocolo;
 > a auditoria é esporádica e só sob pedido explícito do usuário.
 
 ## Abertura obrigatória
