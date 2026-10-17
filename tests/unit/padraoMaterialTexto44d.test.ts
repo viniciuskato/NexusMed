@@ -194,6 +194,7 @@ describe('44-D — conteúdo mínimo de cada prompt', () => {
       'o que o material deve cobrir',
       'Se faltar um dado, pergunte',
       'nenhum livro-texto',
+      'Capítulo de livro só vale se estiver aberto na internet, com identificador fixo (NBK, DOI ou PMCID) e link',
       'Nunca invente referência',
       'LACUNA_DOCUMENTAL',
       'ALTO RISCO',
@@ -225,6 +226,7 @@ describe('44-D — conteúdo mínimo de cada prompt', () => {
       'Afirmação de alto risco não conferida conta como achado grave do grupo 3',
       'o veredito é obrigatoriamente NÃO APTO',
       'Corrija o material conforme os achados abaixo',
+      'Capítulo de livro só vale se estiver aberto na internet, com identificador fixo (NBK, DOI ou PMCID) e link',
     ]) {
       expect(p, trecho).toContain(trecho);
     }
